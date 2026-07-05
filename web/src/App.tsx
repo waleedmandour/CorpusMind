@@ -5,6 +5,8 @@ import { useEffect } from "react";
 
 import { Ribbon } from "@/components/Ribbon";
 import { CommandPalette } from "@/components/CommandPalette";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { OnboardingModal } from "@/components/OnboardingModal";
 import { AssistantView } from "@/views/AssistantView";
 import { CorpusManagerView } from "@/views/CorpusManagerView";
 import { ConcordancerView } from "@/views/ConcordancerView";
@@ -18,26 +20,38 @@ import { useApp } from "@/store/app";
 export default function App() {
   const activeTab = useUI((s) => s.activeTab);
   const theme = useUI((s) => s.theme);
+  const onboardingComplete = useUI((s) => s.onboardingComplete);
+  const setOnboardingOpen = useUI((s) => s.setOnboardingOpen);
   const activeCorpusId = useApp((s) => s.activeCorpusId);
 
   useEffect(() => {
     applyHtmlAttrs();
   }, [theme, useUI((s) => s.dir)]);
 
+  // Show onboarding on first launch
+  useEffect(() => {
+    if (!onboardingComplete) {
+      setOnboardingOpen(true);
+    }
+  }, [onboardingComplete, setOnboardingOpen]);
+
   return (
     <div className="app-shell">
       <a href="#main-content" className="skip-link">Skip to main content</a>
       <header className="app-titlebar">
         <div className="app-brand">
-          <span className="app-logo" aria-hidden>◆</span>
+          <span className="app-logo" aria-hidden>{"\u25C6"}</span>
           <span className="app-name">CorpusMind</span>
-          <span className="app-tagline">local-first · AI-native · research-grade</span>
+          <span className="app-tagline">local-first | AI-native | research-grade</span>
         </div>
         {activeCorpusId && (
           <div className="app-active-corpus" title={activeCorpusId}>
-            <span className="dot" /> {activeCorpusId.slice(0, 8)}…
+            <span className="dot" /> {activeCorpusId.slice(0, 8)}...
           </div>
         )}
+        <div className="app-titlebar-actions">
+          <ThemeToggle />
+        </div>
       </header>
 
       <Ribbon />
@@ -59,6 +73,7 @@ export default function App() {
       </footer>
 
       <CommandPalette />
+      <OnboardingModal />
     </div>
   );
 }
