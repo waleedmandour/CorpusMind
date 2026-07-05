@@ -10,8 +10,9 @@ rows that storage/models.Token expects.
 from __future__ import annotations
 
 import functools
+from collections.abc import Iterator
 from dataclasses import dataclass
-from typing import Iterator, Protocol
+from typing import Protocol
 
 from app.logging import get_logger
 
@@ -118,7 +119,7 @@ class SpaCyPipeline:
         for doc in self._nlp.pipe([text], disable=[]):
             for sent in doc.sents:
                 tokens: list[ParsedToken] = []
-                for i, tok in enumerate(sent, start=1):
+                for _i, tok in enumerate(sent, start=1):
                     head_idx = tok.head.i - sent.start + 1 if tok.head is not tok else 0
                     tokens.append(ParsedToken(
                         text=tok.text,
@@ -143,7 +144,7 @@ class SpaCyPipeline:
 
 
 @functools.lru_cache(maxsize=8)
-def get_pipeline(backend: str = "spacy", language: str = "en", model_name: str | None = None) -> "Pipeline":
+def get_pipeline(backend: str = "spacy", language: str = "en", model_name: str | None = None) -> Pipeline:
     """Return a cached pipeline instance.
 
     Defaults: spaCy + en_core_web_sm. Phase 3 will branch on language == 'ar'

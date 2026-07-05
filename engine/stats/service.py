@@ -8,10 +8,9 @@ statistic) includes that ID so the AI Assistant can cite it (§11.1).
 """
 from __future__ import annotations
 
-import re
 from collections import Counter, defaultdict
-from dataclasses import asdict, dataclass, field
-from typing import Any, Literal
+from dataclasses import dataclass
+from typing import Literal
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -27,14 +26,10 @@ from stats.measures import (
     log_dice,
     log_likelihood_2x2,
     mutual_information,
-    odds_ratio,
-    pct_diff,
-    simple_maths,
     sttr,
     t_score,
-    log_ratio,
 )
-from storage.models import AnnotationVersion, Corpus, Document, Token
+from storage.models import AnnotationVersion, Document, Token
 
 log = get_logger(__name__)
 
@@ -228,7 +223,7 @@ async def compute_frequency(
         .limit(limit)
     )
     if not include_punct:
-        stmt = stmt.where(_is_real_token())  # noqa: E712
+        stmt = stmt.where(_is_real_token())
 
     rows_raw = (await session.execute(stmt)).all()
     total_tokens = await _corpus_size(session, version_id)
@@ -240,7 +235,7 @@ async def compute_frequency(
     if unit == "word":
         tok_stmt = (
             select(Token.text)
-            .where(Token.version_id == version_id, _is_real_token())  # noqa: E712
+            .where(Token.version_id == version_id, _is_real_token())
             .order_by(Token.document_id, Token.sentence_idx, Token.token_idx)
         )
         tokens_list = [r[0] for r in (await session.execute(tok_stmt)).all()]
@@ -357,7 +352,7 @@ async def compute_collocations(
         # Build a clean list of (idx, text) excluding punct + SPACE for window scan.
         # `toks` is already filtered (we skipped is_punct + SPACE at load time).
         clean = [(idx, text) for idx, text, _ in toks]
-        for i, (idx, text) in enumerate(clean):
+        for i, (_idx, text) in enumerate(clean):
             if text.lower() != node_lower:
                 continue
             # Window: tokens i-window..i+window excluding i itself

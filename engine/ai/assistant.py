@@ -13,16 +13,14 @@ from __future__ import annotations
 
 import json
 import time
-import uuid
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.logging import get_logger
 from ai.providers import Message, ModelProvider
 from ai.tools import execute_tool, schemas_for_llm
+from app.logging import get_logger
 from storage.models import Conversation, ConversationTurn
 
 log = get_logger(__name__)
@@ -138,7 +136,7 @@ class Assistant:
                     args = {}
 
                 # Auto-inject corpus_id if the tool needs it and the model omitted it
-                if self.corpus_id and "corpus_id" in (fn_schema := _tool_param_names(name)):
+                if self.corpus_id and "corpus_id" in _tool_param_names(name):
                     if "corpus_id" not in args:
                         args["corpus_id"] = self.corpus_id
 

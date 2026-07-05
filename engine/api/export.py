@@ -2,11 +2,11 @@
 from __future__ import annotations
 
 import io
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from stats.service import (
@@ -57,7 +57,7 @@ class ExportKeynessRequest(BaseModel):
 
 def _xlsx_stream(sheet_name: str, headers: list[str], rows: list[list]) -> bytes:
     from openpyxl import Workbook
-    from openpyxl.styles import Font, PatternFill, Alignment
+    from openpyxl.styles import Alignment, Font, PatternFill
     wb = Workbook()
     ws = wb.active
     ws.title = sheet_name[:31]  # Excel limit
@@ -90,7 +90,7 @@ async def export_concordance_xlsx(cid: str, body: ExportConcordanceRequest, sess
     headers = ["Line ID", "Document", "Sentence", "Token Idx", "Left Context", "Node", "Right Context", "POS", "Lemma"]
     rows = [[l.line_id, l.document_filename, l.sentence_idx, l.token_idx, l.left, l.node, l.right, l.pos, l.lemma] for l in r.lines]
     data = _xlsx_stream("Concordance", headers, rows)
-    fname = f"concordance_{cid}_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.xlsx"
+    fname = f"concordance_{cid}_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}.xlsx"
     return StreamingResponse(io.BytesIO(data), media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                              headers={"Content-Disposition": f'attachment; filename="{fname}"'})
 
@@ -103,7 +103,7 @@ async def export_frequency_xlsx(cid: str, body: ExportFrequencyRequest, session:
     headers = [body.unit.capitalize(), "Frequency", "Per Million", "Percent"]
     rows = [[row["item"], row["freq"], row["per_million"], row["percent"]] for row in r.rows]
     data = _xlsx_stream(f"Frequency ({body.unit})", headers, rows)
-    fname = f"frequency_{cid}_{body.unit}_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.xlsx"
+    fname = f"frequency_{cid}_{body.unit}_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}.xlsx"
     return StreamingResponse(io.BytesIO(data), media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                              headers={"Content-Disposition": f'attachment; filename="{fname}"'})
 
@@ -126,7 +126,7 @@ async def export_collocations_xlsx(cid: str, body: ExportCollocationRequest, ses
         rows.append([row.get("collocate"), row.get("O"), row.get("fx"), row.get("fy"), row.get("N")] +
                     [row.get(k) for k in headers[5:]])
     data = _xlsx_stream(f"Collocations ({body.node})", headers, rows)
-    fname = f"collocations_{cid}_{body.node}_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.xlsx"
+    fname = f"collocations_{cid}_{body.node}_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}.xlsx"
     return StreamingResponse(io.BytesIO(data), media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                              headers={"Content-Disposition": f'attachment; filename="{fname}"'})
 
@@ -149,7 +149,7 @@ async def export_keyness_xlsx(cid: str, body: ExportKeynessRequest, session: Asy
                      row.get("log_ratio"), row.get("pct_diff"),
                      row.get("simple_maths"), row.get("odds_ratio"), "negative"])
     data = _xlsx_stream("Keyness", headers, rows)
-    fname = f"keyness_{cid}_vs_{body.reference_corpus_id}_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.xlsx"
+    fname = f"keyness_{cid}_vs_{body.reference_corpus_id}_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}.xlsx"
     return StreamingResponse(io.BytesIO(data), media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                              headers={"Content-Disposition": f'attachment; filename="{fname}"'})
 
@@ -162,12 +162,12 @@ async def export_keyness_xlsx(cid: str, body: ExportKeynessRequest, session: Asy
 @router.get("/corpora/{cid}/methods.pdf")
 async def export_methods_pdf(cid: str, session: AsyncSession = Depends(get_session)) -> StreamingResponse:
     """Auto-draft a methodology paragraph (§8.23) for the corpus's pipeline recipe."""
-    from reportlab.lib.pagesizes import A4
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.lib.units import cm
-    from reportlab.lib.enums import TA_LEFT
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
     from reportlab.lib import colors
+    from reportlab.lib.enums import TA_LEFT
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+    from reportlab.lib.units import cm
+    from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 
     c = await session.get(Corpus, cid)
     if not c:
@@ -224,6 +224,6 @@ async def export_methods_pdf(cid: str, session: AsyncSession = Depends(get_sessi
     ]
     doc.build(flow)
     data = buf.getvalue()
-    fname = f"methods_{cid}_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.pdf"
+    fname = f"methods_{cid}_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}.pdf"
     return StreamingResponse(io.BytesIO(data), media_type="application/pdf",
                              headers={"Content-Disposition": f'attachment; filename="{fname}"'})

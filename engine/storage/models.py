@@ -10,8 +10,7 @@ version rather than silently overwriting the old one (§4.8).
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 from sqlalchemy import (
     JSON,
@@ -21,14 +20,12 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
-    UniqueConstraint,
-    func,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _uuid() -> str:
@@ -56,7 +53,7 @@ class Project(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
 
-    corpora: Mapped[list["Corpus"]] = relationship(back_populates="project", cascade="all, delete-orphan")
+    corpora: Mapped[list[Corpus]] = relationship(back_populates="project", cascade="all, delete-orphan")
 
 
 class Corpus(Base):
@@ -72,9 +69,9 @@ class Corpus(Base):
     stats: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
-    project: Mapped["Project"] = relationship(back_populates="corpora")
-    documents: Mapped[list["Document"]] = relationship(back_populates="corpus", cascade="all, delete-orphan")
-    annotation_versions: Mapped[list["AnnotationVersion"]] = relationship(back_populates="corpus", cascade="all, delete-orphan")
+    project: Mapped[Project] = relationship(back_populates="corpora")
+    documents: Mapped[list[Document]] = relationship(back_populates="corpus", cascade="all, delete-orphan")
+    annotation_versions: Mapped[list[AnnotationVersion]] = relationship(back_populates="corpus", cascade="all, delete-orphan")
 
 
 class Document(Base):
@@ -87,7 +84,7 @@ class Document(Base):
     filename: Mapped[str] = mapped_column(String(512), nullable=False)
     format: Mapped[str] = mapped_column(String(16), default="txt")  # txt|docx|pdf|html|xml|csv
     encoding: Mapped[str] = mapped_column(String(16), default="utf-8")
-    detected_language: Mapped[Optional[str]] = mapped_column(String(8), nullable=True)
+    detected_language: Mapped[str | None] = mapped_column(String(8), nullable=True)
     raw_size_bytes: Mapped[int] = mapped_column(Integer, default=0)
     cleaned_text: Mapped[str] = mapped_column(Text, default="")
     # User-definable metadata (genre, year, author, register, discipline, etc.)
@@ -95,7 +92,7 @@ class Document(Base):
     meta: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
-    corpus: Mapped["Corpus"] = relationship(back_populates="documents")
+    corpus: Mapped[Corpus] = relationship(back_populates="documents")
 
 
 class AnnotationVersion(Base):
@@ -121,8 +118,8 @@ class AnnotationVersion(Base):
     sentence_count: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
-    corpus: Mapped["Corpus"] = relationship(back_populates="annotation_versions")
-    tokens: Mapped[list["Token"]] = relationship(back_populates="version", cascade="all, delete-orphan")
+    corpus: Mapped[Corpus] = relationship(back_populates="annotation_versions")
+    tokens: Mapped[list[Token]] = relationship(back_populates="version", cascade="all, delete-orphan")
 
 
 class Token(Base):
@@ -144,7 +141,7 @@ class Token(Base):
     is_punct: Mapped[bool] = mapped_column(default=False)
     is_stop: Mapped[bool] = mapped_column(default=False)
 
-    version: Mapped["AnnotationVersion"] = relationship(back_populates="tokens")
+    version: Mapped[AnnotationVersion] = relationship(back_populates="tokens")
 
     __table_args__ = (
         Index("ix_tokens_version_text", "version_id", "text"),
@@ -164,14 +161,14 @@ class Conversation(Base):
     __tablename__ = "conversations"
 
     id: Mapped[str] = mapped_column(String(16), primary_key=True, default=_uuid)
-    project_id: Mapped[Optional[str]] = mapped_column(ForeignKey("projects.id", ondelete="SET NULL"), nullable=True, index=True)
+    project_id: Mapped[str | None] = mapped_column(ForeignKey("projects.id", ondelete="SET NULL"), nullable=True, index=True)
     provider: Mapped[str] = mapped_column(String(32), default="ollama")
     model: Mapped[str] = mapped_column(String(128), default="")
-    framework: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)  # active framework lens
+    framework: Mapped[str | None] = mapped_column(String(64), nullable=True)  # active framework lens
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
 
-    turns: Mapped[list["ConversationTurn"]] = relationship(back_populates="conversation", cascade="all, delete-orphan", order_by="ConversationTurn.idx")
+    turns: Mapped[list[ConversationTurn]] = relationship(back_populates="conversation", cascade="all, delete-orphan", order_by="ConversationTurn.idx")
 
 
 class ConversationTurn(Base):
@@ -190,4 +187,4 @@ class ConversationTurn(Base):
     elapsed_ms: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
-    conversation: Mapped["Conversation"] = relationship(back_populates="turns")
+    conversation: Mapped[Conversation] = relationship(back_populates="turns")

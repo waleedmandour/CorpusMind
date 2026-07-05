@@ -14,9 +14,7 @@ from __future__ import annotations
 
 import csv
 import io
-import os
 from pathlib import Path
-from typing import Optional
 
 from bs4 import BeautifulSoup
 from charset_normalizer import from_bytes
@@ -118,7 +116,7 @@ def parse_pdf(raw: bytes) -> str:
 
 
 def parse_html(raw: bytes) -> str:
-    text, enc = decode_bytes(raw)
+    text, _enc = decode_bytes(raw)
     soup = BeautifulSoup(text, "lxml")
     # Strip script/style
     for tag in soup(["script", "style", "noscript"]):
@@ -139,7 +137,7 @@ def parse_xml(raw: bytes) -> str:
 
 
 def parse_csv(raw: bytes) -> str:
-    text, enc = decode_bytes(raw)
+    text, _enc = decode_bytes(raw)
     reader = csv.DictReader(io.StringIO(text))
     # Prefer a column literally named 'text', otherwise the first column
     field = "text" if "text" in (reader.fieldnames or []) else (reader.fieldnames or ["text"])[0]

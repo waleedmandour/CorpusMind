@@ -20,7 +20,7 @@ async def client():
     # Reset module-level state so the new env vars take effect
     from app.settings import get_settings
     get_settings.cache_clear()
-    from storage.session import _engine, _sessionmaker, dispose_db, init_db
+    from storage.session import _engine, dispose_db
     _engine.clear() if hasattr(_engine, "clear") else None
 
     from app.main import app

@@ -1,5 +1,5 @@
 """
-Phase 1 grounded-AI tool registry (§11.2).
+Phase 1+2 grounded-AI tool registry (§11.2).
 
 Each tool is a closure over an async session factory so it can run DB queries
 on demand. Every tool returns plain dict / list output that the model can cite
@@ -8,13 +8,22 @@ true whenever at least one tool was invoked.
 """
 from __future__ import annotations
 
-import json
 import time
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.logging import get_logger
+from discourse.service import (
+    compute_dependency_analysis,
+    compute_discourse_analysis,
+    compute_grammar_analysis,
+    compute_metaphor_candidates,
+    compute_ngrams,
+    compute_pos_analysis,
+    compute_sentiment,
+    compute_vocab_profile,
+)
 from stats.service import (
     compute_collocations,
     compute_dispersion,
@@ -104,6 +113,90 @@ async def _get_dispersion(session: AsyncSession, *, corpus_id: str, term: str,
         "juillands_d": r.juillands_d,
         "gries_dp": r.gries_dp,
         "per_part_freqs": r.per_part_freqs,
+    }
+
+
+# --------------------------------------------------------------------------- #
+# Phase 2 tools
+# --------------------------------------------------------------------------- #
+
+
+async def _get_ngrams(session: AsyncSession, *, corpus_id: str, n: int = 2,
+                     min_freq: int = 5, min_range: int = 1, limit: int = 20) -> dict:
+    r = await compute_ngrams(session, corpus_id, n=n, min_freq=min_freq,
+                              min_range=min_range, limit=limit)
+    return {
+        "n": r.n, "total_tokens": r.total_tokens,
+        "top_ngrams": r.rows,
+        "min_freq": r.min_freq, "min_range": r.min_range,
+    }
+
+
+async def _get_pos_analysis(session: AsyncSession, *, corpus_id: str,
+                            n: int = 2, limit: int = 20) -> dict:
+    r = await compute_pos_analysis(session, corpus_id, n=n, limit=limit)
+    return {
+        "total_tokens": r.total_tokens,
+        "distribution_top": r.distribution[:10],
+        "pos_ngrams_top": r.pos_ngrams[:limit],
+    }
+
+
+async def _grammar_query(session: AsyncSession, *, corpus_id: str,
+                         patterns: list[str] | None = None, limit: int = 10) -> dict:
+    r = await compute_grammar_analysis(session, corpus_id, patterns=patterns, limit=limit)
+    return {
+        "counts": r.counts,
+        "examples": {p: r.patterns.get(p, [])[:limit] for p in (patterns or r.counts.keys())},
+    }
+
+
+async def _dependency_query(session: AsyncSession, *, corpus_id: str,
+                             relation: str = "nsubj", limit: int = 20) -> dict:
+    r = await compute_dependency_analysis(session, corpus_id, relation=relation, limit=limit)
+    return {"relation": r.relation, "top_pairs": r.rows}
+
+
+async def _discourse_analysis(session: AsyncSession, *, corpus_id: str) -> dict:
+    r = await compute_discourse_analysis(session, corpus_id)
+    return {
+        "taxonomy": r.taxonomy,
+        "total_tokens": r.total_tokens,
+        "categories": r.categories,
+    }
+
+
+async def _vocab_profile(session: AsyncSession, *, corpus_id: str) -> dict:
+    r = await compute_vocab_profile(session, corpus_id)
+    return {
+        "total_tokens": r.total_tokens,
+        "total_types": r.total_types,
+        "bands": r.bands,
+        "rare_words_count": len(r.rare_words),
+        "academic_words_count": len(r.academic_words),
+    }
+
+
+async def _sentiment(session: AsyncSession, *, corpus_id: str) -> dict:
+    r = await compute_sentiment(session, corpus_id)
+    return {
+        "total_sentences": r.total_sentences,
+        "positive": r.positive, "negative": r.negative, "neutral": r.neutral,
+        "avg_score": r.avg_score,
+    }
+
+
+async def _metaphor_candidates(session: AsyncSession, *, corpus_id: str,
+                                limit: int = 10) -> dict:
+    r = await compute_metaphor_candidates(session, corpus_id, limit=limit)
+    return {
+        "pipeline": r.pipeline,
+        "verified_count": r.verified_count,
+        "candidate_count": len(r.candidates),
+        "candidates": r.candidates[:limit],
+        "note": ("These are candidates only — the LLM triages via MIPVU decision "
+                 "steps, and a human must verify before any candidate counts as a "
+                 "confirmed metaphor in export/statistics (§8.17)."),
     }
 
 
@@ -222,6 +315,159 @@ TOOL_SCHEMAS: list[dict] = [
     {
         "type": "function",
         "function": {
+            "name": "get_ngrams",
+            "description": (
+                "Compute n-grams (2-10) with the frequency-and-range criterion (§8.8). "
+                "Lexical bundles require BOTH a minimum frequency AND a minimum number "
+                "of distinct documents — report both when summarizing."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "corpus_id": {"type": "string"},
+                    "n": {"type": "integer", "default": 2, "minimum": 2, "maximum": 10},
+                    "min_freq": {"type": "integer", "default": 5},
+                    "min_range": {"type": "integer", "default": 1, "description": "Min distinct documents"},
+                    "limit": {"type": "integer", "default": 20},
+                },
+                "required": ["corpus_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_pos_analysis",
+            "description": (
+                "Get POS distribution + POS n-grams (§8.11). Use n=1 for distribution, "
+                "n=2 for POS bigrams, etc. Useful for stylistic analysis."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "corpus_id": {"type": "string"},
+                    "n": {"type": "integer", "default": 2, "minimum": 1, "maximum": 5},
+                    "limit": {"type": "integer", "default": 20},
+                },
+                "required": ["corpus_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "grammar_query",
+            "description": (
+                "Run dependency-driven grammar pattern detectors (§8.12): passive_voice, "
+                "modal, negation, relative_clause, complex_np, tense. Returns counts and "
+                "example sentences with evidence IDs."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "corpus_id": {"type": "string"},
+                    "patterns": {
+                        "type": "array", "items": {"type": "string"},
+                        "description": "Subset of: passive_voice, modal, negation, relative_clause, complex_np, tense. Default: all.",
+                    },
+                    "limit": {"type": "integer", "default": 10},
+                },
+                "required": ["corpus_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "dependency_query",
+            "description": (
+                "Query dependency relations (§8.13): most common governor-dependent pairs "
+                "for a given relation (nsubj, obj, iobj, obl, etc.). Useful for verb-valency "
+                "and argument-structure analysis."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "corpus_id": {"type": "string"},
+                    "relation": {"type": "string", "default": "nsubj"},
+                    "limit": {"type": "integer", "default": 20},
+                },
+                "required": ["corpus_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "discourse_analysis",
+            "description": (
+                "Detect Hyland's metadiscourse markers (§8.15): interactive (transitions, "
+                "frame_markers, endophoric_markers, evidentials, code_glosses) + interactional "
+                "(hedges, boosters, attitude_markers, self_mentions, engagement_markers). "
+                "Always cite the taxonomy (Hyland 2005) in your answer."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {"corpus_id": {"type": "string"}},
+                "required": ["corpus_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "vocab_profile",
+            "description": (
+                "Profile vocabulary into frequency bands (K1, K2-K9, AWL, Off-list) — §8.10. "
+                "Also reports rare words and academic words. Uses a starter AWL subset; "
+                "Phase 3 swaps in a proper open frequency corpus."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {"corpus_id": {"type": "string"}},
+                "required": ["corpus_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "sentiment",
+            "description": (
+                "Per-sentence sentiment analysis (§8.18). Returns positive/negative/neutral "
+                "counts + average score (-1 to +1). Lexicon-based; Phase 3 swaps in VADER or "
+                "a transformers model behind the same interface."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {"corpus_id": {"type": "string"}},
+                "required": ["corpus_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "metaphor_candidates",
+            "description": (
+                "Find metaphor candidates (§8.17) — verbs with abstract subjects. These are "
+                "CANDIDATES ONLY. You (the LLM) triage them via MIPVU decision steps, and a "
+                "HUMAN must verify before any candidate counts as a confirmed metaphor in "
+                "export/statistics. This verification gate is load-bearing for validity."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "corpus_id": {"type": "string"},
+                    "limit": {"type": "integer", "default": 10},
+                },
+                "required": ["corpus_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "ping",
             "description": "Health-check tool. Returns engine version + timestamp.",
             "parameters": {"type": "object", "properties": {}},
@@ -232,12 +478,23 @@ TOOL_SCHEMAS: list[dict] = [
 
 # Maps tool name → async implementation that takes (session, **args)
 TOOL_IMPLS = {
+    # Phase 1
     "search_concordance": _search_concordance,
     "get_frequency": _get_frequency,
     "compute_collocations": _compute_collocations,
     "compute_keyness": _compute_keyness,
     "get_dispersion": _get_dispersion,
-    "ping": lambda **_: {"ok": True, "engine": "corpusmind-engine", "ts": __import__("time").time()},
+    # Phase 2
+    "get_ngrams": _get_ngrams,
+    "get_pos_analysis": _get_pos_analysis,
+    "grammar_query": _grammar_query,
+    "dependency_query": _dependency_query,
+    "discourse_analysis": _discourse_analysis,
+    "vocab_profile": _vocab_profile,
+    "sentiment": _sentiment,
+    "metaphor_candidates": _metaphor_candidates,
+    # Utility
+    "ping": lambda **_: {"ok": True, "engine": "corpusmind-engine", "ts": time.time()},
 }
 
 

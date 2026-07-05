@@ -13,8 +13,9 @@ from __future__ import annotations
 
 import abc
 import json
+from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
-from typing import Any, AsyncIterator, Literal
+from typing import Any, Literal
 
 import httpx
 

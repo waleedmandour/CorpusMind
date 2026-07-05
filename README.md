@@ -53,8 +53,20 @@ Phase 1 — **Suite A MVP** (per the [phased roadmap](docs/AI_AGENT_BUILD_PROMPT
 - ✅ Grounded-AI tool surface — `search_concordance`, `get_frequency`, `compute_collocations`, `compute_keyness`, `get_dispersion`; conversations persist in SQLite
 - ✅ Export — Excel (concordance/frequency/collocation/keyness) + auto-drafted Methods PDF
 - ✅ Web UI — corpus manager, concordancer, analysis tabs, Assistant with clickable evidence citations
-- ✅ 32 tests passing (23 stats unit + 9 API integration)
-- 🚧 Phase 2 — Suite A completion (n-grams, dispersion plots, vocabulary profiling, POS/grammar/dependency analysis, discourse, pragmatics, metaphor, sentiment)
+
+### Phase 2 — Suite A completion ✅
+- ✅ §8.8 N-grams + lexical bundles (frequency-and-range criterion, Biber et al.)
+- ✅ §8.10 Vocabulary profiling (K1/K2-K9/AWL/Off-list bands; rare words; academic words)
+- ✅ §8.11 POS analysis (distribution + POS n-grams 1–5)
+- ✅ §8.12 Grammar analysis (dependency-driven: passive, modal, negation, relative clause, complex NP, tense)
+- ✅ §8.13 Dependency analysis (governor-dependent pairs for any UD relation)
+- ✅ §8.15 Discourse analysis (Hyland's interactive + interactional metadiscourse taxonomy)
+- ✅ §8.17 Metaphor candidates (MIPVU-inspired, LLM-triaged, human-verified gate)
+- ✅ §8.18 Sentiment analysis (lexicon-based, per-sentence timeline)
+- ✅ 8 new grounded-AI tools (14 total): `get_ngrams`, `get_pos_analysis`, `grammar_query`, `dependency_query`, `discourse_analysis`, `vocab_profile`, `sentiment`, `metaphor_candidates`
+- ✅ 46 tests passing (23 stats + 9 Phase 1 API + 14 Phase 2 API)
+- ✅ Code review completed: 149 ruff lint errors → 0; spec compliance audit documented
+- 🚧 Phase 3 — Arabic depth pass (CAMeL Tools / SinaTools / Farasa, dialect ID, RTL hardening, §8.21–8.22)
 
 ---
 

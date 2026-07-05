@@ -185,6 +185,122 @@ export interface DispersionResult {
 }
 
 // ----------------------------------------------------------------------- //
+// Phase 2 types
+// ----------------------------------------------------------------------- //
+
+export interface NGramRow {
+  ngram: string;
+  freq: number;
+  per_million: number;
+  range: number;
+  range_percent: number;
+}
+
+export interface NGramResult {
+  n: number;
+  total_tokens: number;
+  rows: NGramRow[];
+  min_freq: number;
+  min_range: number;
+}
+
+export interface POSDistributionRow {
+  pos: string;
+  freq: number;
+  percent: number;
+}
+
+export interface POSNGramRow {
+  pattern: string;
+  freq: number;
+}
+
+export interface POSAnalysisResult {
+  total_tokens: number;
+  distribution: POSDistributionRow[];
+  pos_ngrams: POSNGramRow[];
+  n: number;
+}
+
+export interface GrammarMatch {
+  pattern: string;
+  doc: string;
+  sent: number;
+  evidence_id: string;
+  [key: string]: unknown;
+}
+
+export interface GrammarResult {
+  patterns: Record<string, GrammarMatch[]>;
+  counts: Record<string, number>;
+}
+
+export interface DependencyRow {
+  governor: string;
+  dependent: string;
+  relation: string;
+  freq: number;
+  examples: string[];
+}
+
+export interface DependencyResult {
+  relation: string;
+  rows: DependencyRow[];
+}
+
+export interface DiscourseCategory {
+  freq: number;
+  per_million: number;
+  examples: Array<{ cue: string; evidence_id: string; sentence_preview: string }>;
+}
+
+export interface DiscourseResult {
+  categories: Record<string, DiscourseCategory>;
+  total_tokens: number;
+  taxonomy: string;
+}
+
+export interface VocabBand {
+  band: string;
+  freq: number;
+  percent: number;
+}
+
+export interface VocabProfileResult {
+  total_tokens: number;
+  total_types: number;
+  bands: VocabBand[];
+  rare_words: Array<{ word: string; freq: number }>;
+  academic_words: Array<{ word: string; freq: number }>;
+}
+
+export interface SentimentResult {
+  total_sentences: number;
+  positive: number;
+  negative: number;
+  neutral: number;
+  avg_score: number;
+  timeline: Array<{ doc: string; sent: number; score: number; pos_hits: number; neg_hits: number }>;
+}
+
+export interface MetaphorCandidate {
+  word: string;
+  lemma: string;
+  pos: string;
+  subject: string;
+  subject_lemma: string;
+  sentence: string;
+  evidence_id: string;
+  reason: string;
+}
+
+export interface MetaphorResult {
+  candidates: MetaphorCandidate[];
+  pipeline: string;
+  verified_count: number;
+}
+
+// ----------------------------------------------------------------------- //
 // Fetch helper
 // ----------------------------------------------------------------------- //
 
@@ -280,6 +396,49 @@ export const api = {
     jsonFetch<DispersionResult>(`/api/v1/corpora/${cid}/dispersion`, {
       method: "POST",
       body: JSON.stringify({ term, level }),
+    }),
+
+  // --- Phase 2 analysis ---
+  ngrams: (cid: string, n = 2, min_freq = 5, min_range = 1, limit = 200) =>
+    jsonFetch<NGramResult>(`/api/v1/corpora/${cid}/ngrams`, {
+      method: "POST",
+      body: JSON.stringify({ n, min_freq, min_range, limit }),
+    }),
+
+  posAnalysis: (cid: string, n = 2, min_freq = 2, limit = 100) =>
+    jsonFetch<POSAnalysisResult>(`/api/v1/corpora/${cid}/pos-analysis`, {
+      method: "POST",
+      body: JSON.stringify({ n, min_freq, limit }),
+    }),
+
+  grammar: (cid: string, patterns?: string[], limit = 50) =>
+    jsonFetch<GrammarResult>(`/api/v1/corpora/${cid}/grammar`, {
+      method: "POST",
+      body: JSON.stringify({ patterns, limit }),
+    }),
+
+  dependencies: (cid: string, relation = "nsubj", limit = 100) =>
+    jsonFetch<DependencyResult>(`/api/v1/corpora/${cid}/dependencies`, {
+      method: "POST",
+      body: JSON.stringify({ relation, limit }),
+    }),
+
+  discourse: (cid: string) =>
+    jsonFetch<DiscourseResult>(`/api/v1/corpora/${cid}/discourse`, { method: "POST" }),
+
+  vocabProfile: (cid: string, rare_threshold = 1, limit = 100) =>
+    jsonFetch<VocabProfileResult>(`/api/v1/corpora/${cid}/vocab-profile`, {
+      method: "POST",
+      body: JSON.stringify({ rare_threshold, limit }),
+    }),
+
+  sentiment: (cid: string) =>
+    jsonFetch<SentimentResult>(`/api/v1/corpora/${cid}/sentiment`, { method: "POST" }),
+
+  metaphorCandidates: (cid: string, limit = 50) =>
+    jsonFetch<MetaphorResult>(`/api/v1/corpora/${cid}/metaphor-candidates`, {
+      method: "POST",
+      body: JSON.stringify({ limit }),
     }),
 
   // --- Export ---

@@ -6,7 +6,6 @@ Used by the corpus-management API (§8.1, §8.2).
 from __future__ import annotations
 
 import time
-from datetime import datetime, timezone
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession

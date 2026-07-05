@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,7 +10,7 @@ from ai import Assistant
 from ai.tools import list_tools
 from app.logging import get_logger
 from storage.models import Conversation
-from storage.session import get_session, session_scope
+from storage.session import get_session
 
 log = get_logger(__name__)
 router = APIRouter()
@@ -41,7 +40,7 @@ async def chat(req: ChatRequest, request: Request, session: AsyncSession = Depen
     try:
         provider = request.app.state.providers.get(req.provider)
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Provider error: {e}")
+        raise HTTPException(status_code=400, detail=f"Provider error: {e}") from e
 
     # Load or create conversation
     convo = None
@@ -57,7 +56,7 @@ async def chat(req: ChatRequest, request: Request, session: AsyncSession = Depen
         turn = await assistant.answer(session, convo, req.message)
     except Exception as e:
         log.error("chat_failed", error=str(e))
-        raise HTTPException(status_code=502, detail=f"Model call failed: {e}")
+        raise HTTPException(status_code=502, detail=f"Model call failed: {e}") from e
 
     return ChatResponse(
         conversation_id=convo.id,

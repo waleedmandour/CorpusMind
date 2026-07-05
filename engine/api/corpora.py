@@ -1,10 +1,9 @@
 """Corpus management API routes (§8.1, §8.2)."""
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import datetime
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -167,7 +166,7 @@ class DocumentOut(BaseModel):
     filename: str
     format: str
     encoding: str
-    detected_language: Optional[str]
+    detected_language: str | None
     raw_size_bytes: int
     meta: dict
     created_at: datetime
@@ -177,7 +176,7 @@ class DocumentOut(BaseModel):
 async def upload_documents(
     cid: str,
     files: list[UploadFile] = File(...),
-    language: Optional[str] = Form(None),
+    language: str | None = Form(None),
     session: AsyncSession = Depends(get_session),
 ) -> list[DocumentOut]:
     """Upload one or more files into the corpus. Each is parsed, cleaned,
@@ -202,7 +201,7 @@ async def upload_documents(
             ))
         except Exception as e:
             log.error("ingest_failed", filename=f.filename, error=str(e))
-            raise HTTPException(400, f"Failed to ingest '{f.filename}': {e}")
+            raise HTTPException(400, f"Failed to ingest '{f.filename}': {e}") from e
     return out
 
 

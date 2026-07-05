@@ -237,3 +237,80 @@ Every result screen in CorpusMind shows which measure(s) and parameters
 The "Export Methods Section" feature (§8.23, Phase 1) auto-drafts a
 methodology paragraph citing this document and the engine version that
 produced the analysis, for the user to paste into a manuscript.
+
+---
+
+## Phase 2 analytic frameworks
+
+The Phase 2 measures are framework-pinned so results are citable and
+comparable across studies:
+
+### Metadiscourse (§8.15)
+
+Hyland, K. (2005). *Metadiscourse: Exploring interaction in writing.*
+Continuum.
+
+Categories implemented (10 total):
+
+**Interactive** (how the writer organizes the text):
+- Transitions — logical relations between propositions (`however`, `therefore`, `moreover`)
+- Frame markers — sequence, topic, discourse stage (`first`, `in conclusion`, `to summarize`)
+- Endophoric markers — reference to other parts of the text (`see figure`, `as noted above`)
+- Evidentials — attribution to other sources (`according to`, `cited in`)
+- Code glosses — reformulation / explanation (`namely`, `in other words`, `e.g.`)
+
+**Interactional** (how the writer involves the reader):
+- Hedges — withhold full commitment (`perhaps`, `may`, `appear to`)
+- Boosters — emphasize certainty (`clearly`, `undoubtedly`, `in fact`)
+- Attitude markers — express writer's attitude (`surprisingly`, `importantly`)
+- Self-mentions — first-person pronouns referring to the writer (`I`, `we`, `our`)
+- Engagement markers — explicitly address the reader (`consider`, `note that`, `you`)
+
+### Lexical bundles (§8.8)
+
+Biber, D., Johansson, S., Leech, G., Conrad, S., & Finegan, E. (1999).
+*Longman grammar of spoken and written English.* Pearson Education.
+
+A lexical bundle is a multi-word sequence that meets BOTH:
+1. A minimum frequency per million words (default: 5)
+2. A minimum number of distinct texts/speakers (default: 1, but Biber et al.
+   recommend ≥3 for spoken corpora and ≥5 for written)
+
+CorpusMind reports both metrics — never raw frequency alone.
+
+### Vocabulary profiling (§8.10)
+
+Coxhead, A. (2000). A new academic word list. *TESOL Quarterly*, 34(2), 213–238.
+
+The Academic Word List (AWL) contains 570 word families selected from a
+3.5-million-word academic corpus. CorpusMind ships a starter subset (~60
+high-frequency AWL families); Phase 3 will expand to the full 570 + integrate
+open frequency corpora for the K1–K5 bands.
+
+### Metaphor detection (§8.17)
+
+Steen, G. J., Dorst, A. G., Herrmann, J. B., Kaal, A. A., Krennmayr, T., &
+Pasma, T. (2010). *A method for linguistic metaphor identification: MIPVU.*
+John Benjamins.
+
+CorpusMind's metaphor pipeline is **MIPVU-inspired** and runs in three stages:
+1. **Candidate generation** (this engine): verbs with abstract subjects — a
+   heuristic starter; Phase 3 will add embedding-based comparison.
+2. **LLM triage**: the AI Assistant compares contextual vs. basic meaning per
+   the MIPVU decision steps (contextual meaning vs. more basic/concrete
+   meaning, contrast-but-comprehensible-via-comparison test).
+3. **Human verification** (load-bearing): the researcher confirms or rejects
+   each candidate before it counts as a confirmed metaphor in any export or
+   statistic. Current evidence shows LLMs alone under-perform supervised
+   detectors and especially struggle to filter literal false positives — the
+   verification step is not optional UI polish, it is load-bearing for
+   validity.
+
+### Grammar pattern detection (§8.12)
+
+Detectors are **dependency-parse-driven** (not regex over surface text),
+following Universal Dependencies conventions. They handle both UD v2 labels
+(`aux:pass`, `acl:relc`) and spaCy legacy labels (`auxpass`, `relcl`) —
+`en_core_web_sm` still uses the latter.
+
+Universal Dependencies: <https://universaldependencies.org/>

@@ -1,9 +1,9 @@
 /**
- * Analysis — frequency, collocation, keyness, dispersion (§8.5–8.9).
+ * Analysis — frequency, collocation, keyness, dispersion, n-grams, POS,
+ * grammar, dependency, discourse, vocabulary, sentiment, metaphor.
  *
- * The collocation view's measure selector and the keyness view's combined
- * significance + effect-size display are the load-bearing UI for §4
- * Principle 3: "Effect size and significance, always together."
+ * Phase 1 (left half of tabs): frequency / collocation / keyness / dispersion
+ * Phase 2 (right half): ngrams / pos / grammar / dep / discourse / vocab / sentiment / metaphor
  */
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -12,7 +12,24 @@ import clsx from "clsx";
 import { api, downloadBlob } from "@/lib/api";
 import { useApp } from "@/store/app";
 
-type Tab = "frequency" | "collocation" | "keyness" | "dispersion";
+type Tab =
+  | "frequency" | "collocation" | "keyness" | "dispersion"
+  | "ngrams" | "pos" | "grammar" | "dep" | "discourse" | "vocab" | "sentiment" | "metaphor";
+
+const TABS: { id: Tab; label: string; phase: 1 | 2 }[] = [
+  { id: "frequency", label: "Frequency", phase: 1 },
+  { id: "collocation", label: "Collocation", phase: 1 },
+  { id: "keyness", label: "Keyness", phase: 1 },
+  { id: "dispersion", label: "Dispersion", phase: 1 },
+  { id: "ngrams", label: "N-grams", phase: 2 },
+  { id: "pos", label: "POS", phase: 2 },
+  { id: "grammar", label: "Grammar", phase: 2 },
+  { id: "dep", label: "Dependency", phase: 2 },
+  { id: "discourse", label: "Discourse", phase: 2 },
+  { id: "vocab", label: "Vocabulary", phase: 2 },
+  { id: "sentiment", label: "Sentiment", phase: 2 },
+  { id: "metaphor", label: "Metaphor", phase: 2 },
+];
 
 export function AnalysisView() {
   const cid = useApp((s) => s.activeCorpusId);
@@ -23,9 +40,14 @@ export function AnalysisView() {
   return (
     <div className="analysis">
       <div className="tabs">
-        {(["frequency", "collocation", "keyness", "dispersion"] as Tab[]).map((t) => (
-          <button key={t} className={clsx("tab", { active: tab === t })} onClick={() => setTab(t)}>
-            {t.charAt(0).toUpperCase() + t.slice(1)}
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            className={clsx("tab", { active: tab === t.id, "phase-2": t.phase === 2 })}
+            onClick={() => setTab(t.id)}
+            title={t.phase === 2 ? "Phase 2 feature" : undefined}
+          >
+            {t.label}{t.phase === 2 ? " ·2" : ""}
           </button>
         ))}
       </div>
@@ -34,6 +56,14 @@ export function AnalysisView() {
       {tab === "collocation" && <CollocationPanel cid={cid} />}
       {tab === "keyness" && <KeynessPanel cid={cid} />}
       {tab === "dispersion" && <DispersionPanel cid={cid} />}
+      {tab === "ngrams" && <NGramsPanel cid={cid} />}
+      {tab === "pos" && <POSPanel cid={cid} />}
+      {tab === "grammar" && <GrammarPanel cid={cid} />}
+      {tab === "dep" && <DependencyPanel cid={cid} />}
+      {tab === "discourse" && <DiscoursePanel cid={cid} />}
+      {tab === "vocab" && <VocabPanel cid={cid} />}
+      {tab === "sentiment" && <SentimentPanel cid={cid} />}
+      {tab === "metaphor" && <MetaphorPanel cid={cid} />}
     </div>
   );
 }
@@ -327,4 +357,408 @@ function fmt(v: number | null): string {
   if (v === null || v === undefined) return "—";
   if (!isFinite(v)) return v > 0 ? "∞" : "-∞";
   return v.toFixed(4);
+}
+
+
+// =========================================================================
+// Phase 2 panels
+// =========================================================================
+
+
+function NGramsPanel({ cid }: { cid: string }) {
+  const [n, setN] = useState(2);
+  const [minFreq, setMinFreq] = useState(2);
+  const [minRange, setMinRange] = useState(1);
+  const result = useQuery({
+    queryKey: ["ngrams", cid, n, minFreq, minRange],
+    queryFn: () => api.ngrams(cid, n, minFreq, minRange, 200),
+  });
+
+  return (
+    <div className="panel-content">
+      <div className="toolbar">
+        <label>N
+          <select value={n} onChange={(e) => setN(Number(e.target.value))}>
+            {[2, 3, 4, 5, 6].map((k) => <option key={k} value={k}>{k}</option>)}
+          </select>
+        </label>
+        <label>Min freq
+          <input type="number" min={1} value={minFreq} onChange={(e) => setMinFreq(Number(e.target.value))} />
+        </label>
+        <label>Min range (distinct docs)
+          <input type="number" min={1} value={minRange} onChange={(e) => setMinRange(Number(e.target.value))} />
+        </label>
+      </div>
+
+      <div className="grounding-notice">
+        <strong>§8.8:</strong> Lexical bundles require BOTH a minimum frequency per million words
+        AND a minimum number of distinct texts — raw frequency alone is not enough to
+        distinguish genuine bundles from single-text artifacts (Biber et al.).
+      </div>
+
+      {result.data && (
+        <>
+          <div className="result-meta">
+            <strong>{result.data.total_tokens.toLocaleString()}</strong> tokens ·
+            N = {result.data.n} · min_freq={result.data.min_freq} · min_range={result.data.min_range}
+          </div>
+          <DataTable
+            headers={["N-gram", "Frequency", "Per million", "Range (docs)", "Range %"]}
+            rows={result.data.rows.map((r) => [r.ngram, r.freq, r.per_million, r.range, r.range_percent])}
+          />
+        </>
+      )}
+    </div>
+  );
+}
+
+
+function POSPanel({ cid }: { cid: string }) {
+  const [n, setN] = useState(1);
+  const result = useQuery({
+    queryKey: ["pos", cid, n],
+    queryFn: () => api.posAnalysis(cid, n, 2, 100),
+  });
+
+  return (
+    <div className="panel-content">
+      <div className="toolbar">
+        <label>N
+          <select value={n} onChange={(e) => setN(Number(e.target.value))}>
+            <option value={1}>1 (distribution)</option>
+            <option value={2}>2 (bigrams)</option>
+            <option value={3}>3 (trigrams)</option>
+            <option value={4}>4</option>
+            <option value={5}>5</option>
+          </select>
+        </label>
+      </div>
+
+      {result.data && n === 1 && (
+        <>
+          <div className="result-meta"><strong>{result.data.total_tokens.toLocaleString()}</strong> tokens</div>
+          <h3>POS distribution</h3>
+          <DataTable
+            headers={["POS", "Frequency", "%"]}
+            rows={result.data.distribution.map((r) => [r.pos, r.freq, r.percent])}
+          />
+        </>
+      )}
+      {result.data && n >= 2 && (
+        <>
+          <div className="result-meta"><strong>{result.data.total_tokens.toLocaleString()}</strong> tokens</div>
+          <h3>Top POS {n}-grams</h3>
+          <DataTable
+            headers={["Pattern", "Frequency"]}
+            rows={result.data.pos_ngrams.map((r) => [r.pattern, r.freq])}
+          />
+        </>
+      )}
+    </div>
+  );
+}
+
+
+const GRAMMAR_PATTERNS = ["passive_voice", "modal", "negation", "relative_clause", "complex_np", "tense"] as const;
+
+
+function GrammarPanel({ cid }: { cid: string }) {
+  const [selected, setSelected] = useState<string[]>(GRAMMAR_PATTERNS as unknown as string[]);
+  const result = useQuery({
+    queryKey: ["grammar", cid, selected],
+    queryFn: () => api.grammar(cid, selected, 20),
+  });
+
+  const toggle = (p: string) => {
+    setSelected((prev) => prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]);
+  };
+
+  return (
+    <div className="panel-content">
+      <div className="toolbar">
+        <label>Patterns</label>
+        {GRAMMAR_PATTERNS.map((p) => (
+          <label key={p} className="checkbox">
+            <input type="checkbox" checked={selected.includes(p)} onChange={() => toggle(p)} />
+            {p}
+          </label>
+        ))}
+      </div>
+
+      <div className="grounding-notice">
+        <strong>§8.12:</strong> Grammar pattern detectors are <em>dependency-parse-driven</em>,
+        not regex over surface text — so they generalize across genres.
+      </div>
+
+      {result.data && (
+        <>
+          <h3>Counts</h3>
+          <DataTable
+            headers={["Pattern", "Count"]}
+            rows={Object.entries(result.data.counts).map(([p, c]) => [p, c])}
+          />
+          {Object.entries(result.data.patterns).map(([pat, examples]) => (
+            examples.length > 0 && (
+              <div key={pat}>
+                <h3>{pat} — examples</h3>
+                <ul className="grammar-examples">
+                  {examples.map((ex, i) => {
+                    const verb = String(ex.verb ?? "");
+                    const modal = String(ex.modal ?? "");
+                    const negator = String(ex.negator ?? "");
+                    const head = String(ex.head ?? "");
+                    const modifiers = Array.isArray(ex.modifiers) ? ex.modifiers.map(String) : [];
+                    return (
+                      <li key={i}>
+                        <code className="evidence-ref">{ex.evidence_id}</code>
+                        {verb && <span className="ex-verb">verb: <strong>{verb}</strong></span>}
+                        {modal && <span className="ex-modal">modal: <strong>{modal}</strong></span>}
+                        {negator && <span>negator: <strong>{negator}</strong></span>}
+                        {head && modifiers.length > 0 && <span><strong>{head}</strong> ← {modifiers.join(", ")}</span>}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )
+          ))}
+        </>
+      )}
+    </div>
+  );
+}
+
+
+function DependencyPanel({ cid }: { cid: string }) {
+  const [relation, setRelation] = useState("nsubj");
+  const result = useQuery({
+    queryKey: ["dep", cid, relation],
+    queryFn: () => api.dependencies(cid, relation, 100),
+  });
+
+  return (
+    <div className="panel-content">
+      <div className="toolbar">
+        <label>Relation
+          <select value={relation} onChange={(e) => setRelation(e.target.value)}>
+            <option value="nsubj">nsubj (subject)</option>
+            <option value="obj">obj (object)</option>
+            <option value="iobj">iobj (indirect object)</option>
+            <option value="obl">obl (oblique)</option>
+            <option value="amod">amod (adjectival modifier)</option>
+            <option value="compound">compound</option>
+          </select>
+        </label>
+      </div>
+
+      <div className="grounding-notice">
+        <strong>§8.13:</strong> Built as thin queries over the same dependency parses already
+        produced in §8.1 — not a separate pipeline.
+      </div>
+
+      {result.data && (
+        <>
+          <div className="result-meta">Relation: <code>{result.data.relation}</code></div>
+          <DataTable
+            headers={["Governor", "Dependent", "Frequency", "Example evidence IDs"]}
+            rows={result.data.rows.map((r) => [r.governor, r.dependent, r.freq, r.examples.join(" · ")])}
+          />
+        </>
+      )}
+    </div>
+  );
+}
+
+
+function DiscoursePanel({ cid }: { cid: string }) {
+  const result = useQuery({
+    queryKey: ["discourse", cid],
+    queryFn: () => api.discourse(cid),
+  });
+
+  return (
+    <div className="panel-content">
+      <div className="grounding-notice">
+        <strong>§8.15:</strong> Metadiscourse categories follow Hyland's interactive/interactional
+        taxonomy (Hyland 2005) — this makes results citable and comparable across studies.
+      </div>
+
+      {result.data && (
+        <>
+          <div className="result-meta">
+            Taxonomy: <strong>{result.data.taxonomy}</strong> ·
+            <strong>{result.data.total_tokens.toLocaleString()}</strong> tokens
+          </div>
+          {Object.entries(result.data.categories).map(([cat, info]) => (
+            <div key={cat} className="discourse-cat">
+              <h3>{cat} <span className="cat-meta">freq={info.freq} · {info.per_million}/M</span></h3>
+              <ul className="discourse-examples">
+                {info.examples.map((ex, i) => (
+                  <li key={i}>
+                    <code className="evidence-ref">{ex.evidence_id}</code>
+                    <strong>{ex.cue}</strong>
+                    <em>"{ex.sentence_preview}…"</em>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </>
+      )}
+    </div>
+  );
+}
+
+
+function VocabPanel({ cid }: { cid: string }) {
+  const result = useQuery({
+    queryKey: ["vocab", cid],
+    queryFn: () => api.vocabProfile(cid, 1, 100),
+  });
+
+  return (
+    <div className="panel-content">
+      <div className="grounding-notice">
+        <strong>§8.10:</strong> Vocabulary profiling uses an open frequency-band approximation
+        (CC-0 wordlist). EVP-style CEFR wordlists carry redistribution restrictions and are
+        not bundled without confirmed rights.
+      </div>
+
+      {result.data && (
+        <>
+          <div className="result-meta">
+            <strong>{result.data.total_tokens.toLocaleString()}</strong> tokens ·
+            <strong>{result.data.total_types.toLocaleString()}</strong> types
+          </div>
+          <h3>Frequency bands</h3>
+          <DataTable
+            headers={["Band", "Frequency", "%"]}
+            rows={result.data.bands.map((b) => [b.band, b.freq, b.percent])}
+          />
+          {result.data.academic_words.length > 0 && (
+            <>
+              <h3>Academic words (AWL)</h3>
+              <DataTable
+                headers={["Word", "Frequency"]}
+                rows={result.data.academic_words.map((w) => [w.word, w.freq])}
+              />
+            </>
+          )}
+          {result.data.rare_words.length > 0 && (
+            <>
+              <h3>Rare words (frequency ≤ 1)</h3>
+              <DataTable
+                headers={["Word", "Frequency"]}
+                rows={result.data.rare_words.slice(0, 50).map((w) => [w.word, w.freq])}
+              />
+            </>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+
+function SentimentPanel({ cid }: { cid: string }) {
+  const result = useQuery({
+    queryKey: ["sentiment", cid],
+    queryFn: () => api.sentiment(cid),
+  });
+
+  return (
+    <div className="panel-content">
+      <div className="grounding-notice">
+        <strong>§8.18:</strong> Phase 2 uses a lexicon-based sentiment scorer. Phase 3 will swap
+        in VADER or a transformers-based model behind the same interface — results stay comparable
+        because the model + version is pinned per project (§4 Principle 8).
+      </div>
+
+      {result.data && (
+        <>
+          <div className="result-meta">
+            <strong>{result.data.total_sentences}</strong> sentences ·
+            avg score = <strong>{result.data.avg_score}</strong> (-1 to +1)
+          </div>
+          <div className="sentiment-bars">
+            <div className="bar-row">
+              <span className="bar-label">Positive</span>
+              <div className="bar-track"><div className="bar-fill" style={{ width: `${(result.data.positive / result.data.total_sentences) * 100}%`, background: "#2e7d32" }} /></div>
+              <span className="bar-value">{result.data.positive}</span>
+            </div>
+            <div className="bar-row">
+              <span className="bar-label">Neutral</span>
+              <div className="bar-track"><div className="bar-fill" style={{ width: `${(result.data.neutral / result.data.total_sentences) * 100}%`, background: "#9aa3ad" }} /></div>
+              <span className="bar-value">{result.data.neutral}</span>
+            </div>
+            <div className="bar-row">
+              <span className="bar-label">Negative</span>
+              <div className="bar-track"><div className="bar-fill" style={{ width: `${(result.data.negative / result.data.total_sentences) * 100}%`, background: "#c0392b" }} /></div>
+              <span className="bar-value">{result.data.negative}</span>
+            </div>
+          </div>
+          <h3>Sentiment timeline (per sentence)</h3>
+          <div className="sentiment-timeline">
+            {result.data.timeline.slice(0, 100).map((t, i) => (
+              <div key={i} className="timeline-bar"
+                style={{ height: `${Math.abs(t.score) * 40 + 2}px`,
+                         background: t.score > 0 ? "#2e7d32" : t.score < 0 ? "#c0392b" : "#9aa3ad" }}
+                title={`Sent ${t.sent}: score=${t.score} (pos=${t.pos_hits}, neg=${t.neg_hits})`}
+              />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+
+function MetaphorPanel({ cid }: { cid: string }) {
+  const result = useQuery({
+    queryKey: ["metaphor", cid],
+    queryFn: () => api.metaphorCandidates(cid, 50),
+  });
+
+  return (
+    <div className="panel-content">
+      <div className="grounding-notice">
+        <strong>§8.17 (load-bearing):</strong> These are <em>candidates only</em>.
+        The LLM triages them via MIPVU decision steps (contextual vs. basic meaning,
+        contrast-but-comprehensible-via-comparison test), and a <strong>human must
+        verify</strong> before any candidate counts as a confirmed metaphor in export
+        or statistics. Current evidence shows LLMs alone under-perform supervised
+        detectors and especially struggle to filter literal false positives — the
+        verification gate is not optional UI polish, it is load-bearing for validity.
+      </div>
+
+      {result.data && (
+        <>
+          <div className="result-meta">
+            Pipeline: <strong>{result.data.pipeline}</strong> ·
+            <strong>{result.data.candidates.length}</strong> candidates ·
+            <strong>{result.data.verified_count}</strong> verified
+          </div>
+          <ul className="metaphor-candidates">
+            {result.data.candidates.map((c, i) => (
+              <li key={i} className="metaphor-candidate">
+                <header>
+                  <code className="evidence-ref">{c.evidence_id}</code>
+                  <strong className="metaphor-word">{c.word}</strong>
+                  <span className="metaphor-pos">({c.pos})</span>
+                  <span className="metaphor-subject">subject: <em>{c.subject}</em></span>
+                  <button className="verify-btn" title="Mark as verified (Phase 3)">Needs verification</button>
+                </header>
+                <p className="metaphor-sentence">"{c.sentence}"</p>
+                <p className="metaphor-reason">{c.reason}</p>
+              </li>
+            ))}
+          </ul>
+          {result.data.candidates.length === 0 && (
+            <div className="empty-state">No metaphor candidates found in this corpus.</div>
+          )}
+        </>
+      )}
+    </div>
+  );
 }

@@ -1,7 +1,7 @@
 """System endpoints — provider info, model listing, version."""
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, HTTPException, Request
 
 from app import __version__
 from app.settings import get_settings
@@ -43,7 +43,7 @@ async def list_models(name: str, request: Request) -> dict:
     try:
         p = registry.get(name)
     except Exception as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=404, detail=str(e)) from e
     models = await p.list_models()
     return {"provider": name, "models": models}
 
