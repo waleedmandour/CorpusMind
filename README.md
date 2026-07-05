@@ -20,10 +20,10 @@ one design language:
   Semiotics, and Cognitive Linguistics.
 
 Both suites are reachable from a **Progressive Web App** (installable,
-offline-capable) and from **native desktop apps** for Windows, Linux, and
-macOS (built with Tauri 2). Local LLM inference via **Ollama** and/or
-**LM Studio** lets the AI Assistant run entirely on the researcher's own
-machine.
+offline-capable, deployed at [corpus-mind-web.vercel.app](https://corpus-mind-web.vercel.app/))
+and from **native desktop apps** for Windows, Linux, and macOS (built with Tauri 2).
+Local LLM inference via **Ollama** and/or **LM Studio** lets the AI Assistant
+run entirely on the researcher's own machine.
 
 ---
 
@@ -137,6 +137,13 @@ npm run dev                  # serves on http://localhost:5173
 
 Open http://localhost:5173 — the app talks to the engine on :8765 by default.
 To install as a PWA, use your browser's "Install app" menu item.
+
+**Live demo:** The PWA is also deployed at
+[corpus-mind-web.vercel.app](https://corpus-mind-web.vercel.app/).
+Note: the demo PWA needs a running engine instance to function. Point it at
+your engine by setting `VITE_ENGINE_URL` during build or in the Vercel
+environment variables. See [docs/BUILD_GUIDE.md](docs/BUILD_GUIDE.md) for
+Vercel deployment instructions.
 
 ### 3. Run the desktop app (Tauri 2)
 
@@ -318,6 +325,11 @@ CONTRIBUTING.md).
 
 ---
 
+## Authors
+
+- **Waleed Mandour** — Lead architect and full-stack engineer
+- **Prof. Wessam Ibrahim** — Co-author, corpus linguistics and discourse analysis methodology
+
 ## Acknowledgements
 
 CorpusMind stands on the shoulders of a substantial open-source ecosystem,
@@ -328,3 +340,13 @@ literature cited inline throughout the spec — Kress & van Leeuwen, Halliday,
 Fairclough, van Dijk, Wodak, Machin & Mayr, Barthes, Peirce, Lakoff & Johnson,
 Martin & White, Toulmin, Aristotle, Hyland, Biber, Gabrielatos & Marchi, Hardie,
 Kilgarriff, Church & Hanks, Dunning, Rychlý, Gries, and Juilland.
+
+The development of CorpusMind was assisted by an AI agent (Super Z, built on
+the GLM model by Z.ai) which served as a full-stack engineering collaborator
+across all six phases of the build: scaffolding the monorepo, implementing the
+FastAPI engine, the React PWA, the Tauri 2 desktop shell, the grounded-AI tool
+surface, the Arabic NLP pipeline (CAMeL Tools integration), the vision suite
+(image analysis, Visual Grammar, multimodal alignment), the multimodal discourse
+analyses (CDA, persuasion, framing, narrative, metaphor, emotion, cultural),
+and the collaboration/accessibility/encryption features. All AI-generated code
+was reviewed, tested, and committed by the human authors.

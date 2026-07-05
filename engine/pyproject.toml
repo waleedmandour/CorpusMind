@@ -10,7 +10,8 @@ readme = "../README.md"
 requires-python = ">=3.12"
 license = "AGPL-3.0-only"
 authors = [
-    { name = "CorpusMind Contributors" }
+    { name = "Waleed Mandour" },
+    { name = "Prof. Wessam Ibrahim" },
 ]
 keywords = ["corpus-linguistics", "discourse-analysis", "nlp", "arabic", "multimodal", "visual-grammar", "cda", "tauri", "local-llm"]
 classifiers = [

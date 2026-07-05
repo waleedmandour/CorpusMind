@@ -1,5 +1,7 @@
 # Contributing to CorpusMind
 
+**Authors:** Waleed Mandour and Prof. Wessam Ibrahim
+
 Thank you for considering a contribution to CorpusMind. This document explains
 how to set up a development environment, what we expect from contributions,
 and how the review process works.
