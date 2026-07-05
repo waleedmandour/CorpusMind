@@ -1,0 +1,19 @@
+name: martin-white-appraisal
+full_name: "Martin & White (2005) Appraisal Theory"
+version: "0.1.0"
+framework_family: appraisal
+categories:
+  - id: attitude
+    label: Attitude (affect, judgement, appreciation)
+  - id: engagement
+    label: Engagement (heteroglossic positioning)
+  - id: graduation
+    label: Graduation (force, focus)
+output_schema:
+  claim: str
+  evidence_ids: [str]
+  confidence: float
+  framework: "Martin & White (2005) Appraisal"
+  system: str  # attitude | engagement | graduation
+guardrails:
+  - "Appraisal claims must cite the specific lexical item triggering the reading."

@@ -252,6 +252,165 @@ def _arabic_transliterate(*, text: str) -> dict:
 
 
 # --------------------------------------------------------------------------- #
+# Phase 5 tools — multimodal discourse (§9.10–9.14)
+# --------------------------------------------------------------------------- #
+# These wrap the engine's discourse functions for the AI Assistant.
+# They're stateless + sync because the heavy DB work (image loading) is
+# done by the caller — these functions just take pre-fetched analysis data.
+
+
+def _visual_grammar(*, colours: dict, composition: dict, ocr: dict, caption: str = "") -> dict:
+    """Analyse an image against Kress & van Leeuwen's Visual Grammar (§9.10)."""
+    from multimodal.visual_grammar import analyse_visual_grammar
+    from vision.pipeline import ColourAnalysis, CompositionAnalysis, ImageInfo, OCRResult
+    info = ImageInfo(width=0, height=0, format="", mode="RGB", size_bytes=0)
+    ocr_obj = OCRResult(
+        text=ocr.get("text", ""), confidence=ocr.get("confidence", 0),
+        word_count=ocr.get("word_count", 0), engine=ocr.get("engine", "none"),
+        language=ocr.get("language", "auto"),
+    )
+    colours_obj = ColourAnalysis(
+        dominant_colours=colours.get("dominant_colours", []),
+        warm_cold_balance=colours.get("warm_cold_balance", 0),
+        brightness=colours.get("brightness", 0),
+        contrast=colours.get("contrast", 0),
+        saturation=colours.get("saturation", 0),
+        colour_symbolism_notes=colours.get("colour_symbolism_notes", []),
+    )
+    comp_obj = CompositionAnalysis(
+        information_value=composition.get("information_value", {}),
+        rule_of_thirds_intersections=composition.get("rule_of_thirds_intersections", []),
+        salience_centre=tuple(composition.get("salience_centre", [0.5, 0.5])),
+        visual_balance=composition.get("visual_balance", 0),
+        framing_balance=composition.get("framing_balance", 0),
+        vectors=composition.get("vectors", []),
+    )
+    vg = analyse_visual_grammar(info, ocr_obj, colours_obj, comp_obj)
+    return {
+        "framework": vg.framework,
+        "claim_count": len(vg.claims),
+        "top_claims": [
+            {"metafunction": c.metafunction, "category": c.category,
+             "claim": c.claim, "confidence": c.confidence}
+            for c in vg.claims[:5]
+        ],
+    }
+
+
+def _social_semiotic(*, colours: dict, composition: dict, ocr: dict, caption: str = "") -> dict:
+    """Social semiotic analysis (§9.11)."""
+    from multimodal.discourse import analyse_social_semiotic
+    from vision.pipeline import ColourAnalysis, CompositionAnalysis, OCRResult
+    colours_obj = ColourAnalysis(
+        dominant_colours=colours.get("dominant_colours", []),
+        warm_cold_balance=colours.get("warm_cold_balance", 0),
+        brightness=colours.get("brightness", 0),
+        contrast=colours.get("contrast", 0),
+        saturation=colours.get("saturation", 0),
+        colour_symbolism_notes=colours.get("colour_symbolism_notes", []),
+    )
+    comp_obj = CompositionAnalysis(
+        information_value=composition.get("information_value", {}),
+        rule_of_thirds_intersections=composition.get("rule_of_thirds_intersections", []),
+        salience_centre=tuple(composition.get("salience_centre", [0.5, 0.5])),
+        visual_balance=composition.get("visual_balance", 0),
+        framing_balance=composition.get("framing_balance", 0),
+        vectors=composition.get("vectors", []),
+    )
+    ocr_obj = OCRResult(
+        text=ocr.get("text", ""), confidence=ocr.get("confidence", 0),
+        word_count=ocr.get("word_count", 0), engine=ocr.get("engine", "none"),
+        language=ocr.get("language", "auto"),
+    )
+    r = analyse_social_semiotic(colours_obj, comp_obj, ocr_obj, caption)
+    return {
+        "framework": r.framework,
+        "claim_count": len(r.claims),
+        "top_claims": [
+            {"category": c.category, "claim": c.claim, "confidence": c.confidence}
+            for c in r.claims[:5]
+        ],
+    }
+
+
+def _cda(*, colours: dict, composition: dict, ocr: dict, caption: str = "",
+         framework: str = "fairclough") -> dict:
+    """Critical Discourse Analysis (§9.12) — user-selectable framework."""
+    from multimodal.discourse import analyse_cda
+    from vision.pipeline import ColourAnalysis, CompositionAnalysis, OCRResult
+    colours_obj = ColourAnalysis(
+        dominant_colours=colours.get("dominant_colours", []),
+        warm_cold_balance=colours.get("warm_cold_balance", 0),
+        brightness=colours.get("brightness", 0),
+        contrast=colours.get("contrast", 0),
+        saturation=colours.get("saturation", 0),
+        colour_symbolism_notes=colours.get("colour_symbolism_notes", []),
+    )
+    comp_obj = CompositionAnalysis(
+        information_value=composition.get("information_value", {}),
+        rule_of_thirds_intersections=composition.get("rule_of_thirds_intersections", []),
+        salience_centre=tuple(composition.get("salience_centre", [0.5, 0.5])),
+        visual_balance=composition.get("visual_balance", 0),
+        framing_balance=composition.get("framing_balance", 0),
+        vectors=composition.get("vectors", []),
+    )
+    ocr_obj = OCRResult(
+        text=ocr.get("text", ""), confidence=ocr.get("confidence", 0),
+        word_count=ocr.get("word_count", 0), engine=ocr.get("engine", "none"),
+        language=ocr.get("language", "auto"),
+    )
+    r = analyse_cda(colours_obj, comp_obj, ocr_obj, caption, framework=framework)
+    return {
+        "framework": r.framework,
+        "claim_count": len(r.claims),
+        "top_claims": [
+            {"category": c.category, "claim": c.claim, "confidence": c.confidence}
+            for c in r.claims[:5]
+        ],
+    }
+
+
+def _persuasion(*, ocr: dict, caption: str = "") -> dict:
+    """Persuasion analysis (§9.13) — Aristotle + Toulmin."""
+    from multimodal.discourse import analyse_persuasion
+    from vision.pipeline import OCRResult
+    ocr_obj = OCRResult(
+        text=ocr.get("text", ""), confidence=ocr.get("confidence", 0),
+        word_count=ocr.get("word_count", 0), engine=ocr.get("engine", "none"),
+        language=ocr.get("language", "auto"),
+    )
+    r = analyse_persuasion(ocr_obj, caption)
+    return {
+        "framework": r.framework,
+        "claim_count": len(r.claims),
+        "top_claims": [
+            {"category": c.category, "claim": c.claim, "confidence": c.confidence}
+            for c in r.claims[:5]
+        ],
+    }
+
+
+def _framing(*, ocr: dict, caption: str = "") -> dict:
+    """Framing analysis (§9.14) — Entman's 4 functions."""
+    from multimodal.discourse import analyse_framing
+    from vision.pipeline import OCRResult
+    ocr_obj = OCRResult(
+        text=ocr.get("text", ""), confidence=ocr.get("confidence", 0),
+        word_count=ocr.get("word_count", 0), engine=ocr.get("engine", "none"),
+        language=ocr.get("language", "auto"),
+    )
+    r = analyse_framing(ocr_obj, caption)
+    return {
+        "framework": r.framework,
+        "claim_count": len(r.claims),
+        "top_claims": [
+            {"category": c.category, "claim": c.claim, "confidence": c.confidence}
+            for c in r.claims[:5]
+        ],
+    }
+
+
+# --------------------------------------------------------------------------- #
 # Registry factory
 # --------------------------------------------------------------------------- #
 # The tool schemas passed to the LLM. These match OpenAI's function-calling
@@ -606,6 +765,110 @@ TOOL_SCHEMAS: list[dict] = [
     {
         "type": "function",
         "function": {
+            "name": "visual_grammar",
+            "description": (
+                "Analyse an image against Kress & van Leeuwen's Visual Grammar (§9.10). "
+                "Pass the image's cached colour, composition, and OCR analysis dicts. "
+                "Returns framework-lensed claims across the 3 metafunctions."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "colours": {"type": "object", "description": "The image's colour analysis dict"},
+                    "composition": {"type": "object", "description": "The image's composition analysis dict"},
+                    "ocr": {"type": "object", "description": "The image's OCR result dict"},
+                    "caption": {"type": "string", "description": "Optional co-occurring caption text"},
+                },
+                "required": ["colours", "composition", "ocr"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "social_semiotic",
+            "description": (
+                "Social semiotic analysis (§9.11) — actors, processes, symbolic meaning, "
+                "power, identity. Grounded in Kress & van Leeuwen's Social Semiotics."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "colours": {"type": "object"},
+                    "composition": {"type": "object"},
+                    "ocr": {"type": "object"},
+                    "caption": {"type": "string"},
+                },
+                "required": ["colours", "composition", "ocr"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "cda",
+            "description": (
+                "Critical Discourse Analysis (§9.12). Framework-selectable: "
+                "fairclough, van_dijk, wodak, machin_mayr. Every claim is a "
+                "framework-lensed hypothesis per §4 Principle 5."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "colours": {"type": "object"},
+                    "composition": {"type": "object"},
+                    "ocr": {"type": "object"},
+                    "caption": {"type": "string"},
+                    "framework": {
+                        "type": "string",
+                        "enum": ["fairclough", "van_dijk", "wodak", "machin_mayr"],
+                        "default": "fairclough",
+                    },
+                },
+                "required": ["colours", "composition", "ocr"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "persuasion",
+            "description": (
+                "Persuasion analysis (§9.13) — Aristotle's ethos/pathos/logos + "
+                "Toulmin's argument structure. This is analysis of existing texts, "
+                "not content generation."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "ocr": {"type": "object"},
+                    "caption": {"type": "string"},
+                },
+                "required": ["ocr"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "framing",
+            "description": (
+                "Framing analysis (§9.14) — Entman's 4 functions: problem definition, "
+                "causal interpretation, moral evaluation, treatment recommendation."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "ocr": {"type": "object"},
+                    "caption": {"type": "string"},
+                },
+                "required": ["ocr"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "ping",
             "description": "Health-check tool. Returns engine version + timestamp.",
             "parameters": {"type": "object", "properties": {}},
@@ -639,6 +902,12 @@ TOOL_IMPLS = {
     "arabic_roots": _arabic_roots,
     "arabic_register": _arabic_register,
     "arabic_transliterate": _arabic_transliterate,
+    # Phase 5 — multimodal discourse (stateless, sync — wraps engine functions)
+    "visual_grammar": _visual_grammar,
+    "social_semiotic": _social_semiotic,
+    "cda": _cda,
+    "persuasion": _persuasion,
+    "framing": _framing,
     # Utility — stateless, sync
     "ping": lambda **_: {"ok": True, "engine": "corpusmind-engine", "ts": time.time()},
 }
@@ -647,6 +916,8 @@ TOOL_IMPLS = {
 _STATELESS_TOOLS = {
     "arabic_morphology", "arabic_dialect_id", "arabic_roots",
     "arabic_register", "arabic_transliterate", "ping",
+    # Phase 5 — discourse tools take pre-fetched analysis dicts, not DB sessions
+    "visual_grammar", "social_semiotic", "cda", "persuasion", "framing",
 }
 
 

@@ -1,0 +1,20 @@
+name: aristotle-rhetoric
+full_name: "Aristotle (c. 350 BCE) Rhetoric"
+version: "0.1.0"
+framework_family: rhetoric
+categories:
+  - id: ethos
+    label: Ethos (credibility of the speaker)
+  - id: pathos
+    label: Pathos (appeal to emotion)
+  - id: logos
+    label: Logos (appeal to reason)
+output_schema:
+  claim: str
+  evidence_ids: [str]
+  confidence: float
+  framework: "Aristotle Rhetoric"
+  appeal: str  # ethos | pathos | logos
+guardrails:
+  - "This is analysis of existing texts, not content generation (§9.13)."
+  - "Appeal classification must cite specific textual markers."

@@ -1,0 +1,31 @@
+# Halliday's Systemic Functional Linguistics (SFL).
+# Template version: 0.1.0 (Phase 5 scaffold).
+name: halliday-sfl
+full_name: "Halliday (1985) Systemic Functional Linguistics"
+version: "0.1.0"
+framework_family: sfl
+categories:
+  - id: ideational
+    label: Ideational metafunction
+    description: "How the text represents experience — processes, participants, circumstances."
+  - id: interpersonal
+    label: Interpersonal metafunction
+    description: "How the text enacts social relations — mood, modality, person."
+  - id: textual
+    label: Textual metafunction
+    description: "How the text is organized as a message — theme, information structure, cohesion."
+output_schema:
+  claim: str
+  evidence_ids: [str]
+  confidence: float
+  framework: "Halliday (1985) SFL"
+  metafunction: str  # ideational | interpersonal | textual
+guardrails:
+  - "Every claim MUST cite a specific linguistic feature (process type, modality choice, theme selection)."
+  - "Interpretive claims about social relations are hypotheses, not facts."
+example_output:
+  claim: "The use of modal 'must' in the clause constructs an obligation — positioning the speaker as an authority."
+  evidence_ids: ["clause:3"]
+  confidence: 0.7
+  framework: "Halliday (1985) SFL"
+  metafunction: interpersonal

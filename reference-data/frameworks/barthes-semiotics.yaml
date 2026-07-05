@@ -1,0 +1,20 @@
+name: barthes-semiotics
+full_name: "Barthes (1957/1964) Semiotics"
+version: "0.1.0"
+framework_family: semiotics
+categories:
+  - id: denotation
+    label: Denotation (literal meaning)
+  - id: connotation
+    label: Connotation (cultural meaning)
+  - id: myth
+    label: Myth (ideological naturalization)
+output_schema:
+  claim: str
+  evidence_ids: [str]
+  confidence: float
+  framework: "Barthes (1957/1964) Semiotics"
+  level: str  # denotation | connotation | myth
+guardrails:
+  - "Myth-level claims are hypotheses about ideological naturalization."
+  - "Connotations are culture-relative, not universal."

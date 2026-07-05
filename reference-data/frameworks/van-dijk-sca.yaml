@@ -1,0 +1,22 @@
+name: van-dijk-sca
+full_name: "van Dijk (2008) Socio-Cognitive Approach"
+version: "0.1.0"
+framework_family: cda
+categories:
+  - id: mental_models
+    label: Mental models
+    description: "How the text constructs situation models in the reader's mind."
+  - id: ideology
+    label: Ideology
+    description: "How the text reflects + reproduces group-based belief systems."
+  - id: context
+    label: Context models
+    description: "How the text is shaped by the communicative situation."
+output_schema:
+  claim: str
+  evidence_ids: [str]
+  confidence: float
+  framework: "van Dijk (2008) SCA"
+guardrails:
+  - "Claims about mental models are inferences, not observations."
+  - "Us/them polarization claims must cite specific lexical choices."

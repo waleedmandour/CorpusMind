@@ -1,0 +1,19 @@
+name: peirce-semiotics
+full_name: "Peirce (1867-1913) Semiotics"
+version: "0.1.0"
+framework_family: semiotics
+categories:
+  - id: icon
+    label: Icon (sign resembles object)
+  - id: index
+    label: Index (sign causally connected to object)
+  - id: symbol
+    label: Symbol (sign conventionally connected to object)
+output_schema:
+  claim: str
+  evidence_ids: [str]
+  confidence: float
+  framework: "Peirce Semiotics"
+  sign_type: str  # icon | index | symbol
+guardrails:
+  - "Sign-type classification must cite the specific resemblance/causality/convention."

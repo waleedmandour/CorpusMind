@@ -14,7 +14,7 @@ import clsx from "clsx";
 import { api } from "@/lib/api";
 import { useApp } from "@/store/app";
 
-type Tab = "manage" | "analyse" | "grammar" | "align";
+type Tab = "manage" | "analyse" | "grammar" | "align" | "discourse" | "facial";
 
 export function VisionView() {
   const cid = useApp((s) => s.activeCorpusId);
@@ -27,17 +27,17 @@ export function VisionView() {
   return (
     <div className="vision-view">
       <div className="grounding-notice">
-        <strong>§9 Vision Suite (Phase 4):</strong> Image ingestion, OCR, colour/composition
-        analysis, Visual Grammar (Kress &amp; van Leeuwen), and multimodal image-text alignment.
-        Every interpretive claim is framework-attributed and phrased as a hypothesis
-        per §4 Principle 5. §9.4.3 facial analysis is deferred to Phase 5 behind an
-        explicit opt-in gate (§18).
+        <strong>§9 Vision Suite (Phase 4 + 5):</strong> Image ingestion, OCR, colour/composition
+        analysis, Visual Grammar (Kress &amp; van Leeuwen), multimodal image-text alignment,
+        + Phase 5: Social Semiotic, CDA (4 frameworks), Persuasion, Framing, Narrative,
+        Visual Metaphor, Emotion, Cultural + facial-analysis opt-in (§18).
       </div>
 
       <div className="tabs">
-        {(["manage", "analyse", "grammar", "align"] as Tab[]).map((t) => (
+        {(["manage", "analyse", "grammar", "align", "discourse", "facial"] as Tab[]).map((t) => (
           <button key={t} className={clsx("tab", { active: tab === t })} onClick={() => setTab(t)}>
-            {t === "manage" ? "Manage" : t === "analyse" ? "Analyse" : t === "grammar" ? "Visual Grammar" : "Align"}
+            {t === "manage" ? "Manage" : t === "analyse" ? "Analyse" : t === "grammar" ? "Visual Grammar" :
+             t === "align" ? "Align" : t === "discourse" ? "Discourse §5" : "Facial §18"}
           </button>
         ))}
       </div>
@@ -48,6 +48,8 @@ export function VisionView() {
       {tab === "analyse" && activeImageId && <ImageAnalyser imgId={activeImageId} />}
       {tab === "grammar" && activeImageId && <VisualGrammarView imgId={activeImageId} />}
       {tab === "align" && activeImageId && <AlignmentView imgId={activeImageId} />}
+      {tab === "discourse" && activeImageId && <DiscoursePanel imgId={activeImageId} />}
+      {tab === "facial" && activeImageId && <FacialPanel imgId={activeImageId} />}
       {tab !== "manage" && !activeImageId && (
         <div className="empty-state">Select an image in the Manage tab first.</div>
       )}
@@ -349,6 +351,177 @@ function AlignmentView({ imgId }: { imgId: string }) {
                 <span className="cm-conf">conf: {r.confidence.toFixed(2)}</span>
               </header>
               <p>{r.description}</p>
+            </div>
+          ))}
+        </>
+      )}
+    </div>
+  );
+}
+
+
+// =========================================================================
+// Phase 5 — Discourse panel (§9.11–9.18)
+// =========================================================================
+
+function DiscoursePanel({ imgId }: { imgId: string }) {
+  const [analysis, setAnalysis] = useState<string>("social_semiotic");
+  const [cdaFramework, setCdaFramework] = useState("fairclough");
+  const [submitted, setSubmitted] = useState<{ type: string; framework?: string } | null>(null);
+
+  const frameworks = useQuery({ queryKey: ["cda-frameworks"], queryFn: api.cdaFrameworks });
+
+  const result = useQuery({
+    queryKey: ["discourse", imgId, submitted],
+    queryFn: async () => {
+      if (!submitted) return null;
+      switch (submitted.type) {
+        case "social_semiotic": return await api.socialSemiotic(imgId);
+        case "cda": return await api.cda(imgId, submitted.framework);
+        case "persuasion": return await api.persuasion(imgId);
+        case "framing": return await api.framing(imgId);
+        case "narrative": return await api.narrative(imgId);
+        case "visual_metaphor": return await api.visualMetaphor(imgId);
+        case "emotion": return await api.emotion(imgId);
+        case "cultural": return await api.cultural(imgId);
+        default: return null;
+      }
+    },
+    enabled: !!submitted,
+  });
+
+  const onRun = () => {
+    setSubmitted({ type: analysis, framework: analysis === "cda" ? cdaFramework : undefined });
+  };
+
+  return (
+    <div className="panel-content">
+      <div className="grounding-notice">
+        <strong>§4 Principle 5 (load-bearing):</strong> Every interpretive claim below is
+        framework-attributed and phrased as a hypothesis ("Under a [Framework] reading, X may
+        indicate Y"). Never state ideology, bias, or power relations as settled fact.
+      </div>
+
+      <div className="toolbar">
+        <label>Analysis
+          <select value={analysis} onChange={(e) => setAnalysis(e.target.value)}>
+            <option value="social_semiotic">§9.11 Social Semiotic</option>
+            <option value="cda">§9.12 Critical Discourse (CDA)</option>
+            <option value="persuasion">§9.13 Persuasion (Aristotle + Toulmin)</option>
+            <option value="framing">§9.14 Framing (Entman)</option>
+            <option value="narrative">§9.15 Narrative (Labov)</option>
+            <option value="visual_metaphor">§9.16 Visual Metaphor (MIPVU)</option>
+            <option value="emotion">§9.17 Emotion (combined)</option>
+            <option value="cultural">§9.18 Cultural (culture-relative)</option>
+          </select>
+        </label>
+        {analysis === "cda" && (
+          <label>CDA framework
+            <select value={cdaFramework} onChange={(e) => setCdaFramework(e.target.value)}>
+              {frameworks.data && Object.entries(frameworks.data.frameworks).map(([k, v]) => (
+                <option key={k} value={k}>{v}</option>
+              ))}
+            </select>
+          </label>
+        )}
+        <button onClick={onRun} disabled={result.isPending}>
+          {result.isPending ? "Analysing…" : "Run analysis"}
+        </button>
+      </div>
+
+      {result.data && (
+        <>
+          <div className="result-meta">
+            Framework: <strong>{result.data.framework}</strong> ·
+            {result.data.claims.length} claims
+          </div>
+          <p className="summary">{result.data.summary}</p>
+          {result.data.claims.map((c: any, i: number) => (
+            <div key={i} className="vg-claim">
+              <header>
+                <span className="vg-metafunction">{c.category}</span>
+                <span className="vg-confidence">conf: {c.confidence.toFixed(2)}</span>
+              </header>
+              <p>{c.claim}</p>
+              {c.evidence && c.evidence.length > 0 && (
+                <div className="vg-evidence">
+                  <strong>Evidence:</strong>
+                  <ul>{c.evidence.map((e: string, j: number) => <li key={j}><code>{e}</code></li>)}</ul>
+                </div>
+              )}
+            </div>
+          ))}
+        </>
+      )}
+    </div>
+  );
+}
+
+
+// =========================================================================
+// Phase 5 — Facial analysis panel (§9.4.3, §18 opt-in)
+// =========================================================================
+
+function FacialPanel({ imgId }: { imgId: string }) {
+  const status = useQuery({ queryKey: ["facial-status"], queryFn: api.facialAnalysisStatus });
+  const [result, setResult] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const onRun = async () => {
+    setError(null);
+    try {
+      const r = await api.facialAnalysis(imgId);
+      setResult(r);
+    } catch (e: any) {
+      setError(e.message || String(e));
+    }
+  };
+
+  return (
+    <div className="panel-content">
+      <div className="grounding-notice" style={{ borderInlineStartColor: "var(--danger)" }}>
+        <strong>§18 Ethical Guardrails (load-bearing):</strong> Facial analysis is OFF by default.
+        It NEVER performs identity recognition or re-identification of real individuals.
+        Outputs are descriptive visual cues only. To enable: set
+        <code>CORPUSMIND_FACIAL_ANALYSIS_ENABLED=1</code>.
+      </div>
+
+      {status.data && (
+        <div className="facial-status">
+          Status: <strong className={status.data.enabled ? "ok" : "bad"}>
+            {status.data.enabled ? "ENABLED" : "DISABLED (default)"}
+          </strong>
+          <p className="notice">{status.data.notice}</p>
+        </div>
+      )}
+
+      <button onClick={onRun} className="run-btn">Run facial analysis</button>
+
+      {error && <div className="error">⚠ {error}</div>}
+
+      {result && (
+        <>
+          <div className="result-meta">
+            Model: <strong>{result.model}</strong> ·
+            Faces detected: <strong>{result.face_count}</strong> ·
+            Consent verified: <strong>{result.consent_verified ? "✓" : "✗"}</strong>
+          </div>
+          <div className="ethics-notice">{result.ethics_notice}</div>
+          {result.faces.map((f: any, i: number) => (
+            <div key={i} className="face-card">
+              <header>
+                <span>Face {i + 1}</span>
+                <span>conf: {f.confidence.toFixed(2)}</span>
+              </header>
+              <div className="face-cues">
+                <span>Expression: <strong>{f.facial_expression}</strong></span>
+                <span>Head: <strong>{f.head_direction}</strong></span>
+                <span>Gaze: <strong>{f.eye_gaze}</strong></span>
+                <span>Age group: <strong>{f.estimated_age_group}</strong></span>
+                <span>Gender presentation: <strong>{f.gender_presentation}</strong></span>
+              </div>
+              <p className="gloss">{f.interpretive_gloss}</p>
+              <p className="evidence-note">{f.evidence_note}</p>
             </div>
           ))}
         </>

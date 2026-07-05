@@ -1,0 +1,21 @@
+name: wodak-dha
+full_name: "Wodak (2001) Discourse-Historical Approach"
+version: "0.1.0"
+framework_family: cda
+categories:
+  - id: content
+    label: Content
+  - id: linguistic
+    label: Linguistic realization
+  - id: argumentation
+    label: Argumentation strategies
+  - id: historical_context
+    label: Historical context (researcher-supplied)
+output_schema:
+  claim: str
+  evidence_ids: [str]
+  confidence: float
+  framework: "Wodak (2001) DHA"
+guardrails:
+  - "Historical context claims require the researcher to supply the relevant context."
+  - "Argumentation strategies must cite specific textual evidence."

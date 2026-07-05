@@ -1,0 +1,25 @@
+name: toulmin-argumentation
+full_name: "Toulmin (1958) Argumentation Model"
+version: "0.1.0"
+framework_family: argumentation
+categories:
+  - id: claim
+    label: Claim (the conclusion)
+  - id: data
+    label: Data (the evidence)
+  - id: warrant
+    label: Warrant (the assumption linking data to claim)
+  - id: backing
+    label: Backing (support for the warrant)
+  - id: qualifier
+    label: Qualifier (degree of certainty)
+  - id: rebuttal
+    label: Rebuttal (exceptions)
+output_schema:
+  claim: str
+  evidence_ids: [str]
+  confidence: float
+  framework: "Toulmin (1958) Argumentation"
+  component: str  # claim | data | warrant | etc.
+guardrails:
+  - "Warrants are often implicit — flag them as inferred, not stated."

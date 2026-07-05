@@ -487,6 +487,22 @@ export interface AlignmentResult {
   cross_modal_relations: CrossModalRelation[];
 }
 
+// Phase 5 — multimodal discourse (§9.11–9.18)
+export interface DiscourseClaim {
+  framework: string;
+  category: string;
+  claim: string;
+  evidence: string[];
+  confidence: number;
+}
+
+export interface DiscourseResult {
+  analysis_type: string;
+  framework: string;
+  claims: DiscourseClaim[];
+  summary: string;
+}
+
 // ----------------------------------------------------------------------- //
 // Fetch helper
 // ----------------------------------------------------------------------- //
@@ -737,6 +753,43 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ text }),
     }),
+
+  // --- Phase 5 multimodal discourse (§9.11–9.18) ---
+  socialSemiotic: (imgId: string) =>
+    jsonFetch<DiscourseResult>(`/api/v1/images/${imgId}/social-semiotic`, { method: "POST" }),
+
+  cda: (imgId: string, framework = "fairclough") =>
+    jsonFetch<DiscourseResult>(`/api/v1/images/${imgId}/cda`, {
+      method: "POST",
+      body: JSON.stringify({ framework }),
+    }),
+
+  persuasion: (imgId: string) =>
+    jsonFetch<DiscourseResult>(`/api/v1/images/${imgId}/persuasion`, { method: "POST" }),
+
+  framing: (imgId: string) =>
+    jsonFetch<DiscourseResult>(`/api/v1/images/${imgId}/framing`, { method: "POST" }),
+
+  narrative: (imgId: string) =>
+    jsonFetch<DiscourseResult>(`/api/v1/images/${imgId}/narrative`, { method: "POST" }),
+
+  visualMetaphor: (imgId: string) =>
+    jsonFetch<DiscourseResult>(`/api/v1/images/${imgId}/visual-metaphor`, { method: "POST" }),
+
+  emotion: (imgId: string) =>
+    jsonFetch<DiscourseResult>(`/api/v1/images/${imgId}/emotion`, { method: "POST" }),
+
+  cultural: (imgId: string) =>
+    jsonFetch<DiscourseResult>(`/api/v1/images/${imgId}/cultural`, { method: "POST" }),
+
+  facialAnalysis: (imgId: string) =>
+    jsonFetch<{ image_id: string; face_count: number; model: string; consent_verified: boolean; ethics_notice: string; faces: any[] }>(`/api/v1/images/${imgId}/facial-analysis`, { method: "POST" }),
+
+  facialAnalysisStatus: () =>
+    jsonFetch<{ enabled: boolean; notice: string }>(`/api/v1/facial-analysis/status`),
+
+  cdaFrameworks: () =>
+    jsonFetch<{ frameworks: Record<string, string> }>(`/api/v1/cda-frameworks`),
 
   // --- Export ---
   exportConcordanceXlsx: (cid: string, query: string, level = "word", window = 5, limit = 1000) =>

@@ -1,0 +1,19 @@
+name: machin-mayr-mcda
+full_name: "Machin & Mayr (2012) Multimodal CDA"
+version: "0.1.0"
+framework_family: mcda
+categories:
+  - id: visual_evaluative_loading
+    label: Visual evaluative loading
+  - id: lexical_choices
+    label: Lexical choices
+  - id: representational_choices
+    label: Representational choices
+output_schema:
+  claim: str
+  evidence_ids: [str]
+  confidence: float
+  framework: "Machin & Mayr (2012) MCDA"
+guardrails:
+  - "Visual + linguistic features must be analysed together, not separately."
+  - "Claims about evaluative loading are hypotheses."

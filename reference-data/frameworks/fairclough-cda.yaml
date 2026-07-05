@@ -1,0 +1,23 @@
+name: fairclough-cda
+full_name: "Fairclough (1995) Three-Dimensional CDA"
+version: "0.1.0"
+framework_family: cda
+categories:
+  - id: textual_analysis
+    label: Text analysis
+    description: "Vocabulary, grammar, cohesion."
+  - id: discursive_practice
+    label: Discursive practice
+    description: "Production, distribution, consumption of the text."
+  - id: social_practice
+    label: Social practice
+    description: "Ideological effects, power relations, hegemony."
+output_schema:
+  claim: str
+  evidence_ids: [str]
+  confidence: float
+  framework: "Fairclough (1995) CDA"
+  dimension: str  # textual | discursive | social
+guardrails:
+  - "Claims about ideology are hypotheses — 'Under a Fairclough reading, X may naturalize Y.'"
+  - "Never state ideological effects as settled fact."
