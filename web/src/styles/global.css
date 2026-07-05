@@ -1083,3 +1083,110 @@ code, pre { font-family: var(--font-mono); }
 }
 
 .distribution-bars { display: flex; flex-direction: column; gap: var(--space-1); }
+
+
+/* =========================================================================
+   Phase 4 — Vision suite
+   ========================================================================= */
+
+.vision-view { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-3); }
+
+.image-manager { display: flex; flex-direction: column; gap: var(--space-3); }
+.image-sets-list { display: flex; flex-direction: column; gap: var(--space-1); }
+.image-set-item {
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-subtle);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.image-set-item:hover { background: var(--ribbon-tab-bg-hover); }
+.image-set-item.active { background: var(--ribbon-tab-bg-active); border-inline-start: 3px solid var(--brand-500); }
+.image-set-item span { font-size: 12px; color: var(--text-muted); }
+
+.caption-input { inline-size: 100%; margin-block-start: var(--space-2); }
+
+.image-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--space-2);
+  margin-block-start: var(--space-3);
+}
+.image-thumb {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2);
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.image-thumb:hover { border-color: var(--brand-400); }
+.thumb-placeholder {
+  block-size: 80px;
+  background: var(--bg-subtle);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-subtle);
+}
+.thumb-meta { margin-block-start: var(--space-1); font-size: 11px; }
+.thumb-caption { color: var(--text-muted); font-style: italic; margin-block-start: 2px; }
+
+/* Image analysis */
+.colour-swatches { display: flex; gap: var(--space-2); margin: var(--space-2) 0; flex-wrap: wrap; }
+.swatch { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-1) var(--space-2); background: var(--bg-subtle); border-radius: var(--radius-sm); }
+.swatch-colour { inline-size: 24px; block-size: 24px; border-radius: var(--radius-sm); border: 1px solid var(--border); }
+.swatch-meta { display: flex; flex-direction: column; font-size: 11px; }
+.colour-stats { display: flex; gap: var(--space-4); font-size: 12px; margin-block-end: var(--space-3); flex-wrap: wrap; }
+.composition-info { display: flex; flex-direction: column; gap: var(--space-1); font-size: 12px; }
+.composition-info ul { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-1); }
+.ocr-text { padding: var(--space-2); background: var(--bg-subtle); border-radius: var(--radius-sm); font-family: var(--font-mono); font-size: 12px; }
+
+/* Visual Grammar */
+.vg-scores { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2); margin: var(--space-2) 0; }
+.vg-score { padding: var(--space-2); background: var(--bg-subtle); border-radius: var(--radius-sm); text-align: center; }
+.vg-score h4 { margin: 0; color: var(--brand-500); font-size: 12px; }
+.vg-score span { font-size: 11px; color: var(--text-muted); }
+
+.vg-claim {
+  padding: var(--space-3);
+  background: var(--bg-subtle);
+  border-radius: var(--radius-md);
+  border-inline-start: 3px solid var(--brand-500);
+  margin-block-end: var(--space-2);
+}
+.vg-claim.meta-representational { border-inline-start-color: #1565c0; }
+.vg-claim.meta-interactive { border-inline-start-color: #c2185b; }
+.vg-claim.meta-compositional { border-inline-start-color: #7b1fa2; }
+.vg-claim header { display: flex; gap: var(--space-2); align-items: baseline; margin-block-end: var(--space-1); font-size: 11px; }
+.vg-metafunction { font-weight: 700; text-transform: uppercase; color: var(--brand-500); }
+.vg-category { color: var(--text-muted); font-family: var(--font-mono); }
+.vg-confidence { margin-inline-start: auto; color: var(--text-subtle); }
+.vg-claim p { margin: var(--space-1) 0; font-size: 13px; line-height: 1.5; }
+.vg-evidence { font-size: 11px; color: var(--text-muted); }
+.vg-evidence ul { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.vg-evidence code { background: var(--bg-elevated); padding: 1px 6px; border-radius: 3px; }
+
+/* Alignment */
+.regions-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: var(--space-2); margin: var(--space-2) 0; }
+.region-card { padding: var(--space-2); background: var(--bg-subtle); border-radius: var(--radius-sm); font-size: 11px; }
+.region-colour { inline-size: 100%; block-size: 30px; border-radius: var(--radius-sm); margin-block: var(--space-1); border: 1px solid var(--border); }
+.region-desc { color: var(--text-muted); margin-block-start: 2px; }
+.match-reason { font-size: 11px; color: var(--text-muted); }
+
+.cross-modal-relation {
+  padding: var(--space-2);
+  background: var(--bg-subtle);
+  border-radius: var(--radius-sm);
+  border-inline-start: 3px solid var(--brand-500);
+  margin-block-end: var(--space-1);
+  font-size: 12px;
+}
+.cross-modal-relation header { display: flex; justify-content: space-between; margin-block-end: var(--space-1); }
+.cm-type { font-weight: 700; text-transform: uppercase; color: var(--brand-500); }
+.cm-conf { color: var(--text-subtle); }

@@ -1,21 +1,358 @@
 /**
- * Placeholder view for Suite B (Vision) — populated in Phase 4+.
+ * VisionView — Suite B (§9.1–9.10).
+ *
+ * Tools:
+ *  - Image set management (create, list, upload images)
+ *  - Image analysis viewer (colour, composition, OCR)
+ *  - Visual Grammar analysis (Kress & van Leeuwen)
+ *  - Image-text alignment (flagship)
  */
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import clsx from "clsx";
+
+import { api } from "@/lib/api";
+import { useApp } from "@/store/app";
+
+type Tab = "manage" | "analyse" | "grammar" | "align";
+
 export function VisionView() {
+  const cid = useApp((s) => s.activeCorpusId);
+  const [tab, setTab] = useState<Tab>("manage");
+  const [activeImageSetId, setActiveImageSetId] = useState<string | null>(null);
+  const [activeImageId, setActiveImageId] = useState<string | null>(null);
+
+  if (!cid) return <div className="empty-state">Select a corpus to start working with images.</div>;
+
   return (
-    <div className="placeholder-view">
-      <h2>CorpusMind Vision</h2>
-      <p>
-        The multimodal discourse-analysis suite lands in <strong>Phase 4</strong>:
-        image ingestion, OCR, automatic image analysis (objects, scenes,
-        composition, colour), and the flagship multimodal image–text alignment
-        + Visual Grammar (Kress &amp; van Leeuwen) module.
-      </p>
-      <p>
-        Every interpretive claim (power, ideology, framing) will be labeled with
-        the theoretical framework that produced it and phrased as a hypothesis
-        — never as a bare assertion of fact (§4 Principle 5).
-      </p>
+    <div className="vision-view">
+      <div className="grounding-notice">
+        <strong>§9 Vision Suite (Phase 4):</strong> Image ingestion, OCR, colour/composition
+        analysis, Visual Grammar (Kress &amp; van Leeuwen), and multimodal image-text alignment.
+        Every interpretive claim is framework-attributed and phrased as a hypothesis
+        per §4 Principle 5. §9.4.3 facial analysis is deferred to Phase 5 behind an
+        explicit opt-in gate (§18).
+      </div>
+
+      <div className="tabs">
+        {(["manage", "analyse", "grammar", "align"] as Tab[]).map((t) => (
+          <button key={t} className={clsx("tab", { active: tab === t })} onClick={() => setTab(t)}>
+            {t === "manage" ? "Manage" : t === "analyse" ? "Analyse" : t === "grammar" ? "Visual Grammar" : "Align"}
+          </button>
+        ))}
+      </div>
+
+      {tab === "manage" && (
+        <ImageManager cid={cid} activeImageSetId={activeImageSetId} setActiveImageSetId={setActiveImageSetId} setActiveImageId={setActiveImageId} />
+      )}
+      {tab === "analyse" && activeImageId && <ImageAnalyser imgId={activeImageId} />}
+      {tab === "grammar" && activeImageId && <VisualGrammarView imgId={activeImageId} />}
+      {tab === "align" && activeImageId && <AlignmentView imgId={activeImageId} />}
+      {tab !== "manage" && !activeImageId && (
+        <div className="empty-state">Select an image in the Manage tab first.</div>
+      )}
+    </div>
+  );
+}
+
+
+function ImageManager({ cid, activeImageSetId, setActiveImageSetId, setActiveImageId }: {
+  cid: string;
+  activeImageSetId: string | null;
+  setActiveImageSetId: (id: string | null) => void;
+  setActiveImageId: (id: string | null) => void;
+}) {
+  const qc = useQueryClient();
+  const [newSetName, setNewSetName] = useState("");
+
+  const imageSets = useQuery({
+    queryKey: ["image-sets", cid],
+    queryFn: () => api.listImageSets(cid),
+  });
+
+  const createSet = useMutation({
+    mutationFn: (name: string) => api.createImageSet(cid, name),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["image-sets", cid] }),
+  });
+
+  return (
+    <div className="image-manager">
+      <div className="toolbar">
+        <input value={newSetName} onChange={(e) => setNewSetName(e.target.value)} placeholder="New image set name" />
+        <button disabled={!newSetName.trim()} onClick={() => { createSet.mutate(newSetName); setNewSetName(""); }}>
+          Create image set
+        </button>
+      </div>
+
+      <div className="image-sets-list">
+        {imageSets.data?.map((iset) => (
+          <div key={iset.id} className={clsx("image-set-item", { active: iset.id === activeImageSetId })}
+               onClick={() => setActiveImageSetId(iset.id)}>
+            <strong>{iset.name}</strong>
+            <span>{iset.image_count} image{iset.image_count === 1 ? "" : "s"}</span>
+          </div>
+        ))}
+        {imageSets.data?.length === 0 && <div className="empty">No image sets yet.</div>}
+      </div>
+
+      {activeImageSetId && <ImageUploader isetId={activeImageSetId} setActiveImageId={setActiveImageId} />}
+      {activeImageSetId && <ImageList isetId={activeImageSetId} setActiveImageId={setActiveImageId} />}
+    </div>
+  );
+}
+
+
+function ImageUploader({ isetId, setActiveImageId }: { isetId: string; setActiveImageId: (id: string | null) => void }) {
+  const qc = useQueryClient();
+  const [dragging, setDragging] = useState(false);
+  const [caption, setCaption] = useState("");
+
+  const upload = useMutation({
+    mutationFn: (files: File[]) => api.uploadImages(isetId, files, caption || undefined),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["images", isetId] });
+      qc.invalidateQueries({ queryKey: ["image-sets"] });
+      if (data.length > 0) setActiveImageId(data[0].id);
+    },
+  });
+
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragging(false);
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length > 0) upload.mutate(files);
+  };
+
+  return (
+    <div>
+      <div className={clsx("dropzone", { dragging, busy: upload.isPending })}
+           onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+           onDragLeave={() => setDragging(false)}
+           onDrop={onDrop}>
+        <input type="file" multiple accept=".jpg,.jpeg,.png,.tif,.tiff,.webp,.bmp,.gif"
+               onChange={(e) => { const fs = Array.from(e.target.files ?? []); if (fs.length) upload.mutate(fs); }}
+               style={{ display: "none" }} id="img-file-input" />
+        <label htmlFor="img-file-input" className="dropzone-label">
+          {upload.isPending ? "Uploading & analysing…" : dragging ? "Drop images here" : "Drop images or click (.jpg, .png, .tif, .webp)"}
+        </label>
+      </div>
+      <input className="caption-input" value={caption} onChange={(e) => setCaption(e.target.value)}
+             placeholder="Optional caption (one per image, newline-separated)" />
+    </div>
+  );
+}
+
+
+function ImageList({ isetId, setActiveImageId }: { isetId: string; setActiveImageId: (id: string | null) => void }) {
+  const images = useQuery({
+    queryKey: ["images", isetId],
+    queryFn: () => api.listImages(isetId),
+  });
+  return (
+    <div className="image-grid">
+      {images.data?.map((img) => (
+        <div key={img.id} className="image-thumb" onClick={() => setActiveImageId(img.id)}>
+          <div className="thumb-placeholder">{img.format.toUpperCase()}</div>
+          <div className="thumb-meta">
+            <div>{img.filename}</div>
+            <div>{img.width}×{img.height}</div>
+            {img.caption && <div className="thumb-caption">{img.caption.slice(0, 40)}…</div>}
+          </div>
+        </div>
+      ))}
+      {images.data?.length === 0 && <div className="empty">No images yet.</div>}
+    </div>
+  );
+}
+
+
+function ImageAnalyser({ imgId }: { imgId: string }) {
+  const analysis = useQuery({
+    queryKey: ["image-analysis", imgId],
+    queryFn: () => api.getImageAnalysis(imgId),
+  });
+
+  if (!analysis.data) return <div className="empty-state">Loading…</div>;
+  const a = analysis.data;
+
+  return (
+    <div className="panel-content">
+      <div className="result-meta">
+        <strong>{a.filename}</strong> · {a.dimensions} · {a.analysis.ocr?.engine === "tesseract" ? `OCR: ${a.analysis.ocr.word_count} words` : "OCR unavailable"}
+      </div>
+
+      <h3>Colour analysis (§9.4.6)</h3>
+      <div className="colour-swatches">
+        {a.analysis.colours?.dominant_colours?.map((c: any, i: number) => (
+          <div key={i} className="swatch">
+            <div className="swatch-colour" style={{ background: c.hex }} />
+            <div className="swatch-meta">
+              <code>{c.hex}</code>
+              <span>{c.percent}%</span>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="colour-stats">
+        <span>Brightness: <strong>{a.analysis.colours?.brightness}</strong></span>
+        <span>Contrast: <strong>{a.analysis.colours?.contrast}</strong></span>
+        <span>Saturation: <strong>{a.analysis.colours?.saturation}</strong></span>
+        <span>Warm/cold: <strong>{a.analysis.colours?.warm_cold_balance}</strong></span>
+      </div>
+      {a.analysis.colours?.colour_symbolism_notes?.length > 0 && (
+        <div className="grounding-notice">
+          <strong>Colour symbolism (culture-relative, §9.4.6):</strong>
+          <ul>{a.analysis.colours.colour_symbolism_notes.map((n: string, i: number) => <li key={i}>{n}</li>)}</ul>
+        </div>
+      )}
+
+      <h3>Composition analysis (§9.4.7)</h3>
+      <div className="composition-info">
+        <span>Information value:</span>
+        <ul>
+          <li>Left (Given): <strong>{a.analysis.composition?.information_value?.left}</strong></li>
+          <li>Right (New): <strong>{a.analysis.composition?.information_value?.right}</strong></li>
+          <li>Top (Ideal): <strong>{a.analysis.composition?.information_value?.top}</strong></li>
+          <li>Bottom (Real): <strong>{a.analysis.composition?.information_value?.bottom}</strong></li>
+          <li>Centre: <strong>{a.analysis.composition?.information_value?.centre}</strong></li>
+        </ul>
+        <span>Salience centre: ({a.analysis.composition?.salience_centre?.[0]}, {a.analysis.composition?.salience_centre?.[1]})</span>
+        <span>Visual balance: <strong>{a.analysis.composition?.visual_balance}</strong></span>
+      </div>
+
+      {a.analysis.ocr?.text && (
+        <>
+          <h3>OCR text (§9.3)</h3>
+          <div className="ocr-text">{a.analysis.ocr.text}</div>
+        </>
+      )}
+    </div>
+  );
+}
+
+
+function VisualGrammarView({ imgId }: { imgId: string }) {
+  const vg = useQuery({
+    queryKey: ["visual-grammar", imgId],
+    queryFn: () => api.getVisualGrammar(imgId),
+  });
+
+  if (!vg.data) return <div className="empty-state">Loading…</div>;
+
+  return (
+    <div className="panel-content">
+      <div className="result-meta">
+        Framework: <strong>{vg.data.framework}</strong>
+      </div>
+
+      <div className="vg-scores">
+        <div className="vg-score">
+          <h4>Representational</h4>
+          <span>{vg.data.scores.representational.claim_count} claims · avg conf {vg.data.scores.representational.avg_confidence}</span>
+        </div>
+        <div className="vg-score">
+          <h4>Interactive</h4>
+          <span>{vg.data.scores.interactive.claim_count} claims · avg conf {vg.data.scores.interactive.avg_confidence}</span>
+        </div>
+        <div className="vg-score">
+          <h4>Compositional</h4>
+          <span>{vg.data.scores.compositional.claim_count} claims · avg conf {vg.data.scores.compositional.avg_confidence}</span>
+        </div>
+      </div>
+
+      <h3>Claims (framework-lensed hypotheses, §4 Principle 5)</h3>
+      {vg.data.claims.map((c: any, i: number) => (
+        <div key={i} className={clsx("vg-claim", `meta-${c.metafunction}`)}>
+          <header>
+            <span className="vg-metafunction">{c.metafunction}</span>
+            <span className="vg-category">{c.category}</span>
+            <span className="vg-confidence">conf: {c.confidence.toFixed(2)}</span>
+          </header>
+          <p>{c.claim}</p>
+          <div className="vg-evidence">
+            <strong>Evidence:</strong>
+            <ul>{c.evidence.map((e: string, j: number) => <li key={j}><code>{e}</code></li>)}</ul>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+
+function AlignmentView({ imgId }: { imgId: string }) {
+  const [text, setText] = useState("");
+  const [submitted, setSubmitted] = useState<string | null>(null);
+  const result = useQuery({
+    queryKey: ["alignment", imgId, submitted],
+    queryFn: () => api.alignImageText(imgId, submitted!),
+    enabled: !!submitted,
+  });
+
+  return (
+    <div className="panel-content">
+      <div className="grounding-notice">
+        <strong>§9.8 (flagship):</strong> Image-text alignment. Every alignment is inspectable
+        (not a black box). Phase 4 uses heuristic similarity; Phase 5 swaps in CLIP-style embeddings.
+      </div>
+
+      <div className="toolbar">
+        <textarea value={text} onChange={(e) => setText(e.target.value)}
+                  placeholder="Co-occurring text (caption, article body)…" rows={3} />
+        <button disabled={!text.trim() || result.isPending} onClick={() => setSubmitted(text)}>
+          {result.isPending ? "Aligning…" : "Align"}
+        </button>
+      </div>
+
+      {result.data && (
+        <>
+          <div className="result-meta">
+            Method: <strong>{result.data.method}</strong> ·
+            {result.data.alignments.length} alignments ·
+            {result.data.regions.length} regions · {result.data.spans.length} text spans
+          </div>
+
+          <h3>Alignments (sorted by confidence)</h3>
+          <table className="data-table">
+            <thead>
+              <tr><th>Region</th><th>Text span</th><th>Confidence</th><th>Match reason</th></tr>
+            </thead>
+            <tbody>
+              {result.data.alignments.map((a: any, i: number) => (
+                <tr key={i}>
+                  <td><code>{a.region_id}</code></td>
+                  <td><strong>"{a.span_text}"</strong></td>
+                  <td>{a.confidence.toFixed(3)}</td>
+                  <td className="match-reason">{a.match_reason}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <h3>Regions (grid-based, Phase 5 will use object detector)</h3>
+          <div className="regions-grid">
+            {result.data.regions.map((r: any) => (
+              <div key={r.region_id} className="region-card">
+                <code>{r.region_id}</code>
+                <div className="region-colour" style={{ background: `rgb(${r.mean_colour.join(",")})` }} />
+                <div>salience: {r.salience}</div>
+                <div className="region-desc">{r.descriptor}</div>
+              </div>
+            ))}
+          </div>
+
+          <h3>Cross-modal relations (§9.9)</h3>
+          {result.data.cross_modal_relations.map((r: any, i: number) => (
+            <div key={i} className={clsx("cross-modal-relation", `type-${r.relation_type}`)}>
+              <header>
+                <span className="cm-type">{r.relation_type}</span>
+                <span className="cm-conf">conf: {r.confidence.toFixed(2)}</span>
+              </header>
+              <p>{r.description}</p>
+            </div>
+          ))}
+        </>
+      )}
     </div>
   );
 }

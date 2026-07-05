@@ -188,3 +188,43 @@ class ConversationTurn(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
     conversation: Mapped[Conversation] = relationship(back_populates="turns")
+
+
+# --------------------------------------------------------------------------- #
+# Images (Phase 4 — Suite B Vision)
+# --------------------------------------------------------------------------- #
+
+
+class ImageSet(Base):
+    """A set of images within a corpus (Phase 4)."""
+    __tablename__ = "image_sets"
+
+    id: Mapped[str] = mapped_column(String(16), primary_key=True, default=_uuid)
+    corpus_id: Mapped[str] = mapped_column(ForeignKey("corpora.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+    images: Mapped[list[Image]] = relationship(back_populates="image_set", cascade="all, delete-orphan")
+
+
+class Image(Base):
+    """An ingested image with its analysis results."""
+    __tablename__ = "images"
+
+    id: Mapped[str] = mapped_column(String(16), primary_key=True, default=_uuid)
+    image_set_id: Mapped[str] = mapped_column(ForeignKey("image_sets.id", ondelete="CASCADE"), index=True)
+    filename: Mapped[str] = mapped_column(String(512), nullable=False)
+    format: Mapped[str] = mapped_column(String(16), default="jpg")
+    width: Mapped[int] = mapped_column(Integer, default=0)
+    height: Mapped[int] = mapped_column(Integer, default=0)
+    size_bytes: Mapped[int] = mapped_column(Integer, default=0)
+    # The raw image bytes are stored on disk (data_dir/images/{id}.{ext}),
+    # not in the DB — keeps the DB lean.
+    storage_path: Mapped[str] = mapped_column(String(1024), default="")
+    # Cached analysis results (colour, composition, OCR, visual grammar)
+    analysis: Mapped[dict] = mapped_column(JSON, default=dict)
+    # Optional co-occurring text (caption, alt-text, article body)
+    caption: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+    image_set: Mapped[ImageSet] = relationship(back_populates="images")

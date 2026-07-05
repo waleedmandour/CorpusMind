@@ -383,6 +383,111 @@ export interface TranslationResult {
 }
 
 // ----------------------------------------------------------------------- //
+// Phase 4 types — Vision (§9.1–9.10)
+// ----------------------------------------------------------------------- //
+
+export interface ImageSet {
+  id: string;
+  corpus_id: string;
+  name: string;
+  image_count: number;
+  created_at: string;
+}
+
+export interface ImageRecord {
+  id: string;
+  image_set_id: string;
+  filename: string;
+  format: string;
+  width: number;
+  height: number;
+  size_bytes: number;
+  caption: string;
+  created_at: string;
+}
+
+export interface ImageAnalysis {
+  image_id: string;
+  filename: string;
+  dimensions: string;
+  analysis: {
+    ocr: { text: string; confidence: number; word_count: number; engine: string; language: string };
+    colours: {
+      dominant_colours: Array<{ hex: string; rgb: number[]; percent: number }>;
+      warm_cold_balance: number;
+      brightness: number;
+      contrast: number;
+      saturation: number;
+      colour_symbolism_notes: string[];
+    };
+    composition: {
+      information_value: Record<string, number>;
+      rule_of_thirds_intersections: Array<{ x: number; y: number; salience: number }>;
+      salience_centre: [number, number];
+      visual_balance: number;
+      framing_balance: number;
+      vectors: any[];
+    };
+  };
+  caption: string;
+}
+
+export interface VisualGrammarClaim {
+  metafunction: string;
+  category: string;
+  claim: string;
+  evidence: string[];
+  confidence: number;
+}
+
+export interface VisualGrammarResult {
+  image_id: string;
+  framework: string;
+  claims: VisualGrammarClaim[];
+  scores: {
+    representational: { claim_count: number; avg_confidence: number };
+    interactive: { claim_count: number; avg_confidence: number };
+    compositional: { claim_count: number; avg_confidence: number };
+  };
+}
+
+export interface ImageRegion {
+  region_id: string;
+  bbox: [number, number, number, number];
+  centroid: [number, number];
+  mean_colour: [number, number, number];
+  salience: number;
+  descriptor: string;
+}
+
+export interface Alignment {
+  region_id: string;
+  span_id: string;
+  confidence: number;
+  match_reason: string;
+  region_descriptor: string;
+  span_text: string;
+}
+
+export interface CrossModalRelation {
+  relation_type: string;
+  alignment_refs: string[];
+  description: string;
+  confidence: number;
+}
+
+export interface AlignmentResult {
+  image_id: string;
+  text: string;
+  method: string;
+  note: string;
+  regions: ImageRegion[];
+  spans: Array<{ span_id: string; text: string; start: number; end: number; pos_hint: string }>;
+  alignments: Alignment[];
+  cross_modal_relations: CrossModalRelation[];
+}
+
+// ----------------------------------------------------------------------- //
 // Fetch helper
 // ----------------------------------------------------------------------- //
 
@@ -593,6 +698,44 @@ export const api = {
     jsonFetch<TranslationResult>(`/api/v1/bilingual/translate`, {
       method: "POST",
       body: JSON.stringify({ word, direction }),
+    }),
+
+  // --- Phase 4 Vision (§9.1–9.10) ---
+  createImageSet: (cid: string, name: string) =>
+    jsonFetch<ImageSet>(`/api/v1/corpora/${cid}/image-sets`, {
+      method: "POST",
+      body: JSON.stringify({ name }),
+    }),
+
+  listImageSets: (cid: string) =>
+    jsonFetch<ImageSet[]>(`/api/v1/corpora/${cid}/image-sets`),
+
+  uploadImages: (isetId: string, files: File[], caption?: string) => {
+    const fd = new FormData();
+    files.forEach((f) => fd.append("files", f));
+    if (caption) fd.append("captions", caption);
+    return fetch(`${ENGINE_BASE}/api/v1/image-sets/${isetId}/images`, {
+      method: "POST",
+      body: fd,
+    }).then(async (r) => {
+      if (!r.ok) throw new Error(await r.text());
+      return (await r.json()) as ImageRecord[];
+    });
+  },
+
+  listImages: (isetId: string) =>
+    jsonFetch<ImageRecord[]>(`/api/v1/image-sets/${isetId}/images`),
+
+  getImageAnalysis: (imgId: string) =>
+    jsonFetch<ImageAnalysis>(`/api/v1/images/${imgId}/analysis`),
+
+  getVisualGrammar: (imgId: string) =>
+    jsonFetch<VisualGrammarResult>(`/api/v1/images/${imgId}/visual-grammar`, { method: "POST" }),
+
+  alignImageText: (imgId: string, text: string) =>
+    jsonFetch<AlignmentResult>(`/api/v1/images/${imgId}/align`, {
+      method: "POST",
+      body: JSON.stringify({ text }),
     }),
 
   // --- Export ---
