@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CorpusMind v0.7.0 Pre-Release</title>
+    <style>
+        :root {
+            --brand: #0b6e4f;
+            --brand-dark: #095c41;
+            --accent: #e8b339;
+            --bg: #0e1116;
+            --bg-card: #161a21;
+            --bg-subtle: #1c2129;
+            --text: #e6e9ec;
+            --text-muted: #9aa3ad;
+            --text-subtle: #6c7480;
+            --border: #2a3038;
+            --success: #4ec29a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+        .hero {
+            text-align: center;
+            padding: 80px 20px 60px;
+            background: linear-gradient(180deg, var(--bg-card) 0%, var(--bg) 100%);
+            border-bottom: 1px solid var(--border);
+        }
+        .hero h1 { font-size: 3rem; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 12px; }
+        .hero .version {
+            display: inline-block; background: var(--brand); color: white;
+            padding: 4px 16px; border-radius: 20px; font-size: 0.9rem; font-weight: 600; margin-bottom: 20px;
+        }
+        .hero .tagline { font-size: 1.25rem; color: var(--text-muted); max-width: 640px; margin: 0 auto 30px; }
+        .badges { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
+        .badge {
+            display: inline-flex; align-items: center; gap: 6px;
+            background: var(--bg-subtle); border: 1px solid var(--border);
+            padding: 6px 14px; border-radius: 8px; font-size: 0.85rem; color: var(--text-muted);
+        }
+        .badge strong { color: var(--text); }
+        .container { max-width: 900px; margin: 0 auto; padding: 40px 20px; }
+        .section { margin-bottom: 48px; }
+        .section h2 {
+            font-size: 1.6rem; margin-bottom: 16px; color: var(--brand);
+            display: flex; align-items: center; gap: 8px;
+        }
+        .section h2 .num {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 32px; height: 32px; background: var(--brand); color: white;
+            border-radius: 8px; font-size: 0.9rem; font-weight: 700;
+        }
+        .section p { color: var(--text-muted); margin-bottom: 12px; }
+        .feature-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-top: 20px; }
+        .feature-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+        .feature-card h3 { font-size: 1.1rem; margin-bottom: 8px; color: var(--text); }
+        .feature-card p { font-size: 0.9rem; color: var(--text-muted); margin: 0; }
+        .feature-card .phase {
+            display: inline-block; font-size: 0.75rem; font-weight: 600;
+            padding: 2px 8px; border-radius: 4px; margin-bottom: 8px;
+            background: var(--bg-subtle); color: var(--accent);
+        }
+        .stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 16px; margin: 24px 0; }
+        .stat { text-align: center; background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+        .stat .num { font-size: 2rem; font-weight: 800; color: var(--brand); }
+        .stat .label { font-size: 0.8rem; color: var(--text-subtle); text-transform: uppercase; letter-spacing: 0.05em; }
+        .checklist { list-style: none; padding: 0; }
+        .checklist li { padding: 10px 0; border-bottom: 1px solid var(--border); display: flex; align-items: flex-start; gap: 10px; }
+        .checklist li:last-child { border-bottom: none; }
+        .checklist .icon { color: var(--success); font-weight: bold; flex-shrink: 0; }
+        .checklist .text { color: var(--text-muted); }
+        .checklist .text strong { color: var(--text); }
+        .cta { text-align: center; padding: 40px 20px; background: var(--bg-card); border-radius: 16px; margin-top: 40px; }
+        .cta h2 { color: var(--text); justify-content: center; }
+        .cta-buttons { display: flex; justify-content: center; gap: 16px; margin-top: 24px; flex-wrap: wrap; }
+        .btn { display: inline-block; padding: 12px 28px; border-radius: 8px; font-weight: 600; text-decoration: none; font-size: 0.95rem; }
+        .btn-primary { background: var(--brand); color: white; }
+        .btn-secondary { background: var(--bg-subtle); color: var(--text); border: 1px solid var(--border); }
+        .footer { text-align: center; padding: 30px 20px; border-top: 1px solid var(--border); color: var(--text-subtle); font-size: 0.85rem; }
+        .footer a { color: var(--brand); text-decoration: none; }
+        .warning-box {
+            background: rgba(232, 179, 57, 0.1); border: 1px solid rgba(232, 179, 57, 0.3);
+            border-radius: 8px; padding: 16px; margin: 20px 0; font-size: 0.9rem; color: var(--accent);
+        }
+        code { background: var(--bg-subtle); padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: var(--success); }
+    </style>
+</head>
+<body>
+
+<div class="hero">
+    <div class="version">v0.7.0 Pre-Release</div>
+    <h1>CorpusMind</h1>
+    <p class="tagline">A local-first, AI-native research environment for corpus linguistics and multimodal discourse analysis. All 6 phases complete. 97 tests passing.</p>
+    <div class="badges">
+        <span class="badge"><strong>AGPL-3.0</strong></span>
+        <span class="badge"><strong>Python 3.12</strong> + FastAPI</span>
+        <span class="badge"><strong>React 18</strong> + Vite + PWA</span>
+        <span class="badge"><strong>Tauri 2</strong> Desktop</span>
+        <span class="badge"><strong>Ollama</strong> / LM Studio</span>
+    </div>
+</div>
+
+<div class="container">
+
+    <div class="warning-box">
+        <strong>Pre-Release Notice:</strong> This is a pre-release build for testing and feedback.
+        The API may change before v1.0. Not recommended for production research yet.
+        Please report issues on GitHub.
+    </div>
+
+    <div class="stats">
+        <div class="stat"><div class="num">97</div><div class="label">Tests Passing</div></div>
+        <div class="stat"><div class="num">25</div><div class="label">AI Tools</div></div>
+        <div class="stat"><div class="num">85</div><div class="label">API Routes</div></div>
+        <div class="stat"><div class="num">12</div><div class="label">Frameworks</div></div>
+        <div class="stat"><div class="num">20</div><div class="label">Stat Formulas</div></div>
+        <div class="stat"><div class="num">163</div><div class="label">Source Files</div></div>
+    </div>
+
+    <div class="section">
+        <h2><span class="num">1</span> What is CorpusMind?</h2>
+        <p>CorpusMind is a research-software product that lets a linguist go from raw texts and images to publication-ready quantitative and qualitative analysis without writing a line of code, without sending unpublished data to a third-party server unless they explicitly choose to, and without losing the methodological transparency that peer review demands.</p>
+        <p>It ships as two integrated suites: <strong>CorpusMind Text</strong> (concordancing, frequency, collocation, keyness, n-grams, dispersion, vocabulary, POS, grammar, dependency, discourse, metaphor, sentiment, Arabic-first-class support) and <strong>CorpusMind Vision</strong> (image ingestion, OCR, colour/composition analysis, Visual Grammar per Kress and van Leeuwen, multimodal image-text alignment, CDA, persuasion, framing, narrative, emotion, cultural analysis).</p>
+        <p>Both suites are reachable from a Progressive Web App (installable, offline-capable) and from native desktop apps for Windows, Linux, and macOS (built with Tauri 2). Local LLM inference via Ollama and/or LM Studio lets the AI Assistant run entirely on the researcher's own machine.</p>
+    </div>
+
+    <div class="section">
+        <h2><span class="num">2</span> Feature Highlights</h2>
+        <div class="feature-grid">
+            <div class="feature-card"><span class="phase">Phase 1</span><h3>Corpus Analysis Workbench</h3><p>Concordance (KWIC with stable line IDs), frequency (with STTR), collocation (all 7 measures), keyness (significance + effect size always together), dispersion (Juilland's D + Gries' DP).</p></div>
+            <div class="feature-card"><span class="phase">Phase 2</span><h3>Advanced Text Analysis</h3><p>N-grams with frequency-and-range criterion, POS distribution, grammar pattern detectors, dependency queries, Hyland's metadiscourse, vocabulary profiling, sentiment, MIPVU metaphor candidates.</p></div>
+            <div class="feature-card"><span class="phase">Phase 3</span><h3>Arabic First-Class Support</h3><p>CAMeL Tools morphology, root extraction (al-jizr), pattern identification (al-wazn), Buckwalter transliteration, dialect ID (6-city model), broken plural detection, bilingual alignment, parallel concordance.</p></div>
+            <div class="feature-card"><span class="phase">Phase 4</span><h3>Vision Suite MVP</h3><p>Image ingestion, OCR, colour analysis, composition analysis, Visual Grammar (Kress and van Leeuwen), multimodal image-text alignment (the flagship feature).</p></div>
+            <div class="feature-card"><span class="phase">Phase 5</span><h3>Multimodal Discourse</h3><p>Social semiotic, CDA (4 frameworks), persuasion (Aristotle + Toulmin), framing (Entman), narrative (Labov), visual metaphor, emotion, cultural analysis. Facial analysis opt-in (off by default).</p></div>
+            <div class="feature-card"><span class="phase">Phase 6</span><h3>Collaboration and Polish</h3><p>Saved searches, bookmarks, favorites, project sharing, at-rest encryption, WCAG 2.1 AA accessibility, self-hosted lab deployment with Nginx TLS.</p></div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2><span class="num">3</span> Grounded AI Architecture</h2>
+        <p>The AI Assistant is a tool-using agent, not a chatbot. Every empirical claim must come from a tool call. If no tool was invoked, the answer is visibly flagged as <code>ungrounded</code>. This is the load-bearing implementation of the grounded-AI principle.</p>
+        <p><strong>25 registered tools</strong> across all phases: search_concordance, get_frequency, compute_collocations, compute_keyness, get_dispersion, get_ngrams, get_pos_analysis, grammar_query, dependency_query, discourse_analysis, vocab_profile, sentiment, metaphor_candidates, arabic_morphology, arabic_dialect_id, arabic_roots, arabic_register, arabic_transliterate, visual_grammar, social_semiotic, cda, persuasion, framing, and ping.</p>
+        <p>Conversations persist in SQLite with full audit trail: every turn, every tool call, every evidence item. The UI renders every claim with clickable citations back to concordance lines, image regions, or computed statistics.</p>
+    </div>
+
+    <div class="section">
+        <h2><span class="num">4</span> Privacy and Ethics</h2>
+        <ul class="checklist">
+            <li><span class="icon">&#10003;</span><span class="text"><strong>Local-first by default.</strong> Corpus text, images, and AI queries never leave the user's machine unless they explicitly opt in.</span></li>
+            <li><span class="icon">&#10003;</span><span class="text"><strong>Cloud hard-disable switch.</strong> Self-hosted deployments can block all cloud routing.</span></li>
+            <li><span class="icon">&#10003;</span><span class="text"><strong>At-rest encryption.</strong> AES-256-GCM, opt-in. Key never stored on disk.</span></li>
+            <li><span class="icon">&#10003;</span><span class="text"><strong>Facial analysis opt-in.</strong> Off by default. Never performs identity recognition.</span></li>
+            <li><span class="icon">&#10003;</span><span class="text"><strong>No telemetry.</strong> No analytics, no error reporting, no phone-home.</span></li>
+            <li><span class="icon">&#10003;</span><span class="text"><strong>Framework-lensed hypotheses.</strong> Every interpretive claim is phrased as a hypothesis, never as a bare assertion.</span></li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2><span class="num">5</span> Getting Started</h2>
+        <p>Three commands to a running system:</p>
+        <p><code>cd engine && python3 -m venv .venv && source .venv/bin/activate && pip install -e ".[dev]" && corpusmind-engine</code></p>
+        <p><code>cd web && npm install && npm run dev</code></p>
+        <p><code>ollama serve && ollama pull llama3.2:3b</code></p>
+        <p>Then open <code>http://localhost:5173</code> in your browser. Create a project, drag-drop text files, and start analyzing.</p>
+    </div>
+
+    <div class="section">
+        <h2><span class="num">6</span> Tech Stack</h2>
+        <div class="feature-grid">
+            <div class="feature-card"><h3>Engine</h3><p>Python 3.12, FastAPI, SQLAlchemy 2.0 (async), spaCy, CAMeL Tools, OpenCV, Pillow, scipy/statsmodels, openpyxl, reportlab.</p></div>
+            <div class="feature-card"><h3>Web</h3><p>React 18, Vite, TypeScript, TanStack Query, Zustand, vite-plugin-pwa.</p></div>
+            <div class="feature-card"><h3>Desktop</h3><p>Tauri 2 (Rust), sidecar process supervision, cross-platform.</p></div>
+            <div class="feature-card"><h3>AI</h3><p>ModelProvider abstraction: Ollama, LM Studio, Cloud (opt-in). Tool-calling agent with citation-enforced output.</p></div>
+        </div>
+    </div>
+
+    <div class="cta">
+        <h2>Ready to try it?</h2>
+        <p>Clone the repository and follow the quickstart guide.</p>
+        <div class="cta-buttons">
+            <a href="https://github.com/waleedmandour/CorpusMind" class="btn btn-primary">View on GitHub</a>
+            <a href="https://github.com/waleedmandour/CorpusMind/blob/main/docs/USER_GUIDE.md" class="btn btn-secondary">Read the User Guide</a>
+        </div>
+    </div>
+
+</div>
+
+<div class="footer">
+    CorpusMind v0.7.0 Pre-Release | AGPL-3.0-only |
+    <a href="https://github.com/waleedmandour/CorpusMind">GitHub</a> |
+    <a href="https://github.com/waleedmandour/CorpusMind/blob/main/docs/USER_GUIDE.md">User Guide</a> |
+    <a href="https://github.com/waleedmandour/CorpusMind/blob/main/CHANGELOG.md">Changelog</a>
+</div>
+
+</body>
+</html>
