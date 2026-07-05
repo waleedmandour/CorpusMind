@@ -25,7 +25,8 @@ async def client():
 
 @pytest.mark.asyncio
 async def test_arabic_morphology_analysis(client):
-    """§8.21: Arabic morphology analysis — root, pattern, lemma, POS, Buckwalter."""
+    """§8.21: Arabic morphology analysis — root, pattern, lemma, POS, Buckwalter,
+    number, gender, broken plural."""
     r = await client.post("/api/v1/arabic/analyze", json={
         "text": "الطلاب يدرسون في المكتبة",
         "dialect": "msa",
@@ -35,7 +36,7 @@ async def test_arabic_morphology_analysis(client):
     assert data["backend"] == "camel"
     assert data["detected_dialect"] == "msa"
     assert data["token_count"] >= 3
-    # Each token must have the required fields
+    # Each token must have the required fields including Phase 3 polish additions
     for tok in data["tokens"]:
         assert "text" in tok
         assert "root" in tok
@@ -43,10 +44,70 @@ async def test_arabic_morphology_analysis(client):
         assert "lemma" in tok
         assert "pos" in tok
         assert "buckwalter" in tok
+        assert "number" in tok          # Phase 3 polish
+        assert "gender" in tok          # Phase 3 polish
+        assert "is_broken_plural" in tok  # Phase 3 polish
     # المكتبة should have root ك.ت.ب
     maktaba = next(t for t in data["tokens"] if "مكتبة" in t["text"])
     assert "ك.ت.ب" in maktaba["root"]
     assert maktaba["pattern"]  # non-empty pattern
+
+
+@pytest.mark.asyncio
+async def test_arabic_broken_plural_detection(client):
+    """§8.21: Broken plural (جمع تكسير) detection."""
+    # كتب is a broken plural of كتاب (root ك.ت.ب)
+    r = await client.post("/api/v1/arabic/analyze", json={
+        "text": "كتب طلاب مدارس",
+        "dialect": "msa",
+    })
+    assert r.status_code == 200
+    data = r.json()
+    # At least one token should be flagged as a broken plural
+    broken_plurals = [t for t in data["tokens"] if t["is_broken_plural"]]
+    assert len(broken_plurals) >= 1, f"Expected at least one broken plural, got: {data['tokens']}"
+    # Each broken plural must be a plural noun
+    for bp in broken_plurals:
+        assert bp["number"] == "p"
+        assert bp["pos"] in ("noun", "adj")
+
+
+@pytest.mark.asyncio
+async def test_arabic_gender_and_number(client):
+    """§8.21: Gender + number (singular/dual/plural) detection."""
+    # طالب = singular masculine, طالبة = singular feminine,
+    # طالبان = dual masculine, طالبات = plural feminine
+    r = await client.post("/api/v1/arabic/analyze", json={
+        "text": "طالب طالبة طالبان طالبات",
+        "dialect": "msa",
+    })
+    assert r.status_code == 200
+    data = r.json()
+    tokens = {t["text"]: t for t in data["tokens"]}
+    if "طالب" in tokens:
+        assert tokens["طالب"]["number"] == "s"
+        assert tokens["طالب"]["gender"] == "m"
+    if "طالبة" in tokens:
+        assert tokens["طالبة"]["gender"] == "f"
+
+
+@pytest.mark.asyncio
+async def test_arabic_dialect_id_with_cities(client):
+    """§8.21: Dialect ID with city-level scores (Phase 3 polish)."""
+    r = await client.post("/api/v1/arabic/dialect", json={
+        "text": "الطلاب يدرسون في المكتبة",
+        "include_cities": True,
+    })
+    assert r.status_code == 200
+    data = r.json()
+    dist = data["dialect_distribution"]
+    assert "msa" in dist
+    # With include_cities=True, city_scores should be present (if model available)
+    if "city_scores" in data:
+        # Should include at least one city
+        assert len(data["city_scores"]) >= 1
+        # Top city should be a known code
+        assert data.get("top_city") in (None, "MSA", "BEI", "CAI", "DOH", "RAB", "TUN")
 
 
 @pytest.mark.asyncio
@@ -174,3 +235,113 @@ async def test_arabic_clitic_segmentation(client):
         assert "surface" in seg
         assert "stem" in seg
         assert "pos" in seg
+
+
+# --------------------------------------------------------------------------- #
+# §8.22 Bilingual corpus tools — Phase 3 polish
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.asyncio
+async def test_translation_lookup_ar_en(client):
+    """§8.22: Arabic→English translation lookup."""
+    r = await client.post("/api/v1/bilingual/translate", json={
+        "word": "كتاب",
+        "direction": "ar-en",
+    })
+    assert r.status_code == 200
+    data = r.json()
+    assert data["word"] == "كتاب"
+    assert data["direction"] == "ar-en"
+    assert "book" in data["equivalents"]
+    assert data["source"] == "starter-dict"
+
+
+@pytest.mark.asyncio
+async def test_translation_lookup_en_ar(client):
+    """§8.22: English→Arabic translation lookup (reverse)."""
+    r = await client.post("/api/v1/bilingual/translate", json={
+        "word": "school",
+        "direction": "en-ar",
+    })
+    assert r.status_code == 200
+    data = r.json()
+    assert data["direction"] == "en-ar"
+    # Reverse lookup should find مدرسة
+    assert "مدرسة" in data["equivalents"]
+
+
+@pytest.mark.asyncio
+async def test_parallel_alignment(client):
+    """§8.22: Sentence-level parallel alignment (Gale-Church)."""
+    import io
+    # Create two English corpora (we don't have ar_core_web_sm installed,
+    # so we use English for both sides — the alignment algorithm is
+    # language-agnostic and works on any parallel pair).
+    r = await client.post("/api/v1/projects", json={"name": "Bilingual", "language": "en"})
+    pid = r.json()["id"]
+    r = await client.post(f"/api/v1/projects/{pid}/corpora", json={"name": "Side A", "language": "en"})
+    ar_cid = r.json()["id"]
+    r = await client.post(f"/api/v1/projects/{pid}/corpora", json={"name": "Side B", "language": "en"})
+    en_cid = r.json()["id"]
+
+    text_a = b"The student studies in the library. The teacher writes the book. The boy reads the lesson."
+    text_b = b"The student studies in the library. The teacher writes the book. The boy reads the lesson."
+
+    await client.post(f"/api/v1/corpora/{ar_cid}/documents",
+        files={"files": ("a.txt", io.BytesIO(text_a), "text/plain")})
+    await client.post(f"/api/v1/corpora/{en_cid}/documents",
+        files={"files": ("b.txt", io.BytesIO(text_b), "text/plain")})
+
+    r = await client.post("/api/v1/bilingual/align", json={
+        "ar_corpus_id": ar_cid,
+        "en_corpus_id": en_cid,
+    })
+    assert r.status_code == 200
+    data = r.json()
+    assert data["method"] == "Gale-Church 1993 length-based"
+    assert data["pair_count"] >= 1
+    for pair in data["pairs"]:
+        assert "ar_sentence" in pair
+        assert "en_sentence" in pair
+        assert "confidence" in pair
+        assert 0.0 <= pair["confidence"] <= 1.0
+
+
+@pytest.mark.asyncio
+async def test_parallel_concordance(client):
+    """§8.22: Parallel concordance (KWIC side-by-side)."""
+    import io
+    r = await client.post("/api/v1/projects", json={"name": "PC", "language": "en"})
+    pid = r.json()["id"]
+    r = await client.post(f"/api/v1/projects/{pid}/corpora", json={"name": "Side A", "language": "en"})
+    ar_cid = r.json()["id"]
+    r = await client.post(f"/api/v1/projects/{pid}/corpora", json={"name": "Side B", "language": "en"})
+    en_cid = r.json()["id"]
+
+    text_a = b"The student studies in the library. The teacher writes the book."
+    text_b = b"The student studies in the library. The teacher writes the book."
+
+    await client.post(f"/api/v1/corpora/{ar_cid}/documents",
+        files={"files": ("a.txt", io.BytesIO(text_a), "text/plain")})
+    await client.post(f"/api/v1/corpora/{en_cid}/documents",
+        files={"files": ("b.txt", io.BytesIO(text_b), "text/plain")})
+
+    r = await client.post("/api/v1/bilingual/parallel-concordance", json={
+        "ar_corpus_id": ar_cid,
+        "en_corpus_id": en_cid,
+        "query": "student",
+        "level": "word",
+        "window": 3,
+        "limit": 10,
+    })
+    assert r.status_code == 200
+    data = r.json()
+    assert data["total"] >= 1
+    assert len(data["pairs"]) >= 1
+    pair = data["pairs"][0]
+    assert "ar_node" in pair
+    assert "ar_left" in pair
+    assert "ar_right" in pair
+    assert "en_sentence" in pair
+    assert pair["ar_node"] == "student"

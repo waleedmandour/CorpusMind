@@ -47,7 +47,7 @@ def create_app() -> FastAPI:
             "morphology, dialect ID, root extraction, pattern identification, "
             "Buckwalter transliteration, normalization, clitic segmentation."
         ),
-        version="0.4.0",
+        version="0.4.1",
         license_info={"name": "AGPL-3.0-only", "url": "https://www.gnu.org/licenses/agpl-3.0.html"},
         lifespan=lifespan,
     )

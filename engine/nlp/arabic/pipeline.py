@@ -50,6 +50,9 @@ class ArabicToken:
     buckwalter: str           # Buckwalter transliteration
     dediacritized: str        # diacritics removed
     dialect: str = "msa"      # detected dialect (msa, egy, glf, lev, classical)
+    number: str = ""          # s=singular, d=dual, p=plural
+    gender: str = ""          # m=masculine, f=feminine
+    is_broken_plural: bool = False  # جمع تكسير (broken plural)
 
 
 @dataclass(frozen=True, slots=True)
@@ -170,6 +173,22 @@ class CamelBackend:
 
             # Take the first analysis (CAMeL returns analyses ranked by frequency)
             a = analyses[0]
+            number = a.get("num", "")
+            gender = a.get("gen", "")
+            # Detect broken plural (جمع تكسير): plural noun whose pattern is not
+            # a sound plural (regular masculine ـون/ـين or regular feminine ـات).
+            is_broken_plural = False
+            if number == "p" and a.get("pos") in ("noun", "adj"):
+                # Sound plural patterns: 1ُ2ُونَ/1ُ2ِينَ (masc), 1َ2َ3َات (fem)
+                pat = a.get("pattern", "")
+                sound_plural_patterns = ("1ُ2ُونَ", "1ُ2ِينَ", "1َ2َ3َات", "1َ2ِ3َات")  # noqa: RUF001
+                if pat and not any(pat.startswith(sp[:3]) for sp in sound_plural_patterns):
+                    is_broken_plural = True
+                # Also check the surface form as a fallback
+                elif not pat:
+                    if not (text.endswith("ون") or text.endswith("ين") or text.endswith("ات")):
+                        is_broken_plural = True
+
             arabic_tokens.append(ArabicToken(
                 text=tok_text,
                 lemma=a.get("lex", tok_text),
@@ -180,6 +199,9 @@ class CamelBackend:
                 buckwalter=self._bw_mapper.map_string(tok_text),
                 dediacritized=dediac_ar(tok_text),
                 dialect=self._default_dialect,
+                number=number,
+                gender=gender,
+                is_broken_plural=is_broken_plural,
             ))
 
         return ArabicAnalysis(
@@ -190,11 +212,47 @@ class CamelBackend:
         )
 
     def identify_dialect(self, text: str) -> dict[str, float]:
-        """Phase 3 stub — full dialect ID requires the dialectid model
-        (274 MB). Returns a trivial {msa: 1.0} until the model is bundled.
-        Phase 4 will swap in camel_tools.dialectid.DialectIdentifier."""
-        # Heuristic: if any Egyptian markers (بقى, عايز, ليه), flag as egy
-        # This is a placeholder — real dialect ID needs the model.
+        """Full dialect identification via CAMeL Tools' DIDModel6 (Phase 3 polish).
+
+        The model6 distinguishes 6 city dialects: Beirut (Levantine), Cairo
+        (Egyptian), Doha (Gulf), MSA, Rabat (Maghrebi), Tunis (Maghrebi).
+        We aggregate city scores into the four standard CorpusMind dialect
+        buckets: msa, egy, glf, lev. (Maghrebi falls under 'other' for now;
+        Phase 4 may add a Maghrebi bucket.)
+        """
+        try:
+            did = self._get_dialect_identifier()
+            preds = did.predict([text])
+            if not preds:
+                return {"msa": 1.0}
+            scores = preds[0].scores
+            # Map city codes → CorpusMind dialect buckets
+            buckets = {"msa": 0.0, "egy": 0.0, "glf": 0.0, "lev": 0.0}
+            city_map = {
+                "MSA": "msa", "CAI": "egy",
+                "DOH": "glf",  # Doha = Gulf
+                "BEI": "lev",  # Beirut = Levantine
+                "RAB": "msa",  # Rabat = Maghrebi → fall back to MSA bucket
+                "TUN": "msa",  # Tunis = Maghrebi → fall back to MSA bucket
+            }
+            for city, score in scores.items():
+                bucket = city_map.get(city, "msa")
+                buckets[bucket] += float(score)
+            return buckets
+        except Exception as e:
+            log.warning("dialect_id_fallback", reason=str(e))
+            return self._heuristic_dialect(text)
+
+    def _get_dialect_identifier(self):
+        """Lazily load the DIDModel6 (cached on the backend instance)."""
+        if not hasattr(self, "_did_model"):
+            from camel_tools.dialectid.model6 import DIDModel6
+            self._did_model = DIDModel6.pretrained()
+        return self._did_model
+
+    @staticmethod
+    def _heuristic_dialect(text: str) -> dict[str, float]:
+        """Lexicon-based fallback when the full model isn't available."""
         if any(w in text for w in ("عايز", "ليه", "بقى", "إيه")):
             return {"egy": 0.6, "msa": 0.3, "lev": 0.05, "glf": 0.05}
         if any(w in text for w in ("شلون", "وايد", "كول", "ليش")):
@@ -284,11 +342,39 @@ def analyze_arabic(text: str, *, backend: str = "camel", dialect: str = "msa",
     return b.analyze(text, dediacritize=dediacritize)
 
 
-def identify_arabic_dialect(text: str, *, backend: str = "camel") -> dict[str, float]:
-    """Identify the Arabic dialect of a text. Returns a distribution over
-    {msa, egy, glf, lev, classical}."""
+def identify_arabic_dialect(text: str, *, backend: str = "camel",
+                            include_cities: bool = False) -> dict:
+    """Identify the Arabic dialect of a text.
+
+    Returns a probability distribution over {msa, egy, glf, lev} by default.
+    If `include_cities=True`, also returns the raw city-level scores from
+    the CAMeL DIDModel6 (Beirut, Cairo, Doha, MSA, Rabat, Tunis).
+    """
     b = get_arabic_backend(backend)
-    return b.identify_dialect(text)
+    buckets = b.identify_dialect(text)
+    result: dict = {"dialect_distribution": buckets}
+    if include_cities and hasattr(b, "_get_dialect_identifier"):
+        try:
+            did = b._get_dialect_identifier()
+            preds = did.predict([text])
+            if preds:
+                # City codes → friendly names
+                city_names = {
+                    "MSA": "Modern Standard Arabic",
+                    "BEI": "Beirut (Levantine)",
+                    "CAI": "Cairo (Egyptian)",
+                    "DOH": "Doha (Gulf)",
+                    "RAB": "Rabat (Maghrebi)",
+                    "TUN": "Tunis (Maghrebi)",
+                }
+                result["city_scores"] = {
+                    city_names.get(k, k): float(v)
+                    for k, v in preds[0].scores.items()
+                }
+                result["top_city"] = preds[0].top
+        except Exception as e:
+            log.warning("city_scores_failed", error=str(e))
+    return result
 
 
 def extract_arabic_roots(text: str) -> list[dict]:

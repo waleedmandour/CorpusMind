@@ -19,7 +19,7 @@ import clsx from "clsx";
 
 import { api } from "@/lib/api";
 
-type Tool = "morphology" | "roots" | "clitics" | "buckwalter" | "dediac" | "normalize" | "dialect" | "register";
+type Tool = "morphology" | "roots" | "clitics" | "buckwalter" | "dediac" | "normalize" | "dialect" | "register" | "translate";
 
 const TOOLS: { id: Tool; label: string; arabicLabel: string }[] = [
   { id: "morphology", label: "Morphology", arabicLabel: "التحليل الصرفي" },
@@ -30,6 +30,7 @@ const TOOLS: { id: Tool; label: string; arabicLabel: string }[] = [
   { id: "normalize", label: "Normalize", arabicLabel: "التطبيع" },
   { id: "dialect", label: "Dialect ID", arabicLabel: "اللهجة" },
   { id: "register", label: "Register", arabicLabel: "السجل" },
+  { id: "translate", label: "Translate", arabicLabel: "ترجمة" },
 ];
 
 const SAMPLE_TEXTS = [
@@ -68,6 +69,9 @@ export function ArabicView() {
           return { kind: "dialect" as const, data: await api.arabicDialect(t) };
         case "register":
           return { kind: "register" as const, data: await api.arabicRegister(t) };
+        case "translate":
+          // For translate, we treat the input as a single word
+          return { kind: "translate" as const, data: await api.translate(t.trim(), "ar-en") };
       }
     },
     enabled: !!submitted,
@@ -313,6 +317,28 @@ function ArabicResult({ result }: { result: any }) {
                 </div>
               ))}
           </div>
+        </div>
+      );
+
+    case "translate":
+      return (
+        <div className="result-block">
+          <h3>Translation equivalents</h3>
+          <div className="result-meta">
+            Word: <strong dir="rtl" lang="ar">{result.data.word}</strong> ·
+            Direction: <strong>{result.data.direction}</strong> ·
+            Source: <code>{result.data.source}</code>
+          </div>
+          {result.data.equivalents.length > 0 ? (
+            <ul className="translation-list">
+              {result.data.equivalents.map((eq: string, i: number) => (
+                <li key={i} className="translation-item">{eq}</li>
+              ))}
+            </ul>
+          ) : (
+            <div className="empty-state">No translation found in the starter dictionary.
+              Phase 4 will integrate a proper bilingual word-alignment model.</div>
+          )}
         </div>
       );
 

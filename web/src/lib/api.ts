@@ -340,6 +340,48 @@ export interface ArabicBackendInfo {
   dialects_supported?: string[];
 }
 
+// Phase 3 polish — bilingual (§8.22)
+export interface AlignedPair {
+  ar_sentence: string;
+  en_sentence: string;
+  ar_sent_idx: number;
+  en_sent_idx: number;
+  confidence: number;
+  pair_type: string;
+}
+
+export interface AlignmentResult {
+  method: string;
+  ar_doc_count: number;
+  en_doc_count: number;
+  pair_count: number;
+  pairs: AlignedPair[];
+}
+
+export interface ParallelConcordancePair {
+  ar_line_id: string;
+  ar_left: string;
+  ar_node: string;
+  ar_right: string;
+  ar_sentence: string;
+  en_sentence: string;
+  en_line_id: string;
+  confidence: number;
+}
+
+export interface ParallelConcordanceResult {
+  query: string;
+  total: number;
+  pairs: ParallelConcordancePair[];
+}
+
+export interface TranslationResult {
+  word: string;
+  direction: string;
+  equivalents: string[];
+  source: string;
+}
+
 // ----------------------------------------------------------------------- //
 // Fetch helper
 // ----------------------------------------------------------------------- //
@@ -532,6 +574,26 @@ export const api = {
 
   arabicBackends: () =>
     jsonFetch<{ backends: ArabicBackendInfo[] }>(`/api/v1/arabic/backends`),
+
+  // --- Phase 3 polish — bilingual (§8.22) ---
+  bilingualAlign: (ar_corpus_id: string, en_corpus_id: string) =>
+    jsonFetch<AlignmentResult>(`/api/v1/bilingual/align`, {
+      method: "POST",
+      body: JSON.stringify({ ar_corpus_id, en_corpus_id }),
+    }),
+
+  parallelConcordance: (ar_corpus_id: string, en_corpus_id: string, query: string,
+                        level = "lemma", window = 5, limit = 50) =>
+    jsonFetch<ParallelConcordanceResult>(`/api/v1/bilingual/parallel-concordance`, {
+      method: "POST",
+      body: JSON.stringify({ ar_corpus_id, en_corpus_id, query, level, window, limit }),
+    }),
+
+  translate: (word: string, direction = "ar-en") =>
+    jsonFetch<TranslationResult>(`/api/v1/bilingual/translate`, {
+      method: "POST",
+      body: JSON.stringify({ word, direction }),
+    }),
 
   // --- Export ---
   exportConcordanceXlsx: (cid: string, query: string, level = "word", window = 5, limit = 1000) =>
