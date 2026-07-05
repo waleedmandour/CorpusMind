@@ -66,27 +66,27 @@ const TABS: RibbonTab[] = [
       {
         label: "Manage",
         items: [
-          { label: "Projects & Corpora", phase: "Phase 1", onClick: () => useUI.getState().setActiveTab("text") },
-          { label: "Upload Corpus", phase: "Phase 1", onClick: () => useUI.getState().setActiveTab("text") },
-          { label: "Pipeline Recipe", phase: "Phase 1", onClick: () => useUI.getState().setActiveTab("text") },
+          { label: "Projects & Corpora", phase: "Phase 1", onClick: () => useUI.getState().setActiveNav("file") },
+          { label: "Upload Corpus", phase: "Phase 1", onClick: () => useUI.getState().setActiveNav("file") },
+          { label: "Pipeline Recipe", phase: "Phase 1", onClick: () => useUI.getState().setActiveNav("file") },
         ],
       },
       {
         label: "Analyze",
         items: [
-          { label: "Concordance", phase: "Phase 1", onClick: () => useUI.getState().setActiveTab("text") },
-          { label: "Frequency", phase: "Phase 1", onClick: () => useUI.getState().setActiveTab("text") },
-          { label: "Collocation", phase: "Phase 1", onClick: () => useUI.getState().setActiveTab("text") },
-          { label: "Keyness", phase: "Phase 1", onClick: () => useUI.getState().setActiveTab("text") },
-          { label: "Dispersion", phase: "Phase 1", onClick: () => useUI.getState().setActiveTab("text") },
+          { label: "Concordance", phase: "Phase 1", onClick: () => useUI.getState().setActiveNav("file") },
+          { label: "Frequency", phase: "Phase 1", onClick: () => useUI.getState().setActiveNav("file") },
+          { label: "Collocation", phase: "Phase 1", onClick: () => useUI.getState().setActiveNav("file") },
+          { label: "Keyness", phase: "Phase 1", onClick: () => useUI.getState().setActiveNav("file") },
+          { label: "Dispersion", phase: "Phase 1", onClick: () => useUI.getState().setActiveNav("file") },
         ],
       },
       {
         label: "Arabic",
         items: [
-          { label: "Morphology", phase: "Phase 3", onClick: () => useUI.getState().setActiveTab("arabic") },
-          { label: "Dialect ID", phase: "Phase 3", onClick: () => useUI.getState().setActiveTab("arabic") },
-          { label: "Buckwalter", phase: "Phase 3", onClick: () => useUI.getState().setActiveTab("arabic") },
+          { label: "Morphology", phase: "Phase 3", onClick: () => useUI.getState().setActiveNav("arabic") },
+          { label: "Dialect ID", phase: "Phase 3", onClick: () => useUI.getState().setActiveNav("arabic") },
+          { label: "Buckwalter", phase: "Phase 3", onClick: () => useUI.getState().setActiveNav("arabic") },
         ],
       },
     ],
@@ -119,11 +119,11 @@ const TABS: RibbonTab[] = [
     groups: [
       {
         label: "Chat",
-        items: [{ label: "New Conversation", phase: "Phase 0", onClick: () => useUI.getState().setActiveTab("assistant") }],
+        items: [{ label: "New Conversation", phase: "Phase 0", onClick: () => useUI.getState().setActiveNav("assistant") }],
       },
       {
         label: "Tools",
-        items: [{ label: "Inspect Tools", phase: "Phase 0", onClick: () => useUI.getState().setActiveTab("assistant") }],
+        items: [{ label: "Inspect Tools", phase: "Phase 0", onClick: () => useUI.getState().setActiveNav("assistant") }],
       },
     ],
   },
@@ -159,14 +159,14 @@ const TABS: RibbonTab[] = [
 
 export function Ribbon() {
   // We only render the active tab's groups; the tab strip itself is always visible.
-  const activeTab = useUI().activeTab as UIActiveTab;
-  const setActiveTab = useUI((s) => s.setActiveTab);
+  const activeNav = useUI().activeNav as UIActiveTab;
+  const setActiveNav = useUI((s) => s.setActiveNav);
 
-  // Map our store's activeTab onto the ribbon's tab ids.
+  // Map our store's activeNav onto the ribbon's tab ids.
   // Arabic lives under the 'text' ribbon tab (its group is inside the Text suite tab).
-  const ribbonTab: TabId = (activeTab === "settings") ? "view"
-                         : (activeTab === "arabic") ? "text"
-                         : (activeTab as TabId);
+  const ribbonTab: TabId = (activeNav === "settings") ? "view"
+                         : (activeNav === "arabic") ? "text"
+                         : (activeNav as TabId);
 
   const current = TABS.find((t) => t.id === ribbonTab) ?? TABS[0];
 
@@ -178,11 +178,11 @@ export function Ribbon() {
             key={t.id}
             className={clsx("ribbon-tab", { active: t.id === current.id })}
             onClick={() => {
-              if (t.id === "assistant") setActiveTab("assistant");
-              else if (t.id === "view") setActiveTab("settings");
-              else if (t.id === "text") setActiveTab("text");
-              else if (t.id === "vision") setActiveTab("vision");
-              else setActiveTab("assistant");
+              if (t.id === "assistant") setActiveNav("assistant");
+              else if (t.id === "view") setActiveNav("settings");
+              else if (t.id === "text") setActiveNav("file");
+              else if (t.id === "vision") setActiveNav("vision");
+              else setActiveNav("assistant");
             }}
             title={`${t.label} — ${t.phase}`}
           >

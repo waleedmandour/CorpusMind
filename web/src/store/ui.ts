@@ -1,5 +1,5 @@
 /**
- * UI store -- theme, language/dir, ribbon state, onboarding.
+ * UI store -- theme, language/dir, sidebar navigation, onboarding.
  *
  * Theme is persisted to localStorage; dir is auto-detected from the user's
  * preferred language (Arabic -> RTL, everything else -> LTR) and can be
@@ -11,11 +11,17 @@ import { persist } from "zustand/middleware";
 type Theme = "light" | "dark" | "system";
 type Dir = "ltr" | "rtl";
 
+export type NavTarget =
+  | "home" | "file" | "concordance" | "frequency" | "collocation"
+  | "keyness" | "dispersion" | "ngrams" | "pos" | "grammar" | "dependency"
+  | "discourse" | "vocab" | "sentiment" | "metaphor"
+  | "arabic" | "vision" | "assistant" | "settings" | "about";
+
 interface UIState {
   theme: Theme;
   dir: Dir;
   commandPaletteOpen: boolean;
-  activeTab: "text" | "vision" | "assistant" | "settings" | "arabic";
+  activeNav: NavTarget;
   onboardingComplete: boolean;
   onboardingOpen: boolean;
   setTheme: (t: Theme) => void;
@@ -23,7 +29,7 @@ interface UIState {
   setDir: (d: Dir) => void;
   toggleDir: () => void;
   setCommandPaletteOpen: (open: boolean) => void;
-  setActiveTab: (tab: UIState["activeTab"]) => void;
+  setActiveNav: (nav: NavTarget) => void;
   setOnboardingComplete: (done: boolean) => void;
   setOnboardingOpen: (open: boolean) => void;
 }
@@ -34,7 +40,7 @@ export const useUI = create<UIState>()(
       theme: "system",
       dir: "ltr",
       commandPaletteOpen: false,
-      activeTab: "assistant",
+      activeNav: "home",
       onboardingComplete: false,
       onboardingOpen: false,
       setTheme: (theme) => set({ theme }),
@@ -48,7 +54,7 @@ export const useUI = create<UIState>()(
       setDir: (dir) => set({ dir }),
       toggleDir: () => set({ dir: get().dir === "ltr" ? "rtl" : "ltr" }),
       setCommandPaletteOpen: (open) => set({ commandPaletteOpen: open }),
-      setActiveTab: (activeTab) => set({ activeTab }),
+      setActiveNav: (activeNav) => set({ activeNav }),
       setOnboardingComplete: (onboardingComplete) => set({ onboardingComplete }),
       setOnboardingOpen: (onboardingOpen) => set({ onboardingOpen }),
     }),

@@ -1,12 +1,18 @@
 /**
- * App shell — ribbon + active view + command palette + status bar.
+ * App shell -- top bar + sidebar + main content + status bar.
+ *
+ * The old ribbon + top-tab system has been replaced with a cleaner
+ * left sidebar for navigation. The top bar holds the brand, active
+ * corpus indicator, theme toggle, RTL toggle, and command palette button.
  */
 import { useEffect } from "react";
 
-import { Ribbon } from "@/components/Ribbon";
+import { Sidebar } from "@/components/Sidebar";
 import { CommandPalette } from "@/components/CommandPalette";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { OnboardingModal } from "@/components/OnboardingModal";
+import { HomeView } from "@/views/HomeView";
+import { AboutView } from "@/views/AboutView";
 import { AssistantView } from "@/views/AssistantView";
 import { CorpusManagerView } from "@/views/CorpusManagerView";
 import { ConcordancerView } from "@/views/ConcordancerView";
@@ -18,17 +24,19 @@ import { applyHtmlAttrs, useUI } from "@/store/ui";
 import { useApp } from "@/store/app";
 
 export default function App() {
-  const activeTab = useUI((s) => s.activeTab);
+  const activeNav = useUI((s) => s.activeNav);
   const theme = useUI((s) => s.theme);
+  const dir = useUI((s) => s.dir);
+  const toggleDir = useUI((s) => s.toggleDir);
+  const setCommandPaletteOpen = useUI((s) => s.setCommandPaletteOpen);
   const onboardingComplete = useUI((s) => s.onboardingComplete);
   const setOnboardingOpen = useUI((s) => s.setOnboardingOpen);
   const activeCorpusId = useApp((s) => s.activeCorpusId);
 
   useEffect(() => {
     applyHtmlAttrs();
-  }, [theme, useUI((s) => s.dir)]);
+  }, [theme, dir]);
 
-  // Show onboarding on first launch
   useEffect(() => {
     if (!onboardingComplete) {
       setOnboardingOpen(true);
@@ -38,70 +46,79 @@ export default function App() {
   return (
     <div className="app-shell">
       <a href="#main-content" className="skip-link">Skip to main content</a>
-      <header className="app-titlebar">
+
+      {/* Top bar */}
+      <header className="app-topbar" role="banner">
         <div className="app-brand">
           <span className="app-logo" aria-hidden>{"\u25C6"}</span>
           <span className="app-name">CorpusMind</span>
-          <span className="app-tagline">local-first | AI-native | research-grade</span>
         </div>
         {activeCorpusId && (
           <div className="app-active-corpus" title={activeCorpusId}>
-            <span className="dot" /> {activeCorpusId.slice(0, 8)}...
+            <span className="dot" /> Corpus: {activeCorpusId.slice(0, 8)}
           </div>
         )}
-        <div className="app-titlebar-actions">
+        <div className="app-topbar-actions">
+          <button
+            className="topbar-btn"
+            onClick={() => setCommandPaletteOpen(true)}
+            title="Command Palette (Ctrl/Cmd+K)"
+            aria-label="Open command palette"
+          >
+            {"\u2318"}
+          </button>
+          <button
+            className="topbar-btn"
+            onClick={toggleDir}
+            title={dir === "ltr" ? "Switch to RTL" : "Switch to LTR"}
+            aria-label="Toggle text direction"
+          >
+            {dir === "ltr" ? "RTL" : "LTR"}
+          </button>
           <ThemeToggle />
         </div>
       </header>
 
-      <Ribbon />
+      {/* Sidebar + main content */}
+      <div className="app-body">
+        <Sidebar />
+        <main className="app-main" id="main-content" role="main">
+          {activeNav === "home" && <HomeView />}
+          {activeNav === "file" && <CorpusManagerView />}
+          {activeNav === "concordance" && <ConcordancerView />}
+          {activeNav === "frequency" && <AnalysisView />}
+          {activeNav === "collocation" && <AnalysisView />}
+          {activeNav === "keyness" && <AnalysisView />}
+          {activeNav === "dispersion" && <AnalysisView />}
+          {activeNav === "ngrams" && <AnalysisView />}
+          {activeNav === "pos" && <AnalysisView />}
+          {activeNav === "grammar" && <AnalysisView />}
+          {activeNav === "dependency" && <AnalysisView />}
+          {activeNav === "discourse" && <AnalysisView />}
+          {activeNav === "vocab" && <AnalysisView />}
+          {activeNav === "sentiment" && <AnalysisView />}
+          {activeNav === "metaphor" && <AnalysisView />}
+          {activeNav === "arabic" && <ArabicView />}
+          {activeNav === "vision" && <VisionView />}
+          {activeNav === "assistant" && <AssistantView />}
+          {activeNav === "settings" && <SettingsView />}
+          {activeNav === "about" && <AboutView />}
+        </main>
+      </div>
 
-      <main className="app-main" id="main-content" role="main">
-        {activeTab === "assistant" && <AssistantView />}
-        {activeTab === "text" && <TextSuiteRouter />}
-        {activeTab === "arabic" && <ArabicView />}
-        {activeTab === "vision" && <VisionView />}
-        {activeTab === "settings" && <SettingsView />}
-      </main>
-
+      {/* Status bar */}
       <footer className="app-statusbar" role="contentinfo">
-        <span>Phase 6 · Collaboration + Polish</span>
-        <span className="status-sep">·</span>
+        <span>CorpusMind v0.7.0</span>
+        <span className="status-sep">|</span>
         <span>AGPL-3.0</span>
-        <span className="status-sep">·</span>
+        <span className="status-sep">|</span>
         <span>Press Ctrl/Cmd+K for commands</span>
+        <span className="status-sep">|</span>
+        <a href="https://corpus-mind-web.vercel.app/" style={{ color: "inherit" }}>Live PWA</a>
       </footer>
 
       <CommandPalette />
       <OnboardingModal />
     </div>
   );
-}
-
-/** Routes within the Text suite tab: Manage / Concordance / Analyze. */
-function TextSuiteRouter() {
-  // Read a query-param-like state from the URL hash for sub-tab selection.
-  // Phase 1 keeps this simple — a module-level variable.
-  const sub = useTextSubTab();
-  return (
-    <div className="text-suite">
-      <nav className="sub-tabs">
-        <button className={sub.tab === "manage" ? "active" : ""} onClick={() => sub.setTab("manage")}>Manage</button>
-        <button className={sub.tab === "concordance" ? "active" : ""} onClick={() => sub.setTab("concordance")}>Concordance</button>
-        <button className={sub.tab === "analyze" ? "active" : ""} onClick={() => sub.setTab("analyze")}>Analyze</button>
-      </nav>
-      <div className="sub-content">
-        {sub.tab === "manage" && <CorpusManagerView />}
-        {sub.tab === "concordance" && <ConcordancerView />}
-        {sub.tab === "analyze" && <AnalysisView />}
-      </div>
-    </div>
-  );
-}
-
-// Simple module-level sub-tab state. Phase 2 will move this to the URL.
-import { useState } from "react";
-function useTextSubTab() {
-  const [tab, setTab] = useState<"manage" | "concordance" | "analyze">("manage");
-  return { tab, setTab };
 }

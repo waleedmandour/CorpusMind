@@ -27,7 +27,7 @@ interface Message {
 
 export function AssistantView() {
   const cid = useApp((s) => s.activeCorpusId);
-  const setActiveTab = useUI((s) => s.setActiveTab);
+  const setActiveNav = useUI((s) => s.setActiveNav);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [provider, setProvider] = useState<"ollama" | "lmstudio" | "cloud">("ollama");
@@ -162,7 +162,7 @@ export function AssistantView() {
                         {ev.kind === "concordance_line" && (
                           <button
                             className="evidence-link"
-                            onClick={() => setActiveTab("text")}
+                            onClick={() => setActiveNav("concordance")}
                             title="Open concordancer"
                           >→ open</button>
                         )}

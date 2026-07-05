@@ -1,20 +1,38 @@
 /**
- * Analysis — frequency, collocation, keyness, dispersion, n-grams, POS,
+ * Analysis -- frequency, collocation, keyness, dispersion, n-grams, POS,
  * grammar, dependency, discourse, vocabulary, sentiment, metaphor.
  *
- * Phase 1 (left half of tabs): frequency / collocation / keyness / dispersion
- * Phase 2 (right half): ngrams / pos / grammar / dep / discourse / vocab / sentiment / metaphor
+ * The active sub-tab is driven by the sidebar navigation (activeNav in
+ * the UI store). When the user clicks "Frequency" in the sidebar, this
+ * view receives "frequency" as the active tab and renders that panel.
+ * The internal tab bar also allows switching between analyses.
  */
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
 
 import { api, downloadBlob } from "@/lib/api";
 import { useApp } from "@/store/app";
+import { useUI } from "@/store/ui";
 
 type Tab =
   | "frequency" | "collocation" | "keyness" | "dispersion"
   | "ngrams" | "pos" | "grammar" | "dep" | "discourse" | "vocab" | "sentiment" | "metaphor";
+
+const NAV_TO_TAB: Record<string, Tab> = {
+  frequency: "frequency",
+  collocation: "collocation",
+  keyness: "keyness",
+  dispersion: "dispersion",
+  ngrams: "ngrams",
+  pos: "pos",
+  grammar: "grammar",
+  dependency: "dep",
+  discourse: "discourse",
+  vocab: "vocab",
+  sentiment: "sentiment",
+  metaphor: "metaphor",
+};
 
 const TABS: { id: Tab; label: string; phase: 1 | 2 }[] = [
   { id: "frequency", label: "Frequency", phase: 1 },
@@ -33,9 +51,16 @@ const TABS: { id: Tab; label: string; phase: 1 | 2 }[] = [
 
 export function AnalysisView() {
   const cid = useApp((s) => s.activeCorpusId);
+  const activeNav = useUI((s) => s.activeNav);
   const [tab, setTab] = useState<Tab>("frequency");
 
-  if (!cid) return <div className="empty-state">Select a corpus to analyze.</div>;
+  // Sync the internal tab with the sidebar navigation
+  useEffect(() => {
+    const mapped = NAV_TO_TAB[activeNav];
+    if (mapped) setTab(mapped);
+  }, [activeNav]);
+
+  if (!cid) return <div className="empty-state">Select a corpus to analyze. Go to Projects in the sidebar to choose one.</div>;
 
   return (
     <div className="analysis">
@@ -47,7 +72,7 @@ export function AnalysisView() {
             onClick={() => setTab(t.id)}
             title={t.phase === 2 ? "Phase 2 feature" : undefined}
           >
-            {t.label}{t.phase === 2 ? " ·2" : ""}
+            {t.label}{t.phase === 2 ? " 2" : ""}
           </button>
         ))}
       </div>
