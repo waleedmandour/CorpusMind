@@ -26,6 +26,7 @@ export default function App() {
 
   return (
     <div className="app-shell">
+      <a href="#main-content" className="skip-link">Skip to main content</a>
       <header className="app-titlebar">
         <div className="app-brand">
           <span className="app-logo" aria-hidden>◆</span>
@@ -41,7 +42,7 @@ export default function App() {
 
       <Ribbon />
 
-      <main className="app-main">
+      <main className="app-main" id="main-content" role="main">
         {activeTab === "assistant" && <AssistantView />}
         {activeTab === "text" && <TextSuiteRouter />}
         {activeTab === "arabic" && <ArabicView />}
@@ -49,8 +50,8 @@ export default function App() {
         {activeTab === "settings" && <SettingsView />}
       </main>
 
-      <footer className="app-statusbar">
-        <span>Phase 3 · Arabic depth pass</span>
+      <footer className="app-statusbar" role="contentinfo">
+        <span>Phase 6 · Collaboration + Polish</span>
         <span className="status-sep">·</span>
         <span>AGPL-3.0</span>
         <span className="status-sep">·</span>

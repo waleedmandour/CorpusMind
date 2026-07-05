@@ -1,17 +1,23 @@
-# Docker Compose for self-hosted CorpusMind engine (§6.3).
+# Docker Compose for self-hosted CorpusMind engine (§6.3) — Phase 6.
 #
 # Use case: a research lab wants one always-on engine instance shared by
 # multiple group members, instead of each member running a local copy.
 # Members point their PWA at http://<lab-server>:8765.
 #
+# Phase 6 additions:
+#   - Optional Nginx reverse proxy with TLS for secure multi-user access
+#   - Optional at-rest encryption (set CORPUSMIND_ENCRYPTION_KEY)
+#   - Collaboration features (§10.2 project sharing + §7.4 sync)
+#
 # Bring up with:  docker compose -f infra/docker-compose.yml up -d
+# With TLS:       docker compose -f infra/docker-compose.yml --profile tls up -d
 
 services:
   engine:
     build:
       context: ..
       dockerfile: infra/Dockerfile
-    image: corpusmind/engine:0.1.0
+    image: corpusmind/engine:0.7.0
     container_name: corpusmind-engine
     restart: unless-stopped
     ports:
@@ -24,12 +30,31 @@ services:
       # Cloud is hard-disabled in self-hosted mode by default — protects
       # against accidental cloud-provider routing on shared infrastructure.
       CORPUSMIND_CLOUD_DISABLED_HARD: "true"
+      # Optional: enable at-rest encryption (§13.2)
+      # Generate a key with: python -c "import secrets; print(secrets.token_hex(32))"
+      # CORPUSMIND_ENCRYPTION_KEY: "your-64-char-hex-key-here"
     healthcheck:
       test: ["CMD", "curl", "-fs", "http://127.0.0.1:8765/api/v1/health"]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 15s
+
+  # Optional: Nginx reverse proxy with TLS for secure multi-user access
+  # Enable with: --profile tls
+  nginx:
+    profiles: ["tls"]
+    image: nginx:alpine
+    container_name: corpusmind-nginx
+    restart: unless-stopped
+    ports:
+      - "443:443"
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    depends_on:
+      - engine
 
   # Optional: run a local Ollama alongside the engine on the same host.
   # Comment out if your users run Ollama on their own machines.

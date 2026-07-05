@@ -8,6 +8,7 @@ export function SettingsView() {
   const health = useQuery({ queryKey: ["health"], queryFn: api.health, refetchInterval: 5_000 });
   const providers = useQuery({ queryKey: ["providers"], queryFn: api.providers, refetchInterval: 5_000 });
   const version = useQuery({ queryKey: ["version"], queryFn: api.version });
+  const encryption = useQuery({ queryKey: ["encryption"], queryFn: api.encryptionStatus });
 
   return (
     <div className="settings-view">
@@ -66,7 +67,25 @@ export function SettingsView() {
         <p className="hint">
           No telemetry or analytics without explicit, separate opt-in. The
           cloud-AI indicator is unmissable whenever active. An at-rest encryption
-          option for project storage lands in Phase 6.
+          option for project storage is available (Phase 6).
+        </p>
+        {encryption.data && (
+          <div className="facial-status">
+            <strong>At-rest encryption (§13.2):</strong>
+            <span className={encryption.data.enabled ? "ok" : "bad"}>
+              {encryption.data.enabled ? "ENABLED" : "DISABLED (default)"}
+            </span>
+            <p className="notice">{encryption.data.notice}</p>
+          </div>
+        )}
+      </section>
+
+      <section>
+        <h3>Accessibility (§13.3)</h3>
+        <p className="hint">
+          WCAG 2.1 AA target. Visible focus indicators, skip-to-content link,
+          screen-reader-only text, reduced-motion support, high-contrast mode,
+          44px minimum touch targets, full RTL mirroring for Arabic.
         </p>
       </section>
     </div>

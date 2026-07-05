@@ -791,6 +791,63 @@ export const api = {
   cdaFrameworks: () =>
     jsonFetch<{ frameworks: Record<string, string> }>(`/api/v1/cda-frameworks`),
 
+  // --- Phase 6 research workflow (§8.23) + collaboration (§10.2) ---
+  savedSearches: {
+    list: (pid: string) =>
+      jsonFetch<any[]>(`/api/v1/projects/${pid}/saved-searches`),
+    create: (pid: string, name: string, query: string, searchType = "concordance",
+             corpusId?: string, parameters?: Record<string, unknown>) =>
+      jsonFetch<any>(`/api/v1/projects/${pid}/saved-searches`, {
+        method: "POST",
+        body: JSON.stringify({ name, query, search_type: searchType, corpus_id: corpusId, parameters }),
+      }),
+    delete: (sid: string) =>
+      jsonFetch<{ deleted: string }>(`/api/v1/saved-searches/${sid}`, { method: "DELETE" }),
+  },
+  bookmarks: {
+    list: (pid: string) =>
+      jsonFetch<any[]>(`/api/v1/projects/${pid}/bookmarks`),
+    create: (pid: string, corpusId: string, refType: string, refId: string,
+             label = "", note = "") =>
+      jsonFetch<any>(`/api/v1/projects/${pid}/bookmarks`, {
+        method: "POST",
+        body: JSON.stringify({ corpus_id: corpusId, reference_type: refType, reference_id: refId, label, note }),
+      }),
+    delete: (bid: string) =>
+      jsonFetch<{ deleted: string }>(`/api/v1/bookmarks/${bid}`, { method: "DELETE" }),
+  },
+  favorites: {
+    list: (pid: string) =>
+      jsonFetch<any[]>(`/api/v1/projects/${pid}/favorites`),
+    create: (pid: string, itemType: string, itemId: string) =>
+      jsonFetch<any>(`/api/v1/projects/${pid}/favorites`, {
+        method: "POST",
+        body: JSON.stringify({ item_type: itemType, item_id: itemId }),
+      }),
+    delete: (fid: string) =>
+      jsonFetch<{ deleted: string }>(`/api/v1/favorites/${fid}`, { method: "DELETE" }),
+  },
+  sharing: {
+    share: (pid: string, visibility = "private") =>
+      jsonFetch<any>(`/api/v1/projects/${pid}/share`, {
+        method: "POST",
+        body: JSON.stringify({ visibility }),
+      }),
+    get: (pid: string) =>
+      jsonFetch<any>(`/api/v1/projects/${pid}/share`),
+    unshare: (pid: string) =>
+      jsonFetch<{ unshared: string }>(`/api/v1/projects/${pid}/share`, { method: "DELETE" }),
+    sync: (pid: string, eventType = "push", summary = "") =>
+      jsonFetch<any>(`/api/v1/projects/${pid}/sync`, {
+        method: "POST",
+        body: JSON.stringify({ event_type: eventType, summary }),
+      }),
+    syncEvents: (pid: string) =>
+      jsonFetch<any[]>(`/api/v1/projects/${pid}/sync-events`),
+  },
+  encryptionStatus: () =>
+    jsonFetch<{ enabled: boolean; method: string; notice: string; key_present: boolean }>(`/api/v1/encryption/status`),
+
   // --- Export ---
   exportConcordanceXlsx: (cid: string, query: string, level = "word", window = 5, limit = 1000) =>
     fetch(`${ENGINE_BASE}/api/v1/corpora/${cid}/export/concordance.xlsx`, {

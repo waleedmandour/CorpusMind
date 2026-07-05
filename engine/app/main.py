@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from ai import ProviderRegistry
 from api import ai as ai_routes
-from api import analysis, arabic, corpora, export, health, phase2, phase5, system, vision
+from api import analysis, arabic, corpora, export, health, phase2, phase5, phase6, system, vision
 from app.logging import configure_logging, get_logger
 from app.settings import get_settings
 from storage.session import dispose_db, init_db
@@ -43,11 +43,11 @@ def create_app() -> FastAPI:
         title="CorpusMind Engine",
         description=(
             "Local-first, AI-native research environment for corpus linguistics and "
-            "multimodal discourse analysis. Phase 5: Suite B completion — social "
-            "semiotic, CDA (4 frameworks), persuasion, framing, narrative, visual "
-            "metaphor, emotion, cultural + facial-analysis opt-in module."
+            "multimodal discourse analysis. Phase 6: collaboration, self-hosting, "
+            "polish — saved searches, bookmarks, favorites, project sharing, "
+            "at-rest encryption, accessibility hardening."
         ),
-        version="0.6.0",
+        version="0.7.0",
         license_info={"name": "AGPL-3.0-only", "url": "https://www.gnu.org/licenses/agpl-3.0.html"},
         lifespan=lifespan,
     )
@@ -69,6 +69,7 @@ def create_app() -> FastAPI:
     app.include_router(arabic.router, prefix="/api/v1", tags=["arabic"])
     app.include_router(vision.router, prefix="/api/v1", tags=["vision"])
     app.include_router(phase5.router, prefix="/api/v1", tags=["phase5"])
+    app.include_router(phase6.router, prefix="/api/v1", tags=["phase6"])
     app.include_router(export.router, prefix="/api/v1", tags=["export"])
     return app
 

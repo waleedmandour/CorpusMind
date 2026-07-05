@@ -228,3 +228,76 @@ class Image(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
     image_set: Mapped[ImageSet] = relationship(back_populates="images")
+
+
+# --------------------------------------------------------------------------- #
+# Phase 6 — Research workflow (§8.23) + Collaboration (§10.2)
+# --------------------------------------------------------------------------- #
+
+
+class SavedSearch(Base):
+    """A saved search query (§8.23). Persists query + parameters for re-use."""
+    __tablename__ = "saved_searches"
+
+    id: Mapped[str] = mapped_column(String(16), primary_key=True, default=_uuid)
+    project_id: Mapped[str] = mapped_column(ForeignKey("projects.id", ondelete="CASCADE"), index=True)
+    corpus_id: Mapped[str | None] = mapped_column(ForeignKey("corpora.id", ondelete="SET NULL"), nullable=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    query: Mapped[str] = mapped_column(Text, nullable=False)
+    search_type: Mapped[str] = mapped_column(String(32), default="concordance")  # concordance|collocation|keyness|...
+    parameters: Mapped[dict] = mapped_column(JSON, default=dict)  # window, level, min_freq, etc.
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
+class Bookmark(Base):
+    """A bookmarked concordance line or analysis result (§8.23)."""
+    __tablename__ = "bookmarks"
+
+    id: Mapped[str] = mapped_column(String(16), primary_key=True, default=_uuid)
+    project_id: Mapped[str] = mapped_column(ForeignKey("projects.id", ondelete="CASCADE"), index=True)
+    corpus_id: Mapped[str] = mapped_column(ForeignKey("corpora.id", ondelete="CASCADE"), index=True)
+    label: Mapped[str] = mapped_column(String(255), default="")
+    reference_type: Mapped[str] = mapped_column(String(32), default="concordance_line")  # concordance_line|stat|image_region|...
+    reference_id: Mapped[str] = mapped_column(String(255), default="")  # e.g. "doc:sent:tok" or "stat:ll:..."
+    note: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
+class Favorite(Base):
+    """A favorited item — quick-access pin (§8.23)."""
+    __tablename__ = "favorites"
+
+    id: Mapped[str] = mapped_column(String(16), primary_key=True, default=_uuid)
+    project_id: Mapped[str] = mapped_column(ForeignKey("projects.id", ondelete="CASCADE"), index=True)
+    item_type: Mapped[str] = mapped_column(String(32), default="corpus")  # corpus|search|bookmark|conversation
+    item_id: Mapped[str] = mapped_column(String(16), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
+class SharedProject(Base):
+    """A project shared with other users (§10.2 collaboration).
+
+    Phase 6 implements save-and-sync (not real-time CRDT co-editing, per
+    the §7.4 decision). A shared project can be marked public (anyone can
+    access) or private (invite-only).
+    """
+    __tablename__ = "shared_projects"
+
+    id: Mapped[str] = mapped_column(String(16), primary_key=True, default=_uuid)
+    project_id: Mapped[str] = mapped_column(ForeignKey("projects.id", ondelete="CASCADE"), index=True, unique=True)
+    share_token: Mapped[str] = mapped_column(String(64), unique=True, index=True)  # for public sharing
+    visibility: Mapped[str] = mapped_column(String(16), default="private")  # private|public
+    sync_enabled: Mapped[bool] = mapped_column(default=True)
+    last_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
+class SyncEvent(Base):
+    """Audit log for project sync events (§7.4 save-and-sync)."""
+    __tablename__ = "sync_events"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    project_id: Mapped[str] = mapped_column(ForeignKey("projects.id", ondelete="CASCADE"), index=True)
+    event_type: Mapped[str] = mapped_column(String(32))  # push|pull|conflict|resolve
+    summary: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)

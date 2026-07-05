@@ -59,3 +59,10 @@ async def public_settings() -> dict:
         "lmstudio_base_url": s.lmstudio_base_url,
         "data_dir": str(s.data_dir),
     }
+
+
+@router.get("/encryption/status")
+async def encryption_status() -> dict:
+    """§13.2: At-rest encryption status (transparency endpoint)."""
+    from storage.encryption import get_encryption_status
+    return get_encryption_status()
