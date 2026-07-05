@@ -9,6 +9,7 @@ import { AssistantView } from "@/views/AssistantView";
 import { CorpusManagerView } from "@/views/CorpusManagerView";
 import { ConcordancerView } from "@/views/ConcordancerView";
 import { AnalysisView } from "@/views/AnalysisView";
+import { ArabicView } from "@/views/ArabicView";
 import { VisionView } from "@/views/VisionView";
 import { SettingsView } from "@/views/SettingsView";
 import { applyHtmlAttrs, useUI } from "@/store/ui";
@@ -43,12 +44,13 @@ export default function App() {
       <main className="app-main">
         {activeTab === "assistant" && <AssistantView />}
         {activeTab === "text" && <TextSuiteRouter />}
+        {activeTab === "arabic" && <ArabicView />}
         {activeTab === "vision" && <VisionView />}
         {activeTab === "settings" && <SettingsView />}
       </main>
 
       <footer className="app-statusbar">
-        <span>Phase 1 · Suite A MVP</span>
+        <span>Phase 3 · Arabic depth pass</span>
         <span className="status-sep">·</span>
         <span>AGPL-3.0</span>
         <span className="status-sep">·</span>

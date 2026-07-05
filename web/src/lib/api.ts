@@ -301,6 +301,46 @@ export interface MetaphorResult {
 }
 
 // ----------------------------------------------------------------------- //
+// Phase 3 types — Arabic (§8.21)
+// ----------------------------------------------------------------------- //
+
+export interface ArabicToken {
+  text: string;
+  lemma: string;
+  root: string;
+  pattern: string;
+  pos: string;
+  stem: string;
+  buckwalter: string;
+  dediacritized: string;
+}
+
+export interface ArabicAnalysisResult {
+  text: string;
+  backend: string;
+  detected_dialect: string;
+  token_count: number;
+  tokens: ArabicToken[];
+}
+
+export interface ArabicRootRow {
+  token: string;
+  root: string;
+  pattern: string;
+  lemma: string;
+  pos: string;
+  buckwalter: string;
+}
+
+export interface ArabicBackendInfo {
+  name: string;
+  available: boolean;
+  version?: string;
+  model?: string;
+  dialects_supported?: string[];
+}
+
+// ----------------------------------------------------------------------- //
 // Fetch helper
 // ----------------------------------------------------------------------- //
 
@@ -440,6 +480,58 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ limit }),
     }),
+
+  // --- Phase 3 Arabic (§8.21) ---
+  arabicAnalyze: (text: string, dialect = "msa") =>
+    jsonFetch<ArabicAnalysisResult>(`/api/v1/arabic/analyze`, {
+      method: "POST",
+      body: JSON.stringify({ text, dialect }),
+    }),
+
+  arabicRoots: (text: string) =>
+    jsonFetch<{ roots: ArabicRootRow[] }>(`/api/v1/arabic/roots`, {
+      method: "POST",
+      body: JSON.stringify({ text }),
+    }),
+
+  arabicClitics: (text: string) =>
+    jsonFetch<{ segments: Array<{ surface: string; stem: string; pos: string }> }>(`/api/v1/arabic/clitics`, {
+      method: "POST",
+      body: JSON.stringify({ text }),
+    }),
+
+  arabicBuckwalter: (text: string) =>
+    jsonFetch<{ buckwalter: string; original: string }>(`/api/v1/arabic/buckwalter`, {
+      method: "POST",
+      body: JSON.stringify({ text }),
+    }),
+
+  arabicDediacritize: (text: string) =>
+    jsonFetch<{ dediacritized: string; original: string }>(`/api/v1/arabic/dediacritize`, {
+      method: "POST",
+      body: JSON.stringify({ text }),
+    }),
+
+  arabicNormalize: (text: string) =>
+    jsonFetch<{ normalized: string; original: string }>(`/api/v1/arabic/normalize`, {
+      method: "POST",
+      body: JSON.stringify({ text }),
+    }),
+
+  arabicDialect: (text: string) =>
+    jsonFetch<{ dialect_distribution: Record<string, number> }>(`/api/v1/arabic/dialect`, {
+      method: "POST",
+      body: JSON.stringify({ text }),
+    }),
+
+  arabicRegister: (text: string) =>
+    jsonFetch<{ register_distribution: Record<string, number> }>(`/api/v1/arabic/register`, {
+      method: "POST",
+      body: JSON.stringify({ text }),
+    }),
+
+  arabicBackends: () =>
+    jsonFetch<{ backends: ArabicBackendInfo[] }>(`/api/v1/arabic/backends`),
 
   // --- Export ---
   exportConcordanceXlsx: (cid: string, query: string, level = "word", window = 5, limit = 1000) =>

@@ -25,6 +25,7 @@ export function CommandPalette() {
     return [
       { id: "tab.assistant", label: "Go to AI Assistant", run: () => ui.setActiveTab("assistant") },
       { id: "tab.text", label: "Go to Text Suite", run: () => ui.setActiveTab("text") },
+      { id: "tab.arabic", label: "Go to Arabic Analysis", run: () => ui.setActiveTab("arabic") },
       { id: "tab.vision", label: "Go to Vision Suite", run: () => ui.setActiveTab("vision") },
       { id: "tab.settings", label: "Go to Settings", run: () => ui.setActiveTab("settings") },
       { id: "theme.light", label: "Theme: Light", run: () => ui.setTheme("light") },

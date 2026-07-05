@@ -314,3 +314,82 @@ following Universal Dependencies conventions. They handle both UD v2 labels
 `en_core_web_sm` still uses the latter.
 
 Universal Dependencies: <https://universaldependencies.org/>
+
+---
+
+## Phase 3 — Arabic analytic framework
+
+### Arabic morphology (§8.21)
+
+**Backend:** CAMeL Tools (`camel_tools.morphology.analyzer.Analyzer`)
+with the `calima-msa-r13` morphology database (Modern Standard Arabic).
+Dialect-specific databases are available for Egyptian (`calima-egy-r13`),
+Gulf (`calima-glf-01`), and Levantine (`calima-lev-01`).
+
+Pasha, M., Al-Badrashiny, M., Diab, M., El Kholy, A., Eskander, R.,
+Habl, N., ... & Roth, R. (2014). *MADAMIRA: A fast, comprehensive tool
+for morphological analysis and disambiguation of Arabic.* Proceedings of
+LREC 2014.
+
+The `calima-msa-*` databases are the CALIMA reimplementation of the SAMA /
+MADAMIRA analysis pipeline, exposed via CAMeL Tools' Python API.
+
+### Root extraction (الجذر) and pattern identification (الوزن)
+
+Arabic morphology is root-and-pattern based. Most Arabic words derive from
+a triliteral (three-consonant) root by applying a morphological pattern
+that interleaves vowels and affixes among the root consonants.
+
+**Example:**
+- Root: **ك.ت.ب** (k-t-b, "write")
+- Pattern: **المَ1ْ2َ3َة** → **المَكْتَبَة** ("the library")
+- Pattern: **يُ1ْ2ِ3** → **يُكْتِب** ("he writes")
+- Pattern: **1ُ2ّا3** → **كُتّاب** ("writers")
+
+CorpusMind extracts the root and pattern for each token using CAMeL Tools'
+morphology analyzer. The 1-2-3 placeholders in patterns represent the
+three root consonants. This is the standard convention in Arabic
+linguistics (Wright 1896; Ryding 2005).
+
+### Buckwalter transliteration
+
+The Buckwalter transliteration maps Arabic script to ASCII Latin
+characters. It is a one-to-one, lossless encoding that preserves all
+phonological distinctions. Useful for researchers who can't read Arabic
+script but need to cite specific word forms in published work.
+
+Buckwalter, T. (2004). *Buckwalter Arabic transliteration.* Linguistic
+Data Consortium.
+
+### Dialect identification (§8.21)
+
+Phase 3 ships a heuristic starter (lexicon-based) covering four varieties:
+MSA (Modern Standard Arabic), Egyptian, Gulf, and Levantine. Phase 4 will
+swap in the full CAMeL `DialectIdentifier` model (274 MB, trained to
+differentiate between 25 Arabic city dialects + MSA) behind the same
+interface — results stay comparable because the model + version is pinned
+per project (§4 Principle 8).
+
+Bouamor, H., Habash, N., Oflazer, K., & Rambow, O. (2019). *The MADAR
+Arabic Dialect Corpus and Lexicon.* Proceedings of LREC 2019.
+
+### Register detection
+
+Arabic has a diglossic situation: Classical Arabic (Qoran/Classical),
+Modern Standard Arabic (MSA), and the regional dialects. CorpusMind's
+register detector distinguishes these three registers using a
+lexicon-based heuristic. Phase 4 will integrate a proper classifier.
+
+### Normalization
+
+Three normalization operations are applied (user-controlled):
+
+1. **Alef variants:** أ (alef hamza above), إ (alef hamza below), آ (alef
+   madda) → ا (plain alef)
+2. **Teh marbuta:** ة → ه
+3. **Alef maksura:** ى → ي
+
+These are the standard normalizations used in Arabic computational
+linguistics (Sawalha & Atwell 2013; Al-Thubaity 2014). They are
+**lossy** — the original forms are preserved alongside the normalized
+text for reproducibility.

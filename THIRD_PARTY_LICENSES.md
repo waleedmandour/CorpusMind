@@ -61,13 +61,25 @@ Phase 0 release.
 | (future) [Stanza](https://stanfordnlp.github.io/stanza/) | Apache-2.0 | Multilingual NLP (Phase 1) |
 | (future) [Trankit](https://github.com/nlp-uoregon/trankit) | Apache-2.0 | Multilingual NLP (Phase 1) |
 
-### Arabic NLP (Phase 3+, optional install via `pip install -e ".[arabic]"`)
+### Arabic NLP (Phase 3, optional install via `pip install -e ".[arabic]"`)
 
 | Package | License | Purpose |
 | --- | --- | --- |
-| (future) [CAMeL Tools](https://camel-tools.readthedocs.io/) | MIT | Arabic morphology, NER, sentiment, dialect ID |
+| [CAMeL Tools](https://camel-tools.readthedocs.io/) | MIT (package) + GPL v2 (calima-msa-r13 morphology DB) + CC BY 4.0 (Gulf/Levantine DBs) | Arabic morphology, NER, sentiment, dialect ID. **Note:** the morphology databases have their own licenses — calima-msa-r13 is GPL v2, calima-glf-01 and calima-lev-01 are CC BY 4.0. These are downloaded on demand via `camel_data -i morphology-db-msa-r13` and are NOT bundled in the CorpusMind distribution; users install them locally. |
 | (future) [SinaTools](https://github.com/SinaTools/) | Apache-2.0 | Arabic NLP toolkit |
 | (future) [Farasa](https://farasa.qcri.org/) | MIT | Arabic segmentation / POS / lemmatization |
+| `pyrsistent` | MIT | Required by CAMeL Tools |
+| `muddler` | MIT | Required by CAMeL Tools (database unpacking) |
+| `cachetools` | MIT | Required by CAMeL Tools (analyzer caching) |
+| `emoji` | MIT | Required by CAMeL Tools (charset detection) |
+
+**License compliance note:** Because calima-msa-r13 is GPL v2, users who
+downloadad and use it via CorpusMind are bound by GPL v2 for that specific
+component. This does not affect CorpusMind's own AGPL-3.0 license — GPL v2
+and AGPL-3.0 are compatible (both are strong copyleft). The morphology DBs
+are NOT bundled with CorpusMind; they are downloaded on demand by the user
+via `camel_data -i`. This keeps CorpusMind's distribution clean while still
+allowing users to use the full CAMeL Tools stack.
 
 ### Statistics
 

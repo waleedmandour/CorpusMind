@@ -6,7 +6,117 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
-## [Unreleased] — Phase 2: Suite A completion
+## [Unreleased] — Phase 3: Arabic depth pass
+
+### Added — Engine
+
+- **§8.21 Arabic NLP backend abstraction** (`nlp/arabic/pipeline.py`) —
+  CAMeL Tools as the default backend (calima-msa-r13 morphology DB) with
+  stubbed Farasa and SinaTools backends. The `ArabicBackend` Protocol means
+  backends can be swapped per task/dialect without touching the rest of
+  the engine (§3.3 mandate: "don't reinvent Arabic NLP — build an
+  abstraction layer").
+- **§8.21 Root extraction (الجذر)** — `extract_arabic_roots` returns the
+  triliteral root for each token (e.g. `المكتبة → ك.ت.ب`). Useful for
+  semantic-field analysis: all words sharing a root are semantically
+  related.
+- **§8.21 Pattern (وزن) identification** — patterns like `يُ1ْ2ِ3` and
+  `المَ1ْ2َ3َة` are extracted alongside roots. The 1-2-3 placeholders
+  represent the three root consonants.
+- **§8.21 Lemma normalization** — CAMeL's disambiguated lemma (with
+  diacritics when available) is returned per token.
+- **§8.21 Diacritics handling** — `dediacritize_arabic` removes التشكيل
+  (Harakat). User-controlled: the analyzer accepts a `dediacritize` flag.
+- **§8.21 Buckwalter transliteration** — `transliterate_buckwalter`
+  converts Arabic script to ASCII Buckwalter encoding (e.g. `الطلاب → AlTlAb`).
+  Useful for researchers who can't read Arabic script but need to cite forms.
+- **§8.21 Clitic segmentation** — `segment_arabic_clitics` returns surface +
+  stem + POS per token. Phase 4 will swap in a proper clitic segmenter
+  (CAMeL's `MorphologyDB` with `clitic` segmentation enabled).
+- **§8.21 Dialect identification** — `identify_arabic_dialect` returns a
+  probability distribution over {msa, egy, glf, lev}. Phase 3 ships a
+  heuristic starter (lexicon-based); Phase 4 will swap in the full CAMeL
+  DialectIdentifier model (274 MB) behind the same interface.
+- **§8.21 Register detection** — `detect_arabic_register` distinguishes
+  Classical (Quranic/Classical) / MSA / Dialectal. Useful for diachronic
+  corpus analysis.
+- **§8.21 Normalization** — `normalize_arabic` unifies alef variants
+  (أ/إ/آ → ا), teh marbuta (ة → ه), and alef maksura (ى → ي).
+- **5 new grounded-AI tools** registered (`ai/tools.py`):
+  `arabic_morphology`, `arabic_dialect_id`, `arabic_roots`,
+  `arabic_register`, `arabic_transliterate`. These are stateless (sync,
+  no DB session needed) — the `execute_tool` dispatcher was refactored
+  to handle both async session-backed tools and sync stateless tools.
+- **Phase 3 API routes** (`api/arabic.py`) — 8 new endpoints under
+  `/api/v1/arabic/`: analyze, roots, clitics, buckwalter, dediacritize,
+  normalize, dialect, register, backends.
+- Engine version bumped to 0.4.0. Total grounded-AI tools: 19
+  (Phase 1: 6 + Phase 2: 8 + Phase 3: 5).
+
+### Added — Web
+
+- **ArabicView** (`ArabicView.tsx`) — 8-tool Arabic analysis workbench
+  with RTL text input, sample texts, dialect picker, and result rendering:
+  - Morphology table (token, root, pattern, lemma, POS, stem, Buckwalter)
+  - Root extractor table
+  - Clitic segmenter table
+  - Buckwalter transliteration
+  - Dediacritized text
+  - Normalized text
+  - Dialect ID distribution bars
+  - Register detection distribution bars
+- All Arabic text in the UI uses `dir="rtl"` + `lang="ar"` + Arabic font stack.
+- Ribbon "Arabic" group under Text Suite tab now routes to the Arabic view.
+- Command palette adds "Go to Arabic Analysis" action.
+
+### Added — Tests
+
+- `engine/tests/test_phase3_arabic.py` — 10 integration tests covering
+  morphology analysis (root, pattern, lemma, POS, Buckwalter), root
+  extraction (semantic field of ك.ت.ب), dialect ID (probability distribution
+  + Egyptian lexicon detection), register detection, Buckwalter
+  transliteration (ASCII output), dediacritization (harakat removal),
+  normalization (teh marbuta), backend listing, clitic segmentation, and
+  the 5 Arabic tools registered in the grounded-AI surface.
+
+### Added — Review audit
+
+- `scripts/REVIEW_AUDIT_PHASE2.md` — one-time Phase 2 spec compliance audit
+  confirming all §8.8, §8.10–8.13, §8.15, §8.17, §8.18 features are
+  implemented and tested.
+
+### Changed
+
+- `ai/tools.py` — refactored `execute_tool` to handle stateless sync tools
+  (Arabic, ping) alongside async session-backed tools (Phase 1+2). New
+  `_STATELESS_TOOLS` set identifies tools that don't need a DB session.
+- `app/main.py` — wires the `arabic` router; engine version 0.4.0.
+- `store/ui.ts` + `Ribbon.tsx` + `App.tsx` — `activeTab` type extended
+  with `"arabic"`; ribbon "Arabic" group items now navigate to the
+  Arabic view; command palette gets a new action.
+
+### §16 Phase 3 scope status
+
+Per the phased roadmap, Phase 3 = dedicated hardening of §8.21 against
+the CAMeL Tools / SinaTools / Farasa ecosystem. Status:
+
+- ✅ §8.21 CAMeL Tools integration (calima-msa-r13 + dialect DBs available)
+- ✅ §8.21 Root extraction (الجذر)
+- ✅ §8.21 Pattern (وزن) identification
+- ✅ §8.21 Lemma normalization
+- ✅ §8.21 Diacritics handling (removal, user-controlled)
+- ✅ §8.21 Buckwalter transliteration
+- ✅ §8.21 Clitic segmentation (Phase 4 will improve)
+- ✅ §8.21 Dialect identification (heuristic starter; Phase 4 swaps in full model)
+- ✅ §8.21 Register handling (Classical / MSA / Dialectal)
+- ✅ §8.21 Backend abstraction (CAMeL default; Farasa + SinaTools stubbed)
+- ✅ Grounded-AI tool surface extended (5 new Arabic tools)
+- ✅ RTL UI hardening (Arabic view, dir/lang attrs, Arabic font stack)
+- 🚧 §8.22 Bilingual corpus tools (Arabic–English alignment) — Phase 4
+- 🚧 §8.21 Broken plurals / dual forms / gender detection — Phase 4
+  (CAMeL morphology DB exposes these via the `gen` feature)
+
+## [0.3.0] — Phase 2: Suite A completion
 
 ### Added — Engine
 

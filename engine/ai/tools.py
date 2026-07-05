@@ -24,6 +24,13 @@ from discourse.service import (
     compute_sentiment,
     compute_vocab_profile,
 )
+from nlp.arabic.pipeline import (
+    analyze_arabic,
+    detect_arabic_register,
+    extract_arabic_roots,
+    identify_arabic_dialect,
+    transliterate_buckwalter,
+)
 from stats.service import (
     compute_collocations,
     compute_dispersion,
@@ -198,6 +205,50 @@ async def _metaphor_candidates(session: AsyncSession, *, corpus_id: str,
                  "steps, and a human must verify before any candidate counts as a "
                  "confirmed metaphor in export/statistics (§8.17)."),
     }
+
+
+# --------------------------------------------------------------------------- #
+# Phase 3 tools — Arabic (§8.21)
+# --------------------------------------------------------------------------- #
+
+
+def _arabic_morphology(*, text: str, dialect: str = "msa") -> dict:
+    """Analyze Arabic text — root extraction, pattern (وزن) identification,
+    lemma normalization, POS, Buckwalter transliteration. No session needed."""
+    analysis = analyze_arabic(text, dialect=dialect)
+    return {
+        "backend": analysis.backend,
+        "detected_dialect": analysis.detected_dialect,
+        "token_count": len(analysis.tokens),
+        "top_tokens": [
+            {
+                "text": t.text, "root": t.root, "pattern": t.pattern,
+                "lemma": t.lemma, "pos": t.pos, "buckwalter": t.buckwalter,
+            }
+            for t in analysis.tokens[:20]
+        ],
+    }
+
+
+def _arabic_dialect_id(*, text: str) -> dict:
+    """Identify Arabic dialect (MSA / Egyptian / Gulf / Levantine).
+    Returns a probability distribution."""
+    return {"dialect_distribution": identify_arabic_dialect(text)}
+
+
+def _arabic_roots(*, text: str) -> dict:
+    """Extract roots (الجذر) + patterns (الوزن) from Arabic text."""
+    return {"roots": extract_arabic_roots(text)[:20]}
+
+
+def _arabic_register(*, text: str) -> dict:
+    """Detect Arabic register: Classical / MSA / Dialectal."""
+    return {"register_distribution": detect_arabic_register(text)}
+
+
+def _arabic_transliterate(*, text: str) -> dict:
+    """Transliterate Arabic to Buckwalter encoding."""
+    return {"buckwalter": transliterate_buckwalter(text)}
 
 
 # --------------------------------------------------------------------------- #
@@ -468,6 +519,93 @@ TOOL_SCHEMAS: list[dict] = [
     {
         "type": "function",
         "function": {
+            "name": "arabic_morphology",
+            "description": (
+                "Analyze Arabic text morphologically (§8.21): tokenization + root "
+                "extraction (الجذر) + pattern identification (الوزن) + lemma + POS + "
+                "Buckwalter transliteration. Backend: CAMeL Tools (calima-msa-r13). "
+                "Use this whenever the user asks about Arabic word structure, roots, "
+                "or patterns."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "text": {"type": "string", "description": "Arabic text to analyze"},
+                    "dialect": {
+                        "type": "string", "enum": ["msa", "egy", "glf", "lev"], "default": "msa",
+                        "description": "Dialect-specific morphology DB",
+                    },
+                },
+                "required": ["text"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "arabic_dialect_id",
+            "description": (
+                "Identify the Arabic dialect of a text (§8.21): MSA, Egyptian, Gulf, "
+                "or Levantine. Returns a probability distribution. Phase 4 will swap "
+                "in the full CAMeL DialectIdentifier model (274 MB)."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {"text": {"type": "string"}},
+                "required": ["text"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "arabic_roots",
+            "description": (
+                "Extract triliteral roots (الجذر) and patterns (الوزن) from Arabic "
+                "text. Useful for semantic-field analysis: all words sharing a root "
+                "are semantically related (e.g. ك.ت.ب → كتاب، مكتبة، كاتب، يكتب)."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {"text": {"type": "string"}},
+                "required": ["text"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "arabic_register",
+            "description": (
+                "Detect Arabic register: Classical (Quranic/Classical), MSA, or "
+                "Dialectal. Useful for diachronic corpus analysis."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {"text": {"type": "string"}},
+                "required": ["text"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "arabic_transliterate",
+            "description": (
+                "Transliterate Arabic text to Buckwalter encoding (Latin). Useful "
+                "for researchers who can't read Arabic script but need to cite "
+                "specific forms."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {"text": {"type": "string"}},
+                "required": ["text"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "ping",
             "description": "Health-check tool. Returns engine version + timestamp.",
             "parameters": {"type": "object", "properties": {}},
@@ -476,15 +614,17 @@ TOOL_SCHEMAS: list[dict] = [
 ]
 
 
-# Maps tool name → async implementation that takes (session, **args)
+# Maps tool name → implementation.
+# - Async functions taking (session, **args) for corpus-backed tools
+# - Sync functions taking (**args) for stateless tools (Arabic, ping)
 TOOL_IMPLS = {
-    # Phase 1
+    # Phase 1 — corpus-backed
     "search_concordance": _search_concordance,
     "get_frequency": _get_frequency,
     "compute_collocations": _compute_collocations,
     "compute_keyness": _compute_keyness,
     "get_dispersion": _get_dispersion,
-    # Phase 2
+    # Phase 2 — corpus-backed
     "get_ngrams": _get_ngrams,
     "get_pos_analysis": _get_pos_analysis,
     "grammar_query": _grammar_query,
@@ -493,20 +633,43 @@ TOOL_IMPLS = {
     "vocab_profile": _vocab_profile,
     "sentiment": _sentiment,
     "metaphor_candidates": _metaphor_candidates,
-    # Utility
+    # Phase 3 — Arabic (stateless, sync)
+    "arabic_morphology": _arabic_morphology,
+    "arabic_dialect_id": _arabic_dialect_id,
+    "arabic_roots": _arabic_roots,
+    "arabic_register": _arabic_register,
+    "arabic_transliterate": _arabic_transliterate,
+    # Utility — stateless, sync
     "ping": lambda **_: {"ok": True, "engine": "corpusmind-engine", "ts": time.time()},
+}
+
+# Tools that don't need a DB session (stateless / sync)
+_STATELESS_TOOLS = {
+    "arabic_morphology", "arabic_dialect_id", "arabic_roots",
+    "arabic_register", "arabic_transliterate", "ping",
 }
 
 
 async def execute_tool(name: str, args: dict) -> Any:
-    """Execute a tool by name with the given args, opening a fresh session if needed."""
+    """Execute a tool by name with the given args.
+
+    Corpus-backed tools (Phase 1+2) are async and take an AsyncSession.
+    Stateless tools (Phase 3 Arabic, ping) are sync and don't need a session.
+    """
     impl = TOOL_IMPLS.get(name)
     if impl is None:
         raise KeyError(f"Unknown tool: {name}")
-    # `ping` doesn't need a session
-    if name == "ping":
-        return await impl(**args)
-    # All other tools need an async session
+
+    if name in _STATELESS_TOOLS:
+        # Stateless sync tool — call directly
+        result = impl(**args)
+        # If it returns a coroutine (async), await it
+        import inspect
+        if inspect.isawaitable(result):
+            return await result
+        return result
+
+    # Corpus-backed async tool — open a fresh session
     async with session_scope() as session:
         return await impl(session, **args)
 

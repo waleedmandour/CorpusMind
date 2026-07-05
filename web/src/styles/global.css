@@ -949,3 +949,137 @@ code, pre { font-family: var(--font-mono); }
   cursor: pointer;
 }
 .verify-btn:hover { opacity: 0.85; }
+
+
+/* =========================================================================
+   Phase 3 — Arabic view
+   ========================================================================= */
+
+.arabic-view { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-3); }
+
+.backends-bar { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+.backend-chip {
+  font-size: 11px;
+  padding: var(--space-1) var(--space-3);
+  border-radius: 10px;
+  background: var(--bg-subtle);
+  color: var(--text-subtle);
+  border: 1px solid var(--border);
+}
+.backend-chip.available {
+  background: var(--grounded-bg);
+  color: var(--grounded-fg);
+  border-color: var(--brand-400);
+}
+
+.arabic-toolbar {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  flex-wrap: wrap;
+  padding: var(--space-2) 0;
+  border-block-end: 1px solid var(--border);
+}
+.tool-tabs { display: flex; gap: 2px; flex-wrap: wrap; }
+.tool-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  color: var(--text-muted);
+  gap: 2px;
+}
+.tool-tab.active {
+  background: var(--ribbon-tab-bg-active);
+  color: var(--brand-500);
+  border-color: var(--brand-400);
+  font-weight: 600;
+}
+.tool-tab .arabic-label {
+  font-size: 10px;
+  font-family: var(--font-arabic);
+  opacity: 0.7;
+}
+.dialect-picker { font-size: 12px; color: var(--text-muted); display: flex; gap: var(--space-1); align-items: center; }
+.dialect-picker select { padding: var(--space-1) var(--space-2); }
+
+.text-input-area {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.arabic-textarea {
+  font-family: var(--font-arabic);
+  font-size: 16px;
+  line-height: 1.8;
+  text-align: right;
+  resize: vertical;
+  min-block-size: 60px;
+}
+.sample-texts { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+.sample-btn {
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+  font-family: var(--font-arabic);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.sample-btn:hover { background: var(--ribbon-tab-bg-hover); }
+.run-btn {
+  align-self: flex-start;
+  background: var(--brand-500);
+  color: var(--text-on-brand);
+  border: none;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+.run-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.result-block {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+}
+.result-block h3 { margin: 0 0 var(--space-2); color: var(--brand-500); font-size: 14px; }
+
+.arabic-table { font-size: 13px; }
+.arabic-cell {
+  font-family: var(--font-arabic);
+  font-size: 15px;
+  text-align: right;
+  direction: rtl;
+}
+.root-cell { color: var(--brand-500); font-weight: 600; }
+.pattern-cell { color: var(--text-muted); font-family: var(--font-arabic); font-size: 14px; }
+.buckwalter-cell { font-family: var(--font-mono); font-size: 12px; color: var(--text-muted); }
+
+.buckwalter-result, .arabic-result {
+  padding: var(--space-3);
+  background: var(--bg-subtle);
+  border-radius: var(--radius-sm);
+  font-size: 16px;
+  margin-block-end: var(--space-2);
+}
+.buckwalter-result { font-family: var(--font-mono); direction: ltr; text-align: left; }
+.arabic-result { font-family: var(--font-arabic); direction: rtl; text-align: right; }
+
+.original-text {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-family: var(--font-arabic);
+}
+
+.distribution-bars { display: flex; flex-direction: column; gap: var(--space-1); }

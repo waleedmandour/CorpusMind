@@ -10,7 +10,7 @@ import { useUI } from "@/store/ui";
 import clsx from "clsx";
 
 type TabId = "file" | "text" | "vision" | "assistant" | "view";
-type UIActiveTab = "text" | "vision" | "assistant" | "settings";
+type UIActiveTab = "text" | "vision" | "assistant" | "settings" | "arabic";
 
 interface RibbonTab {
   id: TabId;
@@ -84,8 +84,9 @@ const TABS: RibbonTab[] = [
       {
         label: "Arabic",
         items: [
-          { label: "Morphology", phase: "Phase 3", disabled: true },
-          { label: "Dialect ID", phase: "Phase 3", disabled: true },
+          { label: "Morphology", phase: "Phase 3", onClick: () => useUI.getState().setActiveTab("arabic") },
+          { label: "Dialect ID", phase: "Phase 3", onClick: () => useUI.getState().setActiveTab("arabic") },
+          { label: "Buckwalter", phase: "Phase 3", onClick: () => useUI.getState().setActiveTab("arabic") },
         ],
       },
     ],
@@ -161,9 +162,11 @@ export function Ribbon() {
   const activeTab = useUI().activeTab as UIActiveTab;
   const setActiveTab = useUI((s) => s.setActiveTab);
 
-  // Map our store's activeTab (which uses 'text'/'vision'/'assistant'/'settings')
-  // onto the ribbon's tab ids.
-  const ribbonTab: TabId = activeTab === "settings" ? "view" : (activeTab as TabId);
+  // Map our store's activeTab onto the ribbon's tab ids.
+  // Arabic lives under the 'text' ribbon tab (its group is inside the Text suite tab).
+  const ribbonTab: TabId = (activeTab === "settings") ? "view"
+                         : (activeTab === "arabic") ? "text"
+                         : (activeTab as TabId);
 
   const current = TABS.find((t) => t.id === ribbonTab) ?? TABS[0];
 

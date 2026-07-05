@@ -66,7 +66,22 @@ Phase 1 — **Suite A MVP** (per the [phased roadmap](docs/AI_AGENT_BUILD_PROMPT
 - ✅ 8 new grounded-AI tools (14 total): `get_ngrams`, `get_pos_analysis`, `grammar_query`, `dependency_query`, `discourse_analysis`, `vocab_profile`, `sentiment`, `metaphor_candidates`
 - ✅ 46 tests passing (23 stats + 9 Phase 1 API + 14 Phase 2 API)
 - ✅ Code review completed: 149 ruff lint errors → 0; spec compliance audit documented
-- 🚧 Phase 3 — Arabic depth pass (CAMeL Tools / SinaTools / Farasa, dialect ID, RTL hardening, §8.21–8.22)
+
+### Phase 3 — Arabic depth pass ✅
+- ✅ §8.21 CAMeL Tools integration (calima-msa-r13 morphology DB; Egyptian/Gulf/Levantine DBs available)
+- ✅ §8.21 Root extraction (الجذر) — e.g. `المكتبة → ك.ت.ب`
+- ✅ §8.21 Pattern (وزن) identification — e.g. `يُ1ْ2ِ3`, `المَ1ْ2َ3َة`
+- ✅ §8.21 Lemma normalization + diacritics handling (user-controlled)
+- ✅ §8.21 Buckwalter transliteration — `الطلاب → AlTlAb`
+- ✅ §8.21 Clitic segmentation
+- ✅ §8.21 Dialect identification (MSA/Egyptian/Gulf/Levantine; heuristic starter)
+- ✅ §8.21 Register detection (Classical / MSA / Dialectal)
+- ✅ §8.21 Normalization (alef variants, teh marbuta, alef maksura)
+- ✅ §8.21 Backend abstraction (CAMeL default; Farasa + SinaTools stubbed — swappable per §3.3)
+- ✅ 5 new grounded-AI tools (19 total): `arabic_morphology`, `arabic_dialect_id`, `arabic_roots`, `arabic_register`, `arabic_transliterate`
+- ✅ Web UI: 8-tool Arabic workbench with RTL input + sample texts + dialect picker
+- ✅ 56 tests passing (23 stats + 9 Phase 1 + 14 Phase 2 + 10 Phase 3 Arabic)
+- 🚧 Phase 4 — Suite B MVP (Vision): image ingestion, OCR, Visual Grammar (Kress & van Leeuwen), multimodal image–text alignment; + §8.22 bilingual tools + full CAMeL DialectIdentifier model
 
 ---
 

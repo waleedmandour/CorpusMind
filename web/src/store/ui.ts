@@ -15,7 +15,7 @@ interface UIState {
   theme: Theme;
   dir: Dir;
   commandPaletteOpen: boolean;
-  activeTab: "text" | "vision" | "assistant" | "settings";
+  activeTab: "text" | "vision" | "assistant" | "settings" | "arabic";
   setTheme: (t: Theme) => void;
   setDir: (d: Dir) => void;
   toggleDir: () => void;
