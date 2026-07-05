@@ -29,8 +29,9 @@ machine.
 
 ## Status
 
-Phase 0 — **Foundations** (per the [phased roadmap](docs/AI_AGENT_BUILD_PROMPT.md#16-phased-delivery-roadmap)).
+Phase 1 — **Suite A MVP** (per the [phased roadmap](docs/AI_AGENT_BUILD_PROMPT.md#16-phased-delivery-roadmap)).
 
+### Phase 0 — Foundations ✅
 - ✅ Monorepo scaffold
 - ✅ `corpusmind-engine` skeleton with health-check API
 - ✅ `corpusmind-web` skeleton as an installable PWA
@@ -39,7 +40,21 @@ Phase 0 — **Foundations** (per the [phased roadmap](docs/AI_AGENT_BUILD_PROMPT
 - ✅ Working "hello world" grounded-AI chat round-trip (with citation-or-flag contract)
 - ✅ Statistical measures from §12 (collocation, keyness, dispersion, STTR) with unit tests
 - ✅ Ribbon-style shell UI and theme system (dark/light, RTL-ready)
-- 🚧 Phase 1 — Suite A MVP — not yet started
+
+### Phase 1 — Suite A MVP ✅
+- ✅ Storage layer — SQLAlchemy 2.0 async models (projects, corpora, documents, tokens, annotation versions, persisted conversations)
+- ✅ Ingestion — TXT / DOCX / PDF / HTML / XML / CSV / MD parsing with charset detection + spaCy NLP
+- ✅ Corpus management — full CRUD + drag-and-drop upload + visible pipeline recipe (§4.8 reproducibility)
+- ✅ Concordancer — KWIC search with stable line IDs (cited by the AI Assistant), lemma/word/POS levels, wildcards
+- ✅ Frequency analysis — word / lemma / POS with STTR as the comparably valid default
+- ✅ Collocation analysis — all 7 §12 measures (MI, T-score, LL, Dice, LogDice, χ², ΔP) with configurable window
+- ✅ Keyness analysis — significance (LL, χ²) AND effect size (Log Ratio, %DIFF, Simple Maths, Odds Ratio) always together (§4 Principle 3)
+- ✅ Dispersion — Juilland's D and Gries' DP across documents
+- ✅ Grounded-AI tool surface — `search_concordance`, `get_frequency`, `compute_collocations`, `compute_keyness`, `get_dispersion`; conversations persist in SQLite
+- ✅ Export — Excel (concordance/frequency/collocation/keyness) + auto-drafted Methods PDF
+- ✅ Web UI — corpus manager, concordancer, analysis tabs, Assistant with clickable evidence citations
+- ✅ 32 tests passing (23 stats unit + 9 API integration)
+- 🚧 Phase 2 — Suite A completion (n-grams, dispersion plots, vocabulary profiling, POS/grammar/dependency analysis, discourse, pragmatics, metaphor, sentiment)
 
 ---
 
@@ -117,6 +132,47 @@ curl -X POST http://127.0.0.1:8765/api/v1/ai/chat \
 The response includes `grounded: true` and a `tool_calls` array. The UI renders
 grounded answers with citations; ungrounded answers (no tool was invoked) get a
 visible badge — this is the load-bearing implementation of Principle 2.
+
+### 5. End-to-end Phase 1 workflow (create → upload → analyze → export)
+
+```bash
+# Create a project + corpus
+PID=$(curl -s -X POST http://127.0.0.1:8765/api/v1/projects \
+  -H "Content-Type: application/json" \
+  -d '{"name":"My Research","language":"en"}' | python3 -c "import json,sys;print(json.load(sys.stdin)['id'])")
+
+CID=$(curl -s -X POST http://127.0.0.1:8765/api/v1/projects/$PID/corpora \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Corpus A","language":"en"}' | python3 -c "import json,sys;print(json.load(sys.stdin)['id'])")
+
+# Upload text files (drag-drop in the UI; here via curl)
+curl -X POST http://127.0.0.1:8765/api/v1/corpora/$CID/documents \
+  -F "files=@some_text.txt" -F "files=@another.docx"
+
+# Concordance search
+curl -X POST http://127.0.0.1:8765/api/v1/corpora/$CID/concordance \
+  -H "Content-Type: application/json" \
+  -d '{"query":"research","level":"lemma","window":5,"limit":20}'
+
+# Collocations
+curl -X POST http://127.0.0.1:8765/api/v1/corpora/$CID/collocations \
+  -H "Content-Type: application/json" \
+  -d '{"node":"research","level":"lemma","window":5,"min_freq":2}'
+
+# Frequency with STTR
+curl -X POST http://127.0.0.1:8765/api/v1/corpora/$CID/frequency \
+  -H "Content-Type: application/json" -d '{"unit":"word","limit":50}'
+
+# Export Excel
+curl -X POST http://127.0.0.1:8765/api/v1/corpora/$CID/export/frequency.xlsx \
+  -H "Content-Type: application/json" -d '{"unit":"word","limit":200}' -o frequency.xlsx
+
+# Auto-drafted Methods Section PDF
+curl http://127.0.0.1:8765/api/v1/corpora/$CID/methods.pdf -o methods.pdf
+```
+
+Or just open http://localhost:5173 and use the ribbon UI — Text Suite tab has
+Manage / Concordance / Analyze sub-tabs.
 
 ---
 

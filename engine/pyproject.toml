@@ -53,6 +53,19 @@ dependencies = [
     "structlog>=24.4.0",
     # OpenAPI / schema
     "openapi-core>=0.19.2",
+    # --- Phase 1: ingestion + NLP + export ---
+    # File parsing
+    "python-magic>=0.4.27",
+    "beautifulsoup4>=4.12.3",
+    "python-docx>=1.1.2",
+    "pypdf>=5.1.0",
+    "lxml>=5.3.0",
+    # Encoding / language detection
+    "charset-normalizer>=3.4.0",
+    "langdetect>=1.0.9",
+    # Export
+    "openpyxl>=3.1.5",
+    "reportlab>=4.2.5",
 ]
 
 [project.optional-dependencies]

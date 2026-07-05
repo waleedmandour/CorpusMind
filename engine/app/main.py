@@ -6,29 +6,33 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from ai import ProviderRegistry, ToolRegistry
+from ai import ProviderRegistry
 from app.logging import configure_logging, get_logger
 from app.settings import get_settings
-from api import health, ai as ai_routes, system
+from api import ai as ai_routes, analysis, corpora, export, health, system
+from storage.session import dispose_db, init_db
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Manage provider lifecycle and shared state."""
+    """Manage provider lifecycle, DB init, and shared state."""
     configure_logging()
     log = get_logger("app.lifespan")
     settings = get_settings()
     log.info("engine_starting", host=settings.host, port=settings.port, data_dir=str(settings.data_dir))
 
+    # Initialize the SQLite database (idempotent create_all)
+    await init_db()
+    log.info("db_ready", url=settings.sqlite_url)
+
     registry = ProviderRegistry(settings)
-    tools = ToolRegistry()
     app.state.providers = registry
-    app.state.tools = tools
 
     try:
         yield
     finally:
         await registry.aclose()
+        await dispose_db()
         log.info("engine_stopped")
 
 
@@ -38,10 +42,10 @@ def create_app() -> FastAPI:
         title="CorpusMind Engine",
         description=(
             "Local-first, AI-native research environment for corpus linguistics and "
-            "multimodal discourse analysis. Phase 0: foundations — health, system, "
-            "and grounded-AI round-trip."
+            "multimodal discourse analysis. Phase 1: Suite A MVP — ingestion, "
+            "concordance, frequency, collocation, keyness, dispersion, grounded AI."
         ),
-        version="0.1.0",
+        version="0.2.0",
         license_info={"name": "AGPL-3.0-only", "url": "https://www.gnu.org/licenses/agpl-3.0.html"},
         lifespan=lifespan,
     )
@@ -57,6 +61,9 @@ def create_app() -> FastAPI:
     app.include_router(health.router, prefix="/api/v1", tags=["health"])
     app.include_router(system.router, prefix="/api/v1", tags=["system"])
     app.include_router(ai_routes.router, prefix="/api/v1/ai", tags=["ai"])
+    app.include_router(corpora.router, prefix="/api/v1", tags=["corpora"])
+    app.include_router(analysis.router, prefix="/api/v1", tags=["analysis"])
+    app.include_router(export.router, prefix="/api/v1", tags=["export"])
     return app
 
 

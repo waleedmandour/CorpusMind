@@ -1,5 +1,5 @@
 """Public API of the AI layer."""
-from ai.assistant import Assistant, Conversation, Evidence, AssistantTurn, ToolRegistry, ToolSpec
+from ai.assistant import Assistant, AssistantTurn, Evidence
 from ai.providers import (
     ChatResponse,
     CloudDisabledError,
@@ -19,7 +19,6 @@ __all__ = [
     "ChatResponse",
     "CloudDisabledError",
     "CloudProvider",
-    "Conversation",
     "EmbeddingResponse",
     "Evidence",
     "LMStudioProvider",
@@ -28,6 +27,4 @@ __all__ = [
     "ModelProviderError",
     "OllamaProvider",
     "ProviderRegistry",
-    "ToolRegistry",
-    "ToolSpec",
 ]

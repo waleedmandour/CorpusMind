@@ -1,25 +1,28 @@
-"""AI Assistant endpoints — grounded chat round-trip (§11)."""
+"""AI Assistant endpoints — grounded chat (§11)."""
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from ai import Assistant, Conversation
+from ai import Assistant
+from ai.tools import list_tools
+from app.logging import get_logger
+from storage.models import Conversation
+from storage.session import get_session, session_scope
 
+log = get_logger(__name__)
 router = APIRouter()
 
 
-# In-memory conversation store for Phase 0.
-# Phase 1+ persists to SQLite (storage/) and surfaces a proper session API.
-_CONVERSATIONS: dict[str, Conversation] = {}
-
-
 class ChatRequest(BaseModel):
-    message: str = Field(..., min_length=1, description="User's question to the Assistant.")
-    provider: str = Field("ollama", description="Model provider: ollama | lmstudio | cloud")
-    model: str | None = Field(None, description="Specific model name. Falls back to provider default.")
-    conversation_id: str | None = Field(None, description="Continue an existing conversation.")
+    message: str = Field(..., min_length=1)
+    provider: str = Field("ollama")
+    model: str | None = Field(None)
+    conversation_id: str | None = Field(None)
+    corpus_id: str | None = Field(None)
 
 
 class ChatResponse(BaseModel):
@@ -27,34 +30,33 @@ class ChatResponse(BaseModel):
     content: str
     grounded: bool
     tool_calls: list[dict]
+    evidence: list[dict]
     elapsed_ms: int
     provider: str
     model: str
 
 
 @router.post("/chat", response_model=ChatResponse)
-async def chat(req: ChatRequest, request: Request) -> ChatResponse:
-    """Grounded chat round-trip.
-
-    The response carries `grounded: bool`. The UI MUST render ungrounded answers
-    with a visible badge — this is the load-bearing implementation of §11.1.
-    """
+async def chat(req: ChatRequest, request: Request, session: AsyncSession = Depends(get_session)) -> ChatResponse:
     try:
         provider = request.app.state.providers.get(req.provider)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Provider error: {e}")
 
-    convo = _CONVERSATIONS.get(req.conversation_id) if req.conversation_id else None
+    # Load or create conversation
+    convo = None
+    if req.conversation_id:
+        convo = await session.get(Conversation, req.conversation_id)
     if convo is None:
         convo = Conversation(provider=req.provider, model=req.model or "")
-        _CONVERSATIONS[convo.id] = convo
-    elif req.model and not convo.model:
-        convo.model = req.model
+        session.add(convo)
+        await session.flush()
 
-    assistant = Assistant(provider, request.app.state.tools, model=req.model)
+    assistant = Assistant(provider, model=req.model, corpus_id=req.corpus_id)
     try:
-        turn = await assistant.answer(convo, req.message)
+        turn = await assistant.answer(session, convo, req.message)
     except Exception as e:
+        log.error("chat_failed", error=str(e))
         raise HTTPException(status_code=502, detail=f"Model call failed: {e}")
 
     return ChatResponse(
@@ -62,57 +64,57 @@ async def chat(req: ChatRequest, request: Request) -> ChatResponse:
         content=turn.content,
         grounded=turn.grounded,
         tool_calls=turn.tool_calls,
+        evidence=[{"kind": e.kind, "ref": e.ref, "snippet": e.snippet} for e in turn.evidence],
         elapsed_ms=turn.elapsed_ms,
         provider=req.provider,
         model=req.model or getattr(provider, "default_model", ""),
     )
 
 
-class StreamRequest(BaseModel):
-    message: str
-    provider: str = "ollama"
-    model: str | None = None
-
-
-@router.post("/chat/stream")
-async def chat_stream(req: StreamRequest, request: Request) -> StreamingResponse:
-    """Minimal SSE streaming endpoint — full grounded-streaming lands in Phase 1
-    alongside tool-calling loop. Phase 0 returns plain text chunks from the model
-    for UI plumbing validation only."""
-    try:
-        provider = request.app.state.providers.get(req.provider)
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Provider error: {e}")
-
-    from ai.providers import Message
-
-    msgs = [
-        Message(role="system", content="You are the CorpusMind AI Assistant. Reply concisely."),
-        Message(role="user", content=req.message),
-    ]
-
-    async def gen():
-        try:
-            async for chunk in provider.stream(msgs, model=req.model):
-                # SSE framing
-                yield f"data: {chunk}\n\n"
-            yield "data: [DONE]\n\n"
-        except Exception as e:
-            yield f"data: [ERROR] {e}\n\n"
-
-    return StreamingResponse(gen(), media_type="text/event-stream")
+@router.get("/conversations")
+async def list_conversations(session: AsyncSession = Depends(get_session)) -> list[dict]:
+    stmt = select(Conversation).order_by(Conversation.updated_at.desc()).limit(50)
+    convos = (await session.execute(stmt)).scalars().all()
+    return [{"id": c.id, "provider": c.provider, "model": c.model,
+             "created_at": c.created_at.isoformat(), "updated_at": c.updated_at.isoformat(),
+             "turn_count": len(c.turns)} for c in convos]
 
 
 @router.get("/conversations/{cid}")
-async def get_conversation(cid: str) -> dict:
-    convo = _CONVERSATIONS.get(cid)
-    if convo is None:
-        raise HTTPException(status_code=404, detail="Conversation not found")
-    return convo.to_export()
+async def get_conversation(cid: str, session: AsyncSession = Depends(get_session)) -> dict:
+    convo = await session.get(Conversation, cid)
+    if not convo:
+        raise HTTPException(404, "Conversation not found")
+    return {
+        "id": convo.id,
+        "provider": convo.provider,
+        "model": convo.model,
+        "created_at": convo.created_at.isoformat(),
+        "updated_at": convo.updated_at.isoformat(),
+        "turns": [
+            {
+                "idx": t.idx,
+                "role": t.role,
+                "content": t.content,
+                "grounded": t.grounded,
+                "tool_calls": t.tool_calls,
+                "evidence": t.evidence,
+                "elapsed_ms": t.elapsed_ms,
+            }
+            for t in convo.turns
+        ],
+    }
 
 
 @router.get("/tools")
-async def list_tools(request: Request) -> dict:
-    """List the deterministic tools the Assistant is allowed to call (§11.2)."""
-    tools = request.app.state.tools
-    return {"tools": [{"name": s.name, "description": s.description} for s in tools._tools.values()]}
+async def tools() -> dict:
+    return {"tools": list_tools()}
+
+
+@router.delete("/conversations/{cid}")
+async def delete_conversation(cid: str, session: AsyncSession = Depends(get_session)) -> dict:
+    convo = await session.get(Conversation, cid)
+    if not convo:
+        raise HTTPException(404, "Conversation not found")
+    await session.delete(convo)
+    return {"deleted": cid}

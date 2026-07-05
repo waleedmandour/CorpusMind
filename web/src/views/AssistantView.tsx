@@ -5,25 +5,29 @@
  *   - grounded (has tool_calls / evidence) → rendered with green checkmark + citations
  *   - ungrounded (no tool was invoked)    → rendered with a visible "UNGROUND" badge
  *
- * This is the load-bearing implementation of §11.1: "If the LLM's claim cannot
- * be tied to retrieved evidence, the UI must visibly flag it as ungrounded
- * rather than silently presenting it as equal-weight fact."
+ * Citations are clickable: clicking a `concordance_line` evidence reference
+ * scrolls to / opens the concordancer view filtered to that line.
  */
 import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
 
-import { api, type ChatTurnResponse } from "@/lib/api";
+import { api, type ChatTurnResponse, type EvidenceItem } from "@/lib/api";
+import { useApp } from "@/store/app";
+import { useUI } from "@/store/ui";
 
 interface Message {
   role: "user" | "assistant";
   content: string;
   grounded?: boolean;
   tool_calls?: Array<Record<string, unknown>>;
+  evidence?: EvidenceItem[];
   elapsed_ms?: number;
 }
 
 export function AssistantView() {
+  const cid = useApp((s) => s.activeCorpusId);
+  const setActiveTab = useUI((s) => s.setActiveTab);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [provider, setProvider] = useState<"ollama" | "lmstudio" | "cloud">("ollama");
@@ -34,7 +38,7 @@ export function AssistantView() {
 
   const chat = useMutation({
     mutationFn: (text: string) =>
-      api.chat({ message: text, provider, conversation_id: conversationId }),
+      api.chat({ message: text, provider, conversation_id: conversationId, corpus_id: cid }),
     onSuccess: (turn: ChatTurnResponse) => {
       setConversationId(turn.conversation_id);
       setMessages((prev) => [
@@ -44,6 +48,7 @@ export function AssistantView() {
           content: turn.content,
           grounded: turn.grounded,
           tool_calls: turn.tool_calls,
+          evidence: turn.evidence,
           elapsed_ms: turn.elapsed_ms,
         },
       ]);
@@ -72,6 +77,15 @@ export function AssistantView() {
   };
 
   const providerHealthy = providers.data?.providers.find((p) => p.name === provider)?.healthy ?? false;
+  const corpusHint = cid ? `Active corpus: ${cid.slice(0, 8)}…` : "No active corpus — set one in Text → Manage.";
+
+  const prompts = [
+    "What are the top 10 most frequent words in this corpus?",
+    "Find all occurrences of 'fox' and show me their contexts.",
+    "What are the strongest collocates of 'dog' within ±5 tokens?",
+    "Compare this corpus against the reference — what are the top keywords?",
+    "How evenly is 'the' distributed across the documents?",
+  ];
 
   return (
     <div className="assistant">
@@ -85,6 +99,8 @@ export function AssistantView() {
         <div className={clsx("provider-status", { ok: providerHealthy, bad: !providerHealthy })}>
           {providerHealthy ? "● connected" : "○ offline — start Ollama or LM Studio"}
         </div>
+
+        <div className="corpus-hint">{corpusHint}</div>
 
         <h3>Grounded Tools</h3>
         <ul className="tool-list">
@@ -108,15 +124,18 @@ export function AssistantView() {
           {messages.length === 0 && (
             <div className="empty-state">
               <h2>CorpusMind AI Assistant</h2>
-              <p>
-                Try: <button className="prompt-suggest" onClick={() => setInput("ping the engine to prove tool-calling works")}>
-                  "ping the engine to prove tool-calling works"
-                </button>
-              </p>
-              <p className="hint">
-                Phase 0 ships only the <code>ping</code> tool. Full retrieval + tool surface
-                (concordance, frequency, collocation, keyness, image regions) lands in Phase 1.
-              </p>
+              <p>Try one of these grounded questions:</p>
+              <ul className="prompt-list">
+                {prompts.map((p) => (
+                  <li key={p}>
+                    <button className="prompt-suggest" onClick={() => setInput(p)} disabled={!cid}>
+                      {p}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              {!cid && <p className="hint">Set an active corpus first (Text → Manage).</p>}
+              {!providerHealthy && <p className="hint">Start Ollama or LM Studio to enable grounded answers.</p>}
             </div>
           )}
 
@@ -132,6 +151,26 @@ export function AssistantView() {
                 {m.elapsed_ms != null && <span className="msg-meta">{m.elapsed_ms} ms</span>}
               </header>
               <div className="msg-content">{m.content}</div>
+              {m.evidence && m.evidence.length > 0 && (
+                <div className="evidence-list">
+                  <strong>Evidence cited:</strong>
+                  <ul>
+                    {m.evidence.map((ev, j) => (
+                      <li key={j} className={clsx("evidence-item", ev.kind)}>
+                        <span className="evidence-kind">{ev.kind}</span>
+                        <code className="evidence-ref" title={ev.snippet}>{ev.ref}</code>
+                        {ev.kind === "concordance_line" && (
+                          <button
+                            className="evidence-link"
+                            onClick={() => setActiveTab("text")}
+                            title="Open concordancer"
+                          >→ open</button>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               {m.tool_calls && m.tool_calls.length > 0 && (
                 <details className="tool-calls">
                   <summary>{m.tool_calls.length} tool call(s)</summary>
@@ -141,7 +180,7 @@ export function AssistantView() {
             </article>
           ))}
 
-          {chat.isPending && <div className="msg msg-assistant pending">…</div>}
+          {chat.isPending && <div className="msg msg-assistant pending">Thinking…</div>}
         </div>
 
         <div className="composer">

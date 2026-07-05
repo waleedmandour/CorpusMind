@@ -64,21 +64,21 @@ const TABS: RibbonTab[] = [
     phase: "Phase 1",
     groups: [
       {
-        label: "Ingest",
+        label: "Manage",
         items: [
-          { label: "Upload Corpus", phase: "Phase 1", disabled: true },
-          { label: "Pipeline Recipe", phase: "Phase 1", disabled: true },
+          { label: "Projects & Corpora", phase: "Phase 1", onClick: () => useUI.getState().setActiveTab("text") },
+          { label: "Upload Corpus", phase: "Phase 1", onClick: () => useUI.getState().setActiveTab("text") },
+          { label: "Pipeline Recipe", phase: "Phase 1", onClick: () => useUI.getState().setActiveTab("text") },
         ],
       },
       {
         label: "Analyze",
         items: [
-          { label: "Concordance", phase: "Phase 1", disabled: true },
-          { label: "Frequency", phase: "Phase 1", disabled: true },
-          { label: "Collocation", phase: "Phase 1", disabled: true },
-          { label: "Keyness", phase: "Phase 1", disabled: true },
-          { label: "N-grams", phase: "Phase 2", disabled: true },
-          { label: "Dispersion", phase: "Phase 2", disabled: true },
+          { label: "Concordance", phase: "Phase 1", onClick: () => useUI.getState().setActiveTab("text") },
+          { label: "Frequency", phase: "Phase 1", onClick: () => useUI.getState().setActiveTab("text") },
+          { label: "Collocation", phase: "Phase 1", onClick: () => useUI.getState().setActiveTab("text") },
+          { label: "Keyness", phase: "Phase 1", onClick: () => useUI.getState().setActiveTab("text") },
+          { label: "Dispersion", phase: "Phase 1", onClick: () => useUI.getState().setActiveTab("text") },
         ],
       },
       {

@@ -149,13 +149,21 @@ def _norm_freq(f: int, N: int) -> float:
 
 def log_ratio(f1: int, f2: int, N1: int, N2: int) -> float:
     """Log Ratio = log2( (f1/N1) / (f2/N2) )  (Hardie 2014) — effect size."""
-    if f2 <= 0 or N1 <= 0 or N2 <= 0:
-        return float("inf") if f1 > 0 else 0.0
+    if N1 <= 0 or N2 <= 0:
+        return 0.0
+    if f1 <= 0 and f2 <= 0:
+        return 0.0
+    if f1 <= 0:
+        return float("-inf")  # term absent from target, present in ref
+    if f2 <= 0:
+        return float("inf")   # term present in target, absent from ref
     return math.log2((f1 / N1) / (f2 / N2))
 
 
 def pct_diff(f1: int, f2: int, N1: int, N2: int) -> float:
     """%DIFF = ((norm_f1 − norm_f2) / norm_f2) × 100  (Gabrielatos & Marchi 2012)."""
+    if N1 <= 0 or N2 <= 0:
+        return 0.0
     nf1, nf2 = _norm_freq(f1, N1), _norm_freq(f2, N2)
     if nf2 <= 0:
         return float("inf") if nf1 > 0 else 0.0
