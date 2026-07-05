@@ -1,0 +1,76 @@
+# Kress & van Leeuwen — Reading Images: The Grammar of Visual Design.
+# This is the canonical reference for Suite B's Visual Grammar module (§9.10).
+# Template version: 0.1.0 (scaffold — full analytic depth lands in Phase 4).
+
+name: kress-van-leeuwen
+full_name: "Kress & van Leeuwen (2006)"
+version: "0.1.0"
+framework_family: visual_grammar
+
+categories:
+  - id: representational
+    label: Representational meaning
+    description: >
+      What the image depicts — narrative processes (action, reactional, mental,
+      conversion) vs conceptual processes (classificational, analytical,
+      symbolic). Identifies participants, processes, and circumstances.
+
+  - id: interactive
+    label: Interactive / Interactional meaning
+    description: >
+      The relationship the image constructs between viewer and represented.
+      Includes image act (demand vs offer), social distance (close shot /
+      medium shot / long shot), angle (frontal vs oblique — involvement vs
+      detachment), and modality (realism, abstraction, sensory coding).
+
+  - id: compositional
+    label: Compositional meaning
+    description: >
+      How the representational and interactive elements are integrated into
+      a meaningful whole. Three sub-systems: information value (left/right —
+      given/new; top/bottom — ideal/real; centre/margin), salience (size,
+      contrast, foregrounding, colour), and framing (connection vs separation
+      via framing lines, vectors, white space).
+
+output_schema:
+  claim: str            # one analytic claim
+  evidence_ids: [str]   # image_region IDs (§9.4) or computed stats that justify the claim
+  confidence: float     # 0–1
+  framework: "Kress & van Leeuwen (2006)"
+  category: str         # one of: representational | interactive | compositional
+  subcategory: str      # e.g. "information_value:given_new"
+
+guardrails:
+  - >
+    Every claim MUST cite at least one image region (§9.4) or computed
+    compositional statistic (§9.4.7). Claims without evidence MUST be
+    flagged as ungrounded per §11.1.
+  - >
+    Interpretive claims about power, ideology, or viewer-positioning MUST be
+    phrased as framework-lensed hypotheses — "Under a Kress & van Leeuwen
+    reading, the frontal close-up demand image may construct an asymmetrical
+    power relation with the viewer" — never as bare assertions of fact
+    (§4 Principle 5).
+  - >
+    Never state ideology, bias, or power relations as settled fact.
+  - >
+    Colour symbolism is framework- and culture-relative. Never present
+    colour meanings (e.g. "red = danger") as universal (§9.4.6, §9.18).
+  - >
+    Do not perform identity recognition or re-identification of real
+    individuals. Descriptive analysis only (§18).
+
+example_output:
+  claim: >
+    The image constructs a demand relation with the viewer: the depicted
+    figure makes direct eye contact (frontal angle), is shown at close
+    social distance, and occupies high-salience vertical position in the
+    upper-third compositional zone.
+  evidence_ids:
+    - "region:face:gaze=direct"
+    - "region:figure:shot=close"
+    - "stat:composition:information_value=upper_third"
+  confidence: 0.82
+  framework: "Kress & van Leeuwen (2006)"
+  category: interactive
+  subcategory: "image_act:demand"

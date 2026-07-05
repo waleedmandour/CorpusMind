@@ -1,0 +1,247 @@
+# CorpusMind
+
+> A local-first, AI-native research environment for corpus linguistics and multimodal discourse analysis.
+
+CorpusMind lets a linguist go from raw texts and images to publication-ready
+quantitative and qualitative analysis — without writing a line of code, without
+sending unpublished data to a third-party server unless they explicitly choose
+to, and without losing the methodological transparency that peer review demands.
+
+It ships as two integrated suites sharing one project system, one AI layer, and
+one design language:
+
+- **CorpusMind Text** — a next-generation corpus-analysis workbench
+  (concordancing, frequency, collocation, keyness, n-grams, dispersion,
+  vocabulary / POS / grammar / dependency / semantic / discourse / pragmatic /
+  metaphor / sentiment analysis, with first-class Arabic support).
+- **CorpusMind Vision** — an AI research assistant for multimodal discourse
+  analysis, grounded in Visual Grammar (Kress & van Leeuwen), Systemic
+  Functional Linguistics, Critical Discourse Analysis, Multimodal CDA, Social
+  Semiotics, and Cognitive Linguistics.
+
+Both suites are reachable from a **Progressive Web App** (installable,
+offline-capable) and from **native desktop apps** for Windows, Linux, and
+macOS (built with Tauri 2). Local LLM inference via **Ollama** and/or
+**LM Studio** lets the AI Assistant run entirely on the researcher's own
+machine.
+
+---
+
+## Status
+
+Phase 0 — **Foundations** (per the [phased roadmap](docs/AI_AGENT_BUILD_PROMPT.md#16-phased-delivery-roadmap)).
+
+- ✅ Monorepo scaffold
+- ✅ `corpusmind-engine` skeleton with health-check API
+- ✅ `corpusmind-web` skeleton as an installable PWA
+- ✅ `corpusmind-desktop` Tauri 2 shell that can spawn the engine as a sidecar
+- ✅ `ModelProvider` abstraction wired to Ollama, LM Studio, and an opt-in Cloud provider
+- ✅ Working "hello world" grounded-AI chat round-trip (with citation-or-flag contract)
+- ✅ Statistical measures from §12 (collocation, keyness, dispersion, STTR) with unit tests
+- ✅ Ribbon-style shell UI and theme system (dark/light, RTL-ready)
+- 🚧 Phase 1 — Suite A MVP — not yet started
+
+---
+
+## Non-Negotiable Design Principles
+
+These translate the [research-basis gap analysis](docs/AI_AGENT_BUILD_PROMPT.md#3-research-basis) into concrete engineering mandates. Do not trade these away for convenience.
+
+1. **Local-first, cloud-optional.** By default, corpus text, images, and AI queries never leave the user's machine. Cloud LLM providers are an explicit, per-project, opt-in fallback with a visible indicator whenever active.
+2. **Grounded AI, never a bare chatbot.** Every AI Assistant answer that makes an empirical claim must carry a citation back to a concordance line ID, an image region, or a computed statistic the engine can reproduce on demand.
+3. **Effect size and significance, always together.** A "key" word is never reported as important on frequency-of-occurrence-in-a-huge-corpus grounds alone — Log Ratio, %DIFF, Simple Maths, and Odds Ratio ride alongside log-likelihood.
+4. **Zero-code, not zero-transparency.** Every one-click automatic output (a POS tag, a keyness list, a "power relation" score) is inspectable: the user can always see which model / formula / version produced it, and can export that as citeable methodology text.
+5. **Interpretive claims are hypotheses, framework-lensed, not facts.** Anything in the CDA / MCDA / ideology / power / persuasion family is labeled with the theoretical framework that produced it and phrased as *"under a [Framework] reading, X may indicate Y"* — never as a bare assertion.
+6. **Arabic is a first-class citizen, not a bolt-on.** RTL layout, dialect-aware tooling, and the CAMeL Tools / SinaTools / Farasa ecosystem are part of the core architecture from day one.
+7. **Practical scale, honestly stated.** Designed for disk-backed, incrementally-indexed corpora in the hundreds-of-millions-of-tokens range on consumer hardware, with graceful degradation — not an unqualified "no limit" claim.
+8. **Reproducibility is a feature.** Every project pins the exact tokenizer, tagger, model, and formula versions used, and can emit a "Methods" paragraph for a paper's methodology section.
+9. **Consent and restraint around biometric-adjacent features.** Facial/body "age group," "gender presentation," "emotion," "gaze," and dominance/submission inference ship as an opt-in module, disabled by default, and never perform identity recognition or re-identification of real individuals.
+
+---
+
+## Quickstart
+
+### Prerequisites
+
+- Python 3.12+
+- Node.js 20+ (for the web frontend)
+- [Rust + Cargo](https://rustup.rs/) (only if you want to build the Tauri desktop app)
+- [Ollama](https://ollama.com/) **or** [LM Studio](https://lmstudio.ai/) for local LLM inference
+
+### 1. Run the engine
+
+```bash
+cd engine
+python3 -m venv .venv
+source .venv/bin/activate    # Windows: .venv\Scripts\activate
+pip install -e ".[dev]"
+corpusmind-engine            # serves on http://127.0.0.1:8765
+```
+
+Health check:
+
+```bash
+curl http://127.0.0.1:8765/api/v1/health
+# {"status":"ok","engine":"corpusmind-engine","version":"0.1.0"}
+```
+
+### 2. Run the web frontend (PWA)
+
+```bash
+cd web
+npm install
+npm run dev                  # serves on http://localhost:5173
+```
+
+Open http://localhost:5173 — the app talks to the engine on :8765 by default.
+To install as a PWA, use your browser's "Install app" menu item.
+
+### 3. Run the desktop app (Tauri 2)
+
+```bash
+cd desktop/src-tauri
+cargo tauri dev
+```
+
+On first launch the desktop app spawns `corpusmind-engine` as a sidecar
+process and (optionally) a bundled Ollama binary.
+
+### 4. Try the grounded-AI round-trip
+
+```bash
+curl -X POST http://127.0.0.1:8765/api/v1/ai/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message":"ping the engine to prove tool-calling works","provider":"ollama"}'
+```
+
+The response includes `grounded: true` and a `tool_calls` array. The UI renders
+grounded answers with citations; ungrounded answers (no tool was invoked) get a
+visible badge — this is the load-bearing implementation of Principle 2.
+
+---
+
+## Architecture
+
+```
+corpusmind/
+├── engine/            # corpusmind-engine — Python (FastAPI) service
+│   ├── ingestion/     # upload, cleaning, encoding/language detection
+│   ├── nlp/           # tokenization, POS, lemmatization, dependency parsing
+│   │   ├── general/   # spaCy / Stanza / Trankit pipelines
+│   │   └── arabic/    # CAMeL Tools, Farasa, SinaTools, CamelParser2.0 wrapper
+│   ├── stats/         # frequency, collocation, keyness, dispersion, n-grams  ← §12 formulas
+│   ├── discourse/     # metadiscourse, stance/appraisal, metaphor (MIP/MIPVU), sentiment
+│   ├── vision/        # OCR, object/scene detection, composition/color analysis
+│   ├── multimodal/    # image-text alignment, cross-modal meaning, visual grammar scoring
+│   ├── ai/            # ModelProvider abstraction, RAG index, tool-calling layer, prompt templates
+│   ├── storage/       # corpus index, project DB, annotation store, versioning
+│   └── api/           # REST + WebSocket routes, OpenAPI schema
+├── web/               # corpusmind-web — single frontend (PWA + embedded in Tauri)
+│   ├── src/
+│   ├── public/manifest.webmanifest
+│   └── service-worker.ts
+├── desktop/           # corpusmind-desktop — Tauri 2 project
+│   ├── src-tauri/
+│   │   ├── tauri.conf.json   # sidecar + capability config
+│   │   └── src/              # Rust: sidecar lifecycle, OS integration
+│   └── binaries/             # platform-tagged sidecar executables
+├── shared/            # shared TS types / OpenAPI-generated client
+├── reference-data/    # bundled reference corpora, wordlists, framework prompt templates
+├── docs/              # architecture, methodology, the build prompt itself
+└── infra/             # Docker Compose for self-hosted engine, CI
+```
+
+The single most important architectural call: **a headless engine, multiple shells.**
+A PWA is sandboxed browser code — it cannot itself run spaCy / Stanza / CAMeL
+Tools pipelines or a local LLM. A Tauri desktop app can. So we build one backend
+service (`corpusmind-engine`) that does all heavy lifting, one frontend
+(`corpusmind-web`) that talks only to its HTTP/WebSocket API, and ship that
+frontend three ways: as a PWA, embedded in Tauri, and as a self-hosted
+multi-user engine for labs.
+
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the living diagram.
+
+---
+
+## Statistical Transparency
+
+Every formula is implemented to the precise, named definition in
+[docs/METHODOLOGY.md](docs/METHODOLOGY.md) — and is unit-tested against
+published worked examples. A wrong constant in a keyness formula is a silent,
+serious validity bug, so this is treated as a release-blocking test category.
+
+| Measure | Use | Definition |
+| --- | --- | --- |
+| MI (Church & Hanks 1990) | Collocation | `log2(O / E)`, `E = R·C / N` |
+| T-score | Collocation | `(O − E) / sqrt(O)` |
+| Log-likelihood / G² (Dunning 1993) | Collocation, keyness | `2 · Σ Oᵢⱼ · ln(Oᵢⱼ / Eᵢⱼ)` |
+| Dice | Collocation | `2·f(x,y) / (f(x) + f(y))` |
+| LogDice (Rychlý 2008) | Collocation | `14 + log2( 2·f(x,y) / (f(x) + f(y)) )` |
+| Chi-square | Collocation, keyness | Pearson χ² on the 2×2 table |
+| Delta P (Gries 2013; Ellis 2007) | Collocation (directional) | `P(y|x) − P(y|¬x)`, both directions |
+| Log Ratio (Hardie 2014) | Keyness effect size | `log2( (f1/N1) / (f2/N2) )` |
+| %DIFF (Gabrielatos & Marchi 2012) | Keyness effect size | `((norm_f1 − norm_f2) / norm_f2) × 100` |
+| Simple Maths (Kilgarriff 2009) | Keyness score | `(norm_f1 + SMOOTH) / (norm_f2 + SMOOTH)` |
+| Odds Ratio | Keyness effect size | `(f1 · (N2−f2)) / (f2 · (N1−f1))` |
+| Juilland's D | Dispersion | `1 − (CV / sqrt(n−1))` across n parts |
+| Gries' DP (2008) | Dispersion | `0.5 · Σ |observed_proportionᵢ − expected_proportionᵢ|` |
+| STTR | Lexical variation | TTR over fixed-size chunks, averaged |
+
+---
+
+## Licensing
+
+CorpusMind is released under the **GNU Affero General Public License v3.0**
+(`AGPL-3.0-only`). See [LICENSE](LICENSE).
+
+The AGPL was chosen deliberately:
+
+- It is a strong copyleft license: anyone who modifies CorpusMind and exposes
+  it over a network (e.g., a hosted research service) must release their
+  modifications under the same AGPL terms. This protects the research-software
+  mission from silent proprietary forks.
+- It is compatible with the permissive licenses of our core NLP dependencies
+  (spaCy = MIT, Stanza = Apache-2.0, CAMeL Tools = MIT, SinaTools = Apache-2.0).
+- It aligns with open-science norms: peer review of methodology requires that
+  the exact code producing a result be inspectable — including by users of a
+  hosted instance.
+
+A permissive relicense (MIT / Apache-2.0) is available to the project owner on
+request, but only after a review of the then-current dependency graph. See
+[THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md) for the full list of
+bundled dependencies and their licenses.
+
+---
+
+## Documentation
+
+- [docs/AI_AGENT_BUILD_PROMPT.md](docs/AI_AGENT_BUILD_PROMPT.md) — the full product specification (source of truth)
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — living architecture diagram
+- [docs/METHODOLOGY.md](docs/METHODOLOGY.md) — exact statistical formulas, for researcher-facing transparency
+- [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md) — licenses of bundled models, wordlists, and reference corpora
+- [CONTRIBUTING.md](CONTRIBUTING.md) — how to contribute
+- [CHANGELOG.md](CHANGELOG.md) — what changed, when
+
+---
+
+## Contributing
+
+Contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) first, then
+open an issue or pull request. Please be aware that all contributions will be
+released under the AGPL-3.0-only license; contributors retain their copyright
+but grant a license under the project's terms (see the
+[Developer Certificate of Origin](https://developercertificate.org/) section in
+CONTRIBUTING.md).
+
+---
+
+## Acknowledgements
+
+CorpusMind stands on the shoulders of a substantial open-source ecosystem,
+including (but not limited to) spaCy, Stanza, Trankit, CAMeL Tools, SinaTools,
+Farasa, Camelira, CamelParser2.0, FastAPI, Tauri, React, Ollama, and LM Studio.
+The methodology draws on the corpus-linguistics and multimodal-discourse
+literature cited inline throughout the spec — Kress & van Leeuwen, Halliday,
+Fairclough, van Dijk, Wodak, Machin & Mayr, Barthes, Peirce, Lakoff & Johnson,
+Martin & White, Toulmin, Aristotle, Hyland, Biber, Gabrielatos & Marchi, Hardie,
+Kilgarriff, Church & Hanks, Dunning, Rychlý, Gries, and Juilland.

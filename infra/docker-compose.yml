@@ -1,0 +1,55 @@
+# Docker Compose for self-hosted CorpusMind engine (§6.3).
+#
+# Use case: a research lab wants one always-on engine instance shared by
+# multiple group members, instead of each member running a local copy.
+# Members point their PWA at http://<lab-server>:8765.
+#
+# Bring up with:  docker compose -f infra/docker-compose.yml up -d
+
+services:
+  engine:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile
+    image: corpusmind/engine:0.1.0
+    container_name: corpusmind-engine
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8765:8765"
+    volumes:
+      - corpusmind-data:/data
+      - ./engine/.env:/app/engine/.env:ro
+    environment:
+      CORPUSMIND_LOG_LEVEL: info
+      # Cloud is hard-disabled in self-hosted mode by default — protects
+      # against accidental cloud-provider routing on shared infrastructure.
+      CORPUSMIND_CLOUD_DISABLED_HARD: "true"
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://127.0.0.1:8765/api/v1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  # Optional: run a local Ollama alongside the engine on the same host.
+  # Comment out if your users run Ollama on their own machines.
+  ollama:
+    image: ollama/ollama:latest
+    container_name: corpusmind-ollama
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:11434:11434"
+    volumes:
+      - ollama-models:/root/.ollama
+    # For GPU passthrough on Linux, uncomment:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
+volumes:
+  corpusmind-data:
+  ollama-models:

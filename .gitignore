@@ -1,0 +1,129 @@
+# ---------------------------------------------------------------------------
+# OS / editor cruft
+# ---------------------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# ---------------------------------------------------------------------------
+# Engine (Python)
+# ---------------------------------------------------------------------------
+engine/.venv/
+engine/__pycache__/
+engine/**/__pycache__/
+engine/*.egg-info/
+engine/.eggs/
+engine/.pytest_cache/
+engine/.mypy_cache/
+engine/.ruff_cache/
+engine/.coverage
+engine/htmlcov/
+engine/dist/
+engine/build/
+engine/.env
+engine/.env.local
+
+# ---------------------------------------------------------------------------
+# Web (Node.js / Vite)
+# ---------------------------------------------------------------------------
+web/node_modules/
+web/dist/
+web/.vite/
+web/.env
+web/.env.local
+web/.env.*.local
+web/tsconfig.tsbuildinfo
+web/tsconfig.node.tsbuildinfo
+web/vite.config.d.ts
+web/vite.config.js
+web/eslint-report.json
+
+# ---------------------------------------------------------------------------
+# Shared (Node.js)
+# ---------------------------------------------------------------------------
+shared/node_modules/
+shared/dist/
+shared/.env
+
+# ---------------------------------------------------------------------------
+# Desktop (Rust / Tauri)
+# ---------------------------------------------------------------------------
+desktop/src-tauri/target/
+desktop/src-tauri/Cargo.lock
+desktop/src-tauri/gen/
+desktop/binaries/*
+!desktop/binaries/.gitkeep
+# Sidecar binaries are large; never commit them. CI produces them per release.
+desktop/src-tauri/binaries/*
+!desktop/src-tauri/binaries/.gitkeep
+
+# ---------------------------------------------------------------------------
+# Local data (never commit user data — privacy)
+# ---------------------------------------------------------------------------
+data/
+projects/
+*.db
+*.db-journal
+*.sqlite
+*.sqlite-journal
+*.corpusmind
+corpusmind-data/
+corpusmind-cache/
+
+# ---------------------------------------------------------------------------
+# Logs
+# ---------------------------------------------------------------------------
+*.log
+logs/
+engine.stderr.log
+engine.stdout.log
+
+# ---------------------------------------------------------------------------
+# Build / packaging outputs
+# ---------------------------------------------------------------------------
+*.app
+*.dmg
+*.exe
+*.msi
+*.AppImage
+*.deb
+*.snap
+*.tar.gz
+release/
+releases/
+
+# ---------------------------------------------------------------------------
+# Reference data — never bundle without recorded license (§13.5)
+# ---------------------------------------------------------------------------
+reference-data/reference-corpora/*/*.txt
+reference-data/reference-corpora/*/*.csv
+reference-data/reference-corpora/*/*.xml
+reference-data/reference-corpora/*/*.zip
+reference-data/wordlists/*/*.txt
+reference-data/wordlists/*/*.csv
+reference-data/wordlists/*/*.json
+!reference-data/**/README.md
+!reference-data/**/.gitkeep
+
+# ---------------------------------------------------------------------------
+# Secrets — never commit
+# ---------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+secrets/

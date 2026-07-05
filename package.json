@@ -1,0 +1,17 @@
+{
+  "name": "corpusmind",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Local-first, AI-native research environment for corpus linguistics and multimodal discourse analysis. Monorepo root.",
+  "license": "AGPL-3.0-only",
+  "workspaces": [
+    "web",
+    "shared"
+  ],
+  "scripts": {
+    "dev": "echo 'Run: cd web && npm run dev  (and)  cd engine && source .venv/bin/activate && corpusmind-engine'",
+    "build": "npm run build --workspaces",
+    "typecheck": "npm run typecheck --workspaces",
+    "test": "cd engine && source .venv/bin/activate && pytest tests/"
+  }
+}
