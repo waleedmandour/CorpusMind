@@ -18,7 +18,8 @@ export function AboutView() {
         <h2>Authors</h2>
         <ul className="about-authors">
           <li>
-            <strong>Waleed Mandour</strong>
+            <strong>Dr. Waleed Mandour</strong>
+            <p>Sultan Qaboos University | ORCID: <a href="https://orcid.org/0000-0002-9262-5993">0000-0002-9262-5993</a></p>
             <p>Lead architect and full-stack engineer</p>
           </li>
           <li>
@@ -26,6 +27,19 @@ export function AboutView() {
             <p>Co-author, corpus linguistics and discourse analysis methodology</p>
           </li>
         </ul>
+      </section>
+
+      <section className="about-section">
+        <h2>Citation</h2>
+        <p>
+          If you use CorpusMind in your research, please cite it as:
+        </p>
+        <div style={{ background: "var(--bg-subtle)", padding: "var(--space-3)", borderRadius: "var(--radius-md)", fontSize: "13px", lineHeight: 1.6 }}>
+          Mandour, W., &amp; Ibrahim, W. (2026). <em>CorpusMind: A local-first,
+          AI-native research environment for corpus linguistics and multimodal
+          discourse analysis</em> (Version 0.7.0) [Computer software]. Zenodo.
+          https://doi.org/10.5281/zenodo.(DOI upon registration)
+        </div>
       </section>
 
       <section className="about-section">

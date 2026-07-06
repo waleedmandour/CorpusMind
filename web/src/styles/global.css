@@ -2069,3 +2069,31 @@ html[dir="rtl"] {
 .ribbon, .ribbon-tabs, .ribbon-groups, .ribbon-group, .ribbon-item, .ribbon-group-label, .ribbon-tab {
   display: none !important;
 }
+
+/* Onboarding feature badges (replacing unicode icons) */
+.feature-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--brand-500);
+  color: white;
+  font-weight: 700;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.privacy-check-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 20px;
+  border-radius: 4px;
+  background: var(--grounded-bg);
+  color: var(--grounded-fg);
+  font-weight: 700;
+  font-size: 11px;
+  flex-shrink: 0;
+}

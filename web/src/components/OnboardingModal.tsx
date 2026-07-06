@@ -18,12 +18,10 @@ export function OnboardingModal() {
   const setOnboardingComplete = useUI((s) => s.setOnboardingComplete);
   const [page, setPage] = useState(0);
 
-  // Show if explicitly open OR if first launch (not yet completed)
   if (!onboardingOpen && onboardingComplete) return null;
 
   const pages = [
     {
-      icon: "\u25C6",
       title: "Welcome to CorpusMind",
       subtitle: "Local-first, AI-native research environment for corpus linguistics and multimodal discourse analysis.",
       content: (
@@ -31,28 +29,28 @@ export function OnboardingModal() {
           <p>CorpusMind lets you go from raw texts and images to publication-ready analysis without writing a line of code.</p>
           <div className="onboarding-features">
             <div className="onboarding-feature">
-              <span className="feature-icon">\u2630</span>
+              <div className="feature-badge">A</div>
               <div>
                 <strong>Corpus Analysis</strong>
                 <p>Concordance, frequency, collocation, keyness, n-grams, dispersion, and more.</p>
               </div>
             </div>
             <div className="onboarding-feature">
-              <span className="feature-icon">\u2728</span>
+              <div className="feature-badge">B</div>
               <div>
                 <strong>Vision Suite</strong>
                 <p>Image analysis, Visual Grammar (Kress and van Leeuwen), multimodal alignment.</p>
               </div>
             </div>
             <div className="onboarding-feature">
-              <span className="feature-icon">\u272A</span>
+              <div className="feature-badge">C</div>
               <div>
                 <strong>Arabic First-Class</strong>
                 <p>CAMeL Tools morphology, dialect ID, root extraction, bilingual alignment.</p>
               </div>
             </div>
             <div className="onboarding-feature">
-              <span className="feature-icon">\u2691</span>
+              <div className="feature-badge">D</div>
               <div>
                 <strong>Grounded AI</strong>
                 <p>Every AI answer cites real evidence. No hallucination passes as fact.</p>
@@ -63,7 +61,6 @@ export function OnboardingModal() {
       ),
     },
     {
-      icon: "\u25B6",
       title: "Getting Started in 3 Steps",
       subtitle: "From zero to analysis in minutes.",
       content: (
@@ -73,21 +70,21 @@ export function OnboardingModal() {
               <div className="step-number">1</div>
               <div className="step-body">
                 <strong>Create a Project and Upload Texts</strong>
-                <p>Click the <strong>Text Suite</strong> tab, then <strong>Manage</strong>. Click "+ New" to create a project, then a corpus. Drag and drop your text files (TXT, DOCX, PDF, HTML, XML, CSV, Markdown). The engine automatically tokenizes, tags, and parses them.</p>
+                <p>Click <strong>Projects</strong> in the sidebar. Click "+ New" to create a project, then a corpus. Drag and drop your text files (TXT, DOCX, PDF, HTML, XML, CSV, Markdown). The engine automatically tokenizes, tags, and parses them.</p>
               </div>
             </div>
             <div className="onboarding-step">
               <div className="step-number">2</div>
               <div className="step-body">
                 <strong>Run Analysis</strong>
-                <p>Click <strong>Concordance</strong> to search (KWIC), or <strong>Analyze</strong> for frequency, collocation, keyness, dispersion, n-grams, POS, grammar, discourse, vocabulary, sentiment, and metaphor. Every result includes its parameters for reproducibility.</p>
+                <p>Click any analysis tool in the sidebar: Concordance (KWIC search), Frequency, Collocation, Keyness, Dispersion, N-grams, POS, Grammar, Dependency, Discourse, Vocabulary, Sentiment, or Metaphor. Every result includes its parameters for reproducibility.</p>
               </div>
             </div>
             <div className="onboarding-step">
               <div className="step-number">3</div>
               <div className="step-body">
                 <strong>Ask the AI Assistant</strong>
-                <p>Click the <strong>AI Assistant</strong> tab. Ask questions in natural language. Every answer is either <span className="badge-grounded">grounded</span> (backed by a tool call with cited evidence) or <span className="badge-unground">ungrounded</span> (clearly flagged). Start Ollama locally for fully offline AI.</p>
+                <p>Click <strong>AI Assistant</strong> in the sidebar. Ask questions in natural language. Every answer is either <span className="badge-grounded">grounded</span> (backed by a tool call with cited evidence) or <span className="badge-unground">ungrounded</span> (clearly flagged). Start Ollama locally for fully offline AI.</p>
               </div>
             </div>
           </div>
@@ -98,35 +95,34 @@ export function OnboardingModal() {
       ),
     },
     {
-      icon: "\u272A",
       title: "Privacy and Ethics by Design",
       subtitle: "Your data stays on your machine. Always.",
       content: (
         <div className="onboarding-content">
           <div className="onboarding-privacy">
             <div className="privacy-item">
-              <span className="privacy-check">\u2713</span>
+              <div className="privacy-check-mark">Yes</div>
               <div>
                 <strong>Local-first by default.</strong>
                 <p>Your corpus text, images, and AI queries never leave your machine unless you explicitly opt in to a cloud provider.</p>
               </div>
             </div>
             <div className="privacy-item">
-              <span className="privacy-check">\u2713</span>
+              <div className="privacy-check-mark">Yes</div>
               <div>
                 <strong>No telemetry.</strong>
                 <p>Zero analytics, zero error reporting, zero phone-home. By design.</p>
               </div>
             </div>
             <div className="privacy-item">
-              <span className="privacy-check">\u2713</span>
+              <div className="privacy-check-mark">Yes</div>
               <div>
                 <strong>Framework-lensed hypotheses.</strong>
                 <p>Every interpretive claim (CDA, power, ideology) is phrased as "Under a [Framework] reading, X may indicate Y." Never as a bare assertion of fact.</p>
               </div>
             </div>
             <div className="privacy-item">
-              <span className="privacy-check">\u2713</span>
+              <div className="privacy-check-mark">Yes</div>
               <div>
                 <strong>Facial analysis is opt-in.</strong>
                 <p>Off by default. Never performs identity recognition or re-identification of real individuals.</p>
@@ -165,7 +161,6 @@ export function OnboardingModal() {
     <div className="onboarding-backdrop" onClick={handleClose}>
       <div className="onboarding-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="onboarding-title">
         <div className="onboarding-header">
-          <span className="onboarding-icon" aria-hidden>{currentPage.icon}</span>
           <div>
             <h2 id="onboarding-title">{currentPage.title}</h2>
             <p className="onboarding-subtitle">{currentPage.subtitle}</p>

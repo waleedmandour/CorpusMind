@@ -2,7 +2,7 @@
 name = "corpusmind-desktop"
 version = "0.1.0"
 description = "CorpusMind desktop shell (Tauri 2) — manages the engine sidecar lifecycle and OS integration."
-authors = ["Waleed Mandour", "Prof. Wessam Ibrahim"]
+authors = ["Dr. Waleed Mandour", "Prof. Wessam Ibrahim"]
 license = "AGPL-3.0-only"
 repository = "https://github.com/waleedmandour/CorpusMind"
 edition = "2021"
