@@ -8,7 +8,7 @@ from reportlab.lib.colors import HexColor
 from reportlab.lib.enums import TA_LEFT, TA_CENTER
 from reportlab.platypus import (
     SimpleDocTemplate, Paragraph, Spacer, PageBreak, KeepTogether,
-    Table, TableStyle, ListFlowable, ListItem, HRFlowable
+    Table, TableStyle, ListFlowable, ListItem, HRFlowable, Image as RLImage
 )
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
@@ -213,19 +213,33 @@ def build_pdf(md_path, pdf_path):
     story = []
 
     # ---- Cover page ----
-    story.append(Spacer(1, 6 * cm))
+    story.append(Spacer(1, 3 * cm))
+    
+    # App icon
+    icon_path = str(Path(md_path).parent.parent / "download" / "icon-512.png")
+    if Path(icon_path).exists():
+        story.append(RLImage(icon_path, width=3*cm, height=3*cm, hAlign="CENTER"))
+        story.append(Spacer(1, 0.5 * cm))
+    
     story.append(Paragraph("CorpusMind", style_cover_title))
-    story.append(Spacer(1, 0.5 * cm))
+    story.append(Spacer(1, 0.3 * cm))
     story.append(Paragraph("User Guide", ParagraphStyle("CoverSub2", fontName="HeadSans", fontSize=20,
         leading=26, textColor=BRAND, alignment=TA_CENTER, spaceAfter=8)))
-    story.append(Spacer(1, 1 * cm))
+    story.append(Spacer(1, 0.8 * cm))
     story.append(Paragraph("Version 0.7.0 | Pre-Release | AGPL-3.0-only", style_cover_meta))
-    story.append(Spacer(1, 0.3 * cm))
+    story.append(Spacer(1, 0.2 * cm))
     story.append(Paragraph("Local-first, AI-native research environment for<br/>corpus linguistics and multimodal discourse analysis", style_cover_meta))
-    story.append(Spacer(1, 2 * cm))
+    story.append(Spacer(1, 1.5 * cm))
     story.append(HRFlowable(width="60%", thickness=2, color=BRAND, spaceBefore=10, spaceAfter=10, hAlign="CENTER"))
-    story.append(Spacer(1, 1 * cm))
-    story.append(Paragraph("97 tests passing | 25 AI tools | 85 API routes | 12 frameworks | 20 statistical formulas", style_cover_meta))
+    story.append(Spacer(1, 0.5 * cm))
+    
+    # Authors and citation on cover
+    author_style = ParagraphStyle("CoverAuthor", fontName="HeadSans", fontSize=10, leading=14,
+        textColor=TEXT_MUTED, alignment=TA_CENTER, spaceAfter=2)
+    story.append(Paragraph("Dr. Waleed Mandour (Sultan Qaboos University, ORCID: 0000-0002-9262-5993)", author_style))
+    story.append(Paragraph("Prof. Wessam Ibrahim", author_style))
+    story.append(Spacer(1, 0.8 * cm))
+    story.append(Paragraph("97 tests | 25 AI tools | 85 API routes | 12 frameworks | 20 formulas", style_cover_meta))
     story.append(PageBreak())
 
     # ---- Table of contents ----
