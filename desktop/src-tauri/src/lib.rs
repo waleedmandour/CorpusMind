@@ -97,13 +97,15 @@ impl EngineSidecar {
     ///      (dev mode — assumes the developer has the venv active).
     ///   3. Otherwise, fall back to `corpusmind-engine` on PATH.
     fn resolve_command(&self, app: &tauri::AppHandle) -> (String, Vec<String>) {
-        let target_triple = std::env::consts::ARCH.to_string()
-            + "-" + &std::env::consts::OS.to_string()
-            + "-" + &std::env::consts::FAMILY.to_string();
+        // Tauri's externalBin lookup expects the binary to be suffixed with the
+        // Rust target triple of the build host. `std::env::consts::{ARCH,OS,FAMILY}`
+        // do NOT produce a valid triple (they yield e.g. "aarch64-macos-unix" on
+        // Apple Silicon, but the real triple is "aarch64-apple-darwin"). We map
+        // (ARCH, OS) to the canonical triples Tauri's bundler uses.
+        let target_triple = target_triple();
 
-        // Tauri's sidecar API looks for a binary with the target-triple suffix.
-        // The bundled binaries are at binaries/corpusmind-engine-<triple>.
-        // Tauri's shell plugin exposes these via `app.shell().sidecar(...)`.
+        // The bundled binary lives in the app's resources directory after install
+        // (Tauri copies externalBin entries there with the triple suffix).
         if let Ok(resource) = app.path().resource_dir() {
             let candidate = resource.join(format!("corpusmind-engine-{target_triple}"));
             if candidate.exists() {
@@ -119,7 +121,11 @@ impl EngineSidecar {
 
         if let Some(dir) = engine_dir {
             // Try the venv first, then system python.
-            let venv_python = dir.join(".venv").join("bin").join("python");
+            let venv_python = if cfg!(windows) {
+                dir.join(".venv").join("Scripts").join("python.exe")
+            } else {
+                dir.join(".venv").join("bin").join("python")
+            };
             if venv_python.exists() {
                 return (
                     venv_python.to_string_lossy().into_owned(),
@@ -244,4 +250,28 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![engine_health])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+/// Return the canonical Rust target triple for the build host.
+///
+/// Tauri's `externalBin` mechanism appends this triple to the binary name when
+/// looking up sidecar executables (e.g. `corpusmind-engine-aarch64-apple-darwin`).
+/// We hardcode the mapping instead of using `std::env::consts::{ARCH,OS,FAMILY}`
+/// because those constants don't compose into a valid triple.
+fn target_triple() -> &'static str {
+    match (std::env::consts::ARCH, std::env::consts::OS) {
+        ("aarch64", "macos") => "aarch64-apple-darwin",
+        ("x86_64", "macos") => "x86_64-apple-darwin",
+        ("aarch64", "linux") => "aarch64-unknown-linux-gnu",
+        ("x86_64", "linux") => "x86_64-unknown-linux-gnu",
+        ("x86_64", "windows") => "x86_64-pc-windows-msvc",
+        ("aarch64", "windows") => "aarch64-pc-windows-msvc",
+        (arch, os) => {
+            // Best-effort fallback for unusual targets. This will likely not
+            // match any bundled binary, but logging it here lets the dev fallback
+            // take over cleanly.
+            warn!(target: "sidecar", "unknown target triple for arch={arch} os={os}, sidecar lookup will fail");
+            "unknown-target"
+        }
+    }
 }

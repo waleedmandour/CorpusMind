@@ -42,7 +42,14 @@
       "icons/icon.ico"
     ],
     "resources": [],
-    "externalBin": [],
+    "externalBin": ["binaries/corpusmind-engine"],
+    "macOS": {
+      "signingIdentity": null,
+      "entitlements": null,
+      "exceptionDomain": "",
+      "frameworks": [],
+      "minimumSystemVersion": "13.0"
+    },
     "copyright": "Copyright (C) 2026 Dr. Waleed Mandour (Sultan Qaboos University) and Prof. Wessam Ibrahim. Licensed under AGPL-3.0-only.",
     "category": "Education",
     "shortDescription": "Local-first, AI-native research environment for corpus linguistics and multimodal discourse analysis.",

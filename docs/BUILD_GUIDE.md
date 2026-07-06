@@ -159,6 +159,91 @@ The production build creates a `.app` bundle in `desktop/src-tauri/target/releas
 - If macOS says "CorpusMind cannot be opened because it is from an unidentified developer", right-click the app and select "Open" and then "Open anyway".
 - The first `cargo tauri dev` build takes 5 to 10 minutes (compiling Rust dependencies). Subsequent builds are fast.
 
+### 2.7 One-Shot Apple Silicon Build
+
+For a production build on Apple Silicon, use the bundled build script. It builds
+the engine sidecar with PyInstaller, the web PWA with Vite, and the desktop
+bundle with Tauri in one pass:
+
+```bash
+cd CorpusMind
+./scripts/build-macos-arm64.sh
+```
+
+What the script does:
+
+1. Creates an isolated Python venv in `engine/.venv-build/` and installs the
+   engine plus PyInstaller.
+2. Runs `pyinstaller corpusmind-engine.spec` to produce
+   `engine/dist/corpusmind-engine` (a single-file executable).
+3. Copies the binary to
+   `desktop/src-tauri/binaries/corpusmind-engine-aarch64-apple-darwin`,
+   which is the path Tauri's `externalBin` mechanism looks for.
+4. Builds the web PWA with `npm install && npm run build`.
+5. Runs `cargo tauri build --target aarch64-apple-darwin` to produce the
+   `.app` bundle and the `.dmg` installer.
+
+Final artifacts:
+
+```
+desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/
+    dmg/CorpusMind_0.1.0_aarch64.dmg
+    macos/CorpusMind.app
+```
+
+You can also build just one component:
+
+```bash
+./scripts/build-macos-arm64.sh --engine   # sidecar binary only
+./scripts/build-macos-arm64.sh --web      # PWA only
+./scripts/build-macos-arm64.sh --desktop  # desktop bundle only (requires sidecar already built)
+```
+
+### 2.8 Code Signing and Notarization (Optional, for Distribution)
+
+The build script produces an unsigned `.app` / `.dmg`. To distribute the app
+to other Mac users without the "unidentified developer" warning, you need an
+Apple Developer ID (USD $99/year) and must codesign + notarize:
+
+```bash
+APP="desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/macos/CorpusMind.app"
+DMG="desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/CorpusMind_0.1.0_aarch64.dmg"
+
+# 1. Sign the .app bundle (recursively)
+codesign --deep --force --options runtime \
+  --sign "Developer ID Application: Your Name (TEAMID)" "$APP"
+
+# 2. Build a signed .dmg from the signed .app (Tauri's bundler does this
+#    automatically when APPLE_SIGNING_IDENTITY is set in CI; for local builds
+#    use create-dmg or hdiutil).
+
+# 3. Submit the .dmg to Apple for notarization (requires an app-specific password)
+xcrun notarytool submit "$DMG" \
+  --apple-id you@example.com \
+  --team-id TEAMID \
+  --password app-specific-pwd \
+  --wait
+
+# 4. Staple the notarization ticket to the .dmg
+xcrun stapler staple "$DMG"
+
+# 5. Verify
+xcrun stapler validate "$DMG"
+spctl --assess --type install "$DMG"
+```
+
+For automated builds, the GitHub Actions release workflow (`.github/workflows/release.yml`)
+performs these steps automatically when you set the following repository secrets:
+
+| Secret | Value |
+|--------|-------|
+| `APPLE_SIGNING_IDENTITY` | `Developer ID Application: Your Name (TEAMID)` |
+| `APPLE_CERTIFICATE_BASE64` | base64 of your exported `.p12` developer certificate |
+| `APPLE_CERTIFICATE_PASSWORD` | password for the `.p12` file |
+| `APPLE_ID` | your Apple ID email |
+| `APPLE_PASSWORD` | app-specific password from appleid.apple.com |
+| `APPLE_TEAM_ID` | your 10-character team ID |
+
 ---
 
 ## 3. Building on Windows
