@@ -5,7 +5,7 @@ export function AboutView() {
   return (
     <div className="about-view">
       <div className="about-hero">
-        <span className="about-logo" aria-hidden>{"\u25C6"}</span>
+        <img src="/icon-512.png" alt="CorpusMind" width="96" height="96" className="about-logo-img" />
         <h1>CorpusMind</h1>
         <p className="about-version">Version 0.7.0 Pre-Release | AGPL-3.0-only</p>
         <p className="about-tagline">
@@ -20,7 +20,7 @@ export function AboutView() {
           <li>
             <strong>Dr. Waleed Mandour</strong>
             <p>Sultan Qaboos University | ORCID: <a href="https://orcid.org/0000-0002-9262-5993">0000-0002-9262-5993</a></p>
-            <p>Lead architect and full-stack engineer</p>
+            <p>Lead Architect and Assistant Lecturer of English Language</p>
           </li>
           <li>
             <strong>Prof. Wessam Ibrahim</strong>

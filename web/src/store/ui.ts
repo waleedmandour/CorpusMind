@@ -10,6 +10,7 @@ import { persist } from "zustand/middleware";
 
 type Theme = "light" | "dark" | "system";
 type Dir = "ltr" | "rtl";
+type Lang = "en" | "ar";
 
 export type NavTarget =
   | "home" | "file" | "concordance" | "frequency" | "collocation"
@@ -20,6 +21,7 @@ export type NavTarget =
 interface UIState {
   theme: Theme;
   dir: Dir;
+  lang: Lang;
   commandPaletteOpen: boolean;
   activeNav: NavTarget;
   onboardingComplete: boolean;
@@ -28,6 +30,8 @@ interface UIState {
   toggleTheme: () => void;
   setDir: (d: Dir) => void;
   toggleDir: () => void;
+  setLang: (l: Lang) => void;
+  toggleLang: () => void;
   setCommandPaletteOpen: (open: boolean) => void;
   setActiveNav: (nav: NavTarget) => void;
   setOnboardingComplete: (done: boolean) => void;
@@ -39,6 +43,7 @@ export const useUI = create<UIState>()(
     (set, get) => ({
       theme: "system",
       dir: "ltr",
+      lang: "en",
       commandPaletteOpen: false,
       activeNav: "home",
       onboardingComplete: false,
@@ -53,6 +58,11 @@ export const useUI = create<UIState>()(
       },
       setDir: (dir) => set({ dir }),
       toggleDir: () => set({ dir: get().dir === "ltr" ? "rtl" : "ltr" }),
+      setLang: (lang) => set({ lang, dir: lang === "ar" ? "rtl" : "ltr" }),
+      toggleLang: () => {
+        const newLang = get().lang === "en" ? "ar" : "en";
+        set({ lang: newLang, dir: newLang === "ar" ? "rtl" : "ltr" });
+      },
       setCommandPaletteOpen: (open) => set({ commandPaletteOpen: open }),
       setActiveNav: (activeNav) => set({ activeNav }),
       setOnboardingComplete: (onboardingComplete) => set({ onboardingComplete }),
@@ -62,9 +72,9 @@ export const useUI = create<UIState>()(
   ),
 );
 
-/** Apply theme + dir to <html>. Called from App. */
+/** Apply theme + dir + lang to <html>. Called from App. */
 export function applyHtmlAttrs() {
-  const { theme, dir } = useUI.getState();
+  const { theme, dir, lang } = useUI.getState();
 
   const resolved =
     theme === "system"
@@ -75,5 +85,5 @@ export function applyHtmlAttrs() {
 
   document.documentElement.dataset.theme = resolved;
   document.documentElement.dir = dir;
-  document.documentElement.lang = dir === "rtl" ? "ar" : "en";
+  document.documentElement.lang = lang;
 }

@@ -327,7 +327,7 @@ CONTRIBUTING.md).
 
 ## Authors
 
-- **Dr. Waleed Mandour** - Sultan Qaboos University, ORCID: [0000-0002-9262-5993](https://orcid.org/0000-0002-9262-5993) - Lead architect and full-stack engineer
+- **Dr. Waleed Mandour** - Sultan Qaboos University, ORCID: [0000-0002-9262-5993](https://orcid.org/0000-0002-9262-5993) - Lead Architect and Assistant Lecturer of English Language
 - **Prof. Wessam Ibrahim** - ORCID: [0000-0003-0710-6038](https://orcid.org/0000-0003-0710-6038) - Co-author, corpus linguistics and discourse analysis methodology
 
 ## Citation

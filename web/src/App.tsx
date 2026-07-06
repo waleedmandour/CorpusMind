@@ -26,8 +26,9 @@ import { useApp } from "@/store/app";
 export default function App() {
   const activeNav = useUI((s) => s.activeNav);
   const theme = useUI((s) => s.theme);
+  const lang = useUI((s) => s.lang);
   const dir = useUI((s) => s.dir);
-  const toggleDir = useUI((s) => s.toggleDir);
+  const toggleLang = useUI((s) => s.toggleLang);
   const setCommandPaletteOpen = useUI((s) => s.setCommandPaletteOpen);
   const onboardingComplete = useUI((s) => s.onboardingComplete);
   const setOnboardingOpen = useUI((s) => s.setOnboardingOpen);
@@ -35,7 +36,7 @@ export default function App() {
 
   useEffect(() => {
     applyHtmlAttrs();
-  }, [theme, dir]);
+  }, [theme, dir, lang]);
 
   useEffect(() => {
     if (!onboardingComplete) {
@@ -47,10 +48,9 @@ export default function App() {
     <div className="app-shell">
       <a href="#main-content" className="skip-link">Skip to main content</a>
 
-      {/* Top bar */}
       <header className="app-topbar" role="banner">
         <div className="app-brand">
-          <span className="app-logo" aria-hidden>{"\u25C6"}</span>
+          <img src="/icon-32.png" alt="CorpusMind" width="28" height="28" className="app-brand-icon" />
           <span className="app-name">CorpusMind</span>
         </div>
         {activeCorpusId && (
@@ -60,20 +60,20 @@ export default function App() {
         )}
         <div className="app-topbar-actions">
           <button
+            className="topbar-btn lang-btn"
+            onClick={toggleLang}
+            title={lang === "en" ? "التبديل إلى العربية" : "Switch to English"}
+            aria-label="Switch language"
+          >
+            {lang === "en" ? "ع" : "EN"}
+          </button>
+          <button
             className="topbar-btn"
             onClick={() => setCommandPaletteOpen(true)}
             title="Command Palette (Ctrl/Cmd+K)"
             aria-label="Open command palette"
           >
             {"\u2318"}
-          </button>
-          <button
-            className="topbar-btn"
-            onClick={toggleDir}
-            title={dir === "ltr" ? "Switch to RTL" : "Switch to LTR"}
-            aria-label="Toggle text direction"
-          >
-            {dir === "ltr" ? "RTL" : "LTR"}
           </button>
           <ThemeToggle />
         </div>

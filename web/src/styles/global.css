@@ -2097,3 +2097,54 @@ html[dir="rtl"] {
   font-size: 11px;
   flex-shrink: 0;
 }
+
+
+/* =========================================================================
+   Sidebar logo + app icon + language switch
+   ========================================================================= */
+
+.sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  margin-block-end: var(--space-2);
+  border-block-end: 1px solid var(--border);
+}
+.sidebar-logo img {
+  border-radius: 6px;
+}
+.sidebar-logo-text {
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+
+.app-brand-icon {
+  border-radius: 4px;
+}
+
+.lang-btn {
+  font-weight: 700;
+  font-size: 14px;
+  min-width: 32px;
+  justify-content: center;
+}
+
+.about-logo-img {
+  border-radius: 12px;
+  margin-block-end: var(--space-2);
+  display: block;
+  margin-inline: auto;
+}
+
+/* Arabic font when RTL */
+html[dir="rtl"] body {
+  font-family: "Noto Naskh Arabic", "Amiri", "Scheherazade New", var(--font-sans);
+}
+html[dir="rtl"] .sidebar-item-label,
+html[dir="rtl"] .sidebar-group-label,
+html[dir="rtl"] .app-name {
+  font-family: "Noto Naskh Arabic", "Amiri", var(--font-sans);
+}
