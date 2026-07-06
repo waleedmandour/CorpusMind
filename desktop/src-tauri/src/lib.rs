@@ -229,13 +229,12 @@ pub fn run() {
                 // wait_for_health is blocking; run it on a blocking thread.
                 let s: State<EngineSidecar> = handle.state();
                 let health_result = tokio::task::spawn_blocking(move || {
-                    // Re-acquire through the inner type.
                     let s2 = s.inner();
                     s2.wait_for_health()
                 })
                 .await
                 .map_err(|e| SidecarError::Health(format!("join: {e}")))
-                .and_then(|r| r);
+                .and_then(|r| Ok(r));
                 match health_result {
                     Ok(()) => info!(target: "sidecar", "engine ready"),
                     Err(e) => error!(target: "sidecar", "engine not ready: {e}"),
