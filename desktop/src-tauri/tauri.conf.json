@@ -19,8 +19,7 @@
         "minHeight": 640,
         "resizable": true,
         "decorations": true,
-        "transparent": false,
-        "fileDropEnabled": true
+        "transparent": false
       }
     ],
     "security": {
