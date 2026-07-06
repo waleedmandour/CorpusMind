@@ -137,7 +137,7 @@ impl EngineSidecar {
         ("corpusmind-engine".into(), vec![])
     }
 
-    async fn wait_for_health(&self) -> Result<(), SidecarError> {
+    fn wait_for_health(&self) -> Result<(), SidecarError> {
         let url = format!("http://{ENGINE_HOST}:{ENGINE_PORT}/api/v1/health");
         let start = Instant::now();
 
