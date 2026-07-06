@@ -218,25 +218,16 @@ pub fn run() {
         .manage(EngineSidecar::new())
         .setup(|app| {
             let handle = app.handle().clone();
-            let sidecar: State<EngineSidecar> = app.state();
 
             // Spawn in a background thread so we don't block app startup.
             tauri::async_runtime::spawn(async move {
+                let sidecar: State<EngineSidecar> = handle.state();
                 if let Err(e) = sidecar.spawn(&handle) {
                     error!(target: "sidecar", "spawn failed: {e}");
                     return;
                 }
-                // wait_for_health is blocking; run it on a blocking thread.
-                let s: State<EngineSidecar> = handle.state();
-                let health_result: Result<(), SidecarError> = match tokio::task::spawn_blocking(move || {
-                    let s2 = s.inner();
-                    s2.wait_for_health()
-                }).await {
-                    Ok(Ok(())) => Ok(()),
-                    Ok(Err(e)) => Err(e),
-                    Err(e) => Err(SidecarError::Health(format!("join: {e}"))),
-                };
-                match health_result {
+                // wait_for_health is a blocking fn; we are in a spawned task so blocking is OK.
+                match sidecar.wait_for_health() {
                     Ok(()) => info!(target: "sidecar", "engine ready"),
                     Err(e) => error!(target: "sidecar", "engine not ready: {e}"),
                 }
