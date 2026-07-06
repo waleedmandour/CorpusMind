@@ -228,13 +228,14 @@ pub fn run() {
                 }
                 // wait_for_health is blocking; run it on a blocking thread.
                 let s: State<EngineSidecar> = handle.state();
-                let health_result = tokio::task::spawn_blocking(move || {
+                let health_result: Result<(), SidecarError> = match tokio::task::spawn_blocking(move || {
                     let s2 = s.inner();
                     s2.wait_for_health()
-                })
-                .await
-                .map_err(|e| SidecarError::Health(format!("join: {e}")))
-                .and_then(|r| Ok(r));
+                }).await {
+                    Ok(Ok(())) => Ok(()),
+                    Ok(Err(e)) => Err(e),
+                    Err(e) => Err(SidecarError::Health(format!("join: {e}"))),
+                };
                 match health_result {
                     Ok(()) => info!(target: "sidecar", "engine ready"),
                     Err(e) => error!(target: "sidecar", "engine not ready: {e}"),
