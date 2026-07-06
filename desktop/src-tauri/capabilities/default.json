@@ -13,7 +13,7 @@
     "fs:allow-read-file",
     "fs:allow-write-file",
     "fs:allow-read-dir",
-    "fs:allow-create-dir",
+    "fs:allow-mkdir",
     {
       "identifier": "http:default",
       "allow": [
