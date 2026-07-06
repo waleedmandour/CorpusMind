@@ -17,7 +17,7 @@ services:
     build:
       context: ..
       dockerfile: infra/Dockerfile
-    image: corpusmind/engine:0.7.0
+    image: corpusmind/engine:0.1.0
     container_name: corpusmind-engine
     restart: unless-stopped
     ports:

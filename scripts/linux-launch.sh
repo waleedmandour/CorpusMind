@@ -10,7 +10,7 @@ ENGINE_DIR="$SCRIPT_DIR/engine"
 WEB_DIR="$SCRIPT_DIR/web"
 
 echo "========================================="
-echo "  CorpusMind v0.7.0 Linux Launcher"
+echo "  CorpusMind v0.1.0 Linux Launcher"
 echo "========================================="
 echo ""
 

@@ -127,12 +127,12 @@ desktop/src-tauri/target/release/bundle/dmg/CorpusMind_0.1.0_aarch64.dmg
 
 ## After Building: Upload to GitHub Release
 
-Once you have the built installers, upload them to the pre-release:
+Once you have the built installers, upload them to the release:
 
-1. Go to: https://github.com/waleedmandour/CorpusMind/releases/tag/v0.7.0-pre
-2. Click "Edit release" (the pencil icon)
+1. Go to: https://github.com/waleedmandour/CorpusMind/releases
+2. Click "Draft a new release" or edit the existing v0.1.0 release
 3. Drag and drop your built files into the "Attach binaries" area
-4. Click "Update release"
+4. Click "Publish release" or "Update release"
 
 ### Files to Upload
 

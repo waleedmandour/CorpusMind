@@ -108,7 +108,7 @@ export default function App() {
 
       {/* Status bar */}
       <footer className="app-statusbar" role="contentinfo">
-        <span>CorpusMind v0.7.0</span>
+        <span>CorpusMind v0.1.0</span>
         <span className="status-sep">|</span>
         <span>AGPL-3.0</span>
         <span className="status-sep">|</span>

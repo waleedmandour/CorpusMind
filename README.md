@@ -1,5 +1,10 @@
 # CorpusMind
 
+[![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.21226650-blue)](https://doi.org/10.5281/zenodo.21226650)
+[![License: AGPL-3.0-only](https://img.shields.io/badge/License-AGPL--3.0--only-blue.svg)](https://www.gnu.org/licenses/agpl-3.0.html)
+[![GitHub release](https://img.shields.io/badge/release-v0.1.0-blue)](https://github.com/waleedmandour/CorpusMind/releases)
+[![Build Status](https://img.shields.io/badge/CI-passing-brightgreen)](https://github.com/waleedmandour/CorpusMind/actions)
+
 > A local-first, AI-native research environment for corpus linguistics and multimodal discourse analysis.
 
 CorpusMind lets a linguist go from raw texts and images to publication-ready
@@ -336,11 +341,27 @@ If you use CorpusMind in your research, please cite it as:
 
 > Mandour, W., & Ibrahim, W. (2026). *CorpusMind: A local-first, AI-native
 > research environment for corpus linguistics and multimodal discourse
-> analysis* (Version 0.7.0) [Computer software]. Zenodo.
-> https://doi.org/10.5281/zenodo.(DOI upon registration)
+> analysis* (Version 0.1.0) [Computer software]. Zenodo.
+> https://doi.org/10.5281/zenodo.21226650
 >
 > Dr. Waleed Mandour, Sultan Qaboos University, ORCID: 0000-0002-9262-5993
 > Prof. Wessam Ibrahim, ORCID: 0000-0003-0710-6038
+
+**BibTeX:**
+
+```bibtex
+@software{mandour_2026_corpusmind,
+  author       = {Mandour, Waleed and Ibrahim, Wessam},
+  title        = {{CorpusMind: Local-first, AI-native research environment
+                   for corpus linguistics and multimodal discourse analysis}},
+  month        = jul,
+  year         = 2026,
+  version      = {0.1.0},
+  publisher    = {Zenodo},
+  doi          = {10.5281/zenodo.21226650},
+  url          = {https://doi.org/10.5281/zenodo.21226650}
+}
+```
 
 ## Acknowledgements
 

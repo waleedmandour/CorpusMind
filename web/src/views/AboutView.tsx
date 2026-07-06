@@ -7,7 +7,7 @@ export function AboutView() {
       <div className="about-hero">
         <img src="/icon-512.png" alt="CorpusMind" width="96" height="96" className="about-logo-img" />
         <h1>CorpusMind</h1>
-        <p className="about-version">Version 0.7.0 Pre-Release | AGPL-3.0-only</p>
+        <p className="about-version">Version 0.1.0 | AGPL-3.0-only</p>
         <p className="about-tagline">
           Local-first, AI-native research environment for corpus linguistics
           and multimodal discourse analysis.
@@ -38,8 +38,8 @@ export function AboutView() {
         <div style={{ background: "var(--bg-subtle)", padding: "var(--space-3)", borderRadius: "var(--radius-md)", fontSize: "13px", lineHeight: 1.6 }}>
           Mandour, W., &amp; Ibrahim, W. (2026). <em>CorpusMind: A local-first,
           AI-native research environment for corpus linguistics and multimodal
-          discourse analysis</em> (Version 0.7.0) [Computer software]. Zenodo.
-          https://doi.org/10.5281/zenodo.(DOI upon registration)
+          discourse analysis</em> (Version 0.1.0) [Computer software]. Zenodo.
+          <a href="https://doi.org/10.5281/zenodo.21226650">https://doi.org/10.5281/zenodo.21226650</a>
         </div>
       </section>
 
@@ -125,7 +125,8 @@ export function AboutView() {
         <div className="about-links">
           <a href="https://github.com/waleedmandour/CorpusMind" className="about-link">GitHub Repository</a>
           <a href="https://corpus-mind-web.vercel.app/" className="about-link">Live PWA on Vercel</a>
-          <a href="https://github.com/waleedmandour/CorpusMind/releases/tag/v0.7.0-pre" className="about-link">Pre-Release Page</a>
+          <a href="https://github.com/waleedmandour/CorpusMind/releases" className="about-link">Releases</a>
+          <a href="https://doi.org/10.5281/zenodo.21226650" className="about-link">Zenodo DOI</a>
           <a href="https://github.com/waleedmandour/CorpusMind/blob/main/docs/USER_GUIDE.md" className="about-link">User Guide</a>
           <a href="https://github.com/waleedmandour/CorpusMind/blob/main/docs/BUILD_GUIDE.md" className="about-link">Build Guide</a>
           <a href="https://github.com/waleedmandour/CorpusMind/blob/main/docs/METHODOLOGY.md" className="about-link">Methodology Reference</a>
