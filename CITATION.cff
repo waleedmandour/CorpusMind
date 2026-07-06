@@ -1,23 +1,28 @@
-# CITATION.cff — Zenodo and GitHub use this to generate citation metadata.
-# Fill in your real ORCID iD before the first release.
+# CITATION.cff — Zenodo and GitHub use this file to generate citation metadata.
+# When you push a new GitHub release, Zenodo reads this file and pre-fills the
+# record. Update the version, date-released, and doi fields for each release.
 cff-version: 1.2.0
 message: "If you use CorpusMind in your research, please cite it as below."
 title: "CorpusMind: Local-first, AI-native research environment for corpus linguistics and multimodal discourse analysis"
 abstract: >
-  CorpusMind lets a linguist go from raw texts and images to
-  publication-ready quantitative and qualitative analysis without writing
-  code, without sending unpublished data to a third-party server unless
-  they explicitly choose to, and without losing the methodological
-  transparency that peer review demands. The desktop application bundles a
-  FastAPI engine, a Tauri 2 shell, and an installable PWA, supporting
-  English and Arabic text analysis, vision pipelines for multimodal
-  discourse, and a pluggable AI assistant that can connect to local
-  (Ollama, LM Studio) or remote (OpenAI, Anthropic) model providers.
+  CorpusMind is a local-first, AI-native research environment for corpus
+  linguistics and multimodal discourse analysis. It lets a linguist go from
+  raw texts and images to publication-ready quantitative and qualitative
+  analysis without writing a line of code, without sending unpublished data
+  to a third-party server unless they explicitly choose to, and without
+  losing the methodological transparency that peer review demands. The
+  desktop application bundles a FastAPI engine, a Tauri 2 shell, and an
+  installable PWA, supporting English and Arabic text analysis, vision
+  pipelines for multimodal discourse, and a pluggable AI assistant that can
+  connect to local (Ollama, LM Studio) or remote (OpenAI, Anthropic) model
+  providers.
 authors:
   - family-names: Mandour
     given-names: Waleed
-    affiliation: "Sultan Qaboos University"
-    orcid: "https://orcid.org/0000-0000-0000-0000"
+    name-particle: ""
+    affiliation: "Sultan Qaboos University, Department of English Language and Literature"
+    orcid: "https://orcid.org/0000-0002-9262-5993"
+    email: "waleed.mandour@squ.edu.om"
   - family-names: Ibrahim
     given-names: Wessam
 keywords:
@@ -27,18 +32,51 @@ keywords:
   - Arabic NLP
   - visual grammar
   - critical discourse analysis
+  - multimodal discourse analysis
   - local-first software
   - research software
+  - Tauri
+  - FastAPI
+  - spaCy
+  - CAMeL Tools
+type: software
 license: AGPL-3.0-only
 repository-code: "https://github.com/waleedmandour/CorpusMind"
+repository-artifact: "https://github.com/waleedmandour/CorpusMind/releases"
+url: "https://doi.org/10.5281/zenodo.21226650"
 version: 0.1.0
-date-released: 2026-01-07
+date-released: 2026-07-07
+identifiers:
+  - type: doi
+    value: "10.5281/zenodo.21226650"
+    description: "Zenodo DOI for CorpusMind v0.1.0 (concept DOI — points to the latest version)"
 preferred-citation:
   type: software
   authors:
     - family-names: Mandour
       given-names: Waleed
+      orcid: "https://orcid.org/0000-0002-9262-5993"
     - family-names: Ibrahim
       given-names: Wessam
-  title: "CorpusMind"
+  title: "CorpusMind: Local-first, AI-native research environment for corpus linguistics and multimodal discourse analysis"
   year: 2026
+  version: 0.1.0
+  doi: "10.5281/zenodo.21226650"
+  publisher:
+    name: "Zenodo"
+  date-released: 2026-07-07
+  keywords:
+    - corpus linguistics
+    - discourse analysis
+    - multimodal analysis
+    - Arabic NLP
+    - visual grammar
+    - local-first software
+  license: AGPL-3.0-only
+  url: "https://doi.org/10.5281/zenodo.21226650"
+  notes: >-
+    CorpusMind was developed at Sultan Qaboos University. The desktop
+    application bundles a FastAPI engine, a Tauri 2 shell, and an installable
+    PWA, supporting English and Arabic text analysis, vision pipelines for
+    multimodal discourse, and a pluggable AI assistant that can connect to
+    local (Ollama, LM Studio) or remote (OpenAI, Anthropic) model providers.
