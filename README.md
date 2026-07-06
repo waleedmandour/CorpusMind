@@ -328,7 +328,7 @@ CONTRIBUTING.md).
 ## Authors
 
 - **Dr. Waleed Mandour** - Sultan Qaboos University, ORCID: [0000-0002-9262-5993](https://orcid.org/0000-0002-9262-5993) - Lead architect and full-stack engineer
-- **Prof. Wessam Ibrahim** - Co-author, corpus linguistics and discourse analysis methodology
+- **Prof. Wessam Ibrahim** - ORCID: [0000-0003-0710-6038](https://orcid.org/0000-0003-0710-6038) - Co-author, corpus linguistics and discourse analysis methodology
 
 ## Citation
 
@@ -338,6 +338,9 @@ If you use CorpusMind in your research, please cite it as:
 > research environment for corpus linguistics and multimodal discourse
 > analysis* (Version 0.7.0) [Computer software]. Zenodo.
 > https://doi.org/10.5281/zenodo.(DOI upon registration)
+>
+> Dr. Waleed Mandour, Sultan Qaboos University, ORCID: 0000-0002-9262-5993
+> Prof. Wessam Ibrahim, ORCID: 0000-0003-0710-6038
 
 ## Acknowledgements
 
