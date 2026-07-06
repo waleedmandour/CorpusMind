@@ -34,7 +34,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["msi", "appimage", "app", "deb"],
+    "targets": ["msi", "nsis", "appimage", "app", "deb"],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -43,12 +43,7 @@
       "icons/icon.ico"
     ],
     "resources": [],
-    "externalBin": [
-      "binaries/corpusmind-engine-x86_64-pc-windows-msvc",
-      "binaries/corpusmind-engine-x86_64-unknown-linux-gnu",
-      "binaries/corpusmind-engine-aarch64-apple-darwin",
-      "binaries/corpusmind-engine-x86_64-apple-darwin"
-    ],
+    "externalBin": [],
     "copyright": "Copyright (C) 2026 Dr. Waleed Mandour (Sultan Qaboos University) and Prof. Wessam Ibrahim. Licensed under AGPL-3.0-only.",
     "category": "Education",
     "shortDescription": "Local-first, AI-native research environment for corpus linguistics and multimodal discourse analysis.",
