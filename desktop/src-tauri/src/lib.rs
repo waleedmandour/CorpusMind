@@ -114,10 +114,26 @@ impl EngineSidecar {
         }
 
         // Dev fallback: run the engine from ../engine/ via Python.
-        let engine_dir = std::env::current_dir()
-            .ok()
-            .and_then(|cwd| cwd.parent().map(|p| p.join("engine")))
-            .or_else(|| std::env::var("CORPUSMIND_ENGINE_DIR").ok().map(Into::into));
+        // Check several candidate locations in order:
+        //   1. CORPUSMIND_ENGINE_DIR env var (explicit user override)
+        //   2. ../engine/ relative to the current executable (works when the
+        //      .app is placed next to the repo, or when running from the
+        //      desktop/src-tauri/ target directory during dev)
+        //   3. ../engine/ relative to the current working directory (dev mode)
+        let engine_dir = std::env::var("CORPUSMIND_ENGINE_DIR").ok().map(Into::into)
+            .or_else(|| {
+                std::env::current_exe()
+                    .ok()
+                    .and_then(|exe| exe.parent().map(|p| p.to_path_buf()))
+                    .and_then(|p| p.parent().map(|gp| gp.join("engine")))
+                    .filter(|d| d.exists())
+            })
+            .or_else(|| {
+                std::env::current_dir()
+                    .ok()
+                    .and_then(|cwd| cwd.parent().map(|p| p.join("engine")))
+                    .filter(|d| d.exists())
+            });
 
         if let Some(dir) = engine_dir {
             // Try the venv first, then system python.
