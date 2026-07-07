@@ -1,26 +1,23 @@
 #!/usr/bin/env bash
 # scripts/build-macos-arm64.sh
 #
-# Build CorpusMind for macOS Apple Silicon (arm64) on a developer machine.
+# Build CorpusMind for macOS Apple Silicon (arm64).
 #
-# Produces:
-#   web/dist/                            — PWA artifacts
-#   desktop/src-tauri/binaries/
-#       corpusmind-engine-aarch64-apple-darwin   — bundled engine sidecar
-#   desktop/src-tauri/target/release/bundle/
-#       dmg/CorpusMind_0.1.0_aarch64.dmg         — installer
-#       macos/CorpusMind.app                     — the .app bundle
-#
-# Prerequisites (install once via `brew install python@3.12 node@20 rustup-init`):
-#   - macOS 13+ on Apple Silicon
-#   - Xcode Command Line Tools:  xcode-select --install
-#   - Python 3.12, Node 20, Rust (stable)
-#   - PyInstaller:  pip install pyinstaller
+# This script is designed to be robust. It handles three scenarios:
+#   1. Full build with PyInstaller sidecar (default — produces a
+#      self-contained .dmg with the engine bundled inside).
+#   2. Desktop-only build without sidecar (--no-sidecar — the desktop
+#      app will fall back to running `python -m app.main` from the
+#      engine/ directory at runtime, which requires Python 3.12 on
+#      the target machine but avoids the PyInstaller step entirely).
+#   3. Engine-only build (--engine — just builds the sidecar binary).
 #
 # Usage:
-#   ./scripts/build-macos-arm64.sh           # full build
-#   ./scripts/build-macos-arm64.sh --engine  # engine sidecar only
-#   ./scripts/build-macos-arm64.sh --desktop # desktop bundle only
+#   ./scripts/build-macos-arm64.sh              # full build (sidecar + web + desktop)
+#   ./scripts/build-macos-arm64.sh --no-sidecar # skip PyInstaller, build web + desktop only
+#   ./scripts/build-macos-arm64.sh --engine     # sidecar binary only
+#   ./scripts/build-macos-arm64.sh --web        # PWA only
+#   ./scripts/build-macos-arm64.sh --desktop    # desktop bundle only (requires sidecar or --no-sidecar)
 set -euo pipefail
 
 # ─── config ────────────────────────────────────────────────────────────────
@@ -30,124 +27,201 @@ ENGINE_DIR="$REPO_ROOT/engine"
 WEB_DIR="$REPO_ROOT/web"
 DESKTOP_DIR="$REPO_ROOT/desktop/src-tauri"
 
-# Target triple for Apple Silicon — Tauri's sidecar lookup uses this suffix.
 TARGET_TRIPLE="aarch64-apple-darwin"
 SIDECAR_NAME="corpusmind-engine-${TARGET_TRIPLE}"
 SIDECAR_OUT="$DESKTOP_DIR/binaries/$SIDECAR_NAME"
 
-# What to build — default: everything
+# What to build
 BUILD_ENGINE=1
 BUILD_WEB=1
 BUILD_DESKTOP=1
-if [[ "${1:-}" == "--engine" ]]; then BUILD_DESKTOP=0; BUILD_WEB=0; fi
-if [[ "${1:-}" == "--desktop" ]]; then BUILD_ENGINE=0; fi
-if [[ "${1:-}" == "--web" ]]; then BUILD_ENGINE=0; BUILD_DESKTOP=0; fi
+BUILD_SIDECAR=1
+for arg in "$@"; do
+    case "$arg" in
+        --engine)     BUILD_DESKTOP=0; BUILD_WEB=0; BUILD_SIDECAR=1 ;;
+        --web)        BUILD_ENGINE=0; BUILD_DESKTOP=0 ;;
+        --desktop)    BUILD_ENGINE=0 ;;
+        --no-sidecar) BUILD_SIDECAR=0 ;;
+    esac
+done
 
 # ─── helpers ───────────────────────────────────────────────────────────────
 log()  { printf '\033[1;34m[build]\033[0m %s\n' "$*"; }
-ok()   { printf '\033[1;32m  ok\033[0m  %s\n' "$*"; }
-die()  { printf '\033[1;31m fail\033[0m %s\n' "$*" >&2; exit 1; }
-
-command -v python3.12 >/dev/null || command -v python3 >/dev/null || die "python3 not found"
-command -v node   >/dev/null || die "node not found"
-command -v cargo  >/dev/null || die "cargo not found (install via rustup)"
-command -v pyinstaller >/dev/null || die "pyinstaller not found (pip install pyinstaller)"
-
-# Pick the right python
-PYTHON="$(command -v python3.12 || command -v python3)"
+ok()   { printf '\033[1;32m  ✓\033[0m  %s\n' "$*"; }
+warn() { printf '\033[1;33m  ⚠\033[0m  %s\n' "$*"; }
+die()  { printf '\033[1;31m  ✗\033[0m %s\n' "$*" >&2; exit 1; }
 
 cd "$REPO_ROOT"
 log "repo: $REPO_ROOT"
 log "host: $(uname -sm)"
 
-# ─── 1. engine sidecar ─────────────────────────────────────────────────────
-if [[ $BUILD_ENGINE -eq 1 ]]; then
-  log "building engine sidecar → $SIDECAR_NAME"
+# ─── 0. prerequisites check ───────────────────────────────────────────────
+log "checking prerequisites..."
 
-  # Use a dedicated venv so we don't pollute the system python or pick up
-  # unrelated dev packages that bloat the bundle.
-  VENV="$ENGINE_DIR/.venv-build"
-  if [[ ! -d "$VENV" ]]; then
-    "$PYTHON" -m venv "$VENV"
-    ok "created venv"
-  fi
-  # shellcheck disable=SC1091
-  source "$VENV/bin/activate"
+# Xcode Command Line Tools
+if ! xcode-select -p >/dev/null 2>&1; then
+    warn "Xcode Command Line Tools not found. Installing..."
+    xcode-select --install || die "please run 'xcode-select --install' manually, then re-run this script"
+    die "Xcode tools installation started. Re-run this script after it completes."
+fi
+ok "Xcode Command Line Tools"
 
-  pip install --upgrade pip wheel >/dev/null
-  pip install -e "$ENGINE_DIR[dev,vision]" >/dev/null
-  pip install pyinstaller python-multipart cryptography >/dev/null
-  ok "engine deps installed"
+# Rust
+if ! command -v cargo >/dev/null 2>&1; then
+    warn "Rust not found. Installing via rustup..."
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+    source "$HOME/.cargo/env"
+fi
+source "$HOME/.cargo/env" 2>/dev/null || true
+ok "Rust $(rustc --version)"
 
-  cd "$ENGINE_DIR"
-  rm -rf build dist
-  pyinstaller corpusmind-engine.spec --noconfirm
-  cd "$REPO_ROOT"
+# Tauri CLI
+if ! command -v cargo-tauri >/dev/null 2>&1; then
+    warn "Tauri CLI not found. Installing..."
+    cargo install tauri-cli --version "^2.0" --locked
+fi
+ok "Tauri CLI"
 
-  [[ -f "$ENGINE_DIR/dist/corpusmind-engine" ]] \
-    || die "pyinstaller did not produce dist/corpusmind-engine"
+# Add the arm64 target
+rustup target add aarch64-apple-darwin 2>/dev/null || true
+ok "Rust target aarch64-apple-darwin"
 
-  mkdir -p "$DESKTOP_DIR/binaries"
-  cp "$ENGINE_DIR/dist/corpusmind-engine" "$SIDECAR_OUT"
-  chmod +x "$SIDECAR_OUT"
-  ok "sidecar → $SIDECAR_OUT"
-  ok "size: $(du -h "$SIDECAR_OUT" | cut -f1)"
+# Node
+if ! command -v node >/dev/null 2>&1; then
+    die "Node.js not found. Install with: brew install node@20"
+fi
+ok "Node $(node --version)"
+
+# Python (only needed for sidecar or if --no-sidecar)
+if [[ $BUILD_SIDECAR -eq 1 ]] || [[ $BUILD_ENGINE -eq 1 ]]; then
+    PYTHON="$(command -v python3.12 || command -v python3)"
+    if [[ -z "$PYTHON" ]]; then
+        die "Python 3.12 not found. Install with: brew install python@3.12"
+    fi
+    ok "Python $($PYTHON --version)"
 fi
 
-# ─── 2. web PWA ────────────────────────────────────────────────────────────
+# ─── 1. engine sidecar (PyInstaller) ──────────────────────────────────────
+if [[ $BUILD_SIDECAR -eq 1 ]] && [[ $BUILD_ENGINE -eq 1 ]]; then
+    log "building engine sidecar → $SIDECAR_NAME"
+
+    VENV="$ENGINE_DIR/.venv-build"
+    if [[ ! -d "$VENV" ]]; then
+        "$PYTHON" -m venv "$VENV"
+        ok "created venv"
+    fi
+    # shellcheck disable=SC1091
+    source "$VENV/bin/activate"
+
+    pip install --upgrade pip wheel
+    pip install -e "$ENGINE_DIR[dev,vision]"
+    pip install pyinstaller python-multipart cryptography
+    ok "engine deps installed"
+
+    cd "$ENGINE_DIR"
+    rm -rf build dist
+    pyinstaller corpusmind-engine.spec --noconfirm
+    cd "$REPO_ROOT"
+
+    [[ -f "$ENGINE_DIR/dist/corpusmind-engine" ]] \
+        || die "pyinstaller did not produce dist/corpusmind-engine"
+
+    mkdir -p "$DESKTOP_DIR/binaries"
+    cp "$ENGINE_DIR/dist/corpusmind-engine" "$SIDECAR_OUT"
+    chmod +x "$SIDECAR_OUT"
+    ok "sidecar → $SIDECAR_OUT ($(du -h "$SIDECAR_OUT" | cut -f1))"
+elif [[ $BUILD_SIDECAR -eq 0 ]]; then
+    warn "skipping sidecar build (--no-sidecar). The desktop app will fall back"
+    warn "to running 'python -m app.main' from the engine/ directory at runtime."
+    warn "This requires Python 3.12 + the engine deps on the target machine."
+    # Remove the sidecar binary if it exists so Tauri doesn't try to bundle a stale one
+    rm -f "$SIDECAR_OUT"
+fi
+
+# ─── 2. web PWA ───────────────────────────────────────────────────────────
 if [[ $BUILD_WEB -eq 1 ]]; then
-  log "building web PWA"
-  cd "$WEB_DIR"
-  npm install --silent
-  npm run build
-  cd "$REPO_ROOT"
-  [[ -f "$WEB_DIR/dist/index.html" ]] || die "web build missing dist/index.html"
-  [[ -f "$WEB_DIR/dist/sw.js"       ]] || die "web build missing dist/sw.js"
-  ok "PWA artifacts in web/dist/"
+    log "building web PWA"
+    cd "$WEB_DIR"
+    npm install
+    npm run build
+    cd "$REPO_ROOT"
+    [[ -f "$WEB_DIR/dist/index.html" ]] || die "web build missing dist/index.html"
+    ok "PWA artifacts in web/dist/"
 fi
 
 # ─── 3. desktop bundle ────────────────────────────────────────────────────
 if [[ $BUILD_DESKTOP -eq 1 ]]; then
-  log "building desktop bundle (Tauri 2, arm64)"
+    log "building desktop bundle (Tauri 2, arm64)"
 
-  # Verify the sidecar is present (either we just built it, or it was
-  # pre-built and --desktop was passed).
-  [[ -x "$SIDECAR_OUT" ]] \
-    || die "sidecar missing at $SIDECAR_OUT — run with --engine first"
+    # If sidecar was built, verify it exists
+    if [[ $BUILD_SIDECAR -eq 1 ]]; then
+        [[ -x "$SIDECAR_OUT" ]] \
+            || die "sidecar missing at $SIDECAR_OUT — run with --engine first"
+    fi
 
-  cd "$DESKTOP_DIR"
+    # If --no-sidecar, temporarily remove externalBin from tauri.conf.json
+    # so cargo tauri build doesn't fail looking for a non-existent binary.
+    CONF_FILE="$DESKTOP_DIR/tauri.conf.json"
+    if [[ $BUILD_SIDECAR -eq 0 ]]; then
+        log "temporarily removing externalBin from tauri.conf.json (--no-sidecar)"
+        # Back up the original config
+        cp "$CONF_FILE" "$CONF_FILE.bak"
+        # Remove the externalBin line (python or sed)
+        python3 -c "
+import json
+with open('$CONF_FILE') as f:
+    c = json.load(f)
+c['bundle']['externalBin'] = []
+with open('$CONF_FILE', 'w') as f:
+    json.dump(c, f, indent=2)
+"
+    fi
 
-  # Build for arm64 explicitly. On an Apple Silicon Mac this is the host
-  # triple, but we pass --target to be unambiguous and to make universal
-  # builds possible later (add x86_64-apple-darwin + lipo).
-  rustup target add aarch64-apple-darwin 2>/dev/null || true
+    cd "$DESKTOP_DIR"
 
-  # cargo tauri build picks up tauri.conf.json (frontendDist, bundle config).
-  # We skip the beforeBuildCommand because we already built the web PWA above
-  # and Tauri's bundled npm invocation can race with our manual build.
-  cargo tauri build --target aarch64-apple-darwin
+    # Build for arm64. On Apple Silicon this is the host triple.
+    cargo tauri build --target aarch64-apple-darwin || {
+        # Restore config on failure
+        if [[ $BUILD_SIDECAR -eq 0 ]] && [[ -f "$CONF_FILE.bak" ]]; then
+            mv "$CONF_FILE.bak" "$CONF_FILE"
+        fi
+        die "cargo tauri build failed. See error above."
+    }
 
-  cd "$REPO_ROOT"
-  log "done. artifacts:"
-  ls -lh "$DESKTOP_DIR/target/aarch64-apple-darwin/release/bundle/dmg/"*.dmg 2>/dev/null || true
-  ls -ld  "$DESKTOP_DIR/target/aarch64-apple-darwin/release/bundle/macos/CorpusMind.app" 2>/dev/null || true
-  ok "build complete"
+    # Restore config on success
+    if [[ $BUILD_SIDECAR -eq 0 ]] && [[ -f "$CONF_FILE.bak" ]]; then
+        mv "$CONF_FILE.bak" "$CONF_FILE"
+    fi
+
+    cd "$REPO_ROOT"
+    log "done. artifacts:"
+    DMG=$(find "$DESKTOP_DIR/target/aarch64-apple-darwin/release/bundle/dmg" -name '*.dmg' 2>/dev/null | head -1)
+    APP=$(find "$DESKTOP_DIR/target/aarch64-apple-darwin/release/bundle/macos" -name '*.app' -maxdepth 1 2>/dev/null | head -1)
+    if [[ -n "$DMG" ]]; then
+        ok "📦 $DMG"
+    fi
+    if [[ -n "$APP" ]]; then
+        ok "📱 $APP"
+    fi
+    ok "build complete"
 fi
 
-# ─── 4. codesign + notarize (optional, manual) ────────────────────────────
-#
-# The .dmg / .app produced above is unsigned. To distribute outside your own
-# machine you must codesign and notarize. Run these manually (they need an
-# Apple Developer ID and an App Store Connect API key):
-#
-#   APP="desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/macos/CorpusMind.app"
-#   codesign --deep --force --options runtime \
-#     --sign "Developer ID Application: Your Name (TEAMID)" "$APP"
-#
-#   dmg="desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/CorpusMind_0.1.0_aarch64.dmg"
-#   xcrun notarytool submit "$dmg" \
-#     --apple-id you@example.com --team-id TEAMID --password app-specific-pwd --wait
-#   xcrun stapler staple "$dmg"
-#
-# Until you have a Developer ID, the app will run on your own Mac after
-# right-click → Open → "Open anyway" in System Settings → Privacy & Security.
+# ─── 4. post-build instructions ───────────────────────────────────────────
+echo ""
+echo "═══════════════════════════════════════════════════════════════"
+echo "  Build complete!"
+echo "═══════════════════════════════════════════════════════════════"
+if [[ $BUILD_DESKTOP -eq 1 ]]; then
+    APP=$(find "$DESKTOP_DIR/target/aarch64-apple-darwin/release/bundle/macos" -name '*.app' -maxdepth 1 2>/dev/null | head -1)
+    if [[ -n "$APP" ]]; then
+        echo "  To open: open \"$APP\""
+        echo "  First launch: right-click → Open → Open anyway (unsigned)"
+    fi
+fi
+if [[ $BUILD_SIDECAR -eq 0 ]]; then
+    echo ""
+    echo "  ⚠ No sidecar bundled. To run the engine for the desktop app:"
+    echo "    cd engine && python3.12 -m venv .venv && source .venv/bin/activate"
+    echo "    pip install -e '.[dev,vision]' && corpusmind-engine"
+fi
+echo "═══════════════════════════════════════════════════════════════"
