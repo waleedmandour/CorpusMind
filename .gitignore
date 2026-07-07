@@ -128,3 +128,4 @@ reference-data/wordlists/*/*.json
 *.p12
 secrets/
 node_modules/
+scripts/__pycache__/
