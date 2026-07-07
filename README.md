@@ -383,3 +383,19 @@ surface, the Arabic NLP pipeline (CAMeL Tools integration), the vision suite
 analyses (CDA, persuasion, framing, narrative, metaphor, emotion, cultural),
 and the collaboration/accessibility/encryption features. All AI-generated code
 was reviewed, tested, and committed by the human authors.
+
+## Funding Disclaimer
+
+This project is **not funded by any institution, grant, or commercial entity**.
+CorpusMind was developed independently by the authors out of a sense of
+responsibility to the linguist community and to researchers in corpus
+linguistics, discourse analysis, and multimodal studies who need an
+open-access, local-first, AI-native research environment but cannot afford
+commercial subscriptions or cannot send unpublished data to third-party
+cloud services. The software is released free of charge under the GNU
+Affero General Public License v3.0 (AGPL-3.0-only), and will remain free
+and open-source in perpetuity. The authors bear all development and
+maintenance costs personally. If you find CorpusMind useful in your
+research, please cite it using the DOI above (10.5281/zenodo.21226650)
+and consider contributing bug reports, feature requests, or pull requests
+on GitHub.
