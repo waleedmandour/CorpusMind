@@ -1,6 +1,6 @@
 # Contributing to CorpusMind
 
-**Authors:** Dr. Waleed Mandour (Sultan Qaboos University, ORCID: 0000-0002-9262-5993) and Prof. Wessam Ibrahim (ORCID: 0000-0003-0710-6038)
+**Authors:** Dr. Waleed Mandour (Sultan Qaboos University, ORCID: 0000-0002-9262-5993) and Prof. Wessam Ibrahim (Princess Nourah Bint Abdulrahman University, ORCID: 0000-0003-0710-6038)
 
 Thank you for considering a contribution to CorpusMind. This document explains
 how to set up a development environment, what we expect from contributions,

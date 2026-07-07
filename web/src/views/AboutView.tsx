@@ -24,7 +24,7 @@ export function AboutView() {
           </li>
           <li>
             <strong>Prof. Wessam Ibrahim</strong>
-            <p>ORCID: <a href="https://orcid.org/0000-0003-0710-6038">0000-0003-0710-6038</a></p>
+            <p>Princess Nourah Bint Abdulrahman University | ORCID: <a href="https://orcid.org/0000-0003-0710-6038">0000-0003-0710-6038</a></p>
             <p>Co-author, corpus linguistics and discourse analysis methodology</p>
           </li>
         </ul>

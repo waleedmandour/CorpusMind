@@ -1,4 +1,4 @@
-"""Generate the CorpusMind Arabic User Guide PDF with blue theme and Amiri font."""
+"""Generate the CorpusMind Arabic User Guide PDF with green theme and Amiri font."""
 import re
 from pathlib import Path
 from reportlab.lib.pagesizes import A4
@@ -33,16 +33,16 @@ registerFontFamily("LatinSans", normal="LatinSans", bold="LatinSans-Bold")
 
 pdfmetrics.registerFont(TTFont("LibMono", f"{FONT_DIR}/liberation/LiberationMono-Regular.ttf"))
 
-# ---- Blue theme colors ----
-BRAND = HexColor("#1565c0")        # Blue 800
-BRAND_DARK = HexColor("#0d47a1")   # Blue 900
-BRAND_LIGHT = HexColor("#e3f2fd")  # Blue 50
+# ---- Green theme colors (matching CorpusMind brand + English guide) ----
+BRAND = HexColor("#0b6e4f")        # CorpusMind green
+BRAND_DARK = HexColor("#095c41")   # Darker green
+BRAND_LIGHT = HexColor("#e8f5e9")  # Light green tint
 ACCENT = HexColor("#ffb300")       # Amber
 TEXT = HexColor("#1a1a2e")
 TEXT_MUTED = HexColor("#555555")
 CODE_BG = HexColor("#eef0ee")
 BORDER = HexColor("#d0d0d0")
-COVER_BG = HexColor("#1565c0")
+COVER_BG = HexColor("#0b6e4f")
 COVER_TEXT = white
 
 # ---- Helper: reshape Arabic text for ReportLab ----
@@ -50,6 +50,22 @@ def shape_arabic(text):
     """Reshape Arabic text and apply BiDi for correct rendering in ReportLab."""
     reshaped = arabic_reshaper.reshape(text)
     return get_display(reshaped)
+
+def shape_arabic_safe(text):
+    """Apply shape_arabic to text while preserving HTML tags intact.
+
+    Splits the text by HTML tags, reshapes only the non-tag parts, and
+    reassembles. This prevents the bidi algorithm from corrupting tag
+    characters like </b> into <b/>.
+    """
+    parts = re.split(r'(<[^>]+>)', text)
+    result = []
+    for part in parts:
+        if part.startswith('<') and part.endswith('>'):
+            result.append(part)
+        elif part:
+            result.append(shape_arabic(part))
+    return ''.join(result)
 
 def escape_xml(text):
     text = text.replace("&", "&amp;")
@@ -149,16 +165,27 @@ def parse_markdown(md_text):
                 n.append(re.sub(r"^\s*\d+\. ", "", lines[i])); i += 1
             blocks.append(("numbered", n))
             continue
+        # Markdown table: consecutive lines starting with |
+        if line.strip().startswith("|"):
+            t = []
+            while i < len(lines) and lines[i].strip().startswith("|"):
+                t.append(lines[i].strip()); i += 1
+            blocks.append(("table", t))
+            continue
         if line.strip() == "":
             i += 1; continue
         p = []
         while i < len(lines) and lines[i].strip() and not lines[i].startswith("#") \
               and not lines[i].startswith("```") and not re.match(r"^\s*[-*] ", lines[i]) \
               and not re.match(r"^\s*\d+\. ", lines[i]) and not lines[i].startswith("> ") \
+              and not lines[i].strip().startswith("|") \
               and lines[i].strip() != "---":
             p.append(lines[i]); i += 1
         if p:
             blocks.append(("paragraph", " ".join(p)))
+        else:
+            blocks.append(("paragraph", lines[i]))
+            i += 1
     return blocks
 
 
@@ -212,7 +239,7 @@ def build_arabic_pdf(md_path, pdf_path):
     story.append(Paragraph("Sultan Qaboos University | ORCID: 0000-0002-9262-5993", style_cover_author))
     story.append(Spacer(1, 0.2 * cm))
     story.append(Paragraph(shape_arabic("أ.د. وسام إبراهيم"), style_cover_author))
-    story.append(Paragraph("ORCID: 0000-0003-0710-6038", style_cover_author))
+    story.append(Paragraph(shape_arabic("جامعة الأميرة نورة بنت عبدالرحمن | ORCID: 0000-0003-0710-6038"), style_cover_author))
     story.append(PageBreak())
 
     # ---- Content ----
@@ -222,20 +249,20 @@ def build_arabic_pdf(md_path, pdf_path):
             part_num += 1
             story.append(Spacer(1, 0.3 * cm))
             story.append(Paragraph(f"PART {part_num}", style_part_label))
-            story.append(Paragraph(shape_arabic(format_inline(escape_xml(content))), style_h1))
+            story.append(Paragraph(shape_arabic_safe(format_inline(escape_xml(content))), style_h1))
             story.append(HRFlowable(width="100%", thickness=1, color=BRAND_LIGHT, spaceAfter=8))
         elif btype == "h3":
-            story.append(Paragraph(shape_arabic(format_inline(escape_xml(content))), style_h2))
+            story.append(Paragraph(shape_arabic_safe(format_inline(escape_xml(content))), style_h2))
         elif btype == "paragraph":
-            story.append(Paragraph(shape_arabic(format_inline(escape_xml(content))), style_body))
+            story.append(Paragraph(shape_arabic_safe(format_inline(escape_xml(content))), style_body))
         elif btype == "bullets":
-            items = [ListItem(Paragraph(shape_arabic(format_inline(escape_xml(line))), style_bullet),
+            items = [ListItem(Paragraph(shape_arabic_safe(format_inline(escape_xml(line))), style_bullet),
                      value="bullet", bulletColor=BRAND) for line in content]
             story.append(ListFlowable(items, bulletType="bullet", bulletColor=BRAND,
                        bulletFontSize=8, rightIndent=16, spaceAfter=6))
         elif btype == "numbered":
             for idx, line in enumerate(content, 1):
-                story.append(Paragraph(f"{idx}. {shape_arabic(format_inline(escape_xml(line)))}",
+                story.append(Paragraph(f"{idx}. {shape_arabic_safe(format_inline(escape_xml(line)))}",
                     ParagraphStyle("NumItem", parent=style_body, rightIndent=20, spaceAfter=3)))
             story.append(Spacer(1, 4))
         elif btype == "code":
@@ -244,9 +271,46 @@ def build_arabic_pdf(md_path, pdf_path):
             qs = ParagraphStyle("Quote", parent=style_body, fontName="Amiri-Italic",
                 fontSize=11, leading=18, textColor=TEXT_MUTED, rightIndent=16,
                 borderColor=BRAND, borderWidth=0, borderPadding=6, spaceAfter=8)
-            story.append(Paragraph(shape_arabic(format_inline(escape_xml(content))), qs))
+            story.append(Paragraph(shape_arabic_safe(format_inline(escape_xml(content))), qs))
         elif btype == "hr":
             story.append(HRFlowable(width="100%", thickness=0.5, color=BORDER, spaceBefore=8, spaceAfter=8))
+        elif btype == "table":
+            # Parse markdown table rows into a ReportLab Table
+            rows = []
+            for idx, tline in enumerate(content):
+                if re.match(r"^\|[\s\-:|]+\|$", tline):
+                    continue
+                cells = [c.strip() for c in tline.strip("|").split("|")]
+                rows.append(cells)
+            if rows:
+                cell_style = ParagraphStyle("TableCell", fontName="Amiri",
+                    fontSize=9, leading=12, textColor=TEXT, alignment=TA_RIGHT)
+                header_style = ParagraphStyle("TableHeader", fontName="Amiri-Bold",
+                    fontSize=9, leading=12, textColor=white, alignment=TA_RIGHT)
+                wrapped = []
+                for ridx, row in enumerate(rows):
+                    style = header_style if ridx == 0 else cell_style
+                    # Use shape_arabic_safe to preserve any HTML tags from format_inline
+                    wrapped.append([Paragraph(shape_arabic_safe(format_inline(escape_xml(c))), style) for c in row])
+                ncol = len(rows[0])
+                avail = A4[0] - 5 * cm
+                col_w = avail / ncol
+                t = Table(wrapped, colWidths=[col_w] * ncol, repeatRows=1)
+                t.setStyle(TableStyle([
+                    ("BACKGROUND", (0, 0), (-1, 0), BRAND),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), white),
+                    ("FONTSIZE", (0, 0), (-1, -1), 9),
+                    ("ALIGN", (0, 0), (-1, -1), "RIGHT"),
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                    ("GRID", (0, 0), (-1, -1), 0.5, BORDER),
+                    ("ROWBACKGROUNDS", (0, 1), (-1, -1), [white, BRAND_LIGHT]),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 4),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+                    ("TOPPADDING", (0, 0), (-1, -1), 3),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                ]))
+                story.append(t)
+                story.append(Spacer(1, 6))
 
     # ---- Build document ----
     def cover_page_bg(canvas, doc):
@@ -286,8 +350,8 @@ def build_arabic_pdf(md_path, pdf_path):
 
 
 if __name__ == "__main__":
-    md_path = "/home/z/my-project/corpusmind/docs/USER_GUIDE_AR.md"
-    pdf_path = "/home/z/my-project/corpusmind/download/CorpusMind_User_Guide_Arabic_v0.1.0.pdf"
+    md_path = "/home/z/my-project/work/CorpusMind/docs/USER_GUIDE_AR.md"
+    pdf_path = "/home/z/my-project/work/CorpusMind/download/CorpusMind_User_Guide_Arabic_v0.1.0.pdf"
     build_arabic_pdf(md_path, pdf_path)
     import os
     print(f"Arabic PDF generated: {pdf_path}")

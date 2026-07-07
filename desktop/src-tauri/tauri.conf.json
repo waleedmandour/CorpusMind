@@ -50,7 +50,7 @@
       "frameworks": [],
       "minimumSystemVersion": "13.0"
     },
-    "copyright": "Copyright (C) 2026 Dr. Waleed Mandour (Sultan Qaboos University) and Prof. Wessam Ibrahim. Licensed under AGPL-3.0-only.",
+    "copyright": "Copyright (C) 2026 Dr. Waleed Mandour (Sultan Qaboos University) and Prof. Wessam Ibrahim (Princess Nourah Bint Abdulrahman University). Licensed under AGPL-3.0-only.",
     "category": "Education",
     "shortDescription": "Local-first, AI-native research environment for corpus linguistics and multimodal discourse analysis.",
     "longDescription": "CorpusMind lets a linguist go from raw texts and images to publication-ready quantitative and qualitative analysis — without writing a line of code, without sending unpublished data to a third-party server unless they explicitly choose to, and without losing the methodological transparency that peer review demands."

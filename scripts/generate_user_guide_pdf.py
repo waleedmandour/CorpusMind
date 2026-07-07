@@ -159,16 +159,29 @@ def parse_markdown(md_text):
                 n.append(re.sub(r"^\s*\d+\. ", "", lines[i])); i += 1
             blocks.append(("numbered", n))
             continue
+        # Markdown table: consecutive lines starting with |
+        if line.strip().startswith("|"):
+            t = []
+            while i < len(lines) and lines[i].strip().startswith("|"):
+                t.append(lines[i].strip()); i += 1
+            blocks.append(("table", t))
+            continue
         if line.strip() == "":
             i += 1; continue
         p = []
         while i < len(lines) and lines[i].strip() and not lines[i].startswith("#") \
               and not lines[i].startswith("```") and not re.match(r"^\s*[-*] ", lines[i]) \
               and not re.match(r"^\s*\d+\. ", lines[i]) and not lines[i].startswith("> ") \
+              and not lines[i].strip().startswith("|") \
               and lines[i].strip() != "---":
             p.append(lines[i]); i += 1
         if p:
             blocks.append(("paragraph", " ".join(p)))
+        else:
+            # Line matched a stop condition but no earlier handler (e.g. "#LancsBox" starts with # but isn't a heading).
+            # Treat it as a single-line paragraph and advance.
+            blocks.append(("paragraph", lines[i]))
+            i += 1
     return blocks
 
 def build_pdf(md_path, pdf_path, is_arabic=False):
@@ -221,7 +234,7 @@ def build_pdf(md_path, pdf_path, is_arabic=False):
     story.append(Paragraph("Sultan Qaboos University | ORCID: 0000-0002-9262-5993", style_cover_author))
     story.append(Spacer(1, 0.2 * cm))
     story.append(Paragraph("Prof. Wessam Ibrahim", style_cover_author))
-    story.append(Paragraph("ORCID: 0000-0003-0710-6038", style_cover_author))
+    story.append(Paragraph("Princess Nourah Bint Abdulrahman University | ORCID: 0000-0003-0710-6038", style_cover_author))
     story.append(PageBreak())
 
     # ---- Content ----
@@ -256,6 +269,46 @@ def build_pdf(md_path, pdf_path, is_arabic=False):
             story.append(Paragraph(format_inline(escape_xml(content)), qs))
         elif btype == "hr":
             story.append(HRFlowable(width="100%", thickness=0.5, color=BORDER, spaceBefore=8, spaceAfter=8))
+        elif btype == "table":
+            # Parse markdown table rows into a ReportLab Table
+            rows = []
+            for idx, tline in enumerate(content):
+                # Skip separator rows like |---|---|
+                if re.match(r"^\|[\s\-:|]+\|$", tline):
+                    continue
+                cells = [c.strip() for c in tline.strip("|").split("|")]
+                rows.append(cells)
+            if rows:
+                # Wrap each cell in a Paragraph for text wrapping
+                cell_style = ParagraphStyle("TableCell", fontName="BodySerif",
+                    fontSize=8, leading=10, textColor=TEXT)
+                header_style = ParagraphStyle("TableHeader", fontName="BodySerif-Bold",
+                    fontSize=8, leading=10, textColor=white)
+                wrapped = []
+                for ridx, row in enumerate(rows):
+                    style = header_style if ridx == 0 else cell_style
+                    wrapped.append([Paragraph(format_inline(escape_xml(c)), style) for c in row])
+                # Calculate column widths: distribute evenly across available width
+                ncol = len(rows[0])
+                avail = A4[0] - 5 * cm  # page width minus margins
+                col_w = avail / ncol
+                t = Table(wrapped, colWidths=[col_w] * ncol, repeatRows=1)
+                t.setStyle(TableStyle([
+                    ("BACKGROUND", (0, 0), (-1, 0), BRAND),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), white),
+                    ("FONTNAME", (0, 0), (-1, 0), "BodySerif-Bold"),
+                    ("FONTSIZE", (0, 0), (-1, -1), 8),
+                    ("ALIGN", (0, 0), (-1, -1), "LEFT"),
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                    ("GRID", (0, 0), (-1, -1), 0.5, BORDER),
+                    ("ROWBACKGROUNDS", (0, 1), (-1, -1), [white, BRAND_LIGHT]),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 4),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+                    ("TOPPADDING", (0, 0), (-1, -1), 3),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                ]))
+                story.append(t)
+                story.append(Spacer(1, 6))
 
     # ---- Build document ----
     def page_decorations(canvas, doc):
@@ -320,8 +373,8 @@ def build_pdf(md_path, pdf_path, is_arabic=False):
     return pdf_path
 
 if __name__ == "__main__":
-    md_path = "/home/z/my-project/corpusmind/docs/USER_GUIDE.md"
-    pdf_path = "/home/z/my-project/corpusmind/download/CorpusMind_User_Guide_v0.1.0.pdf"
+    md_path = "/home/z/my-project/work/CorpusMind/docs/USER_GUIDE.md"
+    pdf_path = "/home/z/my-project/work/CorpusMind/download/CorpusMind_User_Guide_v0.1.0.pdf"
     build_pdf(md_path, pdf_path)
     print(f"PDF generated: {pdf_path}")
     import os
