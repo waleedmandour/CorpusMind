@@ -399,3 +399,7 @@ maintenance costs personally. If you find CorpusMind useful in your
 research, please cite it using the DOI above (10.5281/zenodo.21226650)
 and consider contributing bug reports, feature requests, or pull requests
 on GitHub.
+
+---
+
+*Built with ❤ to the Academic Community.*
