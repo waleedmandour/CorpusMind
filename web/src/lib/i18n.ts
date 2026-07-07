@@ -112,7 +112,7 @@ export const translations = {
     about_author1: "Dr. Waleed Mandour",
     about_author1_affil: "Sultan Qaboos University | ORCID: 0000-0002-9262-5993",
     about_author1_role: "Lead Architect and Assistant Lecturer of English Language",
-    about_author2: "Prof. Wessam Ibrahim",
+    about_author2: "Prof. Wesam Ibrahim",
     about_author2_orcid: "Princess Nourah Bint Abdulrahman University | ORCID: 0000-0003-0710-6038",
     about_author2_role: "Co-author, corpus linguistics and discourse analysis methodology",
     about_citation: "Citation",

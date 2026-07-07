@@ -333,7 +333,7 @@ CONTRIBUTING.md).
 ## Authors
 
 - **Dr. Waleed Mandour** - Sultan Qaboos University, ORCID: [0000-0002-9262-5993](https://orcid.org/0000-0002-9262-5993) - Lead Architect and Assistant Lecturer of English Language
-- **Prof. Wessam Ibrahim** - Princess Nourah Bint Abdulrahman University, ORCID: [0000-0003-0710-6038](https://orcid.org/0000-0003-0710-6038) - Co-author, corpus linguistics and discourse analysis methodology
+- **Prof. Wesam Ibrahim** - Princess Nourah Bint Abdulrahman University, ORCID: [0000-0003-0710-6038](https://orcid.org/0000-0003-0710-6038) - Co-author, corpus linguistics and discourse analysis methodology
 
 ## Citation
 
@@ -345,13 +345,13 @@ If you use CorpusMind in your research, please cite it as:
 > https://doi.org/10.5281/zenodo.21226650
 >
 > Dr. Waleed Mandour, Sultan Qaboos University, ORCID: 0000-0002-9262-5993
-> Prof. Wessam Ibrahim, Princess Nourah Bint Abdulrahman University, ORCID: 0000-0003-0710-6038
+> Prof. Wesam Ibrahim, Princess Nourah Bint Abdulrahman University, ORCID: 0000-0003-0710-6038
 
 **BibTeX:**
 
 ```bibtex
 @software{mandour_2026_corpusmind,
-  author       = {Mandour, Waleed and Ibrahim, Wessam},
+  author       = {Mandour, Waleed and Ibrahim, Wesam},
   title        = {{CorpusMind: Local-first, AI-native research environment
                    for corpus linguistics and multimodal discourse analysis}},
   month        = jul,

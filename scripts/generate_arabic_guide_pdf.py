@@ -340,7 +340,7 @@ def build_arabic_pdf(md_path, pdf_path):
         topMargin=2.5 * cm,
         bottomMargin=2.5 * cm,
         title="CorpusMind Arabic User Guide v0.1.0",
-        author="Dr. Waleed Mandour and Prof. Wessam Ibrahim",
+        author="Dr. Waleed Mandour and Prof. Wesam Ibrahim",
         subject="Arabic User Guide for CorpusMind v0.1.0",
         creator="CorpusMind",
     )

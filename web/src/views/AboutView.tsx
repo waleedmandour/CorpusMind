@@ -23,7 +23,7 @@ export function AboutView() {
             <p>Lead Architect and Assistant Lecturer of English Language</p>
           </li>
           <li>
-            <strong>Prof. Wessam Ibrahim</strong>
+            <strong>Prof. Wesam Ibrahim</strong>
             <p>Princess Nourah Bint Abdulrahman University | ORCID: <a href="https://orcid.org/0000-0003-0710-6038">0000-0003-0710-6038</a></p>
             <p>Co-author, corpus linguistics and discourse analysis methodology</p>
           </li>

@@ -3,7 +3,7 @@
 > Version 0.1.0 | AGPL-3.0-only
 >
 > Authors: Dr. Waleed Mandour (Sultan Qaboos University, ORCID: 0000-0002-9262-5993)
-> and Prof. Wessam Ibrahim (Princess Nourah Bint Abdulrahman University, ORCID: 0000-0003-0710-6038)
+> and Prof. Wesam Ibrahim (Princess Nourah Bint Abdulrahman University, ORCID: 0000-0003-0710-6038)
 
 ---
 

@@ -233,7 +233,7 @@ def build_pdf(md_path, pdf_path, is_arabic=False):
     story.append(Paragraph("Dr. Waleed Mandour", style_cover_author))
     story.append(Paragraph("Sultan Qaboos University | ORCID: 0000-0002-9262-5993", style_cover_author))
     story.append(Spacer(1, 0.2 * cm))
-    story.append(Paragraph("Prof. Wessam Ibrahim", style_cover_author))
+    story.append(Paragraph("Prof. Wesam Ibrahim", style_cover_author))
     story.append(Paragraph("Princess Nourah Bint Abdulrahman University | ORCID: 0000-0003-0710-6038", style_cover_author))
     story.append(PageBreak())
 
@@ -364,7 +364,7 @@ def build_pdf(md_path, pdf_path, is_arabic=False):
         topMargin=2.5 * cm,
         bottomMargin=2.5 * cm,
         title="CorpusMind User Guide v0.1.0",
-        author="Dr. Waleed Mandour and Prof. Wessam Ibrahim",
+        author="Dr. Waleed Mandour and Prof. Wesam Ibrahim",
         subject="User Guide for CorpusMind v0.1.0",
         creator="CorpusMind",
     )

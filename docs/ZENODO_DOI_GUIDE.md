@@ -183,7 +183,7 @@ you will receive an email from Zenodo with a link to the new record.
    - **Version**: 0.1.0 (auto-filled from the GitHub tag, minus the leading "v")
 
    **Authors / Creators**: Add yourself (Dr. Waleed Mandour) and
-   Prof. Wessam Ibrahim. For each:
+   Prof. Wesam Ibrahim. For each:
    - Click **+ Add creator**
    - Type the name as it should appear in citations
    - Click the name to link it to their ORCID (this is important — it
@@ -279,7 +279,7 @@ general references.
 
 ### 8.2 Chicago Style
 
-> Mandour, Waleed, and Wessam Ibrahim. 2026. "CorpusMind." Version 0.1.0.
+> Mandour, Waleed, and Wesam Ibrahim. 2026. "CorpusMind." Version 0.1.0.
 > Zenodo. https://doi.org/10.5281/zenodo.YYYYYYY.
 
 ### 8.3 IEEE Style
@@ -291,7 +291,7 @@ general references.
 
 ```bibtex
 @software{mandour_2026_corpusmind,
-  author       = {Mandour, Waleed and Ibrahim, Wessam},
+  author       = {Mandour, Waleed and Ibrahim, Wesam},
   title        = {{CorpusMind: Local-first, AI-native research environment
                    for corpus linguistics and multimodal discourse analysis}},
   month        = jan,
@@ -320,7 +320,7 @@ authors:
     affiliation: "Sultan Qaboos University"
     orcid: "https://orcid.org/0000-0000-0000-0000"
   - family-names: Ibrahim
-    given-names: Wessam
+    given-names: Wesam
 keywords:
   - corpus linguistics
   - discourse analysis
@@ -337,7 +337,7 @@ preferred-citation:
     - family-names: Mandour
       given-names: Waleed
     - family-names: Ibrahim
-      given-names: Wessam
+      given-names: Wesam
   title: "CorpusMind"
   year: 2026
 ```
