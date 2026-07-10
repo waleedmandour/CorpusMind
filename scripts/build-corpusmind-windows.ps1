@@ -51,6 +51,15 @@ if (Get-Command python -ErrorAction SilentlyContinue) {
 if (-not $python) { DieMsg "Python not found. Install Python 3.12 from https://python.org and re-run." }
 $pyVer = & $python --version 2>&1
 OkMsg "Python: $pyVer"
+# Check for Python 3.13+ - some scientific packages may not have wheels
+$pyVerNum = ($pyVer -replace "Python ", "")
+try {
+    $pyVersion = [version]$pyVerNum
+    if ($pyVersion -ge [version]"3.13") {
+        WarnMsg "Python $pyVerNum detected - some packages may not have wheels yet."
+        WarnMsg "If pip install fails, install Python 3.12 from https://python.org"
+    }
+} catch { }
 
 # Node
 if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
@@ -146,8 +155,23 @@ $PyExe = Join-Path $venvPath "Scripts\python.exe"
 OkMsg "engine deps installed"
 
 Log "downloading spaCy English model..."
-& $PyExe -m spacy download en_core_web_sm 2>$null
-OkMsg "spaCy model ready"
+# Note: spaCy download writes progress to stderr. We use 2>&1 to merge
+# it into stdout so PowerShell does not treat it as a fatal error.
+# This is non-fatal - the build can proceed without the model.
+try {
+    $spacyOutput = & $PyExe -m spacy download en_core_web_sm 2>&1
+    $spacyExit = $LASTEXITCODE
+    if ($spacyExit -eq 0) {
+        OkMsg "spaCy model ready"
+    } else {
+        WarnMsg "spaCy model download failed (exit $spacyExit) - non-fatal"
+        WarnMsg "the engine will not ingest text until you run:"
+        WarnMsg "  $PyExe -m spacy download en_core_web_sm"
+    }
+} catch {
+    WarnMsg "spaCy model download failed - non-fatal"
+    WarnMsg "install it later with: $PyExe -m spacy download en_core_web_sm"
+}
 Write-Host ""
 
 # --- 3. Build engine sidecar (PyInstaller) ---
