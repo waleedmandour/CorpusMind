@@ -58,6 +58,10 @@ async def public_settings() -> dict:
         "ollama_base_url": s.ollama_base_url,
         "lmstudio_base_url": s.lmstudio_base_url,
         "data_dir": str(s.data_dir),
+        # Smart Troubleshooting: expose whether Gemini interpretation is
+        # available (key presence only — never the key itself).
+        "gemini_available": bool(s.gemini_api_key),
+        "gemini_model": s.gemini_model if s.gemini_api_key else "",
     }
 
 

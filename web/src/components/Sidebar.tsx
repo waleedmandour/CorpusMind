@@ -61,6 +61,7 @@ const NAV_GROUPS: NavGroup[] = [
     labelKey: "nav_system",
     items: [
       { id: "settings", labelKey: "nav_settings" },
+      { id: "userguide", labelKey: "nav_userguide" },
       { id: "about", labelKey: "nav_about" },
     ],
   },

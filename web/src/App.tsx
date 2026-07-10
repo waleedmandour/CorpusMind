@@ -11,6 +11,7 @@ import { Sidebar } from "@/components/Sidebar";
 import { CommandPalette } from "@/components/CommandPalette";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { OnboardingModal } from "@/components/OnboardingModal";
+import { TroubleshootingBar } from "@/components/TroubleshootingBar";
 import { HomeView } from "@/views/HomeView";
 import { AboutView } from "@/views/AboutView";
 import { AssistantView } from "@/views/AssistantView";
@@ -20,6 +21,7 @@ import { AnalysisView } from "@/views/AnalysisView";
 import { ArabicView } from "@/views/ArabicView";
 import { VisionView } from "@/views/VisionView";
 import { SettingsView } from "@/views/SettingsView";
+import { UserGuideView } from "@/views/UserGuideView";
 import { applyHtmlAttrs, useUI } from "@/store/ui";
 import { useApp } from "@/store/app";
 
@@ -102,11 +104,12 @@ export default function App() {
           {activeNav === "vision" && <VisionView />}
           {activeNav === "assistant" && <AssistantView />}
           {activeNav === "settings" && <SettingsView />}
+          {activeNav === "userguide" && <UserGuideView />}
           {activeNav === "about" && <AboutView />}
         </main>
       </div>
 
-      {/* Status bar */}
+      {/* Status bar — includes Smart Troubleshooting indicator */}
       <footer className="app-statusbar" role="contentinfo">
         <span>CorpusMind v0.1.0</span>
         <span className="status-sep">|</span>
@@ -115,6 +118,8 @@ export default function App() {
         <span>Press Ctrl/Cmd+K for commands</span>
         <span className="status-sep">|</span>
         <a href="https://corpus-mind-web.vercel.app/" style={{ color: "inherit" }}>Live PWA</a>
+        <div className="statusbar-spacer" />
+        <TroubleshootingBar />
       </footer>
 
       <CommandPalette />

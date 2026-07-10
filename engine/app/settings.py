@@ -45,6 +45,14 @@ class Settings(BaseSettings):
     cloud_default_model: str = ""
     cloud_base_url: str = ""  # override for proxies / Azure / Bedrock-compatible gateways
 
+    # --- Smart Troubleshooting (Gemini) ---
+    # Optional. When set, the /api/v1/troubleshoot/interpret endpoint uses
+    # Google's Gemini API to interpret backend errors and suggest fixes.
+    # The key is stored in the engine environment (never exposed to the
+    # browser). Get a free key at https://aistudio.google.com/apikey.
+    gemini_api_key: str = ""
+    gemini_model: str = "gemini-2.5-flash"
+
     # --- Reproducibility ---
     enable_methods_export: bool = True
 

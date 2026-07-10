@@ -52,6 +52,7 @@ export const translations = {
     nav_assistant: "AI Assistant",
     nav_settings: "Settings",
     nav_about: "About",
+    nav_userguide: "User Guide",
 
     // Home view
     home_welcome: "Welcome to CorpusMind",
@@ -182,6 +183,7 @@ export const translations = {
     nav_assistant: "المساعد الذكي",
     nav_settings: "الإعدادات",
     nav_about: "حول البرنامج",
+    nav_userguide: "دليل المستخدم",
 
     // Home view
     home_welcome: "مرحباً بك في CorpusMind",

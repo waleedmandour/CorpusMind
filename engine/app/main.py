@@ -8,7 +8,19 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from ai import ProviderRegistry
 from api import ai as ai_routes
-from api import analysis, arabic, corpora, export, health, phase2, phase5, phase6, system, vision
+from api import (
+    analysis,
+    arabic,
+    corpora,
+    export,
+    health,
+    phase2,
+    phase5,
+    phase6,
+    system,
+    troubleshoot,
+    vision,
+)
 from app.logging import configure_logging, get_logger
 from app.settings import get_settings
 from storage.session import dispose_db, init_db
@@ -71,6 +83,7 @@ def create_app() -> FastAPI:
     app.include_router(phase5.router, prefix="/api/v1", tags=["phase5"])
     app.include_router(phase6.router, prefix="/api/v1", tags=["phase6"])
     app.include_router(export.router, prefix="/api/v1", tags=["export"])
+    app.include_router(troubleshoot.router, prefix="/api/v1", tags=["troubleshoot"])
     return app
 
 

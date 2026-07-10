@@ -889,7 +889,39 @@ export const api = {
     }),
   listConversations: () => jsonFetch<Array<Record<string, unknown>>>("/api/v1/ai/conversations"),
   getConversation: (cid: string) => jsonFetch<Record<string, unknown>>(`/api/v1/ai/conversations/${cid}`),
+
+  // --- Smart Troubleshooting ---
+  troubleshootStatus: () =>
+    jsonFetch<{ available: boolean; model: string }>("/api/v1/troubleshoot/status"),
+  interpretError: (req: InterpretErrorRequest) =>
+    jsonFetch<InterpretErrorResponse>("/api/v1/troubleshoot/interpret", {
+      method: "POST",
+      body: JSON.stringify(req),
+    }),
 };
+
+// ----------------------------------------------------------------------- //
+// Smart Troubleshooting types
+// ----------------------------------------------------------------------- //
+
+export interface InterpretErrorRequest {
+  error_message: string;
+  error_code?: string | number | null;
+  endpoint?: string | null;
+  context?: string | null;
+  stack_trace?: string | null;
+}
+
+export interface InterpretErrorResponse {
+  available: boolean;
+  severity: "info" | "warning" | "error" | string;
+  plain_language: string;
+  likely_cause: string;
+  suggested_fix: string;
+  should_report: boolean;
+  raw_error: string;
+  model: string;
+}
 
 /** Helper: trigger a browser download for a Blob. */
 export function downloadBlob(blob: Blob, filename: string) {

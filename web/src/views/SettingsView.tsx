@@ -1,5 +1,6 @@
 /**
- * Settings view — engine info, providers, reproducibility toggles.
+ * Settings view — engine info, providers, reproducibility toggles,
+ * Smart Troubleshooting status.
  */
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -9,6 +10,7 @@ export function SettingsView() {
   const providers = useQuery({ queryKey: ["providers"], queryFn: api.providers, refetchInterval: 5_000 });
   const version = useQuery({ queryKey: ["version"], queryFn: api.version });
   const encryption = useQuery({ queryKey: ["encryption"], queryFn: api.encryptionStatus });
+  const troubleshoot = useQuery({ queryKey: ["troubleshoot-status"], queryFn: api.troubleshootStatus });
 
   return (
     <div className="settings-view">
@@ -51,6 +53,52 @@ export function SettingsView() {
             ))}
           </tbody>
         </table>
+      </section>
+
+      <section>
+        <h3>Smart Troubleshooting</h3>
+        <p className="hint">
+          When a backend error occurs during use, CorpusMind captures it and shows
+          the details in the taskbar at the bottom of the window. If a Gemini API
+          key is configured in the engine environment, the error is automatically
+          interpreted by Google&apos;s Gemini model — you get a plain-language
+          explanation, the likely cause, and a suggested fix.
+        </p>
+        <div className="troubleshoot-settings-status">
+          <strong>Gemini interpretation:</strong>{" "}
+          {troubleshoot.data?.available ? (
+            <span className="ok">
+              ENABLED ({troubleshoot.data.model || "gemini-2.5-flash"})
+            </span>
+          ) : (
+            <span className="bad">DISABLED (no API key configured)</span>
+          )}
+        </div>
+        {!troubleshoot.data?.available && (
+          <div className="troubleshoot-setup-hint">
+            <p>
+              <strong>To enable AI-powered error interpretation:</strong>
+            </p>
+            <ol>
+              <li>
+                Get a free API key at{" "}
+                <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer">
+                  aistudio.google.com/apikey
+                </a>
+              </li>
+              <li>
+                Set it in the engine environment:
+                <pre>{`export CORPUSMIND_GEMINI_API_KEY="your-key-here"`}</pre>
+              </li>
+              <li>Restart <code>corpusmind-engine</code>.</li>
+            </ol>
+            <p className="hint">
+              The key is stored in the engine environment and never exposed to the
+              browser. Only error text (message, code, endpoint) is sent to Gemini —
+              never your corpus data.
+            </p>
+          </div>
+        )}
       </section>
 
       <section>
