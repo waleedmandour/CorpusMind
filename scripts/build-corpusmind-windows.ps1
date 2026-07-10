@@ -1,40 +1,16 @@
-# =========================================================================
-# CorpusMind — Windows one-shot build + reinstall script
+﻿# =========================================================================
+# CorpusMind - Windows one-shot build + reinstall script
 # =========================================================================
 #
 # Builds BOTH .exe (NSIS) and .msi installers, uninstalls any previous
-# version, and installs the new build for the current user
-# (C:\Users\Waleed Mandour).
-#
-# Requirements (the script checks for these and tells you how to install
-# any that are missing):
-#   - Python 3.12  (https://python.org)
-#   - Node.js 20   (https://nodejs.org)
-#   - Rust stable  (https://rustup.rs)
-#   - Git          (https://git-scm.com)
-#   - WebView2 Runtime (preinstalled on Windows 11; Windows 10 may need it)
+# version, and installs the new build for the current user.
 #
 # Usage:
-#   1. Open PowerShell as a regular user (NOT Administrator — NSIS per-user
-#      install doesn't need elevation; MSI per-user also doesn't).
-#   2. cd to the CorpusMind repo root (the folder containing this script's
-#      parent — i.e. the folder with `engine/`, `web/`, `desktop/`).
-#   3. Run:
-#        powershell -ExecutionPolicy Bypass -File scripts\build-corpusmind-windows.ps1
+#   powershell -ExecutionPolicy Bypass -File scripts\build-corpusmind-windows.ps1
 #
-# What it does, in order:
-#   0. Checks prerequisites (Python, Node, Rust, Git)
-#   1. Removes any previously-installed CorpusMind (NSIS + MSI, both
-#      per-user and per-machine, best-effort)
-#   2. Sets up the engine venv + installs deps + downloads spaCy model
-#   3. Builds the PyInstaller sidecar (corpusmind-engine.exe)
-#   4. Stages the sidecar for Tauri (binaries\corpusmind-engine-x86_64-pc-windows-msvc.exe)
-#   5. Builds the web PWA (web\dist\)
-#   6. Runs `cargo tauri build` — produces BOTH:
-#        desktop\src-tauri\target\release\bundle\nsis\CorpusMind_0.1.0_x64-setup.exe
-#        desktop\src-tauri\target\release\bundle\msi\CorpusMind_0.1.0_x64_en-US.msi
-#   7. Installs the NSIS .exe silently for the current user
-#   8. (MSI is left alongside for manual install or enterprise deployment)
+# Flags:
+#   -SkipUninstall   - don't uninstall the previous version first
+#   -SkipInstall     - build only, don't install the result
 #
 # =========================================================================
 
@@ -46,215 +22,248 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-# ─── helpers ────────────────────────────────────────────────────────────
+# --- helpers ---
 function Log($msg)  { Write-Host "[build] $msg" -ForegroundColor Cyan }
-function Ok($msg)   { Write-Host "  OK  $msg" -ForegroundColor Green }
-function Warn($msg) { Write-Host "  WARN  $msg" -ForegroundColor Yellow }
-function Die($msg)  { Write-Host "  FAIL  $msg" -ForegroundColor Red; exit 1 }
+function OkMsg($msg)   { Write-Host "  OK  $msg" -ForegroundColor Green }
+function WarnMsg($msg) { Write-Host "  WARN  $msg" -ForegroundColor Yellow }
+function DieMsg($msg)  { Write-Host "  FAIL  $msg" -ForegroundColor Red; exit 1 }
 
-$UserName = $env:USERNAME  # e.g. "Waleed Mandour"
-$InstallDir = "$env:LOCALAPPDATA\Programs\CorpusMind"
-$StartMenuDir = "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\CorpusMind"
+$UserName = $env:USERNAME
+$InstallDir = Join-Path $env:LOCALAPPDATA "Programs\CorpusMind"
+$StartMenuDir = Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\CorpusMind"
 
-Log "CorpusMind v0.1.0 — Windows build + reinstall"
+Log "CorpusMind v0.1.0 - Windows build + reinstall"
 Log "Repo root:  $RepoRoot"
 Log "User:       $UserName"
 Log "Install to: $InstallDir"
 Write-Host ""
 
-# ─── 0. Prerequisites ───────────────────────────────────────────────────
+# --- 0. Prerequisites ---
 Log "checking prerequisites..."
 
-$python = (Get-Command python -ErrorAction SilentlyContinue) ? "python" : $null
-if (-not $python) { $python = (Get-Command python3 -ErrorAction SilentlyContinue) ? "python3" : $null }
-if (-not $python) { Die "Python not found. Install Python 3.12 from https://python.org and re-run." }
-$pyVer = & $python --version 2>&1
-Ok "Python: $pyVer"
-
-$node = (Get-Command node -ErrorAction SilentlyContinue)
-if (-not $node) { Die "Node.js not found. Install Node 20 from https://nodejs.org and re-run." }
-Ok "Node: $(node --version)"
-
-$cargo = (Get-Command cargo -ErrorAction SilentlyContinue)
-if (-not $cargo) {
-    Warn "Rust not found. Installing via rustup..."
-    Invoke-WebRequest -Uri 'https://win.rustup.rs/x86_64' -OutFile "$env:TEMP\rustup-init.exe"
-    & "$env:TEMP\rustup-init.exe" -y
-    $env:Path += ";$env:USERPROFILE\.cargo\bin"
-    . "$env:USERPROFILE\.cargo\env" 2>$null
+# Python (PS 5.1 compatible - no ternary operator)
+$python = $null
+if (Get-Command python -ErrorAction SilentlyContinue) {
+    $python = "python"
+} elseif (Get-Command python3 -ErrorAction SilentlyContinue) {
+    $python = "python3"
 }
-Ok "Rust: $(rustc --version)"
+if (-not $python) { DieMsg "Python not found. Install Python 3.12 from https://python.org and re-run." }
+$pyVer = & $python --version 2>&1
+OkMsg "Python: $pyVer"
 
-$git = (Get-Command git -ErrorAction SilentlyContinue)
-if (-not $git) { Die "Git not found. Install from https://git-scm.com and re-run." }
-Ok "Git: $(git --version)"
+# Node
+if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
+    DieMsg "Node.js not found. Install Node 20 from https://nodejs.org and re-run."
+}
+OkMsg "Node: $(node --version)"
+
+# Rust
+if (-not (Get-Command cargo -ErrorAction SilentlyContinue)) {
+    WarnMsg "Rust not found. Installing via rustup..."
+    $rustupInit = Join-Path $env:TEMP "rustup-init.exe"
+    Invoke-WebRequest -Uri "https://win.rustup.rs/x86_64" -OutFile $rustupInit
+    & $rustupInit -y
+    $cargoBin = Join-Path $env:USERPROFILE ".cargo\bin"
+    $env:Path += ";$cargoBin"
+    $cargoEnv = Join-Path $env:USERPROFILE ".cargo\env"
+    if (Test-Path $cargoEnv) { . $cargoEnv }
+}
+OkMsg "Rust: $(rustc --version)"
+
+# Git
+if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
+    DieMsg "Git not found. Install from https://git-scm.com and re-run."
+}
+OkMsg "Git: $(git --version)"
 
 # Tauri CLI
 if (-not (Get-Command cargo-tauri -ErrorAction SilentlyContinue)) {
-    Warn "Tauri CLI not found. Installing (this takes ~3 minutes)..."
+    WarnMsg "Tauri CLI not found. Installing (this takes ~3 minutes)..."
     cargo install tauri-cli --version "^2.0" --locked
 }
-Ok "Tauri CLI: $(cargo tauri --version 2>&1 | Select-Object -First 1)"
+OkMsg "Tauri CLI: $(cargo tauri --version 2>&1 | Select-Object -First 1)"
 Write-Host ""
 
-# ─── 1. Uninstall any previous version ──────────────────────────────────
+# --- 1. Uninstall any previous version ---
 if (-not $SkipUninstall) {
     Log "removing any previously-installed CorpusMind..."
 
-    # 1a. NSIS per-user uninstaller (the one we ship installs here)
-    $nsisUninstaller = "$InstallDir\corpusmind-desktop-uninstaller.exe"
+    $nsisUninstaller = Join-Path $InstallDir "corpusmind-desktop-uninstaller.exe"
     if (Test-Path $nsisUninstaller) {
-        Warn "found NSIS install at $InstallDir — running uninstaller silently..."
+        WarnMsg "found NSIS install - running uninstaller silently..."
         try {
             Start-Process -FilePath $nsisUninstaller -ArgumentList "/S" -Wait -NoNewWindow
-            Ok "NSIS uninstalled"
+            OkMsg "NSIS uninstalled"
         } catch {
-            Warn "NSIS uninstaller failed: $_ — will remove files manually"
+            WarnMsg "NSIS uninstaller failed: $_"
         }
     }
 
-    # 1b. MSI-based install (in case a previous MSI was installed)
-    $msiProduct = Get-CimInstance Win32_Product -Filter "Name LIKE '%CorpusMind%'" -ErrorAction SilentlyContinue
-    if ($msiProduct) {
-        Warn "found MSI install: $($msiProduct.Name) — uninstalling..."
-        try {
-            $msiProduct | Invoke-CimMethod -MethodName Uninstall | Out-Null
-            Ok "MSI uninstalled"
-        } catch {
-            Warn "MSI uninstall failed: $_"
+    try {
+        $msiProduct = Get-CimInstance Win32_Product -Filter "Name LIKE '%CorpusMind%'" -ErrorAction SilentlyContinue
+        if ($msiProduct) {
+            WarnMsg "found MSI install: $($msiProduct.Name) - uninstalling..."
+            try {
+                $msiProduct | Invoke-CimMethod -MethodName Uninstall | Out-Null
+                OkMsg "MSI uninstalled"
+            } catch {
+                WarnMsg "MSI uninstall failed: $_"
+            }
         }
-    }
+    } catch { }
 
-    # 1c. Clean up any leftover files
     foreach ($p in @($InstallDir, $StartMenuDir)) {
         if (Test-Path $p) {
-            Warn "removing leftover: $p"
+            WarnMsg "removing leftover: $p"
             Remove-Item -Recurse -Force $p -ErrorAction SilentlyContinue
         }
     }
 
-    # 1d. Remove desktop/start-menu shortcuts
-    $desktopShortcut = "$env:USERPROFILE\Desktop\CorpusMind.lnk"
-    $startShortcut = "$StartMenuDir\CorpusMind.lnk"
+    $desktopShortcut = Join-Path $env:USERPROFILE "Desktop\CorpusMind.lnk"
+    $startShortcut = Join-Path $StartMenuDir "CorpusMind.lnk"
     foreach ($s in @($desktopShortcut, $startShortcut)) {
         if (Test-Path $s) { Remove-Item -Force $s -ErrorAction SilentlyContinue }
     }
 
-    # 1e. Wait for file locks to release
     Start-Sleep -Seconds 2
-    Ok "previous version removed"
+    OkMsg "previous version removed"
     Write-Host ""
 }
 
-# ─── 2. Engine venv + deps ──────────────────────────────────────────────
+# --- 2. Engine venv + deps ---
 Log "setting up Python engine venv..."
 $EngineDir = Join-Path $RepoRoot "engine"
-if (-not (Test-Path "$EngineDir\.venv")) {
-    & $python -m venv "$EngineDir\.venv"
+$venvPath = Join-Path $EngineDir ".venv"
+if (-not (Test-Path $venvPath)) {
+    & $python -m venv $venvPath
 }
-$Pip = "$EngineDir\.venv\Scripts\pip.exe"
-$PyExe = "$EngineDir\.venv\Scripts\python.exe"
+$Pip = Join-Path $venvPath "Scripts\pip.exe"
+$PyExe = Join-Path $venvPath "Scripts\python.exe"
 & $Pip install --upgrade pip wheel --quiet
 & $Pip install pyinstaller python-multipart cryptography --quiet
 & $Pip install -e "$EngineDir[dev,vision]" --quiet
-Ok "engine deps installed"
+OkMsg "engine deps installed"
 
 Log "downloading spaCy English model..."
 & $PyExe -m spacy download en_core_web_sm 2>$null
-Ok "spaCy model ready"
+OkMsg "spaCy model ready"
 Write-Host ""
 
-# ─── 3. Build engine sidecar (PyInstaller) ──────────────────────────────
+# --- 3. Build engine sidecar (PyInstaller) ---
 Log "building engine sidecar (PyInstaller)..."
 Push-Location $EngineDir
 & $PyExe -m PyInstaller corpusmind-engine.spec --noconfirm
-if ($LASTEXITCODE -ne 0) { Pop-Location; Die "PyInstaller build failed" }
+if ($LASTEXITCODE -ne 0) { Pop-Location; DieMsg "PyInstaller build failed" }
 Pop-Location
 
-$sidecarSrc = "$EngineDir\dist\corpusmind-engine.exe"
-if (-not (Test-Path $sidecarSrc)) { Die "sidecar not found at $sidecarSrc" }
-Ok "sidecar built: $sidecarSrc ($(Get-Item $sidecarSrc | Select-Object -ExpandProperty Length | ForEach-Object { '{0:N1} MB' -f ($_ / 1MB) }))"
+$sidecarSrc = Join-Path $EngineDir "dist\corpusmind-engine.exe"
+if (-not (Test-Path $sidecarSrc)) { DieMsg "sidecar not found at $sidecarSrc" }
+$sidecarSize = [math]::Round((Get-Item $sidecarSrc).Length / 1MB, 1)
+OkMsg "sidecar built: $sidecarSrc ($sidecarSize MB)"
 Write-Host ""
 
-# ─── 4. Stage sidecar for Tauri ─────────────────────────────────────────
+# --- 4. Stage sidecar for Tauri ---
 Log "staging sidecar for Tauri..."
 $BinariesDir = Join-Path $RepoRoot "desktop\src-tauri\binaries"
 New-Item -ItemType Directory -Force -Path $BinariesDir | Out-Null
-$sidecarDest = "$BinariesDir\corpusmind-engine-x86_64-pc-windows-msvc.exe"
+$sidecarDest = Join-Path $BinariesDir "corpusmind-engine-x86_64-pc-windows-msvc.exe"
 Copy-Item -Force $sidecarSrc $sidecarDest
-Ok "staged: $sidecarDest"
+OkMsg "staged: $sidecarDest"
 Write-Host ""
 
-# ─── 5. Build web PWA ───────────────────────────────────────────────────
+# --- 5. Build web PWA ---
 Log "building web PWA..."
 $WebDir = Join-Path $RepoRoot "web"
 Push-Location $WebDir
 npm install --silent
-if ($LASTEXITCODE -ne 0) { Pop-Location; Die "npm install failed" }
+if ($LASTEXITCODE -ne 0) { Pop-Location; DieMsg "npm install failed" }
 npm run build
-if ($LASTEXITCODE -ne 0) { Pop-Location; Die "PWA build failed" }
+if ($LASTEXITCODE -ne 0) { Pop-Location; DieMsg "PWA build failed" }
 Pop-Location
-if (-not (Test-Path "$WebDir\dist\index.html")) { Die "PWA build failed — missing dist\index.html" }
-Ok "PWA built → web\dist\"
+$distIndex = Join-Path $WebDir "dist\index.html"
+if (-not (Test-Path $distIndex)) { DieMsg "PWA build failed - missing dist\index.html" }
+OkMsg "PWA built to web\dist\"
 Write-Host ""
 
-# ─── 6. Build Tauri app (produces BOTH .exe and .msi) ───────────────────
+# --- 6. Build Tauri app (produces BOTH .exe and .msi) ---
 Log "building Tauri desktop bundle (NSIS .exe + MSI .msi)..."
-Log "  this takes 5–15 minutes on first run..."
+Log "  this takes 5-15 minutes on first run..."
 $TauriDir = Join-Path $RepoRoot "desktop\src-tauri"
 Push-Location $TauriDir
 cargo tauri build
-if ($LASTEXITCODE -ne 0) { Pop-Location; Die "cargo tauri build failed" }
+$tauriExitCode = $LASTEXITCODE
 Pop-Location
 
-$BundleDir = "$TauriDir\target\release\bundle"
-$nsisExe = Get-ChildItem "$BundleDir\nsis\*.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
-$msiFile = Get-ChildItem "$BundleDir\msi\*.msi" -ErrorAction SilentlyContinue | Select-Object -First 1
+if ($tauriExitCode -ne 0) {
+    Write-Host ""
+    Write-Host "  ====================================================================" -ForegroundColor Red
+    Write-Host "  cargo tauri build FAILED (exit code $tauriExitCode)" -ForegroundColor Red
+    Write-Host "  ====================================================================" -ForegroundColor Red
+    Write-Host ""
+    Write-Host "  Common causes:" -ForegroundColor Yellow
+    Write-Host "    1. Missing MSVC Build Tools - install with:" -ForegroundColor White
+    Write-Host "       winget install Microsoft.VisualStudio.2022.BuildTools" -ForegroundColor Gray
+    Write-Host "       --override '--passive --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended'" -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "    2. Missing WebView2 Runtime - install with:" -ForegroundColor White
+    Write-Host "       winget install Microsoft.EdgeWebView2Runtime" -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "    3. Missing WiX Toolset (for MSI)" -ForegroundColor White
+    Write-Host "       Tauri installs this automatically but sometimes fails." -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "  Check the full error output above for the specific failure." -ForegroundColor Yellow
+    DieMsg "cargo tauri build failed"
+}
 
-if (-not $nsisExe) { Die "NSIS .exe not found in $BundleDir\nsis\" }
-if (-not $msiFile) { Die "MSI not found in $BundleDir\msi\" }
+$BundleDir = Join-Path $TauriDir "target\release\bundle"
+$nsisExe = Get-ChildItem (Join-Path $BundleDir "nsis\*.exe") -ErrorAction SilentlyContinue | Select-Object -First 1
+$msiFile = Get-ChildItem (Join-Path $BundleDir "msi\*.msi") -ErrorAction SilentlyContinue | Select-Object -First 1
 
-Ok "NSIS installer: $($nsisExe.FullName) ($('{0:N1} MB' -f ($nsisExe.Length / 1MB)))"
-Ok "MSI installer:  $($msiFile.FullName) ($('{0:N1} MB' -f ($msiFile.Length / 1MB)))"
+if (-not $nsisExe) { DieMsg "NSIS .exe not found" }
+if (-not $msiFile) { DieMsg "MSI not found" }
+
+$nsisSize = [math]::Round($nsisExe.Length / 1MB, 1)
+$msiSize = [math]::Round($msiFile.Length / 1MB, 1)
+OkMsg "NSIS installer: $($nsisExe.FullName) ($nsisSize MB)"
+OkMsg "MSI installer:  $($msiFile.FullName) ($msiSize MB)"
 Write-Host ""
 
-# ─── 7. Install the NSIS .exe silently for the current user ─────────────
+# --- 7. Install the NSIS .exe silently for the current user ---
 if (-not $SkipInstall) {
     Log "installing NSIS build for $UserName..."
-    # NSIS /S = silent, /D = install dir (must be last, no quotes, no trailing slash)
-    $installArgs = "/S", "/D=$InstallDir"
+    $installArgs = @("/S", "/D=$InstallDir")
     Start-Process -FilePath $nsisExe.FullName -ArgumentList $installArgs -Wait -NoNewWindow
     Start-Sleep -Seconds 3
 
-    if (Test-Path "$InstallDir\corpusmind-desktop.exe") {
-        Ok "installed to $InstallDir"
+    $appExe = Join-Path $InstallDir "corpusmind-desktop.exe"
+    if (Test-Path $appExe) {
+        OkMsg "installed to $InstallDir"
 
-        # Create Start Menu shortcut
         New-Item -ItemType Directory -Force -Path $StartMenuDir | Out-Null
         $shell = New-Object -ComObject WScript.Shell
-        $shortcut = $shell.CreateShortcut("$StartMenuDir\CorpusMind.lnk")
-        $shortcut.TargetPath = "$InstallDir\corpusmind-desktop.exe"
+        $shortcut = $shell.CreateShortcut((Join-Path $StartMenuDir "CorpusMind.lnk"))
+        $shortcut.TargetPath = $appExe
         $shortcut.WorkingDirectory = $InstallDir
-        $shortcut.IconLocation = "$InstallDir\corpusmind-desktop.exe,0"
+        $shortcut.IconLocation = "$appExe,0"
         $shortcut.Save()
 
-        # Create desktop shortcut
-        $desktopShortcut = "$env:USERPROFILE\Desktop\CorpusMind.lnk"
+        $desktopShortcut = Join-Path $env:USERPROFILE "Desktop\CorpusMind.lnk"
         $desktopShortcutObj = $shell.CreateShortcut($desktopShortcut)
-        $desktopShortcutObj.TargetPath = "$InstallDir\corpusmind-desktop.exe"
+        $desktopShortcutObj.TargetPath = $appExe
         $desktopShortcutObj.WorkingDirectory = $InstallDir
-        $desktopShortcutObj.IconLocation = "$InstallDir\corpusmind-desktop.exe,0"
+        $desktopShortcutObj.IconLocation = "$appExe,0"
         $desktopShortcutObj.Save()
 
-        Ok "shortcuts created (Start Menu + Desktop)"
+        OkMsg "shortcuts created (Start Menu + Desktop)"
     } else {
-        Warn "install may not have completed — check $InstallDir"
-        Warn "you can install manually by running: $($nsisExe.FullName)"
+        WarnMsg "install may not have completed - check $InstallDir"
+        WarnMsg "you can install manually by running: $($nsisExe.FullName)"
     }
     Write-Host ""
 }
 
-# ─── Done ───────────────────────────────────────────────────────────────
+# --- Done ---
 Write-Host "================================================================" -ForegroundColor Green
 Write-Host "  Build Complete!" -ForegroundColor Green
 Write-Host "================================================================" -ForegroundColor Green
@@ -268,6 +277,5 @@ if (-not $SkipInstall) {
     Write-Host "Launch via:   Start Menu > CorpusMind  (or desktop shortcut)" -ForegroundColor White
     Write-Host ""
 }
-Write-Host "To reinstall later, just re-run this script — it uninstalls the old" -ForegroundColor Gray
-Write-Host "version first, then builds + installs the new one." -ForegroundColor Gray
+Write-Host "To reinstall later, just re-run this script." -ForegroundColor Gray
 Write-Host ""
