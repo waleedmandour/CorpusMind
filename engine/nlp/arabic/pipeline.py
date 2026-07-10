@@ -181,7 +181,7 @@ class CamelBackend:
             if number == "p" and a.get("pos") in ("noun", "adj"):
                 # Sound plural patterns: 1ُ2ُونَ/1ُ2ِينَ (masc), 1َ2َ3َات (fem)
                 pat = a.get("pattern", "")
-                sound_plural_patterns = ("1ُ2ُونَ", "1ُ2ِينَ", "1َ2َ3َات", "1َ2ِ3َات")  # noqa: RUF001
+                sound_plural_patterns = ("1ُ2ُونَ", "1ُ2ِينَ", "1َ2َ3َات", "1َ2ِ3َات")
                 if pat and not any(pat.startswith(sp[:3]) for sp in sound_plural_patterns):
                     is_broken_plural = True
                 # Also check the surface form as a fallback
