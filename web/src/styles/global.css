@@ -2916,3 +2916,72 @@ button.danger:hover:not(:disabled) {
 .hub-privacy-note strong {
   color: var(--text);
 }
+
+/* =========================================================================
+   Export dropdown button
+   ========================================================================= */
+
+.export-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.export-trigger {
+  font-size: 12px;
+  padding: 4px 10px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  min-height: 28px;
+}
+.export-trigger:hover:not(:disabled) {
+  background: var(--bg-subtle);
+  border-color: var(--border-strong);
+}
+
+.export-menu {
+  position: absolute;
+  inset-block-start: calc(100% + 2px);
+  inset-inline-end: 0;
+  min-inline-size: 220px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  z-index: 500;
+  padding: var(--space-1);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.export-menu-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: var(--space-2) var(--space-3);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-align: start;
+  inline-size: 100%;
+}
+.export-menu-item:hover {
+  background: var(--ribbon-tab-bg-hover);
+}
+
+.export-menu-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.export-menu-hint {
+  font-size: 10px;
+  color: var(--text-subtle);
+  line-height: 1.3;
+}

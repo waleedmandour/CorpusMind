@@ -56,7 +56,7 @@ Phase 1 — **Suite A MVP** (per the [phased roadmap](docs/AI_AGENT_BUILD_PROMPT
 - ✅ Keyness analysis — significance (LL, χ²) AND effect size (Log Ratio, %DIFF, Simple Maths, Odds Ratio) always together (§4 Principle 3)
 - ✅ Dispersion — Juilland's D and Gries' DP across documents
 - ✅ Grounded-AI tool surface — `search_concordance`, `get_frequency`, `compute_collocations`, `compute_keyness`, `get_dispersion`; conversations persist in SQLite
-- ✅ Export — Excel (concordance/frequency/collocation/keyness) + auto-drafted Methods PDF
+- ✅ Export — Excel + CSV + TSV + TXT + JSON (concordance/frequency/collocation/keyness) + collocation network diagrams (SVG + PNG) + auto-drafted Methods PDF
 - ✅ Web UI — corpus manager, concordancer, analysis tabs, Assistant with clickable evidence citations
 
 ### Phase 2 — Suite A completion ✅
@@ -86,7 +86,19 @@ Phase 1 — **Suite A MVP** (per the [phased roadmap](docs/AI_AGENT_BUILD_PROMPT
 - ✅ 5 new grounded-AI tools (19 total): `arabic_morphology`, `arabic_dialect_id`, `arabic_roots`, `arabic_register`, `arabic_transliterate`
 - ✅ Web UI: 8-tool Arabic workbench with RTL input + sample texts + dialect picker
 - ✅ 56 tests passing (23 stats + 9 Phase 1 + 14 Phase 2 + 10 Phase 3 Arabic)
-- 🚧 Phase 4 — Suite B MVP (Vision): image ingestion, OCR, Visual Grammar (Kress & van Leeuwen), multimodal image–text alignment; + §8.22 bilingual tools + full CAMeL DialectIdentifier model
+
+### Phase 6 — Polish, tooling, and research workflow ✅
+- ✅ **Smart Troubleshooting** — backend error detection during app use, shown in the taskbar; optional Gemini-powered interpretation + suggested fix; one-click "Report to developer" email flow
+- ✅ **In-app User Guide** — 18-section professional guide in the sidebar (Getting Started, Concordance, Frequency/STTR, Collocation, Keyness, Arabic Tools, Vision Suite, AI Assistant, Privacy, Troubleshooting, Reproducibility, Shortcuts, Citation)
+- ✅ **Corpus Cleaning** — per-corpus on-demand re-cleaning with 16 options (whitespace, URLs, emails, lowercase, punctuation, numbers, emoji, stopwords, min token length, Arabic normalization/diacritics/tatweel)
+- ✅ **Corpus Hub** — search + download open-access corpora in Arabic and English from three hubs: HuggingFace datasets-server (Wikipedia, OSCAR, CC-100), Wikipedia live (ar + en), OPUS (parallel ar↔en translation pairs)
+- ✅ **Multi-format export** — all analysis results exportable in 5 formats (Excel, CSV, TSV, TXT, JSON) via a unified format-parameterized API
+- ✅ **Diagram export** — collocation network diagrams exportable as SVG (vector) and PNG (raster 1600×1200)
+- ✅ **Windows build script** — `scripts/build-corpusmind-windows.ps1` produces both NSIS `.exe` and MSI `.msi`, uninstalls previous versions, installs for the current user
+- ✅ **CI fixes** — Desktop (Rust) job now passes (externalBin clearing pattern + E0597 lifetime fix); engine tests improved from 71→88 passing by downloading the spaCy model in CI
+
+### 🚧 Phase 4 — Suite B MVP (Vision)
+- 🚧 Image ingestion, OCR, Visual Grammar (Kress & van Leeuwen), multimodal image–text alignment; + §8.22 bilingual tools + full CAMeL DialectIdentifier model
 
 ---
 
@@ -202,9 +214,13 @@ curl -X POST http://127.0.0.1:8765/api/v1/corpora/$CID/collocations \
 curl -X POST http://127.0.0.1:8765/api/v1/corpora/$CID/frequency \
   -H "Content-Type: application/json" -d '{"unit":"word","limit":50}'
 
-# Export Excel
-curl -X POST http://127.0.0.1:8765/api/v1/corpora/$CID/export/frequency.xlsx \
-  -H "Content-Type: application/json" -d '{"unit":"word","limit":200}' -o frequency.xlsx
+# Export — multi-format (xlsx, csv, tsv, txt, json)
+curl -X POST "http://127.0.0.1:8765/api/v1/corpora/$CID/export/frequency?fmt=csv" \
+  -H "Content-Type: application/json" -d '{"unit":"word","limit":200}' -o frequency.csv
+
+# Collocation network diagram (SVG or PNG)
+curl -X POST http://127.0.0.1:8765/api/v1/corpora/$CID/export/collocations.network.svg \
+  -H "Content-Type: application/json" -d '{"node":"research","level":"lemma","window":5,"min_freq":2}' -o network.svg
 
 # Auto-drafted Methods Section PDF
 curl http://127.0.0.1:8765/api/v1/corpora/$CID/methods.pdf -o methods.pdf
@@ -281,6 +297,26 @@ serious validity bug, so this is treated as a release-blocking test category.
 | Juilland's D | Dispersion | `1 − (CV / sqrt(n−1))` across n parts |
 | Gries' DP (2008) | Dispersion | `0.5 · Σ |observed_proportionᵢ − expected_proportionᵢ|` |
 | STTR | Lexical variation | TTR over fixed-size chunks, averaged |
+
+All statistics are **computed by these pure functions**, never by an LLM. The AI Assistant calls these same deterministic `compute_*` functions and feeds the pre-computed numbers to the LLM for interpretation only — the LLM never computes a statistic. This keeps every result reproducible and defensible under peer review.
+
+### Export formats
+
+Every analysis result (concordance, frequency, collocation, keyness) can be exported in **5 formats** via a unified `?fmt=` query parameter:
+
+| Format | Use case | Extension |
+| --- | --- | --- |
+| **Excel** | Styled spreadsheet, opens in Excel/Google Sheets | `.xlsx` |
+| **CSV** | Universal comma-separated, any tool | `.csv` |
+| **TSV** | Tab-separated, paste into Excel/Sheets | `.tsv` |
+| **Plain text** | Fixed-width table for emails / quick view | `.txt` |
+| **JSON** | Structured, for programmatic use / re-import | `.json` |
+
+Collocation results also export as **diagrams**:
+- **SVG** (`.svg`) — vector, scales to any size, for papers/posters/slides
+- **PNG** (`.png`) — raster 1600×1200, for Word docs / social media (requires `pip install -e ".[export]"` + libcairo)
+
+Plus the **Methods PDF** — an auto-drafted methodology paragraph naming the exact tools, model versions, and formulas used, for pasting into a manuscript's Methods section.
 
 ---
 

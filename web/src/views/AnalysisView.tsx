@@ -11,9 +11,10 @@ import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
 
-import { api, downloadBlob } from "@/lib/api";
+import { api, downloadBlob, type ExportFormat } from "@/lib/api";
 import { useApp } from "@/store/app";
 import { useUI } from "@/store/ui";
+import { ExportButton } from "@/components/ExportButton";
 
 type Tab =
   | "frequency" | "collocation" | "keyness" | "dispersion"
@@ -102,9 +103,9 @@ function FrequencyPanel({ cid }: { cid: string }) {
     queryFn: () => api.frequency(cid, unit, minFreq, 200),
   });
 
-  const onExport = async () => {
-    const blob = await api.exportFrequencyXlsx(cid, unit, 1000);
-    downloadBlob(blob, `frequency_${unit}.xlsx`);
+  const onExport = async (fmt: ExportFormat | "svg" | "png") => {
+    const blob = await api.exportFrequency(cid, unit, fmt as ExportFormat, 1000);
+    downloadBlob(blob, `frequency_${unit}.${fmt}`);
   };
 
   return (
@@ -120,7 +121,7 @@ function FrequencyPanel({ cid }: { cid: string }) {
         <label>Min freq
           <input type="number" min={1} value={minFreq} onChange={(e) => setMinFreq(Number(e.target.value))} />
         </label>
-        <button onClick={onExport}>Export Excel</button>
+        <ExportButton onExport={onExport} disabled={!result.data} />
       </div>
 
       {result.data && (
@@ -159,10 +160,18 @@ function CollocationPanel({ cid }: { cid: string }) {
     setSubmitted({ n: node.trim(), l: level, w: window, mf: minFreq });
   };
 
-  const onExport = async () => {
+  const onExport = async (fmt: ExportFormat | "svg" | "png") => {
     if (!submitted) return;
-    const blob = await api.exportCollocationsXlsx(cid, submitted.n, submitted.l as any, submitted.w, submitted.mf);
-    downloadBlob(blob, `collocations_${submitted.n}.xlsx`);
+    if (fmt === "svg") {
+      const blob = await api.exportCollocationNetworkSvg(cid, submitted.n, submitted.l as any, submitted.w, submitted.mf);
+      downloadBlob(blob, `collocation_network_${submitted.n}.svg`);
+    } else if (fmt === "png") {
+      const blob = await api.exportCollocationNetworkPng(cid, submitted.n, submitted.l as any, submitted.w, submitted.mf);
+      downloadBlob(blob, `collocation_network_${submitted.n}.png`);
+    } else {
+      const blob = await api.exportCollocations(cid, submitted.n, fmt, submitted.l as any, submitted.w, submitted.mf);
+      downloadBlob(blob, `collocations_${submitted.n}.${fmt}`);
+    }
   };
 
   // Determine which measure columns to show
@@ -196,7 +205,13 @@ function CollocationPanel({ cid }: { cid: string }) {
                  onChange={(e) => setMinFreq(Number(e.target.value))} />
         </label>
         <button onClick={onSearch} disabled={!node.trim()}>Compute</button>
-        <button onClick={onExport} disabled={!result.data}>Export Excel</button>
+        <ExportButton onExport={onExport} disabled={!result.data} />
+        <ExportButton
+          label="Export diagram"
+          onExport={onExport}
+          disabled={!result.data}
+          formats={["svg", "png"]}
+        />
       </div>
 
       <div className="grounding-notice">
@@ -247,10 +262,10 @@ function KeynessPanel({ cid }: { cid: string }) {
     enabled: !!referenceCorpusId,
   });
 
-  const onExport = async () => {
+  const onExport = async (fmt: ExportFormat | "svg" | "png") => {
     if (!referenceCorpusId) return;
-    const blob = await api.exportKeynessXlsx(cid, referenceCorpusId);
-    downloadBlob(blob, `keyness.xlsx`);
+    const blob = await api.exportKeyness(cid, referenceCorpusId, fmt as ExportFormat);
+    downloadBlob(blob, `keyness.${fmt}`);
   };
 
   const onMethodsPdf = async () => {
@@ -272,7 +287,7 @@ function KeynessPanel({ cid }: { cid: string }) {
         <label>Min freq
           <input type="number" min={1} value={minFreq} onChange={(e) => setMinFreq(Number(e.target.value))} />
         </label>
-        <button onClick={onExport} disabled={!result.data}>Export Excel</button>
+        <ExportButton onExport={onExport} disabled={!result.data} />
         <button onClick={onMethodsPdf}>Methods PDF</button>
       </div>
 

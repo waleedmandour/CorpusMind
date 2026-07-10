@@ -241,9 +241,53 @@ Example questions:
 
 ## 10. Export, Collaboration, and Privacy
 
-**Export**: Excel for concordance, frequency, collocations, and keyness.
-PDF for the auto-drafted Methods Section (cites exact tools, versions, and
-formulas).
+**Export — multi-format**: Every analysis result (concordance, frequency,
+collocation, keyness) can be exported in **five formats** via the Export
+dropdown button in each analysis view:
+
+| Format | Extension | Use case |
+| --- | --- | --- |
+| Excel | `.xlsx` | Styled spreadsheet — opens in Excel or Google Sheets |
+| CSV | `.csv` | Universal comma-separated — any tool (R, Python, SPSS) |
+| TSV | `.tsv` | Tab-separated — paste into Excel/Sheets |
+| Plain text | `.txt` | Fixed-width table — emails, quick inspection |
+| JSON | `.json` | Structured — programmatic use / re-import |
+
+**Diagram export**: The Collocation view has a separate **Export diagram**
+dropdown that produces a collocation network diagram:
+- **SVG** (`.svg`) — vector graphics, scales to any size. Best for papers,
+  posters, slides. Open in a browser, Inkscape, or Adobe Illustrator.
+- **PNG** (`.png`) — raster 1600×1200. Best for Word documents, social
+  media. Requires `pip install -e ".[export]"` + libcairo.
+
+**Methods PDF**: The Keyness view has a **Methods PDF** button that auto-drafts
+a methodology paragraph naming the exact tools, model versions, and formulas
+used. Paste it into a manuscript's Methods section so peer reviewers can
+verify your workflow.
+
+**Corpus Cleaning**: Each corpus in the Projects view has a **Clean** button
+that opens a modal with 16 cleaning options: collapse whitespace, remove
+URLs/emails/HTML entities, lowercase, remove punctuation/numbers/emoji,
+remove stopwords (English or Arabic), min token length, and Arabic-specific
+normalization (alef variants, diacritics, tatweel). The cleaning is
+destructive — it re-cleans every document and re-runs the NLP pipeline.
+
+**Corpus Hub**: The sidebar's File → Corpus Hub lets you search and download
+open-access corpora in Arabic and English from three hubs:
+- **HuggingFace Datasets** — Wikipedia (ar/en), OSCAR, CC-100, Arabic Pile
+- **Wikipedia (live)** — fresh article fetch, CC-BY-SA 3.0
+- **OPUS** — 1,200+ parallel corpora (ar↔en translation pairs)
+
+Downloaded files land in your browser's download folder; upload them into a
+corpus via Projects. All searches are proxied through the engine — your
+existing corpus data never leaves your machine.
+
+**Smart Troubleshooting**: When a backend error occurs during use, it appears
+in the taskbar at the bottom of the window. If you configure a Gemini API key
+(`CORPUSMIND_GEMINI_API_KEY` in the engine environment), the error is
+auto-interpreted by Google's Gemini model — you get a plain-language
+explanation, likely cause, and suggested fix. A "Report to developer" button
+opens a pre-filled email to `w.abumandour@squ.edu.om`.
 
 **Saved Searches and Bookmarks**: Save queries with parameters for re-use.
 Bookmark specific concordance lines or statistics with notes.

@@ -5,8 +5,9 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
 
-import { api, downloadBlob } from "@/lib/api";
+import { api, downloadBlob, type ExportFormat } from "@/lib/api";
 import { useApp } from "@/store/app";
+import { ExportButton } from "@/components/ExportButton";
 
 const LEVELS = ["word", "lemma", "pos"] as const;
 const POS_COLORS: Record<string, string> = {
@@ -33,10 +34,10 @@ export function ConcordancerView() {
     setSubmitted({ q: query.trim(), l: level, w: window });
   };
 
-  const onExport = async () => {
+  const onExport = async (fmt: ExportFormat | "svg" | "png") => {
     if (!submitted || !cid) return;
-    const blob = await api.exportConcordanceXlsx(cid, submitted.q, submitted.l as any, submitted.w, 1000);
-    downloadBlob(blob, `concordance_${submitted.q}.xlsx`);
+    const blob = await api.exportConcordance(cid, submitted.q, fmt as ExportFormat, submitted.l as any, submitted.w, 1000);
+    downloadBlob(blob, `concordance_${submitted.q}.${fmt}`);
   };
 
   if (!cid) return <div className="empty-state">Select a corpus to start searching.</div>;
@@ -60,7 +61,7 @@ export function ConcordancerView() {
                  onChange={(e) => setWindow(Number(e.target.value))} />
         </label>
         <button onClick={onSearch} disabled={!query.trim()}>Search</button>
-        <button onClick={onExport} disabled={!submitted || !result.data}>Export Excel</button>
+        <ExportButton onExport={onExport} disabled={!submitted || !result.data} />
       </div>
 
       {result.isLoading && <div className="empty-state">Searching…</div>}
