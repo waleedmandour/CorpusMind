@@ -920,12 +920,32 @@ export const api = {
 
   // --- Smart Troubleshooting ---
   troubleshootStatus: () =>
-    jsonFetch<{ available: boolean; model: string }>("/api/v1/troubleshoot/status"),
+    jsonFetch<{ available: boolean; model: string; source: string }>("/api/v1/troubleshoot/status"),
   interpretError: (req: InterpretErrorRequest) =>
     jsonFetch<InterpretErrorResponse>("/api/v1/troubleshoot/interpret", {
       method: "POST",
       body: JSON.stringify(req),
     }),
+  setGeminiKey: (apiKey: string) =>
+    jsonFetch<{ ok: boolean; available: boolean; source: string }>("/api/v1/troubleshoot/gemini-key", {
+      method: "POST",
+      body: JSON.stringify({ api_key: apiKey }),
+    }),
+  clearGeminiKey: () =>
+    jsonFetch<{ ok: boolean; available: boolean; source: string }>("/api/v1/troubleshoot/gemini-key", {
+      method: "DELETE",
+    }),
+
+  // --- Ollama model catalogue + pull ---
+  ollamaCatalogue: () =>
+    jsonFetch<{ models: OllamaModel[] }>("/api/v1/ollama/catalogue"),
+  ollamaPull: (model: string) =>
+    jsonFetch<{ ok: boolean; model: string; message: string }>("/api/v1/ollama/pull", {
+      method: "POST",
+      body: JSON.stringify({ model }),
+    }),
+  ollamaPullStatus: (model: string) =>
+    jsonFetch<OllamaPullStatus>(`/api/v1/ollama/pull/status?model=${encodeURIComponent(model)}`),
 
   // --- Corpus Cleaning ---
   cleanCorpus: (cid: string, options: CleaningOptions) =>
@@ -950,6 +970,28 @@ export const api = {
 // ----------------------------------------------------------------------- //
 
 export type ExportFormat = "xlsx" | "csv" | "tsv" | "txt" | "json";
+
+// ----------------------------------------------------------------------- //
+// Ollama model catalogue + pull types
+// ----------------------------------------------------------------------- //
+
+export interface OllamaModel {
+  name: string;
+  size: string;
+  params: string;
+  ram: string;
+  description: string;
+  languages: string[];
+  recommended: boolean;
+}
+
+export interface OllamaPullStatus {
+  model: string;
+  status: "starting" | "pulling" | "success" | "error" | "not_started" | string;
+  completed: number;
+  total: number;
+  error: string | null;
+}
 
 // ----------------------------------------------------------------------- //
 // Smart Troubleshooting types

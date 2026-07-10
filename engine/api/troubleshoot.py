@@ -4,12 +4,17 @@ Provides:
   - GET  /api/v1/troubleshoot/status  — is Gemini interpretation available?
   - POST /api/v1/troubleshoot/interpret — ask Gemini to interpret a backend
     error and suggest a fix.
+  - POST /api/v1/troubleshoot/gemini-key — set the Gemini API key at runtime
+    (from the UI). The key is stored in-memory in the engine process and
+    never written to disk. It takes precedence over the env-var key.
+  - DELETE /api/v1/troubleshoot/gemini-key — clear the runtime-set key.
 
-The Gemini API key is stored in the engine environment
-(CORPUSMIND_GEMINI_API_KEY) and never exposed to the browser. This follows
-Google's recommendation: "Never expose keys client-side in production."
-The browser sends the error text; the engine calls Gemini; the engine
-returns the interpretation.
+The Gemini API key can be provided two ways:
+  1. CORPUSMIND_GEMINI_API_KEY environment variable (set before engine start)
+  2. POST /api/v1/troubleshoot/gemini-key (set at runtime from the UI)
+
+The runtime key takes precedence. The key is never exposed back to the
+browser — only its presence (boolean) is reported via the /status endpoint.
 """
 from __future__ import annotations
 
@@ -23,6 +28,17 @@ from pydantic import BaseModel, Field
 from app.settings import get_settings
 
 router = APIRouter()
+
+# Runtime-overridable Gemini key (set from the UI). Takes precedence over
+# the env-var key. Stored in-memory only — never written to disk.
+_runtime_gemini_key: str | None = None
+
+
+def _get_gemini_key() -> str:
+    """Return the effective Gemini key: runtime key if set, else env key."""
+    if _runtime_gemini_key:
+        return _runtime_gemini_key
+    return get_settings().gemini_api_key
 
 GEMINI_URL_TEMPLATE = (
     "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
@@ -87,10 +103,47 @@ class InterpretResponse(BaseModel):
 @router.get("/troubleshoot/status")
 async def troubleshoot_status() -> dict:
     """Tell the frontend whether Gemini interpretation is available."""
+    key = _get_gemini_key()
     settings = get_settings()
     return {
+        "available": bool(key),
+        "model": settings.gemini_model if key else "",
+        "source": "ui" if _runtime_gemini_key else ("env" if settings.gemini_api_key else "none"),
+    }
+
+
+class GeminiKeyRequest(BaseModel):
+    """Set the Gemini API key from the UI."""
+    api_key: str = Field(..., min_length=1, description="Google Gemini API key")
+
+
+@router.post("/troubleshoot/gemini-key")
+async def set_gemini_key(req: GeminiKeyRequest) -> dict:
+    """Set the Gemini API key at runtime (from the UI).
+
+    The key is stored in-memory only — never written to disk. It takes
+    precedence over the CORPUSMIND_GEMINI_API_KEY environment variable.
+    The key is never exposed back to the browser.
+    """
+    global _runtime_gemini_key
+    _runtime_gemini_key = req.api_key.strip()
+    return {"ok": True, "available": True, "source": "ui"}
+
+
+@router.delete("/troubleshoot/gemini-key")
+async def clear_gemini_key() -> dict:
+    """Clear the runtime-set Gemini key.
+
+    After this, interpretation falls back to the env-var key (if set),
+    or is disabled entirely if no env-var key exists.
+    """
+    global _runtime_gemini_key
+    _runtime_gemini_key = None
+    settings = get_settings()
+    return {
+        "ok": True,
         "available": bool(settings.gemini_api_key),
-        "model": settings.gemini_model if settings.gemini_api_key else "",
+        "source": "env" if settings.gemini_api_key else "none",
     }
 
 
@@ -98,25 +151,26 @@ async def troubleshoot_status() -> dict:
 async def interpret_error(req: InterpretRequest) -> InterpretResponse:
     """Ask Gemini to interpret a backend error and suggest a fix.
 
-    The Gemini API key lives in the engine environment, so the browser
-    never sees it. If no key is configured, returns available=false with
-    a fallback message.
+    The Gemini API key lives in the engine (env var or runtime-set from
+    the UI), so the browser never sees it. If no key is configured,
+    returns available=false with a fallback message.
     """
     settings = get_settings()
+    key = _get_gemini_key()
 
-    if not settings.gemini_api_key:
+    if not key:
         return InterpretResponse(
             available=False,
             plain_language=(
-                "Gemini interpretation is not configured. Set the "
-                "CORPUSMIND_GEMINI_API_KEY environment variable in the "
-                "engine to enable AI-powered error interpretation."
+                "Gemini interpretation is not configured. Enter your API key "
+                "in Settings, or set the CORPUSMIND_GEMINI_API_KEY environment "
+                "variable in the engine."
             ),
             likely_cause="Not configured",
             suggested_fix=(
                 "Get a free key at https://aistudio.google.com/apikey, then "
-                "set CORPUSMIND_GEMINI_API_KEY in the engine environment and "
-                "restart corpusmind-engine."
+                "enter it in Settings (Smart Troubleshooting section) or set "
+                "CORPUSMIND_GEMINI_API_KEY in the engine environment."
             ),
             should_report=True,
             raw_error=req.error_message,
@@ -151,7 +205,7 @@ async def interpret_error(req: InterpretRequest) -> InterpretResponse:
         async with httpx.AsyncClient(timeout=30.0) as client:
             r = await client.post(
                 url,
-                params={"key": settings.gemini_api_key},
+                params={"key": key},
                 json=payload,
                 headers={"Content-Type": "application/json"},
             )

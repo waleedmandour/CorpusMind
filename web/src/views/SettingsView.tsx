@@ -7,8 +7,10 @@
  * Status indicators use colored badges (green = ok, red = problem,
  * amber = warning) so the user can scan the page in one glance.
  */
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { useTroubleshoot } from "@/store/troubleshooting";
 
 export function SettingsView() {
   const health = useQuery({ queryKey: ["health"], queryFn: api.health, refetchInterval: 5_000 });
@@ -96,6 +98,9 @@ export function SettingsView() {
               description="Opt-in cloud provider (Anthropic / OpenAI). Off by default for privacy."
             />
           </div>
+
+          {/* Ollama model downloader */}
+          <OllamaModelManager ollamaHealthy={ollamaOk} />
         </div>
       </section>
 
@@ -111,50 +116,27 @@ export function SettingsView() {
           </div>
           <span className={`settings-badge ${troubleshoot.data?.available ? "ok" : "warn"}`}>
             <span className="settings-badge-dot" />
-            {troubleshoot.data?.available ? "Enabled" : "Not configured"}
+            {troubleshoot.data?.available ? "Enabled" : "Off by default"}
           </span>
         </div>
         <div className="settings-card-body">
           <p className="settings-text">
             When a backend error occurs during use, CorpusMind captures it and shows
             the details in the taskbar at the bottom of the window. If a Gemini API
-            key is configured in the engine environment, the error is automatically
-            interpreted by Google&apos;s Gemini model — you get a plain-language
-            explanation, the likely cause, and a suggested fix.
+            key is configured, the error is automatically interpreted by Google&apos;s
+            Gemini model — you get a plain-language explanation, the likely cause,
+            and a suggested fix.
           </p>
-          <div className="settings-status-row">
-            <strong>Gemini interpretation:</strong>{" "}
-            {troubleshoot.data?.available ? (
-              <span className="status-ok">
-                ENABLED ({troubleshoot.data.model || "gemini-2.5-flash"})
-              </span>
-            ) : (
-              <span className="status-bad">DISABLED (no API key configured)</span>
-            )}
-          </div>
-          {!troubleshoot.data?.available && (
-            <div className="settings-setup-hint">
-              <p><strong>To enable AI-powered error interpretation:</strong></p>
-              <ol>
-                <li>
-                  Get a free API key at{" "}
-                  <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer">
-                    aistudio.google.com/apikey
-                  </a>
-                </li>
-                <li>
-                  Set it in the engine environment:
-                  <pre><code>{`export CORPUSMIND_GEMINI_API_KEY="your-key-here"`}</code></pre>
-                </li>
-                <li>Restart <code>corpusmind-engine</code>.</li>
-              </ol>
-              <p className="settings-text-muted">
-                The key is stored in the engine environment and never exposed to the
-                browser. Only error text (message, code, endpoint) is sent to Gemini —
-                never your corpus data.
-              </p>
-            </div>
-          )}
+
+          {/* Gemini API key input */}
+          <GeminiKeyInput
+            available={troubleshoot.data?.available ?? false}
+            source={troubleshoot.data?.source ?? "none"}
+            model={troubleshoot.data?.model ?? "gemini-2.5-flash"}
+          />
+
+          {/* Mute toggle */}
+          <MuteToggle />
         </div>
       </section>
 
@@ -293,6 +275,260 @@ function ProviderCard({
         <dt>Default model</dt>
         <dd><code>{defaultModel}</code></dd>
       </dl>
+    </div>
+  );
+}
+
+
+function GeminiKeyInput({
+  available,
+  source,
+  model,
+}: {
+  available: boolean;
+  source: string;
+  model: string;
+}) {
+  const qc = useQueryClient();
+  const [key, setKey] = useState("");
+  const [showKey, setShowKey] = useState(false);
+  const [savedMsg, setSavedMsg] = useState("");
+
+  const saveMutation = useMutation({
+    mutationFn: (k: string) => api.setGeminiKey(k),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["troubleshoot-status"] });
+      setKey("");
+      setSavedMsg(data.available ? "Key saved. Smart Troubleshooting is now ON." : "Key saved but not active.");
+      setTimeout(() => setSavedMsg(""), 4000);
+    },
+    onError: (e: Error) => {
+      setSavedMsg(`Error: ${e.message}`);
+      setTimeout(() => setSavedMsg(""), 4000);
+    },
+  });
+
+  const clearMutation = useMutation({
+    mutationFn: () => api.clearGeminiKey(),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["troubleshoot-status"] });
+      setSavedMsg("Key cleared.");
+      setTimeout(() => setSavedMsg(""), 4000);
+    },
+  });
+
+  return (
+    <div className="gemini-key-section">
+      <div className="gemini-key-status">
+        <strong>Gemini interpretation:</strong>{" "}
+        {available ? (
+          <span className="status-ok">
+            ENABLED ({model}) via {source === "ui" ? "UI key" : "env var"}
+          </span>
+        ) : (
+          <span className="status-bad">OFF (no key configured)</span>
+        )}
+      </div>
+
+      {available && source === "ui" && (
+        <button
+          className="btn-small danger gemini-clear-btn"
+          onClick={() => clearMutation.mutate()}
+          disabled={clearMutation.isPending}
+        >
+          {clearMutation.isPending ? "Clearing..." : "Clear saved key"}
+        </button>
+      )}
+
+      {!available || source !== "ui" ? (
+        <>
+          <p className="settings-text-muted">
+            Enter your Gemini API key to enable AI-powered error interpretation.
+            Get a free key at{" "}
+            <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer">
+              aistudio.google.com/apikey
+            </a>.
+            The key is stored in-memory in the engine (never written to disk)
+            and never sent back to the browser.
+          </p>
+          <div className="gemini-key-input-row">
+            <input
+              type={showKey ? "text" : "password"}
+              value={key}
+              onChange={(e) => setKey(e.target.value)}
+              placeholder="Paste your Gemini API key here..."
+              className="gemini-key-input"
+              autoComplete="off"
+            />
+            <button
+              className="btn-small"
+              onClick={() => setShowKey(!showKey)}
+              title={showKey ? "Hide key" : "Show key"}
+            >
+              {showKey ? "Hide" : "Show"}
+            </button>
+            <button
+              className="btn-primary gemini-save-btn"
+              onClick={() => key.trim() && saveMutation.mutate(key.trim())}
+              disabled={!key.trim() || saveMutation.isPending}
+            >
+              {saveMutation.isPending ? "Saving..." : "Save"}
+            </button>
+          </div>
+          {savedMsg && <div className="gemini-saved-msg">{savedMsg}</div>}
+        </>
+      ) : (
+        savedMsg && <div className="gemini-saved-msg">{savedMsg}</div>
+      )}
+    </div>
+  );
+}
+
+
+function MuteToggle() {
+  const muted = useTroubleshoot((s) => s.muted);
+  const setMuted = useTroubleshoot((s) => s.setMuted);
+
+  return (
+    <div className="mute-toggle-row">
+      <div>
+        <strong>Notifications:</strong>
+        <p className="settings-text-muted">
+          When ON, a red badge appears in the taskbar when errors occur and the
+          panel auto-opens. When OFF (muted), errors are still captured silently
+          and can be reviewed here anytime.
+        </p>
+      </div>
+      <label className="toggle-switch">
+        <input
+          type="checkbox"
+          checked={!muted}
+          onChange={(e) => setMuted(!e.target.checked)}
+        />
+        <span className="toggle-slider" />
+      </label>
+    </div>
+  );
+}
+
+
+function OllamaModelManager({ ollamaHealthy }: { ollamaHealthy: boolean }) {
+  const qc = useQueryClient();
+  const catalogue = useQuery({ queryKey: ["ollama-catalogue"], queryFn: api.ollamaCatalogue });
+  const installedModels = useQuery({
+    queryKey: ["ollama-models"],
+    queryFn: () => api.listModels("ollama"),
+    enabled: ollamaHealthy,
+    refetchInterval: 10_000,
+  });
+  const [pullingModel, setPullingModel] = useState<string | null>(null);
+  const [pullStatus, setPullStatus] = useState<{ completed: number; total: number; status: string } | null>(null);
+
+  const installedSet = new Set(installedModels.data?.models ?? []);
+
+  const pullModel = async (modelName: string) => {
+    if (!ollamaHealthy) {
+      alert("Ollama is not running. Start it with `ollama serve` first.");
+      return;
+    }
+    setPullingModel(modelName);
+    setPullStatus({ completed: 0, total: 0, status: "starting" });
+    try {
+      await api.ollamaPull(modelName);
+      // Poll for progress
+      const poll = setInterval(async () => {
+        try {
+          const status = await api.ollamaPullStatus(modelName);
+          setPullStatus({
+            completed: status.completed,
+            total: status.total,
+            status: status.status,
+          });
+          if (status.status === "success" || status.status === "error") {
+            clearInterval(poll);
+            setPullingModel(null);
+            qc.invalidateQueries({ queryKey: ["ollama-models"] });
+            if (status.status === "error") {
+              alert(`Pull failed: ${status.error}`);
+            }
+          }
+        } catch {
+          clearInterval(poll);
+          setPullingModel(null);
+        }
+      }, 2000);
+    } catch (e) {
+      setPullingModel(null);
+      alert(`Pull failed: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  };
+
+  if (!ollamaHealthy) {
+    return (
+      <div className="ollama-model-manager">
+        <p className="settings-text-muted">
+          Ollama is not running. Start it with{" "}
+          <code>ollama serve</code> to download and manage models.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="ollama-model-manager">
+      <div className="ollama-model-section-title">
+        Download models
+        {installedModels.data && (
+          <span className="ollama-installed-count">
+            {installedModels.data.models.length} installed
+          </span>
+        )}
+      </div>
+      <div className="ollama-model-grid">
+        {catalogue.data?.models.map((m) => {
+          const isInstalled = installedSet.has(m.name);
+          const isPulling = pullingModel === m.name;
+          const pct = pullStatus && pullStatus.total > 0
+            ? Math.round((pullStatus.completed / pullStatus.total) * 100)
+            : 0;
+          return (
+            <div key={m.name} className={`ollama-model-card ${m.recommended ? "recommended" : ""}`}>
+              <div className="ollama-model-header">
+                <strong className="ollama-model-name">{m.name}</strong>
+                {m.recommended && <span className="ollama-recommended-badge">Recommended</span>}
+                {isInstalled && <span className="ollama-installed-badge">Installed</span>}
+              </div>
+              <p className="ollama-model-desc">{m.description}</p>
+              <div className="ollama-model-meta">
+                <span className="ollama-meta-tag">{m.size}</span>
+                <span className="ollama-meta-tag">{m.params} params</span>
+                <span className="ollama-meta-tag">{m.ram} RAM</span>
+                {m.languages.includes("ar") && <span className="ollama-meta-tag ar">Arabic</span>}
+              </div>
+              {isPulling && (
+                <div className="ollama-pull-progress">
+                  <div className="ollama-progress-bar" style={{ width: `${pct}%` }} />
+                  <span className="ollama-progress-text">
+                    {pullStatus?.status === "starting" ? "Starting..." : `${pct}%`}
+                  </span>
+                </div>
+              )}
+              {!isInstalled && !isPulling && (
+                <button
+                  className="btn-small ollama-pull-btn"
+                  onClick={() => pullModel(m.name)}
+                  disabled={!!pullingModel}
+                >
+                  Download
+                </button>
+              )}
+              {isInstalled && !isPulling && (
+                <span className="ollama-ready-text">Ready to use</span>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
