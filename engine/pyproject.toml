@@ -87,12 +87,12 @@ dev = [
     "mypy>=1.13.0",
     "httpx>=0.27.0",
 ]
-
-[project.optional-dependencies.export]
 # Diagram (PNG) export for collocation networks. SVG export works without
 # this — it's pure Python. PNG requires cairosvg which needs libcairo.
 # Install with: pip install -e ".[export]"  (and libcairo on your system)
-cairosvg = ">=2.7.0"
+export = [
+    "cairosvg>=2.7.0",
+]
 
 [project.scripts]
 corpusmind-engine = "app.main:run"
