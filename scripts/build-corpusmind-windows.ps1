@@ -272,14 +272,22 @@ if (-not $SkipInstall) {
         $shortcut.IconLocation = "$appExe,0"
         $shortcut.Save()
 
-        $desktopShortcut = Join-Path $env:USERPROFILE "Desktop\CorpusMind.lnk"
-        $desktopShortcutObj = $shell.CreateShortcut($desktopShortcut)
-        $desktopShortcutObj.TargetPath = $appExe
-        $desktopShortcutObj.WorkingDirectory = $InstallDir
-        $desktopShortcutObj.IconLocation = "$appExe,0"
-        $desktopShortcutObj.Save()
-
-        OkMsg "shortcuts created (Start Menu + Desktop)"
+        # Create desktop shortcut - use the actual Desktop path
+        # (handles OneDrive redirection and custom Desktop locations)
+        try {
+            $desktopPath = [Environment]::GetFolderPath("Desktop")
+            if (-not $desktopPath) { $desktopPath = Join-Path $env:USERPROFILE "Desktop" }
+            $desktopShortcut = Join-Path $desktopPath "CorpusMind.lnk"
+            $desktopShortcutObj = $shell.CreateShortcut($desktopShortcut)
+            $desktopShortcutObj.TargetPath = $appExe
+            $desktopShortcutObj.WorkingDirectory = $InstallDir
+            $desktopShortcutObj.IconLocation = "$appExe,0"
+            $desktopShortcutObj.Save()
+            OkMsg "shortcuts created (Start Menu + Desktop)"
+        } catch {
+            WarnMsg "could not create desktop shortcut: $_"
+            OkMsg "Start Menu shortcut created (desktop shortcut skipped)"
+        }
     } else {
         WarnMsg "install may not have completed - check $InstallDir"
         WarnMsg "you can install manually by running: $($nsisExe.FullName)"
