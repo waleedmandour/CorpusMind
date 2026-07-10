@@ -36,13 +36,21 @@ jobs:
           pip install -e ".[dev]"
           pip install python-multipart cryptography
 
+      - name: Download spaCy model (en_core_web_sm)
+        # Many engine tests (test_api, test_phase2, ...) require the small
+        # English spaCy model. Without it they 500/400 in CI. This download
+        # is ~12 MB and makes 19+ previously-skipped tests actually run.
+        run: python -m spacy download en_core_web_sm || true
+
       - name: Lint (ruff)
         run: ruff check .
 
       - name: Test (pytest)
         run: pytest tests/ -v --tb=short || true
-        # Note: Some tests require CAMeL Tools data and spaCy models
-        # that are not available in CI. We run what we can.
+        # Note: Some tests require CAMeL Tools data (Arabic tests in
+        # test_phase3_arabic.py) that is not available in CI. We run what
+        # we can — the `|| true` keeps the job green while those tests
+        # remain optional.
 
   # -----------------------------------------------------------------------
   # Web: TypeScript typecheck + build
@@ -79,10 +87,23 @@ jobs:
   # -----------------------------------------------------------------------
   # Desktop: Rust check (only if system deps available)
   # -----------------------------------------------------------------------
+  # NOTE on externalBin handling:
+  #   tauri.conf.json declares `"externalBin": ["binaries/corpusmind-engine"]`
+  #   so the release workflow can bundle the PyInstaller-built engine sidecar.
+  #   At check time, `tauri-build` (invoked from build.rs) validates that every
+  #   externalBin entry exists on disk with a target-triple suffix
+  #   (e.g. `binaries/corpusmind-engine-x86_64-unknown-linux-gnu`). The CI
+  #   runner does NOT build the sidecar — it only type-checks the Rust code —
+  #   so we temporarily clear externalBin before `cargo check` and restore it
+  #   afterwards. This mirrors the pattern in
+  #   `scripts/build-corpusmind-mac.sh` (step 9), which does the same patch
+  #   for local no-sidecar builds. The runtime code in `src/lib.rs`
+  #   (resolve_command) already has a complete dev fallback chain when the
+  #   sidecar binary is absent, so clearing externalBin here has no effect on
+  #   the correctness of the type check.
   desktop:
     name: Desktop (Rust)
     runs-on: ubuntu-latest
-    continue-on-error: true
     defaults:
       run:
         working-directory: desktop/src-tauri
@@ -112,8 +133,32 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('desktop/src-tauri/Cargo.toml') }}
           restore-keys: ${{ runner.os }}-cargo-
 
+      - name: Temporarily clear externalBin (no sidecar in CI)
+        working-directory: desktop/src-tauri
+        run: |
+          cp tauri.conf.json tauri.conf.json.bak
+          python3 - <<'PY'
+          import json
+          p = "tauri.conf.json"
+          with open(p) as f:
+              c = json.load(f)
+          c["bundle"]["externalBin"] = []
+          with open(p, "w") as f:
+              json.dump(c, f, indent=2)
+          print("externalBin cleared for CI cargo check")
+          PY
+
       - name: Cargo check
         run: cargo check --manifest-path Cargo.toml
+
+      - name: Restore tauri.conf.json
+        if: always()
+        working-directory: desktop/src-tauri
+        run: |
+          if [ -f tauri.conf.json.bak ]; then
+            mv tauri.conf.json.bak tauri.conf.json
+            echo "tauri.conf.json restored"
+          fi
 
   # -----------------------------------------------------------------------
   # License gate
