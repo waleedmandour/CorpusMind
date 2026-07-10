@@ -239,8 +239,9 @@ code, pre { font-family: var(--font-mono); }
 }
 
 .placeholder-view, .settings-view {
-  max-inline-size: 880px;
+  max-inline-size: 900px;
   margin: 0 auto;
+  padding: var(--space-6) var(--space-4);
 }
 
 .placeholder-view h2, .settings-view h2 {
@@ -251,14 +252,322 @@ code, pre { font-family: var(--font-mono); }
 .placeholder-view p, .settings-view p { color: var(--text-muted); }
 .placeholder-view code { background: var(--bg-subtle); padding: 2px 6px; border-radius: 3px; }
 
-/* Settings tables */
-.settings-view dl { display: grid; grid-template-columns: max-content 1fr; gap: var(--space-1) var(--space-4); margin: 0; }
-.settings-view dt { color: var(--text-muted); }
-.settings-view table { inline-size: 100%; border-collapse: collapse; margin-block-start: var(--space-2); }
-.settings-view th, .settings-view td { text-align: start; padding: var(--space-2) var(--space-3); border-block-end: 1px solid var(--border); }
-.settings-view th { font-weight: 600; color: var(--text-muted); }
+/* =========================================================================
+   Settings — professional card-based layout
+   ========================================================================= */
+
+.settings-header {
+  margin-block-end: var(--space-6);
+}
+.settings-header h1 {
+  font-size: 24px;
+  margin: 0 0 var(--space-1) 0;
+  color: var(--text);
+}
+.settings-subtitle {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.settings-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  margin-block-end: var(--space-4);
+  overflow: hidden;
+  transition: border-color 0.15s;
+}
+.settings-card:hover {
+  border-color: var(--border-strong);
+}
+
+.settings-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-4) var(--space-3);
+  border-block-end: 1px solid var(--border);
+  background: var(--bg-subtle);
+}
+.settings-card-icon {
+  font-size: 20px;
+  color: var(--brand-500);
+  flex-shrink: 0;
+  inline-size: 32px;
+  block-size: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ribbon-tab-bg-active);
+  border-radius: var(--radius-md);
+}
+.settings-card-header > div {
+  flex: 1;
+  min-inline-size: 0;
+}
+.settings-card-header h2 {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0 0 var(--space-1) 0;
+  color: var(--text);
+}
+.settings-card-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.settings-card-body {
+  padding: var(--space-4);
+}
+
+/* Status badges */
+.settings-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.settings-badge.ok {
+  background: var(--grounded-bg);
+  color: var(--grounded-fg);
+}
+.settings-badge.bad {
+  background: rgba(192, 57, 43, 0.12);
+  color: var(--danger);
+}
+.settings-badge.warn {
+  background: var(--unground-bg);
+  color: var(--unground-fg);
+}
+.settings-badge-dot {
+  inline-size: 6px;
+  block-size: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+.settings-badge.ok .settings-badge-dot {
+  animation: settings-pulse 2s ease-in-out infinite;
+}
+@keyframes settings-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Definition lists inside cards */
+.settings-dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--space-2) var(--space-6);
+  margin: 0;
+}
+.settings-dl dt {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+.settings-dl dd {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text);
+}
+.settings-dl dd code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  background: var(--bg-subtle);
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+
+.settings-text {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.6;
+  margin: 0 0 var(--space-3) 0;
+}
+.settings-text-muted {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin: var(--space-1) 0 0 0;
+}
+
+.settings-status-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-subtle);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+}
+.settings-status-row .status-ok { color: var(--success); font-weight: 600; }
+.settings-status-row .status-bad { color: var(--danger); font-weight: 600; }
+
+.settings-setup-hint {
+  margin-block-start: var(--space-3);
+  padding: var(--space-3);
+  background: var(--bg-subtle);
+  border-radius: var(--radius-md);
+  border-inline-start: 3px solid var(--brand-400);
+}
+.settings-setup-hint ol {
+  margin: var(--space-2) 0;
+  padding-inline-start: var(--space-5);
+}
+.settings-setup-hint li {
+  font-size: 13px;
+  color: var(--text);
+  margin-block-end: var(--space-2);
+  line-height: 1.5;
+}
+.settings-setup-hint pre {
+  margin: var(--space-1) 0;
+  padding: var(--space-2);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-family: var(--font-mono);
+  overflow-x: auto;
+}
+.settings-setup-hint code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  background: var(--bg-elevated);
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+/* Feature list (accessibility card) */
+.settings-feature-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--space-2);
+}
+.settings-feature-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 13px;
+  color: var(--text);
+}
+.settings-feature-check {
+  color: var(--success);
+  font-weight: 700;
+  flex-shrink: 0;
+  inline-size: 18px;
+  block-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--grounded-bg);
+  border-radius: 50%;
+  font-size: 11px;
+}
+
+/* Provider cards */
+.provider-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--space-3);
+}
+
+.provider-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  background: var(--bg-elevated);
+  transition: border-color 0.15s;
+}
+.provider-card.healthy {
+  border-inline-start: 3px solid var(--success);
+}
+.provider-card.unhealthy {
+  border-inline-start: 3px solid var(--border-strong);
+}
+
+.provider-card-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-block-end: var(--space-2);
+}
+.provider-card-icon {
+  font-size: 14px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+.provider-card.healthy .provider-card-icon {
+  color: var(--success);
+}
+.provider-card-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  flex: 1;
+}
+.provider-card-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+}
+.provider-card-badge.ok {
+  background: var(--grounded-bg);
+  color: var(--grounded-fg);
+}
+.provider-card-badge.bad {
+  background: var(--bg-subtle);
+  color: var(--text-muted);
+}
+
+.provider-card-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 0 0 var(--space-2) 0;
+  line-height: 1.4;
+}
+
+.provider-card-meta {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px var(--space-3);
+  margin: 0;
+  font-size: 11px;
+}
+.provider-card-meta dt {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+.provider-card-meta dd {
+  margin: 0;
+  color: var(--text);
+}
+.provider-card-meta dd code {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  background: var(--bg-subtle);
+  padding: 1px 4px;
+  border-radius: 3px;
+  word-break: break-all;
+}
+
+/* Backwards-compat: old settings classes still referenced */
 .settings-view .hint { color: var(--text-muted); font-size: 12px; }
-.settings-view section { margin-block-end: var(--space-8); }
+.settings-view section { margin-block-end: var(--space-4); }
 
 /* =========================================================================
    Assistant view
