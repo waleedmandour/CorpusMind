@@ -2,7 +2,7 @@
  * CorpusManager — project list, corpus list, document upload (drag-drop),
  * pipeline-recipe display (§8.1, §8.2), and on-demand corpus cleaning.
  */
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
 
@@ -126,6 +126,7 @@ function PipelineRecipe({ recipe }: { recipe: Record<string, unknown> }) {
 function DocumentUploader({ cid }: { cid: string }) {
   const qc = useQueryClient();
   const [dragging, setDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const upload = useMutation({
     mutationFn: (files: File[]) => api.uploadDocuments(cid, files),
@@ -145,6 +146,12 @@ function DocumentUploader({ cid }: { cid: string }) {
   const onFilePicker = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     if (files.length > 0) upload.mutate(files);
+    // Reset the input so the same file can be selected again
+    e.target.value = "";
+  };
+
+  const openFilePicker = () => {
+    fileInputRef.current?.click();
   };
 
   return (
@@ -153,22 +160,31 @@ function DocumentUploader({ cid }: { cid: string }) {
       onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
       onDragLeave={() => setDragging(false)}
       onDrop={onDrop}
+      onClick={openFilePicker}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openFilePicker(); } }}
     >
       <input
+        ref={fileInputRef}
         type="file"
         multiple
         accept=".txt,.md,.docx,.pdf,.html,.htm,.xml,.csv"
         onChange={onFilePicker}
-        style={{ display: "none" }}
-        id="file-input"
+        style={{ position: "absolute", width: 0, height: 0, opacity: 0, pointerEvents: "none" }}
+        aria-hidden="true"
       />
-      <label htmlFor="file-input" className="dropzone-label">
+      <div className="dropzone-icon">{"\u2191"}</div>
+      <div className="dropzone-label">
         {upload.isPending
           ? "Uploading & tagging…"
           : dragging
             ? "Drop files here"
-            : "Drop files here or click to choose (.txt, .md, .docx, .pdf, .html, .xml, .csv)"}
-      </label>
+            : "Drop files here or click to upload"}
+      </div>
+      <div className="dropzone-formats">
+        .txt · .md · .docx · .pdf · .html · .xml · .csv
+      </div>
       {upload.isError && <div className="error">{String(upload.error)}</div>}
       {upload.data && (
         <div className="success">Ingested {upload.data.length} document(s).</div>
