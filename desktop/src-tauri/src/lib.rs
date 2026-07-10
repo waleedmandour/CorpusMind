@@ -164,8 +164,10 @@ impl EngineSidecar {
         let start = Instant::now();
 
         // Use a simple blocking client — we're already on a background thread.
+        // Bypass proxies for loopback traffic (corporate VPN fix from RDAT project).
         let client = reqwest::blocking::Client::builder()
             .timeout(HEALTH_POLL_INTERVAL)
+            .no_proxy()
             .build()
             .map_err(|e| SidecarError::Health(e.to_string()))?;
 
@@ -215,15 +217,17 @@ impl Drop for EngineSidecar {
 }
 
 #[tauri::command]
-fn engine_health() -> Result<String, String> {
-    // Synchronous health check the webview can call to verify the sidecar is up.
+async fn engine_health() -> Result<String, String> {
+    // Async health check the webview can call to verify the sidecar is up.
+    // Uses async reqwest to avoid blocking the Tauri async runtime.
     let url = format!("http://{ENGINE_HOST}:{ENGINE_PORT}/api/v1/health");
-    let client = reqwest::blocking::Client::builder()
-        .timeout(Duration::from_secs(2))
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(5))
+        .no_proxy()
         .build()
         .map_err(|e| e.to_string())?;
-    let r = client.get(&url).send().map_err(|e| e.to_string())?;
-    let body = r.text().map_err(|e| e.to_string())?;
+    let r = client.get(&url).send().await.map_err(|e| e.to_string())?;
+    let body = r.text().await.map_err(|e| e.to_string())?;
     Ok(body)
 }
 
@@ -248,10 +252,16 @@ pub fn run() {
                     error!(target: "sidecar", "spawn failed: {e}");
                     return;
                 }
-                // wait_for_health is a blocking fn; we are in a spawned task so blocking is OK.
-                match sidecar.wait_for_health() {
-                    Ok(()) => info!(target: "sidecar", "engine ready"),
-                    Err(e) => error!(target: "sidecar", "engine not ready: {e}"),
+                // wait_for_health is a blocking fn — use spawn_blocking
+                // to avoid blocking the Tauri async runtime executor.
+                let sidecar_ref = handle.state::<EngineSidecar>();
+                let result = tauri::async_runtime::spawn_blocking(move || {
+                    sidecar_ref.wait_for_health()
+                }).await;
+                match result {
+                    Ok(Ok(())) => info!(target: "sidecar", "engine ready"),
+                    Ok(Err(e)) => error!(target: "sidecar", "engine not ready: {e}"),
+                    Err(e) => error!(target: "sidecar", "health check task panicked: {e}"),
                 }
             });
 
