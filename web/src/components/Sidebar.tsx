@@ -25,7 +25,10 @@ const NAV_GROUPS: NavGroup[] = [
   },
   {
     labelKey: "nav_file",
-    items: [{ id: "file", labelKey: "nav_projects" }],
+    items: [
+      { id: "file", labelKey: "nav_projects" },
+      { id: "hub", labelKey: "nav_hub" },
+    ],
   },
   {
     labelKey: "nav_analyze",

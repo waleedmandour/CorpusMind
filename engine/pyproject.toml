@@ -108,6 +108,7 @@ ignore = [
   "E741",   # ambiguous-variable-name — used in math-heavy code matching the literature (e.g. N, R, C)
   "RUF002", # ambiguous-unicode-character-docstring — we use Unicode math symbols (², ·, Σ) intentionally in METHODOLOGY
   "RUF003", # ambiguous-unicode-character-comment — same
+  "RUF001", # ambiguous-unicode-character-string — the cleaning module intentionally includes real Unicode punctuation (‹›«»—–) in strip sets
 ]
 
 [tool.mypy]

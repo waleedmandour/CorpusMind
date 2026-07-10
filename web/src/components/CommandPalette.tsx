@@ -36,6 +36,7 @@ export function CommandPalette() {
       { id: "nav.assistant", label: "Go to AI Assistant", run: () => ui.setActiveNav("assistant") },
       { id: "nav.settings", label: "Go to Settings", run: () => ui.setActiveNav("settings") },
       { id: "nav.userguide", label: "Go to User Guide", run: () => ui.setActiveNav("userguide") },
+      { id: "nav.hub", label: "Go to Corpus Hub", run: () => ui.setActiveNav("hub") },
       { id: "nav.about", label: "Go to About", run: () => ui.setActiveNav("about") },
       { id: "theme.light", label: "Theme: Light", run: () => ui.setTheme("light") },
       { id: "theme.dark", label: "Theme: Dark", run: () => ui.setTheme("dark") },

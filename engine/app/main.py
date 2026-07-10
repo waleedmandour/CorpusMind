@@ -11,9 +11,11 @@ from api import ai as ai_routes
 from api import (
     analysis,
     arabic,
+    cleaning,
     corpora,
     export,
     health,
+    hub,
     phase2,
     phase5,
     phase6,
@@ -84,6 +86,8 @@ def create_app() -> FastAPI:
     app.include_router(phase6.router, prefix="/api/v1", tags=["phase6"])
     app.include_router(export.router, prefix="/api/v1", tags=["export"])
     app.include_router(troubleshoot.router, prefix="/api/v1", tags=["troubleshoot"])
+    app.include_router(cleaning.router, prefix="/api/v1", tags=["cleaning"])
+    app.include_router(hub.router, prefix="/api/v1", tags=["hub"])
     return app
 
 

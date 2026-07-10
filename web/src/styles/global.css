@@ -2631,3 +2631,288 @@ html[dir="rtl"] .app-name {
   padding: 1px 5px;
   margin: 0 2px;
 }
+
+/* =========================================================================
+   Corpus Cleaning — modal + options
+   ========================================================================= */
+
+.item-actions {
+  margin-block-start: var(--space-1);
+  display: flex;
+  gap: var(--space-1);
+}
+
+.clean-btn {
+  font-size: 11px !important;
+  padding: 2px 8px !important;
+  background: var(--bg-subtle) !important;
+  color: var(--text-muted) !important;
+}
+.clean-btn:hover {
+  background: var(--ribbon-tab-bg-hover) !important;
+  color: var(--text) !important;
+}
+
+.clean-modal {
+  max-inline-size: 640px;
+  max-block-size: 85vh;
+  overflow-y: auto;
+}
+
+.clean-warning {
+  background: rgba(255, 193, 7, 0.12);
+  border: 1px solid var(--warning);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  font-size: 12px;
+  color: var(--text);
+  margin-block-end: var(--space-3);
+}
+
+.clean-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+  margin-block-end: var(--space-3);
+}
+@media (max-width: 600px) {
+  .clean-options { grid-template-columns: 1fr; }
+}
+
+.clean-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.clean-group-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-subtle);
+  margin-block-end: var(--space-1);
+}
+
+.clean-group label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.clean-group input[type="checkbox"] {
+  inline-size: auto;
+  margin: 0;
+}
+
+.hint-inline {
+  font-size: 10px;
+  color: var(--text-subtle);
+  font-style: italic;
+}
+
+button.danger {
+  background: var(--danger) !important;
+  color: white !important;
+}
+button.danger:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+/* =========================================================================
+   Corpus Hub view
+   ========================================================================= */
+
+.hub-view {
+  padding: var(--space-6) var(--space-8);
+  max-inline-size: 1000px;
+  margin: 0 auto;
+  overflow-y: auto;
+  height: 100%;
+}
+
+.hub-header {
+  margin-block-end: var(--space-4);
+}
+.hub-header h1 {
+  font-size: 24px;
+  margin: 0 0 var(--space-1) 0;
+  color: var(--text);
+}
+.hub-subtitle {
+  color: var(--text-muted);
+  font-size: 13px;
+  margin: 0;
+}
+
+.hub-search-bar {
+  display: flex;
+  gap: var(--space-2);
+  margin-block-end: var(--space-6);
+  flex-wrap: wrap;
+}
+
+.hub-search-input {
+  flex: 1;
+  min-inline-size: 200px;
+}
+
+.hub-search-bar select {
+  inline-size: auto;
+  min-inline-size: 120px;
+}
+
+.hub-section-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0 0 var(--space-3) 0;
+  color: var(--text);
+}
+
+.hub-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--space-3);
+  margin-block-end: var(--space-6);
+}
+
+.hub-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  background: var(--bg-elevated);
+}
+.hub-card.featured {
+  border-color: var(--brand-400);
+}
+.hub-card h3 {
+  font-size: 14px;
+  margin: 0 0 var(--space-1) 0;
+  color: var(--text);
+}
+.hub-card p {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 0 0 var(--space-2) 0;
+  line-height: 1.5;
+}
+
+.hub-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.hub-tag {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  background: var(--bg-subtle);
+  padding: 1px 6px;
+  border-radius: 3px;
+  color: var(--text-muted);
+}
+
+.hub-results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.hub-results-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-block-end: var(--space-2);
+}
+
+.hub-empty {
+  padding: var(--space-8);
+  text-align: center;
+  color: var(--text-subtle);
+  font-size: 13px;
+  background: var(--bg-subtle);
+  border-radius: var(--radius-md);
+}
+
+.hub-result-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-elevated);
+  border-inline-start: 3px solid var(--border-strong);
+}
+.hub-result-card.hub-huggingface { border-inline-start-color: #ff9d00; }
+.hub-result-card.hub-wikipedia { border-inline-start-color: #3366cc; }
+.hub-result-card.hub-opus { border-inline-start-color: #6b8e23; }
+
+.hub-result-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-block-end: var(--space-1);
+}
+
+.hub-result-hub-badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: var(--bg-subtle);
+  padding: 2px 6px;
+  border-radius: 3px;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+}
+
+.hub-result-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0;
+  color: var(--text);
+}
+
+.hub-result-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 0 0 var(--space-2) 0;
+  line-height: 1.5;
+}
+
+.hub-result-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-block-end: var(--space-2);
+}
+
+.hub-result-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.hub-download-btn {
+  font-size: 12px !important;
+  padding: 4px 12px !important;
+}
+
+.hub-download-hint {
+  font-size: 11px;
+  color: var(--text-subtle);
+  font-style: italic;
+}
+
+.hub-privacy-note {
+  margin-block-start: var(--space-6);
+  padding: var(--space-3);
+  background: var(--bg-subtle);
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+.hub-privacy-note strong {
+  color: var(--text);
+}

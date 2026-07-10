@@ -53,6 +53,7 @@ export const translations = {
     nav_settings: "Settings",
     nav_about: "About",
     nav_userguide: "User Guide",
+    nav_hub: "Corpus Hub",
 
     // Home view
     home_welcome: "Welcome to CorpusMind",
@@ -184,6 +185,7 @@ export const translations = {
     nav_settings: "الإعدادات",
     nav_about: "حول البرنامج",
     nav_userguide: "دليل المستخدم",
+    nav_hub: "مستودع النصوص",
 
     // Home view
     home_welcome: "مرحباً بك في CorpusMind",

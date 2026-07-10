@@ -898,6 +898,23 @@ export const api = {
       method: "POST",
       body: JSON.stringify(req),
     }),
+
+  // --- Corpus Cleaning ---
+  cleanCorpus: (cid: string, options: CleaningOptions) =>
+    jsonFetch<CleaningResponse>(`/api/v1/corpora/${cid}/clean`, {
+      method: "POST",
+      body: JSON.stringify(options),
+    }),
+
+  // --- Corpus Hub (search + download open-access corpora) ---
+  hubCatalogue: () =>
+    jsonFetch<HubCatalogue>("/api/v1/hub/catalogue"),
+  hubSearch: (q: string, language: string, hub: string = "all", limit: number = 20) =>
+    jsonFetch<HubSearchResponse>(
+      `/api/v1/hub/search?q=${encodeURIComponent(q)}&language=${language}&hub=${hub}&limit=${limit}`,
+    ),
+  hubDownloadUrl: (hub: string, corpusId: string, title: string, extra: Record<string, unknown>) =>
+    `${ENGINE_BASE}/api/v1/hub/download?hub=${encodeURIComponent(hub)}&corpus_id=${encodeURIComponent(corpusId)}&title=${encodeURIComponent(title)}&extra=${encodeURIComponent(JSON.stringify(extra))}`,
 };
 
 // ----------------------------------------------------------------------- //
@@ -921,6 +938,87 @@ export interface InterpretErrorResponse {
   should_report: boolean;
   raw_error: string;
   model: string;
+}
+
+// ----------------------------------------------------------------------- //
+// Corpus Cleaning types
+// ----------------------------------------------------------------------- //
+
+export interface CleaningOptions {
+  collapse_whitespace?: boolean;
+  strip_leading_trailing?: boolean;
+  remove_empty_lines?: boolean;
+  remove_urls?: boolean;
+  remove_email_addresses?: boolean;
+  remove_html_entities?: boolean;
+  lowercase?: boolean;
+  remove_punctuation?: boolean;
+  remove_numbers?: boolean;
+  remove_extra_symbols?: boolean;
+  remove_stopwords?: boolean;
+  min_token_length?: number;
+  normalize_arabic?: boolean;
+  strip_arabic_diacritics?: boolean;
+  remove_arabic_tatweel?: boolean;
+  create_new_version?: boolean;
+}
+
+export interface CleaningResponse {
+  corpus_id: string;
+  documents_cleaned: number;
+  old_token_count: number;
+  new_token_count: number;
+  old_type_count: number;
+  new_type_count: number;
+  new_version_id: string | null;
+  options_applied: Record<string, boolean | number>;
+}
+
+// ----------------------------------------------------------------------- //
+// Corpus Hub types
+// ----------------------------------------------------------------------- //
+
+export interface HubInfo {
+  id: string;
+  name: string;
+  description: string;
+  requires_key: boolean;
+  languages: string[];
+}
+
+export interface HubFeaturedItem {
+  hub: string;
+  id: string;
+  title: string;
+  language: string;
+  size: string;
+  license: string;
+}
+
+export interface HubCatalogue {
+  hubs: HubInfo[];
+  featured: HubFeaturedItem[];
+}
+
+export interface HubSearchResult {
+  hub: string;
+  id: string;
+  title: string;
+  description: string;
+  language: string;
+  size: string;
+  license: string;
+  download_url: string | null;
+  download_format: string;
+  extra: Record<string, unknown>;
+}
+
+export interface HubSearchResponse {
+  query: string;
+  language: string;
+  hub: string;
+  total: number;
+  results: HubSearchResult[];
 }
 
 /** Helper: trigger a browser download for a Blob. */
