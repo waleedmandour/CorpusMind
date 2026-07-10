@@ -194,16 +194,10 @@ impl EngineSidecar {
     fn shutdown(&self) {
         let mut child_opt = self.child.lock().unwrap();
         if let Some(mut child) = child_opt.take() {
-            // Try graceful first, then force-kill.
-            #[cfg(unix)]
-            {
-                use std::os::unix::process::ExitStatusExt;
-                let _ = child.kill();
-            }
-            #[cfg(windows)]
-            {
-                let _ = child.kill();
-            }
+            // Force-kill the child. std::process::Child::kill() is
+            // cross-platform — SIGKILL on Unix, TerminateProcess on
+            // Windows — so no cfg gates are needed.
+            let _ = child.kill();
             let _ = child.wait();
             info!(target: "sidecar", "engine sidecar shut down");
         }
@@ -254,8 +248,16 @@ pub fn run() {
                 }
                 // wait_for_health is a blocking fn — use spawn_blocking
                 // to avoid blocking the Tauri async runtime executor.
-                let sidecar_ref = handle.state::<EngineSidecar>();
+                //
+                // NOTE: spawn_blocking's closure must be 'static, but
+                // State<'_, T> borrows from the AppHandle and therefore
+                // isn't 'static. We clone the AppHandle (which IS 'static
+                // and Send) and re-borrow the State from inside the
+                // closure so the borrow's lifetime is scoped to the
+                // closure body.
+                let handle_for_blocking = handle.clone();
                 let result = tauri::async_runtime::spawn_blocking(move || {
+                    let sidecar_ref = handle_for_blocking.state::<EngineSidecar>();
                     sidecar_ref.wait_for_health()
                 }).await;
                 match result {
