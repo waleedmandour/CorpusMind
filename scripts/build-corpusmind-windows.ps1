@@ -140,9 +140,9 @@ if (-not (Test-Path $venvPath)) {
 }
 $Pip = Join-Path $venvPath "Scripts\pip.exe"
 $PyExe = Join-Path $venvPath "Scripts\python.exe"
-& $Pip install --upgrade pip wheel --quiet
-& $Pip install pyinstaller python-multipart cryptography --quiet
-& $Pip install -e "$EngineDir[dev,vision]" --quiet
+& $PyExe -m pip install --upgrade pip wheel --quiet
+& $PyExe -m pip install pyinstaller python-multipart cryptography --quiet
+& $PyExe -m pip install -e "$EngineDir[dev,vision]" --quiet
 OkMsg "engine deps installed"
 
 Log "downloading spaCy English model..."
