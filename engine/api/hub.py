@@ -126,6 +126,52 @@ HF_CATALOGUE: list[dict] = [
         "license": "See HF card (mixed)",
         "size_hint": "~3 GB",
     },
+    # --- Open-source Arabic corpora (less computing-intensive) ---
+    {
+        "id": "arabic_billion_words",
+        "config_ar": "ar",
+        "config_en": None,
+        "title": "Arabic Billion Words",
+        "description": "Collection of 8 Arabic news sources (Aljazira, Almustaqbal, Alarabiya, etc.). ~1B words. Good for MSA reference. CC-BY.",
+        "license": "CC-BY 4.0",
+        "size_hint": "~2 GB",
+    },
+    {
+        "id": "Osian/arabic_corpus",
+        "config_ar": "ar",
+        "config_en": None,
+        "title": "OSIAN (Open Source International Arabic News)",
+        "description": "~3.5M articles from 32 Arabic newspapers. CC-BY-NC. Good for news register studies.",
+        "license": "CC-BY-NC 4.0",
+        "size_hint": "~1.5 GB",
+    },
+    {
+        "id": "HeshamHaroon/arabic_quotes",
+        "config_ar": "ar",
+        "config_en": None,
+        "title": "Arabic Quotes Corpus",
+        "description": "Small collection of Arabic quotes. Good for testing + teaching. Lightweight.",
+        "license": "MIT",
+        "size_hint": "~5 MB",
+    },
+    {
+        "id": "wiki_qa",
+        "config_ar": "ar",
+        "config_en": "en",
+        "title": "Arabic-English Wiki QA",
+        "description": "Question-answer pairs from Wikipedia in Arabic + English. Good for parallel/bilingual studies.",
+        "license": "CC-BY-SA 3.0",
+        "size_hint": "~50 MB",
+    },
+    {
+        "id": "arabic_text_classification",
+        "config_ar": "ar",
+        "config_en": None,
+        "title": "Arabic Text Classification Corpus",
+        "description": "News articles classified by topic (politics, sports, economy, culture). Good for register studies.",
+        "license": "CC-BY 4.0",
+        "size_hint": "~100 MB",
+    },
 ]
 
 

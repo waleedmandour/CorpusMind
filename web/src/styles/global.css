@@ -3868,3 +3868,173 @@ html[dir="rtl"] .toggle-switch input:checked + .toggle-slider::before {
   gap: var(--space-2);
   margin-block-start: var(--space-2);
 }
+
+/* Vision Suite — Coming Soon */
+.vision-coming-soon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: var(--space-10) var(--space-6);
+  max-inline-size: 600px;
+  margin: 0 auto;
+  height: 100%;
+}
+.coming-soon-icon {
+  font-size: 48px;
+  color: var(--brand-400);
+  margin-block-end: var(--space-4);
+  opacity: 0.6;
+}
+.vision-coming-soon h1 {
+  font-size: 28px;
+  margin: 0 0 var(--space-1) 0;
+  color: var(--text);
+}
+.vision-coming-soon h2 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--brand-500);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin: 0 0 var(--space-4) 0;
+}
+.coming-soon-desc {
+  font-size: 14px;
+  color: var(--text-muted);
+  line-height: 1.6;
+  margin: 0 0 var(--space-3) 0;
+}
+.coming-soon-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 var(--space-4) 0;
+  text-align: start;
+}
+.coming-soon-list li {
+  font-size: 13px;
+  color: var(--text-muted);
+  padding: var(--space-1) 0;
+  padding-inline-start: var(--space-4);
+  position: relative;
+}
+.coming-soon-list li::before {
+  content: "\u2022";
+  position: absolute;
+  inset-inline-start: 0;
+  color: var(--brand-400);
+}
+.coming-soon-note {
+  font-size: 12px;
+  color: var(--text-subtle);
+  font-style: italic;
+  max-inline-size: 450px;
+}
+
+/* Confidence + MCQ in AI Assistant */
+.confidence-display {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-block-start: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  background: var(--bg-subtle);
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+}
+.confidence-bar {
+  inline-size: 60px;
+  block-size: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.confidence-fill {
+  block-size: 100%;
+  border-radius: 3px;
+  transition: width 0.3s;
+}
+.confidence-fill.high { background: var(--success); }
+.confidence-fill.medium { background: var(--warning); }
+.confidence-fill.low { background: var(--danger); }
+.confidence-label {
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.confidence-reasoning {
+  font-size: 11px;
+  color: var(--text-subtle);
+  font-style: italic;
+  margin-block-start: 2px;
+}
+
+.mcq-container {
+  margin-block-start: var(--space-3);
+  padding: var(--space-3);
+  background: var(--unground-bg);
+  border-radius: var(--radius-md);
+  border-inline-start: 3px solid var(--unground-fg);
+}
+.mcq-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--unground-fg);
+  margin: 0 0 var(--space-2) 0;
+}
+.mcq-question {
+  font-size: 12px;
+  color: var(--text);
+  margin-block-end: var(--space-1);
+  font-weight: 500;
+}
+.mcq-options {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-block-end: var(--space-2);
+}
+.mcq-option {
+  font-size: 12px;
+  padding: 4px 10px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-align: start;
+  color: var(--text);
+  transition: border-color 0.1s;
+}
+.mcq-option:hover {
+  border-color: var(--brand-400);
+}
+.mcq-option.correct {
+  background: var(--grounded-bg);
+  color: var(--grounded-fg);
+  border-color: var(--success);
+}
+.mcq-option.incorrect {
+  background: rgba(192, 57, 43, 0.08);
+  color: var(--danger);
+  border-color: var(--danger);
+}
+.mcq-explanation {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-style: italic;
+  margin-block-start: 2px;
+}
+.mcq-reveal-btn {
+  margin-block-start: var(--space-2);
+  font-size: 12px;
+  padding: 6px 16px;
+  background: var(--brand-500);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-weight: 600;
+}
+.mcq-reveal-btn:hover {
+  background: var(--brand-600);
+}

@@ -12,7 +12,7 @@ import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
 
-import { api, type ChatTurnResponse, type EvidenceItem } from "@/lib/api";
+import { api, type ChatTurnResponse, type EvidenceItem, type MCQ } from "@/lib/api";
 import { useApp } from "@/store/app";
 import { useUI } from "@/store/ui";
 
@@ -26,6 +26,11 @@ interface Message {
   turn_id?: number;
   verified?: "accepted" | "rejected" | "edited" | null;
   studentInterpretation?: string;
+  confidence?: number;
+  confidence_reasoning?: string;
+  needs_validation?: boolean;
+  mcqs?: MCQ[];
+  mcqsAnswered?: boolean;
 }
 
 export function AssistantView() {
@@ -56,6 +61,11 @@ export function AssistantView() {
           tool_calls: turn.tool_calls,
           evidence: turn.evidence,
           elapsed_ms: turn.elapsed_ms,
+          confidence: turn.confidence,
+          confidence_reasoning: turn.confidence_reasoning,
+          needs_validation: turn.needs_validation,
+          mcqs: turn.mcqs,
+          mcqsAnswered: false,
         },
       ]);
     },
@@ -217,7 +227,40 @@ export function AssistantView() {
               {/* Show AI content (always in normal mode, after student writes in student mode) */}
               {m.role === "assistant" && (!studentMode || m.studentInterpretation) && (
                 <>
-                  <div className="msg-content">{m.content}</div>
+                  {/* Confidence display */}
+                  {m.confidence != null && m.confidence < 1.0 && (
+                    <div className="confidence-display">
+                      <div className="confidence-bar">
+                        <div
+                          className={`confidence-fill ${m.confidence >= 0.7 ? "high" : m.confidence >= 0.4 ? "medium" : "low"}`}
+                          style={{ width: `${m.confidence * 100}%` }}
+                        />
+                      </div>
+                      <span className="confidence-label">
+                        Confidence: {(m.confidence * 100).toFixed(0)}%
+                      </span>
+                      {m.confidence_reasoning && (
+                        <span className="confidence-reasoning">— {m.confidence_reasoning}</span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* MCQ validation (when confidence is low) */}
+                  {m.needs_validation && m.mcqs && m.mcqs.length > 0 && !m.mcqsAnswered && (
+                    <MCQValidation
+                      mcqs={m.mcqs}
+                      onComplete={() => {
+                        setMessages((prev) => prev.map((msg, idx) =>
+                          idx === i ? { ...msg, mcqsAnswered: true } : msg
+                        ));
+                      }}
+                    />
+                  )}
+
+                  {/* Show content only if no validation needed, or MCQs answered, or high confidence */}
+                  {(!m.needs_validation || m.mcqsAnswered || (m.confidence != null && m.confidence >= 0.7)) && (
+                    <>
+                    <div className="msg-content">{m.content}</div>
                   {m.evidence && m.evidence.length > 0 && (
                     <div className="evidence-list">
                       <strong>Evidence cited:</strong>
@@ -254,6 +297,8 @@ export function AssistantView() {
                       <button className="btn-small verify-edit" onClick={() => verifyInterpretation(i, "edited")}>{"\u270E"} Edit</button>
                     </div>
                   )}
+                    </>
+                  )}
                 </>
               )}
 
@@ -279,6 +324,75 @@ export function AssistantView() {
           </button>
         </div>
       </section>
+    </div>
+  );
+}
+
+
+function MCQValidation({ mcqs, onComplete }: { mcqs: MCQ[]; onComplete: () => void }) {
+  const [answers, setAnswers] = useState<Record<number, number>>({});
+  const [submitted, setSubmitted] = useState(false);
+
+  const allAnswered = mcqs.every((_, i) => answers[i] !== undefined);
+  const allCorrect = mcqs.every((mcq, i) => answers[i] === mcq.correct_answer);
+
+  const handleSubmit = () => {
+    setSubmitted(true);
+  };
+
+  const handleReveal = () => {
+    onComplete();
+  };
+
+  return (
+    <div className="mcq-container">
+      <p className="mcq-title">
+        {"\u26A0"} This interpretation has low confidence. Answer these
+        questions to verify the key claims before revealing the AI&apos;s answer.
+      </p>
+      {mcqs.map((mcq, i) => (
+        <div key={i} style={{ marginBottom: "var(--space-2)" }}>
+          <div className="mcq-question">{i + 1}. {mcq.question}</div>
+          <div className="mcq-options">
+            {mcq.options.map((opt, j) => {
+              const isSelected = answers[i] === j;
+              const showResult = submitted;
+              const isCorrect = j === mcq.correct_answer;
+              const isUserAnswer = isSelected && !isCorrect;
+              return (
+                <button
+                  key={j}
+                  className={`mcq-option ${showResult && isCorrect ? "correct" : ""} ${showResult && isUserAnswer ? "incorrect" : ""}`}
+                  onClick={() => !submitted && setAnswers({ ...answers, [i]: j })}
+                  disabled={submitted}
+                >
+                  {String.fromCharCode(65 + j)}. {opt}
+                </button>
+              );
+            })}
+          </div>
+          {submitted && (
+            <div className="mcq-explanation">
+              {answers[i] === mcq.correct_answer ? "✓ " : "✗ "}
+              {mcq.explanation}
+            </div>
+          )}
+        </div>
+      ))}
+      {!submitted && (
+        <button
+          className="mcq-reveal-btn"
+          onClick={handleSubmit}
+          disabled={!allAnswered}
+        >
+          Submit answers
+        </button>
+      )}
+      {submitted && (
+        <button className="mcq-reveal-btn" onClick={handleReveal}>
+          {allCorrect ? "✓ All correct — reveal AI answer" : "Reveal AI answer anyway"}
+        </button>
+      )}
     </div>
   );
 }

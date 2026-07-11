@@ -33,6 +33,11 @@ class ChatResponse(BaseModel):
     elapsed_ms: int
     provider: str
     model: str
+    # Confidence layer (deterministic interpretation)
+    confidence: float = 1.0
+    confidence_reasoning: str = ""
+    needs_validation: bool = False
+    mcqs: list[dict] = []
 
 
 @router.post("/chat", response_model=ChatResponse)
@@ -67,6 +72,10 @@ async def chat(req: ChatRequest, request: Request, session: AsyncSession = Depen
         elapsed_ms=turn.elapsed_ms,
         provider=req.provider,
         model=req.model or getattr(provider, "default_model", ""),
+        confidence=turn.confidence,
+        confidence_reasoning=turn.confidence_reasoning,
+        needs_validation=turn.needs_validation,
+        mcqs=turn.mcqs,
     )
 
 

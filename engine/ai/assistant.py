@@ -41,6 +41,11 @@ class AssistantTurn:
     evidence: list[Evidence] = field(default_factory=list)
     tool_calls: list[dict[str, Any]] = field(default_factory=list)
     elapsed_ms: int = 0
+    # Confidence layer (deterministic interpretation)
+    confidence: float = 1.0
+    confidence_reasoning: str = ""
+    needs_validation: bool = False
+    mcqs: list[dict[str, Any]] = field(default_factory=list)
 
 
 class Assistant:
@@ -167,12 +172,51 @@ class Assistant:
             content = final.content
 
         elapsed = int((time.perf_counter() - started) * 1000)
+
+        # Confidence layer: assess how well the interpretation is supported
+        # by the retrieved evidence. If confidence is low, generate MCQs
+        # for the user to validate before the interpretation is revealed.
+        confidence = 1.0
+        confidence_reasoning = ""
+        needs_validation = False
+        mcqs: list[dict[str, Any]] = []
+
+        if tool_calls and evidence:
+            try:
+                from ai.confidence import assess_confidence, generate_mcqs, needs_user_validation
+                evidence_dicts = [{"kind": e.kind, "ref": e.ref, "snippet": e.snippet} for e in evidence]
+                conf_result = await assess_confidence(
+                    self.provider, self.model, user_text, evidence_dicts, content,
+                )
+                confidence = conf_result.get("confidence", 0.5)
+                confidence_reasoning = conf_result.get("reasoning", "")
+                if needs_user_validation(confidence):
+                    needs_validation = True
+                    mcqs = await generate_mcqs(
+                        self.provider, self.model, user_text,
+                        evidence_dicts, content,
+                        conf_result.get("unsupported_claims", []),
+                    )
+                    log.info("confidence_low",
+                             confidence=confidence,
+                             mcqs=len(mcqs),
+                             unsupported=len(conf_result.get("unsupported_claims", [])))
+                else:
+                    log.info("confidence_ok", confidence=confidence)
+            except Exception as e:
+                log.warning("confidence_layer_error", error=str(e))
+                # Non-fatal — continue without confidence assessment
+
         turn = AssistantTurn(
             content=content,
             grounded=bool(tool_calls),
             evidence=evidence,
             tool_calls=tool_calls,
             elapsed_ms=elapsed,
+            confidence=confidence,
+            confidence_reasoning=confidence_reasoning,
+            needs_validation=needs_validation,
+            mcqs=mcqs,
         )
 
         # Persist the assistant turn

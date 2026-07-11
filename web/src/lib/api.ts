@@ -53,6 +53,18 @@ export interface ChatTurnResponse {
   elapsed_ms: number;
   provider: string;
   model: string;
+  confidence: number;
+  confidence_reasoning: string;
+  needs_validation: boolean;
+  mcqs: MCQ[];
+}
+
+export interface MCQ {
+  question: string;
+  options: string[];
+  correct_answer: number;
+  evidence_ref: string;
+  explanation: string;
 }
 
 export interface ToolInfo {
