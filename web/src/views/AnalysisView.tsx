@@ -723,17 +723,17 @@ function SentimentPanel({ cid }: { cid: string }) {
           <div className="sentiment-bars">
             <div className="bar-row">
               <span className="bar-label">Positive</span>
-              <div className="bar-track"><div className="bar-fill" style={{ width: `${(result.data.positive / result.data.total_sentences) * 100}%`, background: "#2e7d32" }} /></div>
+              <div className="bar-track"><div className="bar-fill" style={{ width: `${(result.data.positive / result.data.total_sentences) * 100}%`, background: "var(--bar-positive)" }} /></div>
               <span className="bar-value">{result.data.positive}</span>
             </div>
             <div className="bar-row">
               <span className="bar-label">Neutral</span>
-              <div className="bar-track"><div className="bar-fill" style={{ width: `${(result.data.neutral / result.data.total_sentences) * 100}%`, background: "#9aa3ad" }} /></div>
+              <div className="bar-track"><div className="bar-fill" style={{ width: `${(result.data.neutral / result.data.total_sentences) * 100}%`, background: "var(--bar-neutral)" }} /></div>
               <span className="bar-value">{result.data.neutral}</span>
             </div>
             <div className="bar-row">
               <span className="bar-label">Negative</span>
-              <div className="bar-track"><div className="bar-fill" style={{ width: `${(result.data.negative / result.data.total_sentences) * 100}%`, background: "#c0392b" }} /></div>
+              <div className="bar-track"><div className="bar-fill" style={{ width: `${(result.data.negative / result.data.total_sentences) * 100}%`, background: "var(--bar-negative)" }} /></div>
               <span className="bar-value">{result.data.negative}</span>
             </div>
           </div>
@@ -742,7 +742,7 @@ function SentimentPanel({ cid }: { cid: string }) {
             {result.data.timeline.slice(0, 100).map((t, i) => (
               <div key={i} className="timeline-bar"
                 style={{ height: `${Math.abs(t.score) * 40 + 2}px`,
-                         background: t.score > 0 ? "#2e7d32" : t.score < 0 ? "#c0392b" : "#9aa3ad" }}
+                         background: t.score > 0 ? "var(--bar-positive)" : t.score < 0 ? "var(--bar-negative)" : "var(--bar-neutral)" }}
                 title={`Sent ${t.sent}: score=${t.score} (pos=${t.pos_hits}, neg=${t.neg_hits})`}
               />
             ))}

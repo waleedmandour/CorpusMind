@@ -291,7 +291,7 @@ function ArabicResult({ result }: { result: any }) {
                 <div key={d} className="bar-row">
                   <span className="bar-label">{d.toUpperCase()}</span>
                   <div className="bar-track">
-                    <div className="bar-fill" style={{ width: `${p * 100}%`, background: "#0b6e4f" }} />
+                    <div className="bar-fill" style={{ width: `${p * 100}%`, background: "var(--bar-brand)" }} />
                   </div>
                   <span className="bar-value">{(p * 100).toFixed(1)}%</span>
                 </div>
@@ -311,7 +311,7 @@ function ArabicResult({ result }: { result: any }) {
                 <div key={r} className="bar-row">
                   <span className="bar-label">{r}</span>
                   <div className="bar-track">
-                    <div className="bar-fill" style={{ width: `${p * 100}%`, background: "#e8b339" }} />
+                    <div className="bar-fill" style={{ width: `${p * 100}%`, background: "var(--bar-accent)" }} />
                   </div>
                   <span className="bar-value">{(p * 100).toFixed(1)}%</span>
                 </div>

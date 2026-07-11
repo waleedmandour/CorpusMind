@@ -260,7 +260,12 @@ function ReferenceDownload() {
 function ReferenceUpload() {
   const setActive = useApp((s) => s.setReferenceCorpus);
   const activeProjectId = useApp((s) => s.activeProjectId);
-  const [selectedCorpus, setSelectedCorpus] = useState<string | null>(null);
+  const activeReferenceId = useApp((s) => s.referenceCorpusId);
+  const qc = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showNewCorpus, setShowNewCorpus] = useState(false);
+  const [newCorpusName, setNewCorpusName] = useState("");
+  const [newCorpusLang, setNewCorpusLang] = useState("en");
 
   const corpora = useQuery({
     queryKey: ["corpora", activeProjectId],
@@ -268,25 +273,146 @@ function ReferenceUpload() {
     enabled: !!activeProjectId,
   });
 
+  const createAndUpload = useMutation({
+    mutationFn: async ({ name, lang, files }: { name: string; lang: string; files: File[] }) => {
+      if (!activeProjectId) throw new Error("No active project");
+      const corpus = await api.createCorpus(activeProjectId, name, lang);
+      await api.uploadDocuments(corpus.id, files);
+      return corpus;
+    },
+    onSuccess: (corpus) => {
+      setActive(corpus.id);
+      qc.invalidateQueries({ queryKey: ["corpora"] });
+      setShowNewCorpus(false);
+      setNewCorpusName("");
+    },
+  });
+
+  const uploadToSelected = useMutation({
+    mutationFn: ({ cid, files }: { cid: string; files: File[] }) => api.uploadDocuments(cid, files),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["corpora"] }),
+  });
+
+  const onUploadFiles = (files: File[]) => {
+    if (files.length === 0) return;
+    if (activeReferenceId) {
+      uploadToSelected.mutate({ cid: activeReferenceId, files });
+    } else if (showNewCorpus && newCorpusName.trim() && activeProjectId) {
+      createAndUpload.mutate({ name: newCorpusName.trim(), lang: newCorpusLang, files });
+    }
+  };
+
   return (
     <div className="reference-upload">
       <p className="reference-section-desc">
-        Use one of your existing corpora as the reference. This is useful if
-        you have your own balanced comparison corpus.
+        Upload your own reference corpus files, or select an existing corpus
+        to use as the reference for keyness comparison.
       </p>
-      <select
-        value={selectedCorpus ?? ""}
-        onChange={(e) => {
-          setSelectedCorpus(e.target.value || null);
-          setActive(e.target.value || null);
-        }}
-        className="reference-select"
-      >
-        <option value="">— Select a corpus —</option>
-        {corpora.data?.map((c) => (
-          <option key={c.id} value={c.id}>{c.name} ({c.language})</option>
-        ))}
-      </select>
+
+      {/* Option 1: Select an existing corpus */}
+      <div className="reference-upload-section">
+        <strong>Option 1: Use an existing corpus</strong>
+        <select
+          value={activeReferenceId ?? ""}
+          onChange={(e) => setActive(e.target.value || null)}
+          className="reference-select"
+        >
+          <option value="">— Select a corpus —</option>
+          {corpora.data?.map((c) => (
+            <option key={c.id} value={c.id}>{c.name} ({c.language}) — {c.stats?.document_count ?? 0} docs</option>
+          ))}
+        </select>
+      </div>
+
+      {/* Option 2: Upload files to a new or existing reference corpus */}
+      <div className="reference-upload-section">
+        <strong>Option 2: Upload reference files</strong>
+        {!showNewCorpus ? (
+          <>
+            {activeReferenceId ? (
+              <div
+                className="dropzone"
+                onClick={() => fileInputRef.current?.click()}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fileInputRef.current?.click(); } }}
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept=".txt,.md,.docx,.pdf,.html,.htm,.xml,.csv"
+                  onChange={(e) => {
+                    const files = Array.from(e.target.files ?? []);
+                    if (files.length > 0) onUploadFiles(files);
+                    e.target.value = "";
+                  }}
+                  style={{ position: "absolute", width: 0, height: 0, opacity: 0, pointerEvents: "none" }}
+                  aria-hidden="true"
+                />
+                <div className="dropzone-icon">{"\u2191"}</div>
+                <div className="dropzone-label">
+                  {uploadToSelected.isPending ? "Uploading..." : "Drop reference files here or click to upload"}
+                </div>
+                <div className="dropzone-formats">.txt · .md · .docx · .pdf · .html · .xml · .csv</div>
+              </div>
+            ) : (
+              <button className="btn-primary" onClick={() => setShowNewCorpus(true)}>
+                + Create a new reference corpus
+              </button>
+            )}
+          </>
+        ) : (
+          <div className="reference-new-corpus">
+            <input
+              type="text"
+              value={newCorpusName}
+              onChange={(e) => setNewCorpusName(e.target.value)}
+              placeholder="Reference corpus name (e.g. 'BNC sample')"
+              className="reference-name-input"
+            />
+            <select value={newCorpusLang} onChange={(e) => setNewCorpusLang(e.target.value)}>
+              <option value="en">English</option>
+              <option value="ar">Arabic</option>
+              <option value="fr">French</option>
+              <option value="de">German</option>
+              <option value="es">Spanish</option>
+            </select>
+            <div
+              className="dropzone"
+              onClick={() => newCorpusName.trim() && fileInputRef.current?.click()}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); if (newCorpusName.trim()) fileInputRef.current?.click(); } }}
+              style={{ opacity: newCorpusName.trim() ? 1 : 0.5 }}
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept=".txt,.md,.docx,.pdf,.html,.htm,.xml,.csv"
+                onChange={(e) => {
+                  const files = Array.from(e.target.files ?? []);
+                  if (files.length > 0) onUploadFiles(files);
+                  e.target.value = "";
+                }}
+                style={{ position: "absolute", width: 0, height: 0, opacity: 0, pointerEvents: "none" }}
+                aria-hidden="true"
+              />
+              <div className="dropzone-icon">{"\u2191"}</div>
+              <div className="dropzone-label">
+                {createAndUpload.isPending ? "Creating + uploading..." : "Drop reference files here or click to upload"}
+              </div>
+              <div className="dropzone-formats">.txt · .md · .docx · .pdf · .html · .xml · .csv</div>
+            </div>
+            <button className="btn-small" onClick={() => setShowNewCorpus(false)}>Cancel</button>
+            {createAndUpload.isError && <div className="error">{String(createAndUpload.error)}</div>}
+          </div>
+        )}
+        {uploadToSelected.isError && <div className="error">{String(uploadToSelected.error)}</div>}
+        {uploadToSelected.isSuccess && <div className="success">Files uploaded to reference corpus.</div>}
+        {createAndUpload.isSuccess && <div className="success">Reference corpus created and files uploaded.</div>}
+      </div>
     </div>
   );
 }
