@@ -100,7 +100,7 @@ impl OllamaManager {
             .build();
         if let Ok(c) = client {
             for url in &["http://127.0.0.1:11434/api/tags", "http://localhost:11434/api/tags"] {
-                if let Ok(r) = c.get(url).send().await {
+                if let Ok(r) = c.get(*url).send().await {
                     if r.status().is_success() {
                         return true;
                     }
