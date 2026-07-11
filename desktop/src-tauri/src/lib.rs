@@ -579,7 +579,7 @@ pub fn run() {
             {
                 let ollama: State<OllamaManager> = handle.state();
                 match ollama.start() {
-                    Ok(true) => {
+                    Ok(_) => {
                         // Wait for Ollama to be ready (non-blocking — spawn in thread)
                         let handle_clone = handle.clone();
                         std::thread::spawn(move || {
