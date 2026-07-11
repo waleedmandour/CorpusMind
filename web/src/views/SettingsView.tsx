@@ -11,6 +11,8 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useTroubleshoot } from "@/store/troubleshooting";
+import { useUI } from "@/store/ui";
+import { useApp } from "@/store/app";
 
 export function SettingsView() {
   const health = useQuery({ queryKey: ["health"], queryFn: api.health, refetchInterval: 5_000 });
@@ -238,7 +240,118 @@ export function SettingsView() {
           </div>
         </div>
       </section>
+
+      {/* Research + Reproducibility card */}
+      <ResearchCard />
     </div>
+  );
+}
+
+
+function ResearchCard() {
+  const studentMode = useUI((s) => s.studentMode);
+  const setStudentMode = useUI((s) => s.setStudentMode);
+  const activeCorpusId = useApp((s) => s.activeCorpusId);
+  const activeProjectId = useApp((s) => s.activeProjectId);
+
+  const precheck = useQuery({
+    queryKey: ["precheck", activeCorpusId],
+    queryFn: () => activeCorpusId ? api.prepublicationCheck(activeCorpusId) : Promise.resolve(null),
+    enabled: !!activeCorpusId,
+  });
+
+  const disclosure = useQuery({
+    queryKey: ["ai-disclosure", activeProjectId],
+    queryFn: () => activeProjectId ? api.aiDisclosure(activeProjectId) : Promise.resolve(null),
+    enabled: !!activeProjectId,
+  });
+
+  const [showDisclosure, setShowDisclosure] = useState(false);
+
+  return (
+    <section className="settings-card">
+        <div className="settings-card-header">
+          <span className="settings-card-icon" aria-hidden>{"\u2139"}</span>
+          <div>
+            <h2>Research &amp; Reproducibility</h2>
+            <p className="settings-card-desc">
+              Pre-publication checks, AI usage disclosure, and student mode.
+            </p>
+          </div>
+        </div>
+        <div className="settings-card-body">
+          {/* Student mode toggle */}
+          <div className="student-mode-row">
+            <div>
+              <strong>Student Mode</strong>
+              <p className="settings-text-muted">
+                When ON, the AI Assistant hides its interpretation until the
+                student writes their own. Prevents over-reliance while still
+                teaching the tools. The student can then compare their
+                interpretation with the AI&apos;s for learning.
+              </p>
+            </div>
+            <label className="toggle-switch">
+              <input
+                type="checkbox"
+                checked={studentMode}
+                onChange={(e) => setStudentMode(e.target.checked)}
+              />
+              <span className="toggle-slider" />
+            </label>
+          </div>
+
+          {/* Pre-publication check */}
+          {activeCorpusId && (
+            <div className="settings-status-row" style={{ flexDirection: "column", alignItems: "stretch", marginTop: "var(--space-3)" }}>
+              <strong>Pre-publication Check</strong>
+              <p className="settings-text-muted">
+                Audits your corpus for reproducibility before you publish.
+                Checks annotation version, AI non-determinism, pipeline
+                recipe, and document count.
+              </p>
+              {precheck.data && (
+                <div className="precheck-result" style={{ marginTop: "var(--space-2)" }}>
+                  <div className={`settings-badge ${precheck.data.overall === "pass" ? "ok" : precheck.data.overall === "warn" ? "warn" : "bad"}`}>
+                    <span className="settings-badge-dot" />
+                    Overall: {precheck.data.overall.toUpperCase()}
+                  </div>
+                  {precheck.data.checks.map((c) => (
+                    <div key={c.id} className={`precheck-item ${c.status}`}>
+                      <span className="precheck-status">
+                        {c.status === "pass" ? "\u2713" : c.status === "warn" ? "\u26A0" : "\u2717"}
+                      </span>
+                      <div>
+                        <div className="precheck-label">{c.label}</div>
+                        <div className="precheck-detail">{c.detail}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* AI usage disclosure */}
+          {activeProjectId && disclosure.data && (
+            <div className="settings-status-row" style={{ flexDirection: "column", alignItems: "stretch", marginTop: "var(--space-3)" }}>
+              <strong>AI Usage Disclosure</strong>
+              <p className="settings-text-muted">
+                Summary of AI usage for this project. Include this in your
+                manuscript&apos;s Methods section for transparency.
+              </p>
+              <button className="btn-small" onClick={() => setShowDisclosure(!showDisclosure)}>
+                {showDisclosure ? "Hide" : "Show"} disclosure text
+              </button>
+              {showDisclosure && (
+                <div className="ai-disclosure-text">
+                  {disclosure.data.disclosure_text}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </section>
   );
 }
 

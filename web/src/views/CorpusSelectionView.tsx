@@ -72,9 +72,8 @@ function CorpusListPanel({ mode }: { mode: CorpusMode }) {
         <h2>{isReference ? "Reference Corpora" : "Your Corpora"}</h2>
         {activeProjectId && (
           <NewCorpusDialog
-            onCreate={(name, lang) => {
-              // Inline create — in a real impl this would call the API
-              api.createCorpus(activeProjectId, name, lang).then(() => {
+            onCreate={(name, lang, genre) => {
+              api.createCorpus(activeProjectId, name, lang, genre).then(() => {
                 qc.invalidateQueries({ queryKey: ["corpora"] });
               });
             }}
@@ -529,10 +528,11 @@ function DocumentList({ cid }: { cid: string }) {
 }
 
 
-function NewCorpusDialog({ onCreate }: { onCreate: (name: string, language: string) => void }) {
+function NewCorpusDialog({ onCreate }: { onCreate: (name: string, language: string, genre: string) => void }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [language, setLanguage] = useState("en");
+  const [genre, setGenre] = useState("mixed");
 
   return (
     <>
@@ -551,9 +551,24 @@ function NewCorpusDialog({ onCreate }: { onCreate: (name: string, language: stri
                 <option value="es">Spanish</option>
               </select>
             </label>
+            <label>Genre / Register
+              <select value={genre} onChange={(e) => setGenre(e.target.value)}>
+                <option value="mixed">Mixed (default)</option>
+                <option value="academic">Academic</option>
+                <option value="news">News</option>
+                <option value="spoken">Spoken</option>
+                <option value="fiction">Fiction</option>
+                <option value="blog">Blog / Social media</option>
+                <option value="legal">Legal</option>
+                <option value="medical">Medical</option>
+                <option value="business">Business</option>
+                <option value="religious">Religious</option>
+                <option value="other">Other</option>
+              </select>
+            </label>
             <div className="modal-actions">
               <button onClick={() => setOpen(false)}>Cancel</button>
-              <button className="primary" disabled={!name} onClick={() => { onCreate(name, language); setOpen(false); setName(""); }}>Create</button>
+              <button className="primary" disabled={!name} onClick={() => { onCreate(name, language, genre); setOpen(false); setName(""); }}>Create</button>
             </div>
           </div>
         </div>

@@ -3705,3 +3705,166 @@ html[dir="rtl"] .toggle-switch input:checked + .toggle-slider::before {
   margin: 0;
   padding: var(--space-4);
 }
+
+/* =========================================================================
+   Research features: verify buttons, student mode, genre, pre-check
+   ========================================================================= */
+
+/* Verify This Interpretation buttons */
+.verify-buttons {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-block-start: var(--space-2);
+  padding-block-start: var(--space-2);
+  border-block-start: 1px solid var(--border);
+}
+.verify-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+.verify-accept { color: var(--success) !important; border-color: var(--success) !important; }
+.verify-reject { color: var(--danger) !important; border-color: var(--danger) !important; }
+.verify-edit { color: var(--brand-500) !important; border-color: var(--brand-500) !important; }
+
+.verify-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 8px;
+  margin-inline-start: var(--space-1);
+}
+.verify-badge.accepted { background: var(--grounded-bg); color: var(--grounded-fg); }
+.verify-badge.rejected { background: rgba(192, 57, 43, 0.12); color: var(--danger); }
+.verify-badge.edited { background: var(--ribbon-tab-bg-active); color: var(--brand-600); }
+
+/* Student mode */
+.student-mode-notice {
+  padding: var(--space-3);
+  background: var(--unground-bg);
+  border-radius: var(--radius-md);
+  margin-block-end: var(--space-2);
+}
+.student-mode-notice p {
+  font-size: 12px;
+  color: var(--unground-fg);
+  margin: 0 0 var(--space-2) 0;
+}
+.student-interpretation-input {
+  inline-size: 100%;
+  margin-block-end: var(--space-2);
+  font-size: 13px;
+}
+.student-interpretation-display {
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-subtle);
+  border-radius: var(--radius-sm);
+  border-inline-start: 3px solid var(--accent);
+  margin-block-end: var(--space-2);
+}
+.student-interpretation-display strong {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.student-interpretation-display p {
+  font-size: 13px;
+  color: var(--text);
+  margin: var(--space-1) 0 0 0;
+  line-height: 1.5;
+}
+
+/* Inter-tool linking — clickable words in frequency/keyness tables */
+.data-table td.clickable-word {
+  cursor: pointer;
+  color: var(--brand-500);
+  text-decoration: underline;
+  text-decoration-style: dotted;
+}
+.data-table td.clickable-word:hover {
+  color: var(--brand-600);
+  text-decoration-style: solid;
+}
+
+/* Genre badge in corpus list items */
+.corpus-item-genre {
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  background: var(--bg-subtle);
+  color: var(--text-muted);
+  padding: 1px 5px;
+  border-radius: 3px;
+  margin-inline-start: var(--space-1);
+}
+
+/* Pre-publication check results */
+.precheck-result {
+  margin-block-end: var(--space-2);
+}
+.precheck-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  margin-block-end: var(--space-1);
+}
+.precheck-item.pass { background: var(--grounded-bg); }
+.precheck-item.warn { background: var(--unground-bg); }
+.precheck-item.fail { background: rgba(192, 57, 43, 0.08); }
+.precheck-status {
+  font-size: 14px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.precheck-item.pass .precheck-status { color: var(--success); }
+.precheck-item.warn .precheck-status { color: var(--warning); }
+.precheck-item.fail .precheck-status { color: var(--danger); }
+.precheck-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+}
+.precheck-detail {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-block-start: 2px;
+}
+
+/* AI disclosure text block */
+.ai-disclosure-text {
+  padding: var(--space-3);
+  background: var(--bg-subtle);
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  color: var(--text);
+  line-height: 1.6;
+  border-inline-start: 3px solid var(--brand-400);
+}
+
+/* Student mode toggle in Settings */
+.student-mode-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  margin-block-start: var(--space-3);
+  padding: var(--space-3);
+  background: var(--bg-subtle);
+  border-radius: var(--radius-md);
+}
+.student-mode-row > div { flex: 1; }
+.student-mode-row strong {
+  font-size: 13px;
+  color: var(--text);
+}
+
+/* Frequency list export/import buttons */
+.freq-list-actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-block-start: var(--space-2);
+}

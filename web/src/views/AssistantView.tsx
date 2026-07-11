@@ -23,15 +23,21 @@ interface Message {
   tool_calls?: Array<Record<string, unknown>>;
   evidence?: EvidenceItem[];
   elapsed_ms?: number;
+  turn_id?: number;
+  verified?: "accepted" | "rejected" | "edited" | null;
+  studentInterpretation?: string;
 }
 
 export function AssistantView() {
   const cid = useApp((s) => s.activeCorpusId);
   const setActiveNav = useUI((s) => s.setActiveNav);
+  const studentMode = useUI((s) => s.studentMode);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [provider, setProvider] = useState<"ollama" | "lmstudio" | "cloud">("ollama");
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const [showStudentInput, setShowStudentInput] = useState<number | null>(null);
+  const [studentText, setStudentText] = useState("");
 
   const tools = useQuery({ queryKey: ["tools"], queryFn: api.listTools });
   const providers = useQuery({ queryKey: ["providers"], queryFn: api.providers });
@@ -78,6 +84,22 @@ export function AssistantView() {
 
   const providerHealthy = providers.data?.providers.find((p) => p.name === provider)?.healthy ?? false;
   const corpusHint = cid ? `Active corpus: ${cid.slice(0, 8)}…` : "No active corpus — set one in Text → Manage.";
+
+  const verifyInterpretation = async (msgIndex: number, verified: "accepted" | "rejected" | "edited") => {
+    const msg = messages[msgIndex];
+    if (!msg.turn_id) return;
+    try {
+      await api.verifyTurn(msg.turn_id, verified);
+      setMessages((prev) => prev.map((m, i) =>
+        i === msgIndex ? { ...m, verified } : m
+      ));
+    } catch (e) {
+      // Non-fatal — the verification is local-only if the API call fails
+      setMessages((prev) => prev.map((m, i) =>
+        i === msgIndex ? { ...m, verified } : m
+      ));
+    }
+  };
 
   const prompts = [
     "What are the top 10 most frequent words in this corpus?",
@@ -149,33 +171,94 @@ export function AssistantView() {
                   </span>
                 )}
                 {m.elapsed_ms != null && <span className="msg-meta">{m.elapsed_ms} ms</span>}
+                {m.verified && (
+                  <span className={clsx("verify-badge", m.verified)}>
+                    {m.verified === "accepted" ? "✓ verified" : m.verified === "rejected" ? "✗ rejected" : "✎ edited"}
+                  </span>
+                )}
               </header>
-              <div className="msg-content">{m.content}</div>
-              {m.evidence && m.evidence.length > 0 && (
-                <div className="evidence-list">
-                  <strong>Evidence cited:</strong>
-                  <ul>
-                    {m.evidence.map((ev, j) => (
-                      <li key={j} className={clsx("evidence-item", ev.kind)}>
-                        <span className="evidence-kind">{ev.kind}</span>
-                        <code className="evidence-ref" title={ev.snippet}>{ev.ref}</code>
-                        {ev.kind === "concordance_line" && (
-                          <button
-                            className="evidence-link"
-                            onClick={() => setActiveNav("concordance")}
-                            title="Open concordancer"
-                          >→ open</button>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
+
+              {/* Student mode: hide AI content until student writes their own interpretation */}
+              {m.role === "assistant" && studentMode && !m.studentInterpretation && (
+                <div className="student-mode-notice">
+                  <p>{"\u2139"} Student mode is ON. Write your own interpretation first, then reveal the AI's answer for comparison.</p>
+                  <textarea
+                    value={showStudentInput === i ? studentText : ""}
+                    onChange={(e) => { setShowStudentInput(i); setStudentText(e.target.value); }}
+                    placeholder="Write your own interpretation of the results..."
+                    className="student-interpretation-input"
+                    rows={3}
+                  />
+                  {showStudentInput === i && studentText.trim() && (
+                    <button
+                      className="btn-small"
+                      onClick={() => {
+                        setMessages((prev) => prev.map((msg, idx) =>
+                          idx === i ? { ...msg, studentInterpretation: studentText.trim() } : msg
+                        ));
+                        setStudentText("");
+                        setShowStudentInput(null);
+                      }}
+                    >
+                      Reveal AI answer
+                    </button>
+                  )}
                 </div>
               )}
-              {m.tool_calls && m.tool_calls.length > 0 && (
-                <details className="tool-calls">
-                  <summary>{m.tool_calls.length} tool call(s)</summary>
-                  <pre>{JSON.stringify(m.tool_calls, null, 2)}</pre>
-                </details>
+
+              {/* Show student's interpretation (if student mode + they wrote one) */}
+              {m.role === "assistant" && m.studentInterpretation && (
+                <div className="student-interpretation-display">
+                  <strong>Your interpretation:</strong>
+                  <p>{m.studentInterpretation}</p>
+                </div>
+              )}
+
+              {/* Show AI content (always in normal mode, after student writes in student mode) */}
+              {m.role === "assistant" && (!studentMode || m.studentInterpretation) && (
+                <>
+                  <div className="msg-content">{m.content}</div>
+                  {m.evidence && m.evidence.length > 0 && (
+                    <div className="evidence-list">
+                      <strong>Evidence cited:</strong>
+                      <ul>
+                        {m.evidence.map((ev, j) => (
+                          <li key={j} className={clsx("evidence-item", ev.kind)}>
+                            <span className="evidence-kind">{ev.kind}</span>
+                            <code className="evidence-ref" title={ev.snippet}>{ev.ref}</code>
+                            {ev.kind === "concordance_line" && (
+                              <button
+                                className="evidence-link"
+                                onClick={() => setActiveNav("concordance")}
+                                title="Open concordancer"
+                              >→ open</button>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {m.tool_calls && m.tool_calls.length > 0 && (
+                    <details className="tool-calls">
+                      <summary>{m.tool_calls.length} tool call(s)</summary>
+                      <pre>{JSON.stringify(m.tool_calls, null, 2)}</pre>
+                    </details>
+                  )}
+
+                  {/* Verify This Interpretation buttons (human-in-the-loop) */}
+                  {!m.verified && m.turn_id && (
+                    <div className="verify-buttons">
+                      <span className="verify-label">Verify this interpretation:</span>
+                      <button className="btn-small verify-accept" onClick={() => verifyInterpretation(i, "accepted")}>{"\u2713"} Accept</button>
+                      <button className="btn-small verify-reject" onClick={() => verifyInterpretation(i, "rejected")}>{"\u2717"} Reject</button>
+                      <button className="btn-small verify-edit" onClick={() => verifyInterpretation(i, "edited")}>{"\u270E"} Edit</button>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {m.role === "user" && (
+                <div className="msg-content">{m.content}</div>
               )}
             </article>
           ))}

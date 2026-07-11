@@ -79,6 +79,7 @@ export interface Corpus {
   project_id: string;
   name: string;
   language: string;
+  genre: string;
   pipeline_recipe: Record<string, unknown>;
   stats: Record<string, number>;
   created_at: string;
@@ -547,10 +548,10 @@ export const api = {
     jsonFetch<{ deleted: string }>(`/api/v1/projects/${pid}`, { method: "DELETE" }),
 
   listCorpora: (pid: string) => jsonFetch<Corpus[]>(`/api/v1/projects/${pid}/corpora`),
-  createCorpus: (pid: string, name: string, language = "en") =>
+  createCorpus: (pid: string, name: string, language = "en", genre = "mixed") =>
     jsonFetch<Corpus>(`/api/v1/projects/${pid}/corpora`, {
       method: "POST",
-      body: JSON.stringify({ name, language }),
+      body: JSON.stringify({ name, language, genre }),
     }),
   getCorpus: (cid: string) => jsonFetch<Corpus>(`/api/v1/corpora/${cid}`),
   deleteCorpus: (cid: string) =>
@@ -947,6 +948,37 @@ export const api = {
   ollamaPullStatus: (model: string) =>
     jsonFetch<OllamaPullStatus>(`/api/v1/ollama/pull/status?model=${encodeURIComponent(model)}`),
 
+  // --- Research-grade features ---
+  prepublicationCheck: (cid: string) =>
+    jsonFetch<PreCheckResponse>(`/api/v1/research/precheck/${cid}`),
+  aiDisclosure: (pid: string) =>
+    jsonFetch<AIDisclosureResponse>(`/api/v1/research/ai-disclosure/${pid}`),
+  verifyTurn: (turnId: number, verified: "accepted" | "rejected" | "edited", notes: string = "") =>
+    jsonFetch<{ ok: boolean; turn_id: number; verified: string }>(`/api/v1/research/verify-turn/${turnId}`, {
+      method: "POST",
+      body: JSON.stringify({ verified, notes }),
+    }),
+  exportFrequencyList: (cid: string, unit: string = "word", minFreq: number = 1, limit: number = 10000) =>
+    fetch(`${ENGINE_BASE}/api/v1/research/frequency-list/export/${cid}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ unit, min_freq: minFreq, limit }),
+    }).then((r) => r.blob()),
+  importFrequencyList: (content: string) =>
+    jsonFetch<{ items: Array<{ word: string; freq: number }>; total_tokens: number; total_types: number }>(
+      "/api/v1/research/frequency-list/import",
+      { method: "POST", body: JSON.stringify({ content }) },
+    ),
+  compareConcordance: (targetCid: string, refCid: string, query: string, level: string = "word", window: number = 5, limit: number = 20) =>
+    jsonFetch<CompareConcordanceResponse>("/api/v1/research/compare-concordance", {
+      method: "POST",
+      body: JSON.stringify({
+        target_corpus_id: targetCid,
+        reference_corpus_id: refCid,
+        query, level, window, limit,
+      }),
+    }),
+
   // --- Corpus Cleaning ---
   cleanCorpus: (cid: string, options: CleaningOptions) =>
     jsonFetch<CleaningResponse>(`/api/v1/corpora/${cid}/clean`, {
@@ -1107,4 +1139,60 @@ export function downloadBlob(blob: Blob, filename: string) {
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
+}
+
+// ----------------------------------------------------------------------- //
+// Research-grade feature types
+// ----------------------------------------------------------------------- //
+
+export interface PreCheckResult {
+  id: string;
+  label: string;
+  status: "pass" | "warn" | "fail";
+  detail: string;
+}
+
+export interface PreCheckResponse {
+  corpus_id: string;
+  corpus_name: string;
+  overall: "pass" | "warn" | "fail";
+  checks: PreCheckResult[];
+  timestamp: string;
+}
+
+export interface AIDisclosureResponse {
+  project_id: string;
+  project_name: string;
+  ai_used: boolean;
+  providers: string[];
+  models: string[];
+  frameworks: string[];
+  total_ai_turns: number;
+  grounded_turns: number;
+  ungrounded_turns: number;
+  verified_accepted: number;
+  verified_rejected: number;
+  unverified: number;
+  tools_called: string[];
+  disclosure_text: string;
+}
+
+export interface CompareConcordanceSide {
+  corpus_id: string;
+  total: number;
+  lines: Array<{
+    line_id: string;
+    document: string;
+    left: string;
+    node: string;
+    right: string;
+    pos: string;
+    lemma: string;
+  }>;
+}
+
+export interface CompareConcordanceResponse {
+  query: string;
+  target: CompareConcordanceSide;
+  reference: CompareConcordanceSide;
 }

@@ -538,6 +538,34 @@ async def export_methods_pdf(cid: str, session: AsyncSession = Depends(get_sessi
             f"{recipe}.",
             body,
         ),
+        Spacer(1, 18),
+        Paragraph("AI Usage Disclosure", h1),
+        Spacer(1, 6),
+        Paragraph(
+            "AI assistance was available via the CorpusMind AI Assistant during this analysis. "
+            "All statistical results (frequency, collocation, keyness, dispersion, etc.) were "
+            "computed by deterministic, pure mathematical functions &mdash; the AI model never "
+            "computed a statistic. The AI Assistant's role was limited to interpreting "
+            "pre-computed results and answering questions about the corpus using a grounded, "
+            "citation-enforced protocol. Every AI claim is either backed by a cited tool call "
+            "with a stable evidence ID (grounded) or visibly flagged as ungrounded. "
+            "AI interpretations are stochastic; re-running the same query may produce different "
+            "text. The specific provider, model, and number of AI turns should be reported "
+            "in your manuscript's Methods section. The full AI usage audit trail is available "
+            "in the engine's conversation persistence layer and can be exported via the "
+            "AI Usage Disclosure endpoint.",
+            body,
+        ),
+        Spacer(1, 18),
+        Paragraph("Human Verification", h1),
+        Spacer(1, 6),
+        Paragraph(
+            "AI-generated interpretations can be verified, rejected, or edited by the human "
+            "researcher. The verification state is recorded in the audit trail alongside each "
+            "AI turn. Only interpretations marked as &ldquo;accepted&rdquo; should be cited in "
+            "published work.",
+            body,
+        ),
     ]
     doc.build(flow)
     data = buf.getvalue()

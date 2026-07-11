@@ -93,6 +93,7 @@ async def delete_project(pid: str, session: AsyncSession = Depends(get_session))
 class CorpusCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     language: str = "en"
+    genre: str = "mixed"  # academic, news, spoken, fiction, blog, legal, medical, mixed, etc.
 
 
 class CorpusOut(BaseModel):
@@ -100,6 +101,7 @@ class CorpusOut(BaseModel):
     project_id: str
     name: str
     language: str
+    genre: str = "mixed"
     pipeline_recipe: dict
     stats: dict
     created_at: datetime
@@ -111,12 +113,13 @@ async def create_corpus(pid: str, body: CorpusCreate, session: AsyncSession = De
     p = await session.get(Project, pid)
     if not p:
         raise HTTPException(404, "Project not found")
-    c = Corpus(project_id=pid, name=body.name, language=body.language or p.language)
+    c = Corpus(project_id=pid, name=body.name, language=body.language or p.language, genre=body.genre)
     session.add(c)
     await session.flush()
     return CorpusOut(
         id=c.id, project_id=c.project_id, name=c.name, language=c.language,
-        pipeline_recipe=c.pipeline_recipe, stats=c.stats, created_at=c.created_at, document_count=0,
+        genre=c.genre, pipeline_recipe=c.pipeline_recipe, stats=c.stats,
+        created_at=c.created_at, document_count=0,
     )
 
 
@@ -129,7 +132,8 @@ async def list_corpora(pid: str, session: AsyncSession = Depends(get_session)) -
         n = await session.scalar(select(func.count(Document.id)).where(Document.corpus_id == c.id)) or 0
         out.append(CorpusOut(
             id=c.id, project_id=c.project_id, name=c.name, language=c.language,
-            pipeline_recipe=c.pipeline_recipe, stats=c.stats, created_at=c.created_at, document_count=n,
+            genre=c.genre, pipeline_recipe=c.pipeline_recipe, stats=c.stats,
+            created_at=c.created_at, document_count=n,
         ))
     return out
 
@@ -142,7 +146,8 @@ async def get_corpus(cid: str, session: AsyncSession = Depends(get_session)) -> 
     n = await session.scalar(select(func.count(Document.id)).where(Document.corpus_id == cid)) or 0
     return CorpusOut(
         id=c.id, project_id=c.project_id, name=c.name, language=c.language,
-        pipeline_recipe=c.pipeline_recipe, stats=c.stats, created_at=c.created_at, document_count=n,
+        genre=c.genre, pipeline_recipe=c.pipeline_recipe, stats=c.stats,
+        created_at=c.created_at, document_count=n,
     )
 
 

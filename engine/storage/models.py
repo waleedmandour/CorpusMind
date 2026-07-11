@@ -63,6 +63,9 @@ class Corpus(Base):
     project_id: Mapped[str] = mapped_column(ForeignKey("projects.id", ondelete="CASCADE"), index=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     language: Mapped[str] = mapped_column(String(8), default="en")
+    # Register/genre metadata (academic, news, spoken, fiction, blog, legal, medical, etc.)
+    # Used for subcorpus filtering in analysis views + register-aware keyness.
+    genre: Mapped[str] = mapped_column(String(64), default="mixed")
     # The pipeline recipe: tokenizer/tagger/parser + versions (§8.1)
     pipeline_recipe: Mapped[dict] = mapped_column(JSON, default=dict)
     # Aggregate stats cache (token count, type count, etc.) — recomputed on ingestion
@@ -185,6 +188,11 @@ class ConversationTurn(Base):
     tool_calls: Mapped[list] = mapped_column(JSON, default=list)
     evidence: Mapped[list] = mapped_column(JSON, default=list)  # [{kind, ref, snippet}]
     elapsed_ms: Mapped[int] = mapped_column(Integer, default=0)
+    # Human-in-the-loop verification: the linguist can accept, reject, or
+    # edit the AI's interpretation. This is the load-bearing implementation
+    # of "AI assists, human decides" (§4 Principle 2 extension).
+    verified: Mapped[str | None] = mapped_column(String(16), nullable=True)  # accepted | rejected | edited | None
+    verification_notes: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
     conversation: Mapped[Conversation] = relationship(back_populates="turns")

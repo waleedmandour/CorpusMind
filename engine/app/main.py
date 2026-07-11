@@ -19,6 +19,7 @@ from api import (
     phase2,
     phase5,
     phase6,
+    research,
     system,
     troubleshoot,
     vision,
@@ -88,6 +89,7 @@ def create_app() -> FastAPI:
     app.include_router(troubleshoot.router, prefix="/api/v1", tags=["troubleshoot"])
     app.include_router(cleaning.router, prefix="/api/v1", tags=["cleaning"])
     app.include_router(hub.router, prefix="/api/v1", tags=["hub"])
+    app.include_router(research.router, prefix="/api/v1", tags=["research"])
     return app
 
 
