@@ -536,6 +536,23 @@ function OllamaModelManager({ ollamaHealthy }: { ollamaHealthy: boolean }) {
   });
   const [pullingModel, setPullingModel] = useState<string | null>(null);
   const [pullStatus, setPullStatus] = useState<{ completed: number; total: number; status: string } | null>(null);
+  const [showImport, setShowImport] = useState(false);
+  const [importName, setImportName] = useState("");
+  const [importPath, setImportPath] = useState("");
+
+  const importMutation = useMutation({
+    mutationFn: ({ name, path }: { name: string; path: string }) => api.ollamaImport(name, path),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["ollama-models"] });
+      setShowImport(false);
+      setImportName("");
+      setImportPath("");
+      alert("Model imported successfully! It now appears in your Ollama model list.");
+    },
+    onError: (e: Error) => {
+      alert(`Import failed: ${e.message}`);
+    },
+  });
 
   const installedSet = new Set(installedModels.data?.models ?? []);
 
@@ -597,6 +614,47 @@ function OllamaModelManager({ ollamaHealthy }: { ollamaHealthy: boolean }) {
           </span>
         )}
       </div>
+
+      {/* Import from file (.gguf) */}
+      <div className="ollama-import-section">
+        {!showImport ? (
+          <button className="btn-small ollama-import-btn" onClick={() => setShowImport(true)}>
+            + Import from file (.gguf)
+          </button>
+        ) : (
+          <div className="ollama-import-form">
+            <p className="settings-text-muted">
+              Import a local .gguf model file (e.g. downloaded from HuggingFace).
+              The engine calls <code>ollama create</code> to register it.
+            </p>
+            <input
+              type="text"
+              value={importName}
+              onChange={(e) => setImportName(e.target.value)}
+              placeholder="Model name (e.g. 'my-gemma-4b')"
+              className="ollama-import-input"
+            />
+            <input
+              type="text"
+              value={importPath}
+              onChange={(e) => setImportPath(e.target.value)}
+              placeholder="Full path to .gguf file (e.g. C:\Users\...\gemma-4b.gguf)"
+              className="ollama-import-input"
+            />
+            <div className="ollama-import-actions">
+              <button
+                className="btn-primary"
+                disabled={!importName.trim() || !importPath.trim() || importMutation.isPending}
+                onClick={() => importMutation.mutate({ name: importName.trim(), path: importPath.trim() })}
+              >
+                {importMutation.isPending ? "Importing..." : "Import model"}
+              </button>
+              <button className="btn-small" onClick={() => setShowImport(false)}>Cancel</button>
+            </div>
+          </div>
+        )}
+      </div>
+
       <div className="ollama-model-grid">
         {catalogue.data?.models.map((m) => {
           const isInstalled = installedSet.has(m.name);

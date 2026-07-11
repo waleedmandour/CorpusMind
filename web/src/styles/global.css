@@ -4038,3 +4038,28 @@ html[dir="rtl"] .toggle-switch input:checked + .toggle-slider::before {
 .mcq-reveal-btn:hover {
   background: var(--brand-600);
 }
+
+/* Ollama import from file */
+.ollama-import-section {
+  margin-block-end: var(--space-3);
+}
+.ollama-import-btn {
+  font-size: 11px;
+}
+.ollama-import-form {
+  padding: var(--space-3);
+  background: var(--bg-subtle);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.ollama-import-input {
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.ollama-import-actions {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}

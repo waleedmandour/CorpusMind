@@ -957,6 +957,11 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ model }),
     }),
+  ollamaImport: (modelName: string, filePath: string) =>
+    jsonFetch<{ ok: boolean; model: string; message: string }>("/api/v1/ollama/import", {
+      method: "POST",
+      body: JSON.stringify({ model_name: modelName, file_path: filePath }),
+    }),
   ollamaPullStatus: (model: string) =>
     jsonFetch<OllamaPullStatus>(`/api/v1/ollama/pull/status?model=${encodeURIComponent(model)}`),
 

@@ -102,6 +102,43 @@ RECOMMENDED_OLLAMA_MODELS: list[dict] = [
         "languages": ["en", "ar", "fr", "es"],
         "recommended": True,
     },
+    # --- Google Gemma 3 (2025 release, multilingual + multimodal) ---
+    {
+        "name": "gemma3:1b",
+        "size": "0.8 GB",
+        "params": "1B",
+        "ram": "1 GB",
+        "description": "Google Gemma 3 1B — ultra-lightweight, runs on any machine. Multilingual including Arabic. Good for basic queries.",
+        "languages": ["en", "ar", "fr", "de", "es", "ja", "ko", "zh"],
+        "recommended": True,
+    },
+    {
+        "name": "gemma3:4b",
+        "size": "3.3 GB",
+        "params": "4B",
+        "ram": "4 GB",
+        "description": "Google Gemma 3 4B — best balance of size + quality. Multilingual, handles Arabic well. Supports vision (images) in addition to text.",
+        "languages": ["en", "ar", "fr", "de", "es", "ja", "ko", "zh"],
+        "recommended": True,
+    },
+    {
+        "name": "gemma3:12b",
+        "size": "8.1 GB",
+        "params": "12B",
+        "ram": "12 GB",
+        "description": "Google Gemma 3 12B — high quality, needs 12 GB+ RAM. Multilingual + multimodal (text + images). Best quality for research.",
+        "languages": ["en", "ar", "fr", "de", "es", "ja", "ko", "zh"],
+        "recommended": False,
+    },
+    {
+        "name": "gemma3:27b",
+        "size": "17 GB",
+        "params": "27B",
+        "ram": "24 GB",
+        "description": "Google Gemma 3 27B — flagship quality, needs 24 GB+ RAM. Best for complex interpretive tasks. Multilingual + multimodal.",
+        "languages": ["en", "ar", "fr", "de", "es", "ja", "ko", "zh"],
+        "recommended": False,
+    },
 ]
 
 
@@ -274,3 +311,97 @@ async def ollama_pull_status(model: str) -> dict:
     if model not in _pull_status:
         return {"model": model, "status": "not_started", "completed": 0, "total": 0, "error": None}
     return {"model": model, **_pull_status[model]}
+
+
+# --------------------------------------------------------------------------- #
+# Import a local .gguf model file via `ollama create`
+# --------------------------------------------------------------------------- #
+
+
+class OllamaImportRequest(BaseModel):
+    """Import a local .gguf file as an Ollama model.
+
+    The user picks a .gguf file on their disk. The engine calls
+    `ollama create <name> -f <path>` to register it with Ollama.
+    After that, the model appears in the Ollama model list and can
+    be used like any other model.
+    """
+    model_name: str = Field(..., description="Name to register the model as (e.g. 'my-gemma-4b')")
+    file_path: str = Field(..., description="Absolute path to the .gguf file on disk")
+
+
+@router.post("/ollama/import")
+async def ollama_import(req: OllamaImportRequest) -> dict:
+    """Import a local .gguf file as an Ollama model via `ollama create`.
+
+    This lets users download .gguf files from any source (HuggingFace,
+    direct download, shared by a colleague) and register them with
+    Ollama without using the Ollama registry.
+    """
+    import subprocess
+    import tempfile
+
+    settings = get_settings()
+    base_url = settings.ollama_base_url.rstrip("/")
+    model_name = req.model_name.strip()
+    file_path = req.file_path.strip()
+
+    if not model_name or not file_path:
+        raise HTTPException(400, "Both model_name and file_path are required")
+
+    # Check Ollama is running
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            r = await client.get(f"{base_url}/api/tags")
+            if r.status_code != 200:
+                raise HTTPException(503, "Ollama is not responding. Is `ollama serve` running?")
+    except httpx.ConnectError as e:
+        raise HTTPException(503, f"Cannot connect to Ollama at {base_url}. Is `ollama serve` running?") from e
+
+    # Check the file exists
+    import os
+    if not os.path.exists(file_path):
+        raise HTTPException(400, f"File not found: {file_path}")
+
+    # Create a Modelfile that points to the .gguf file
+    # Ollama's `create` command reads a Modelfile that says:
+    #   FROM /path/to/model.gguf
+    modelfile_content = f"FROM {file_path}\n"
+
+    try:
+        # Write the Modelfile to a temp file
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".modelfile", delete=False) as f:
+            f.write(modelfile_content)
+            modelfile_path = f.name
+
+        # Call `ollama create <name> -f <modelfile>`
+        # This is a blocking call — run it in a thread pool
+        result = await asyncio.to_thread(
+            subprocess.run,
+            ["ollama", "create", model_name, "-f", modelfile_path],
+            capture_output=True,
+            text=True,
+            timeout=300,  # 5 min timeout for large files
+        )
+
+        # Clean up the temp file
+        os.unlink(modelfile_path)
+
+        if result.returncode != 0:
+            raise HTTPException(500, f"ollama create failed: {result.stderr}")
+
+        log.info("ollama_import_success", model=model_name, file=file_path)
+        return {
+            "ok": True,
+            "model": model_name,
+            "message": f"Model '{model_name}' imported from {file_path}. It now appears in your Ollama model list.",
+        }
+    except subprocess.TimeoutExpired:
+        raise HTTPException(504, "ollama create timed out (5 min). The file may be too large.") from None
+    except FileNotFoundError:
+        raise HTTPException(500, "`ollama` command not found. Is Ollama installed and on PATH?") from None
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(500, f"Import failed: {e}") from e
+
