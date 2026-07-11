@@ -112,7 +112,7 @@ export const useTroubleshoot = create<TroubleshootState>()(
       geminiAvailable: false,
       panelOpen: false,
       detailedViewOpen: false,
-      muted: false,  // OFF by default — user must explicitly unmute to get notifications
+      muted: true,  // Notifications OFF by default — user can unmute in Settings
 
   captureError: (params) => {
     const code = params.code ?? extractCode(params.message);

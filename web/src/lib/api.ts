@@ -995,6 +995,10 @@ export const api = {
         query, level, window, limit,
       }),
     }),
+  listBundledReferences: () =>
+    jsonFetch<{ references: Array<{ name: string; desc: string; size: string; available: boolean }> }>("/api/v1/research/bundled-references"),
+  getBundledReference: (name: string) =>
+    jsonFetch<{ name: string; items: Array<{ word: string; freq: number }>; total_tokens: number; total_types: number }>(`/api/v1/research/bundled-references/${name}`),
 
   // --- Corpus Cleaning ---
   cleanCorpus: (cid: string, options: CleaningOptions) =>

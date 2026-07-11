@@ -29,6 +29,174 @@ const ENGINE_PORT: u16 = 8765;
 const HEALTH_TIMEOUT: Duration = Duration::from_secs(30);
 const HEALTH_POLL_INTERVAL: Duration = Duration::from_millis(500);
 
+// ─── Ollama auto-start manager ──────────────────────────────────────
+// Finds the ollama executable, spawns `ollama serve` if not running,
+// and shuts it down when the app closes. The user never has to open
+// Ollama manually.
+
+struct OllamaManager {
+    child: Mutex<Option<Child>>,
+}
+
+impl OllamaManager {
+    fn new() -> Self {
+        Self { child: Mutex::new(None) }
+    }
+
+    /// Find the ollama executable on the system.
+    fn find_ollama() -> Option<String> {
+        // 1. Check PATH
+        if let Ok(path) = std::env::var("PATH") {
+            for dir in path.split(if cfg!(windows) { ';' } else { ':' }) {
+                let exe_name = if cfg!(windows) { "ollama.exe" } else { "ollama" };
+                let candidate = std::path::Path::new(dir).join(exe_name);
+                if candidate.exists() {
+                    return Some(candidate.to_string_lossy().into_owned());
+                }
+            }
+        }
+
+        // 2. Check common Windows install locations
+        #[cfg(windows)]
+        {
+            let mut locations: Vec<String> = Vec::new();
+            if let Ok(la) = std::env::var("LOCALAPPDATA") {
+                locations.push(format!("{}\\Programs\\Ollama\\ollama.exe", la));
+            }
+            if let Ok(pf) = std::env::var("PROGRAMFILES") {
+                locations.push(format!("{}\\Ollama\\ollama.exe", pf));
+            }
+            if let Ok(pf86) = std::env::var("PROGRAMFILES(X86)") {
+                locations.push(format!("{}\\Ollama\\ollama.exe", pf86));
+            }
+            for loc in &locations {
+                if std::path::Path::new(loc).exists() {
+                    return Some(loc.clone());
+                }
+            }
+        }
+
+        // 3. Check macOS install location
+        #[cfg(target_os = "macos")]
+        {
+            let loc = "/usr/local/bin/ollama";
+            if std::path::Path::new(loc).exists() {
+                return Some(loc.to_string());
+            }
+            let loc = "/opt/homebrew/bin/ollama";
+            if std::path::Path::new(loc).exists() {
+                return Some(loc.to_string());
+            }
+        }
+
+        None
+    }
+
+    /// Check if Ollama is already running by trying to reach /api/tags.
+    async fn is_running() -> bool {
+        let client = reqwest::Client::builder()
+            .no_proxy()
+            .timeout(Duration::from_secs(3))
+            .build();
+        if let Ok(c) = client {
+            for url in &["http://127.0.0.1:11434/api/tags", "http://localhost:11434/api/tags"] {
+                if let Ok(r) = c.get(url).send().await {
+                    if r.status().is_success() {
+                        return true;
+                    }
+                }
+            }
+        }
+        false
+    }
+
+    /// Start `ollama serve` as a background process if not already running.
+    fn start(&self) -> Result<bool, String> {
+        let mut child_opt = self.child.lock().unwrap();
+        if child_opt.is_some() {
+            return Ok(true); // Already started by us
+        }
+
+        // Check if Ollama is already running (maybe user started it)
+        // We can't call async here, so we use a blocking check
+        let already_running = {
+            let client = reqwest::blocking::Client::builder()
+                .no_proxy()
+                .timeout(Duration::from_secs(3))
+                .build()
+                .map_err(|e| format!("HTTP client: {e}"))?;
+            client.get("http://127.0.0.1:11434/api/tags").send()
+                .map(|r| r.status().is_success())
+                .unwrap_or(false)
+        };
+
+        if already_running {
+            info!(target: "ollama", "ollama already running — not starting a new instance");
+            return Ok(true);
+        }
+
+        // Find the ollama executable
+        let ollama_exe = Self::find_ollama()
+            .ok_or_else(|| "Ollama not found. Install from https://ollama.com".to_string())?;
+
+        info!(target: "ollama", "starting ollama serve from: {}", ollama_exe);
+
+        // Spawn `ollama serve` — it runs as a daemon and listens on 11434
+        let child = Command::new(&ollama_exe)
+            .arg("serve")
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()
+            .map_err(|e| format!("Failed to start ollama: {e}"))?;
+
+        *child_opt = Some(child);
+        info!(target: "ollama", "ollama serve started (PID: {})", child_opt.as_ref().unwrap().id());
+        Ok(true)
+    }
+
+    /// Wait for Ollama to be ready (poll /api/tags).
+    fn wait_for_ready(&self) -> bool {
+        let start = Instant::now();
+        let timeout = Duration::from_secs(15);
+
+        let client = match reqwest::blocking::Client::builder()
+            .no_proxy()
+            .timeout(Duration::from_secs(3))
+            .build()
+        {
+            Ok(c) => c,
+            Err(_) => return false,
+        };
+
+        while start.elapsed() < timeout {
+            if let Ok(r) = client.get("http://127.0.0.1:11434/api/tags").send() {
+                if r.status().is_success() {
+                    info!(target: "ollama", "ollama ready after {:?}", start.elapsed());
+                    return true;
+                }
+            }
+            std::thread::sleep(Duration::from_millis(500));
+        }
+        warn!(target: "ollama", "ollama did not become ready within {:?}", timeout);
+        false
+    }
+
+    fn shutdown(&self) {
+        let mut child_opt = self.child.lock().unwrap();
+        if let Some(mut child) = child_opt.take() {
+            let _ = child.kill();
+            let _ = child.wait();
+            info!(target: "ollama", "ollama serve shut down");
+        }
+    }
+}
+
+impl Drop for OllamaManager {
+    fn drop(&mut self) {
+        self.shutdown();
+    }
+}
+
 #[derive(Debug, Error)]
 pub enum SidecarError {
     #[error("failed to spawn engine sidecar: {0}")]
@@ -346,6 +514,52 @@ async fn ollama_health() -> String {
     }
 }
 
+/// Returns the full system status: engine running? ollama running? ollama path?
+#[tauri::command]
+async fn system_status(app: tauri::AppHandle) -> String {
+    // Check engine
+    let engine_url = format!("http://{}:{}/api/v1/health", ENGINE_HOST, ENGINE_PORT);
+    let engine_ok = match reqwest::Client::builder()
+        .no_proxy()
+        .timeout(Duration::from_secs(3))
+        .build()
+    {
+        Ok(c) => c.get(&engine_url).send().await
+            .map(|r| r.status().is_success())
+            .unwrap_or(false),
+        Err(_) => false,
+    };
+
+    // Check Ollama
+    let ollama_ok = match reqwest::Client::builder()
+        .no_proxy()
+        .timeout(Duration::from_secs(3))
+        .build()
+    {
+        Ok(c) => c.get("http://127.0.0.1:11434/api/tags").send().await
+            .map(|r| r.status().is_success())
+            .unwrap_or(false),
+        Err(_) => false,
+    };
+
+    // Get sidecar info
+    let sidecar: State<EngineSidecar> = app.state();
+    let (program, args, wd) = sidecar.resolve_command(&app);
+    let wd_str = wd.map(|d| d.display().to_string()).unwrap_or_else(|| "(none)".to_string());
+
+    // Get ollama path
+    let ollama_path = OllamaManager::find_ollama().unwrap_or_else(|| "not found".to_string());
+
+    serde_json::json!({
+        "engine_running": engine_ok,
+        "ollama_running": ollama_ok,
+        "ollama_path": ollama_path,
+        "engine_program": program,
+        "engine_args": args.join(" "),
+        "engine_working_dir": wd_str,
+    }).to_string()
+}
+
 pub fn run() {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info"))
         .format_timestamp_secs()
@@ -357,25 +571,35 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_http::init())
         .manage(EngineSidecar::new())
+        .manage(OllamaManager::new())
         .setup(|app| {
             let handle = app.handle().clone();
 
-            // Spawn in a background thread so we don't block app startup.
+            // Start Ollama first (blocking, but fast — just spawns a process)
+            {
+                let ollama: State<OllamaManager> = handle.state();
+                match ollama.start() {
+                    Ok(true) => {
+                        // Wait for Ollama to be ready (non-blocking — spawn in thread)
+                        let handle_clone = handle.clone();
+                        std::thread::spawn(move || {
+                            let ollama: State<OllamaManager> = handle_clone.state();
+                            ollama.wait_for_ready();
+                        });
+                    }
+                    Err(e) => {
+                        warn!(target: "ollama", "could not start Ollama: {e}");
+                    }
+                }
+            }
+
+            // Spawn the engine in a background thread so we don't block app startup.
             tauri::async_runtime::spawn(async move {
                 let sidecar: State<EngineSidecar> = handle.state();
                 if let Err(e) = sidecar.spawn(&handle) {
                     error!(target: "sidecar", "spawn failed: {e}");
                     return;
                 }
-                // wait_for_health is a blocking fn — use spawn_blocking
-                // to avoid blocking the Tauri async runtime executor.
-                //
-                // NOTE: spawn_blocking's closure must be 'static, but
-                // State<'_, T> borrows from the AppHandle and therefore
-                // isn't 'static. We clone the AppHandle (which IS 'static
-                // and Send) and re-borrow the State from inside the
-                // closure so the borrow's lifetime is scoped to the
-                // closure body.
                 let handle_for_blocking = handle.clone();
                 let result = tauri::async_runtime::spawn_blocking(move || {
                     let sidecar_ref = handle_for_blocking.state::<EngineSidecar>();
@@ -394,9 +618,11 @@ pub fn run() {
             if let tauri::WindowEvent::Destroyed = event {
                 let sidecar: State<EngineSidecar> = window.state();
                 sidecar.shutdown();
+                let ollama: State<OllamaManager> = window.state();
+                ollama.shutdown();
             }
         })
-        .invoke_handler(tauri::generate_handler![engine_health, sidecar_status, ollama_health])
+        .invoke_handler(tauri::generate_handler![engine_health, sidecar_status, ollama_health, system_status])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

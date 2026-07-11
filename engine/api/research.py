@@ -435,3 +435,107 @@ async def compare_concordance(
             ],
         },
     }
+
+
+# --------------------------------------------------------------------------- #
+# 6. Bundled reference corpora (BE06, AmE06)
+# --------------------------------------------------------------------------- #
+
+
+@router.get("/research/bundled-references")
+async def list_bundled_references() -> dict:
+    """List available bundled reference frequency lists.
+
+    These are small (~5 MB) word-frequency lists derived from open
+    frequency data. They're suitable for keyness comparison without
+    needing a full reference corpus.
+    """
+    import os
+    ref_dir = os.path.join(os.path.dirname(__file__), "..", "..", "reference-data", "reference-corpora", "en")
+    ref_dir = os.path.normpath(ref_dir)
+
+    bundled = []
+    # BE06
+    be06_path = os.path.join(ref_dir, "be06-freq-top1000.tsv")
+    if os.path.exists(be06_path):
+        bundled.append({
+            "name": "BE06",
+            "desc": "British English written, top 1000 words (derived from open frequency data)",
+            "size": "~5 KB",
+            "available": True,
+            "file": "be06-freq-top1000.tsv",
+        })
+    else:
+        bundled.append({
+            "name": "BE06",
+            "desc": "British English written reference corpus",
+            "size": "~5 MB",
+            "available": False,
+            "file": None,
+        })
+
+    bundled.append({
+        "name": "AmE06",
+        "desc": "American English written reference corpus",
+        "size": "~5 MB",
+        "available": False,
+        "file": None,
+    })
+    bundled.append({
+        "name": "BNC Baby",
+        "desc": "British National Corpus sample (4M words)",
+        "size": "~12 MB",
+        "available": False,
+        "file": None,
+    })
+
+    return {"references": bundled}
+
+
+@router.get("/research/bundled-references/{name}")
+async def get_bundled_reference(name: str) -> dict:
+    """Get a bundled reference frequency list as JSON.
+
+    Returns: { name, items: [{word, freq}], total_tokens, total_types }
+    """
+    import csv
+    import os
+
+    ref_dir = os.path.join(os.path.dirname(__file__), "..", "..", "reference-data", "reference-corpora", "en")
+    ref_dir = os.path.normpath(ref_dir)
+
+    # Map name to file
+    file_map = {
+        "BE06": "be06-freq-top1000.tsv",
+    }
+
+    filename = file_map.get(name)
+    if not filename:
+        raise HTTPException(404, f"Bundled reference '{name}' not found")
+
+    filepath = os.path.join(ref_dir, filename)
+    if not os.path.exists(filepath):
+        raise HTTPException(404, f"File not found: {filename}")
+
+    items = []
+    total_tokens = 0
+    with open(filepath, encoding="utf-8") as f:
+        reader = csv.reader(f, delimiter="\t")
+        for row in reader:
+            if not row or row[0].startswith("#"):
+                continue
+            if len(row) >= 2:
+                word = row[0]
+                try:
+                    freq = int(row[1])
+                except ValueError:
+                    continue
+                items.append({"word": word, "freq": freq})
+                total_tokens += freq
+
+    return {
+        "name": name,
+        "items": items,
+        "total_tokens": total_tokens,
+        "total_types": len(items),
+    }
