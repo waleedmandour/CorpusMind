@@ -285,7 +285,7 @@ fn sidecar_status(app: tauri::AppHandle) -> String {
 ///   3. OLLAMA_HOST env var (if set)
 #[tauri::command]
 async fn ollama_health() -> String {
-    let urls = vec![
+    let mut urls = vec![
         "http://127.0.0.1:11434/api/tags".to_string(),
         "http://localhost:11434/api/tags".to_string(),
     ];
