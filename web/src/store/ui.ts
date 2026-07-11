@@ -17,7 +17,7 @@ export type NavTarget =
   | "home" | "corpus-target" | "corpus-reference" | "concordance" | "frequency" | "collocation"
   | "keyness" | "dispersion" | "ngrams" | "pos" | "grammar" | "dependency"
   | "discourse" | "vocab" | "sentiment" | "metaphor"
-  | "arabic" | "vision" | "assistant" | "settings" | "about" | "userguide" | "hub";
+  | "arabic" | "vision" | "assistant" | "settings" | "about" | "userguide";
 
 interface UIState {
   theme: Theme;
