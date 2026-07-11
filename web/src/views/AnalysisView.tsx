@@ -61,7 +61,7 @@ export function AnalysisView() {
     if (mapped) setTab(mapped);
   }, [activeNav]);
 
-  if (!cid) return <div className="empty-state">Select a corpus to analyze. Go to Projects in the sidebar to choose one.</div>;
+  if (!cid) return <div className="empty-state">Select a corpus to analyze. Go to <strong>Corpora Selection → Your Corpus</strong> in the sidebar to create a corpus and upload texts.</div>;
 
   return (
     <div className="analysis">

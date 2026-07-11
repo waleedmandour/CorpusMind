@@ -40,7 +40,7 @@ export function ConcordancerView() {
     downloadBlob(blob, `concordance_${submitted.q}.${fmt}`);
   };
 
-  if (!cid) return <div className="empty-state">Select a corpus to start searching.</div>;
+  if (!cid) return <div className="empty-state">Select a corpus to start searching. Go to <strong>Corpora Selection → Your Corpus</strong> in the sidebar.</div>;
 
   return (
     <div className="concordancer">

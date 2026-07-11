@@ -2,30 +2,23 @@
  * CorpusSelectionView — unified view for managing both the user's study
  * corpus (target) and the reference corpus (for keyness comparison).
  *
- * This view replaces the old CorpusManagerView + CorpusHubView with a
- * single, role-aware interface. The `mode` prop determines which corpus
- * role is being managed:
- *   - "target"   → the user's study corpus (upload files, create corpora)
- *   - "reference" → the reference corpus (download pre-built, upload, or
- *                   use a bundled frequency list)
+ * The target mode includes:
+ *   - Project selector (create/select a project)
+ *   - Corpus list (create/select a corpus within the project)
+ *   - File picker (upload .txt, .docx, .pdf, .html, .xml, .csv)
+ *   - Document list (shows ingested files with format/language/size)
+ *   - Clean button (opens the 16-option cleaning modal)
  *
- * Workflow (standard corpus linguistics):
- *   1. Load your study texts into "Your Corpus"
- *   2. Pick or download a reference corpus for keyness comparison
- *   3. Run keyness analysis (Analysis Tools → Keyness) which compares
- *      the target vs reference corpus
- *
- * The reference corpus can be:
- *   - A corpus the user uploads (same as target)
- *   - A pre-built corpus downloaded from the Corpus Hub (HuggingFace,
- *     Wikipedia, OPUS)
- *   - A bundled frequency list (BE06, AmE06 — like AntConc ships)
+ * The reference mode includes:
+ *   - Download (search HuggingFace + Wikipedia + OPUS)
+ *   - Upload (file picker for reference corpus files)
+ *   - Bundled (pre-built frequency lists: BE06, AmE06, etc.)
  */
 import { useState, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
 
-import { api, type HubSearchResult } from "@/lib/api";
+import { api, type HubSearchResult, type CleaningOptions } from "@/lib/api";
 import { useApp } from "@/store/app";
 
 type CorpusMode = "target" | "reference";
@@ -39,15 +32,87 @@ export function CorpusSelectionView({ mode }: { mode: CorpusMode }) {
         <h1>{isReference ? "Reference Corpus" : "Your Corpus"}</h1>
         <p className="corpus-selection-subtitle">
           {isReference
-            ? "Choose or download a reference corpus for keyness comparison. The reference corpus represents 'general language' — what your study corpus is compared against."
-            : "Upload your study texts and manage your corpora. These are the texts you'll analyze with the tools in the Analysis Tools section."}
+            ? "Choose or download a reference corpus for keyness comparison."
+            : "Upload your study texts and manage your corpora."}
         </p>
       </div>
+
+      {!isReference && <ProjectSelector />}
 
       <div className="corpus-selection-grid">
         <CorpusListPanel mode={mode} />
         <CorpusActionsPanel mode={mode} />
       </div>
+    </div>
+  );
+}
+
+
+function ProjectSelector() {
+  const qc = useQueryClient();
+  const activeProjectId = useApp((s) => s.activeProjectId);
+  const setActiveProject = useApp((s) => s.setActiveProject);
+  const [showNew, setShowNew] = useState(false);
+  const [name, setName] = useState("");
+  const [language, setLanguage] = useState("en");
+
+  const projects = useQuery({ queryKey: ["projects"], queryFn: api.listProjects });
+
+  const createProject = useMutation({
+    mutationFn: () => api.createProject(name, language),
+    onSuccess: (p) => {
+      setActiveProject(p.id);
+      qc.invalidateQueries({ queryKey: ["projects"] });
+      setShowNew(false);
+      setName("");
+    },
+  });
+
+  return (
+    <div className="project-selector">
+      <label className="project-selector-label">
+        Active Project:
+        <select
+          value={activeProjectId ?? ""}
+          onChange={(e) => setActiveProject(e.target.value || null)}
+          className="project-selector-select"
+        >
+          <option value="">— Select a project —</option>
+          {projects.data?.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name} ({p.language}) — {p.corpus_count} corpora
+            </option>
+          ))}
+        </select>
+      </label>
+      {!showNew ? (
+        <button className="btn-small" onClick={() => setShowNew(true)}>+ New Project</button>
+      ) : (
+        <div className="project-new-form">
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Project name"
+            className="project-name-input"
+          />
+          <select value={language} onChange={(e) => setLanguage(e.target.value)}>
+            <option value="en">English</option>
+            <option value="ar">Arabic</option>
+            <option value="fr">French</option>
+            <option value="de">German</option>
+            <option value="es">Spanish</option>
+          </select>
+          <button
+            className="btn-primary"
+            disabled={!name.trim() || createProject.isPending}
+            onClick={() => createProject.mutate()}
+          >
+            {createProject.isPending ? "Creating..." : "Create"}
+          </button>
+          <button className="btn-small" onClick={() => setShowNew(false)}>Cancel</button>
+        </div>
+      )}
     </div>
   );
 }
@@ -81,9 +146,9 @@ function CorpusListPanel({ mode }: { mode: CorpusMode }) {
         )}
       </header>
 
-      {!activeProjectId && (
+      {!activeProjectId && !isReference && (
         <div className="corpus-empty">
-          Select a project first to see its corpora.
+          Create or select a project above to start managing corpora.
         </div>
       )}
 
@@ -97,6 +162,7 @@ function CorpusListPanel({ mode }: { mode: CorpusMode }) {
             <div className="corpus-item-name">{c.name}</div>
             <div className="corpus-item-meta">
               {c.language} · {c.stats?.document_count ?? 0} docs · {(c.stats?.token_count ?? 0).toLocaleString()} tokens
+              {c.genre && c.genre !== "mixed" && <span className="corpus-item-genre">{c.genre}</span>}
             </div>
             {c.id === activeCorpusId && (
               <span className="corpus-active-badge">
@@ -106,7 +172,7 @@ function CorpusListPanel({ mode }: { mode: CorpusMode }) {
           </li>
         ))}
         {corpora.data?.length === 0 && activeProjectId && (
-          <li className="corpus-empty">No corpora yet. Create one to get started.</li>
+          <li className="corpus-empty">No corpora yet. Click "+ New" to create one.</li>
         )}
       </ul>
     </section>
@@ -121,7 +187,7 @@ function CorpusActionsPanel({ mode }: { mode: CorpusMode }) {
   return (
     <section className="corpus-panel">
       <header className="corpus-panel-header">
-        <h2>{isReference ? "Add Reference Corpus" : "Upload Texts"}</h2>
+        <h2>{isReference ? "Add Reference Corpus" : "Upload & Manage"}</h2>
       </header>
 
       {isReference ? (
@@ -131,6 +197,7 @@ function CorpusActionsPanel({ mode }: { mode: CorpusMode }) {
           <>
             <DocumentUploader cid={activeCorpusId} />
             <DocumentList cid={activeCorpusId} />
+            <CleanCorpusButton cid={activeCorpusId} />
           </>
         ) : (
           <div className="corpus-empty">
@@ -143,32 +210,111 @@ function CorpusActionsPanel({ mode }: { mode: CorpusMode }) {
 }
 
 
+function CleanCorpusButton({ cid }: { cid: string }) {
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [opts, setOpts] = useState<CleaningOptions>({
+    collapse_whitespace: true,
+    strip_leading_trailing: true,
+    remove_empty_lines: false,
+    remove_urls: false,
+    remove_email_addresses: false,
+    remove_html_entities: false,
+    lowercase: false,
+    remove_punctuation: false,
+    remove_numbers: false,
+    remove_extra_symbols: false,
+    remove_stopwords: false,
+    min_token_length: 0,
+    normalize_arabic: false,
+    strip_arabic_diacritics: false,
+    remove_arabic_tatweel: false,
+    create_new_version: true,
+  });
+
+  const clean = useMutation({
+    mutationFn: () => api.cleanCorpus(cid, opts),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["corpora"] });
+      qc.invalidateQueries({ queryKey: ["documents", cid] });
+      setOpen(false);
+      const delta = data.new_token_count - data.old_token_count;
+      alert(
+        `Corpus cleaned.\n\n` +
+        `Documents: ${data.documents_cleaned}\n` +
+        `Tokens: ${data.old_token_count.toLocaleString()} -> ${data.new_token_count.toLocaleString()} (${delta >= 0 ? "+" : ""}${delta.toLocaleString()})\n` +
+        `Types: ${data.old_type_count.toLocaleString()} -> ${data.new_type_count.toLocaleString()}`
+      );
+    },
+    onError: (e: Error) => {
+      alert(`Cleaning failed: ${e.message}`);
+    },
+  });
+
+  const toggle = (key: keyof CleaningOptions, value: boolean | number) =>
+    setOpts((o) => ({ ...o, [key]: value }));
+
+  return (
+    <>
+      <div className="document-list-section">
+        <button className="btn-small clean-btn" onClick={() => setOpen(true)}>
+          {"\u2727"} Clean Corpus
+        </button>
+      </div>
+      {open && (
+        <div className="modal-backdrop" onClick={() => setOpen(false)}>
+          <div className="modal clean-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>Clean Corpus</h3>
+            <p className="clean-warning">
+              Warning: This re-cleans every document and re-runs the NLP pipeline.
+              This cannot be undone.
+            </p>
+            <div className="clean-options">
+              <div className="clean-group">
+                <div className="clean-group-label">Structure</div>
+                <label><input type="checkbox" checked={opts.collapse_whitespace ?? false} onChange={(e) => toggle("collapse_whitespace", e.target.checked)} /> Collapse whitespace</label>
+                <label><input type="checkbox" checked={opts.strip_leading_trailing ?? false} onChange={(e) => toggle("strip_leading_trailing", e.target.checked)} /> Strip leading/trailing</label>
+                <label><input type="checkbox" checked={opts.remove_empty_lines ?? false} onChange={(e) => toggle("remove_empty_lines", e.target.checked)} /> Remove empty lines</label>
+                <label><input type="checkbox" checked={opts.remove_urls ?? false} onChange={(e) => toggle("remove_urls", e.target.checked)} /> Remove URLs</label>
+                <label><input type="checkbox" checked={opts.remove_email_addresses ?? false} onChange={(e) => toggle("remove_email_addresses", e.target.checked)} /> Remove emails</label>
+              </div>
+              <div className="clean-group">
+                <div className="clean-group-label">Case & Punctuation</div>
+                <label><input type="checkbox" checked={opts.lowercase ?? false} onChange={(e) => toggle("lowercase", e.target.checked)} /> Lowercase</label>
+                <label><input type="checkbox" checked={opts.remove_punctuation ?? false} onChange={(e) => toggle("remove_punctuation", e.target.checked)} /> Remove punctuation</label>
+                <label><input type="checkbox" checked={opts.remove_numbers ?? false} onChange={(e) => toggle("remove_numbers", e.target.checked)} /> Remove numbers</label>
+                <label><input type="checkbox" checked={opts.remove_extra_symbols ?? false} onChange={(e) => toggle("remove_extra_symbols", e.target.checked)} /> Remove emoji</label>
+              </div>
+              <div className="clean-group">
+                <div className="clean-group-label">Linguistic</div>
+                <label><input type="checkbox" checked={opts.remove_stopwords ?? false} onChange={(e) => toggle("remove_stopwords", e.target.checked)} /> Remove stopwords</label>
+                <label>Min token length: <input type="number" min={0} max={20} value={opts.min_token_length ?? 0} onChange={(e) => toggle("min_token_length", parseInt(e.target.value, 10) || 0)} style={{ inlineSize: "60px", marginInlineStart: "8px" }} /></label>
+              </div>
+            </div>
+            <div className="modal-actions">
+              <button onClick={() => setOpen(false)} disabled={clean.isPending}>Cancel</button>
+              <button className="primary danger" disabled={clean.isPending} onClick={() => clean.mutate()}>
+                {clean.isPending ? "Cleaning..." : "Clean Corpus"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+
 function ReferenceCorpusOptions() {
   const [tab, setTab] = useState<"download" | "upload" | "bundled">("download");
 
   return (
     <div className="reference-options">
       <div className="reference-tabs">
-        <button
-          className={clsx("reference-tab", { active: tab === "download" })}
-          onClick={() => setTab("download")}
-        >
-          Download
-        </button>
-        <button
-          className={clsx("reference-tab", { active: tab === "upload" })}
-          onClick={() => setTab("upload")}
-        >
-          Upload
-        </button>
-        <button
-          className={clsx("reference-tab", { active: tab === "bundled" })}
-          onClick={() => setTab("bundled")}
-        >
-          Bundled
-        </button>
+        <button className={clsx("reference-tab", { active: tab === "download" })} onClick={() => setTab("download")}>Download</button>
+        <button className={clsx("reference-tab", { active: tab === "upload" })} onClick={() => setTab("upload")}>Upload</button>
+        <button className={clsx("reference-tab", { active: tab === "bundled" })} onClick={() => setTab("bundled")}>Bundled</button>
       </div>
-
       {tab === "download" && <ReferenceDownload />}
       {tab === "upload" && <ReferenceUpload />}
       {tab === "bundled" && <BundledReferences />}
@@ -206,9 +352,7 @@ function ReferenceDownload() {
   return (
     <div className="reference-download">
       <p className="reference-section-desc">
-        Search and download open-access reference corpora from HuggingFace,
-        Wikipedia, and OPUS. These are large, balanced corpora suitable for
-        keyness comparison.
+        Search and download open-access reference corpora.
       </p>
       <div className="reference-search-bar">
         <input
@@ -223,9 +367,7 @@ function ReferenceDownload() {
           <option value="en">English</option>
           <option value="ar">Arabic</option>
         </select>
-        <button className="btn-primary" onClick={doSearch} disabled={!query.trim()}>
-          Search
-        </button>
+        <button className="btn-primary" onClick={doSearch} disabled={!query.trim()}>Search</button>
       </div>
 
       {search.data?.results.map((result) => (
@@ -239,12 +381,7 @@ function ReferenceDownload() {
             <span className="hub-tag">{result.size}</span>
             <span className="hub-tag">{result.license}</span>
           </div>
-          <button
-            className="btn-small hub-download-btn"
-            onClick={() => handleDownload(result)}
-          >
-            Download
-          </button>
+          <button className="btn-small hub-download-btn" onClick={() => handleDownload(result)}>Download</button>
         </div>
       ))}
 
@@ -304,11 +441,9 @@ function ReferenceUpload() {
   return (
     <div className="reference-upload">
       <p className="reference-section-desc">
-        Upload your own reference corpus files, or select an existing corpus
-        to use as the reference for keyness comparison.
+        Upload your own reference corpus files, or select an existing corpus.
       </p>
 
-      {/* Option 1: Select an existing corpus */}
       <div className="reference-upload-section">
         <strong>Option 1: Use an existing corpus</strong>
         <select
@@ -323,94 +458,45 @@ function ReferenceUpload() {
         </select>
       </div>
 
-      {/* Option 2: Upload files to a new or existing reference corpus */}
       <div className="reference-upload-section">
         <strong>Option 2: Upload reference files</strong>
         {!showNewCorpus ? (
           <>
             {activeReferenceId ? (
-              <div
-                className="dropzone"
-                onClick={() => fileInputRef.current?.click()}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fileInputRef.current?.click(); } }}
-              >
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  multiple
-                  accept=".txt,.md,.docx,.pdf,.html,.htm,.xml,.csv"
-                  onChange={(e) => {
-                    const files = Array.from(e.target.files ?? []);
-                    if (files.length > 0) onUploadFiles(files);
-                    e.target.value = "";
-                  }}
-                  style={{ position: "absolute", width: 0, height: 0, opacity: 0, pointerEvents: "none" }}
-                  aria-hidden="true"
-                />
+              <div className="dropzone" onClick={() => fileInputRef.current?.click()} role="button" tabIndex={0}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fileInputRef.current?.click(); } }}>
+                <input ref={fileInputRef} type="file" multiple accept=".txt,.md,.docx,.pdf,.html,.htm,.xml,.csv"
+                  onChange={(e) => { const files = Array.from(e.target.files ?? []); if (files.length > 0) onUploadFiles(files); e.target.value = ""; }}
+                  style={{ position: "absolute", width: 0, height: 0, opacity: 0, pointerEvents: "none" }} aria-hidden="true" />
                 <div className="dropzone-icon">{"\u2191"}</div>
-                <div className="dropzone-label">
-                  {uploadToSelected.isPending ? "Uploading..." : "Drop reference files here or click to upload"}
-                </div>
+                <div className="dropzone-label">{uploadToSelected.isPending ? "Uploading..." : "Drop reference files here or click to upload"}</div>
                 <div className="dropzone-formats">.txt · .md · .docx · .pdf · .html · .xml · .csv</div>
               </div>
             ) : (
-              <button className="btn-primary" onClick={() => setShowNewCorpus(true)}>
-                + Create a new reference corpus
-              </button>
+              <button className="btn-primary" onClick={() => setShowNewCorpus(true)}>+ Create a new reference corpus</button>
             )}
           </>
         ) : (
           <div className="reference-new-corpus">
-            <input
-              type="text"
-              value={newCorpusName}
-              onChange={(e) => setNewCorpusName(e.target.value)}
-              placeholder="Reference corpus name (e.g. 'BNC sample')"
-              className="reference-name-input"
-            />
+            <input type="text" value={newCorpusName} onChange={(e) => setNewCorpusName(e.target.value)}
+              placeholder="Reference corpus name" className="reference-name-input" />
             <select value={newCorpusLang} onChange={(e) => setNewCorpusLang(e.target.value)}>
               <option value="en">English</option>
               <option value="ar">Arabic</option>
-              <option value="fr">French</option>
-              <option value="de">German</option>
-              <option value="es">Spanish</option>
             </select>
-            <div
-              className="dropzone"
-              onClick={() => newCorpusName.trim() && fileInputRef.current?.click()}
-              role="button"
-              tabIndex={0}
+            <div className="dropzone" onClick={() => newCorpusName.trim() && fileInputRef.current?.click()} role="button" tabIndex={0}
               onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); if (newCorpusName.trim()) fileInputRef.current?.click(); } }}
-              style={{ opacity: newCorpusName.trim() ? 1 : 0.5 }}
-            >
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                accept=".txt,.md,.docx,.pdf,.html,.htm,.xml,.csv"
-                onChange={(e) => {
-                  const files = Array.from(e.target.files ?? []);
-                  if (files.length > 0) onUploadFiles(files);
-                  e.target.value = "";
-                }}
-                style={{ position: "absolute", width: 0, height: 0, opacity: 0, pointerEvents: "none" }}
-                aria-hidden="true"
-              />
+              style={{ opacity: newCorpusName.trim() ? 1 : 0.5 }}>
+              <input ref={fileInputRef} type="file" multiple accept=".txt,.md,.docx,.pdf,.html,.htm,.xml,.csv"
+                onChange={(e) => { const files = Array.from(e.target.files ?? []); if (files.length > 0) onUploadFiles(files); e.target.value = ""; }}
+                style={{ position: "absolute", width: 0, height: 0, opacity: 0, pointerEvents: "none" }} aria-hidden="true" />
               <div className="dropzone-icon">{"\u2191"}</div>
-              <div className="dropzone-label">
-                {createAndUpload.isPending ? "Creating + uploading..." : "Drop reference files here or click to upload"}
-              </div>
+              <div className="dropzone-label">{createAndUpload.isPending ? "Creating + uploading..." : "Drop reference files here or click to upload"}</div>
               <div className="dropzone-formats">.txt · .md · .docx · .pdf · .html · .xml · .csv</div>
             </div>
             <button className="btn-small" onClick={() => setShowNewCorpus(false)}>Cancel</button>
-            {createAndUpload.isError && <div className="error">{String(createAndUpload.error)}</div>}
           </div>
         )}
-        {uploadToSelected.isError && <div className="error">{String(uploadToSelected.error)}</div>}
-        {uploadToSelected.isSuccess && <div className="success">Files uploaded to reference corpus.</div>}
-        {createAndUpload.isSuccess && <div className="success">Reference corpus created and files uploaded.</div>}
       </div>
     </div>
   );
@@ -428,9 +514,7 @@ function BundledReferences() {
   return (
     <div className="bundled-references">
       <p className="reference-section-desc">
-        Pre-built reference frequency lists, bundled with CorpusMind
-        (like AntConc's BE06/AmE06). These are word-frequency lists, not
-        full corpora — they're sufficient for keyness comparison.
+        Pre-built reference frequency lists, bundled with CorpusMind.
       </p>
       <div className="bundled-grid">
         {bundled.map((b) => (
@@ -440,11 +524,7 @@ function BundledReferences() {
               <span className="bundled-size">{b.size}</span>
             </div>
             <p className="bundled-desc">{b.desc}</p>
-            <button
-              className="btn-small"
-              disabled={!b.available}
-              title={b.available ? "Use as reference" : "Coming soon"}
-            >
+            <button className="btn-small" disabled={!b.available} title={b.available ? "Use as reference" : "Coming soon"}>
               {b.available ? "Use" : "N/A"}
             </button>
           </div>

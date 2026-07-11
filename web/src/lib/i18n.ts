@@ -135,7 +135,7 @@ export const translations = {
     status_live_pwa: "Live PWA",
 
     // Common
-    select_corpus: "Select a corpus to analyze. Go to Projects in the sidebar to choose one.",
+    select_corpus: "Select a corpus to analyze. Go to Corpora Selection → Your Corpus in the sidebar to create a corpus and upload texts.",
     select_corpus_image: "Select a corpus to start working with images.",
     loading: "Loading...",
     search: "Search",

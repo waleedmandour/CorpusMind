@@ -261,7 +261,6 @@ async fn engine_health() -> Result<String, String> {
 #[tauri::command]
 fn sidecar_status(app: tauri::AppHandle) -> String {
     // Diagnostic command — returns what the sidecar resolver would pick.
-    // Useful for debugging "engine not found" issues from the UI.
     let sidecar: State<EngineSidecar> = app.state();
     let (program, args, working_dir) = sidecar.resolve_command(&app);
     let wd_str = working_dir
@@ -273,6 +272,78 @@ fn sidecar_status(app: tauri::AppHandle) -> String {
         args.join(" "),
         wd_str
     )
+}
+
+/// Check if Ollama is running by trying to reach its /api/tags endpoint
+/// directly from Rust (bypassing any proxy/VPN that might intercept
+/// loopback traffic). This is the #1 fix for "Ollama not detected" on
+/// Windows machines with corporate VPN/security software.
+///
+/// Tries 3 URLs in order (matching the RDAT project's pattern):
+///   1. http://127.0.0.1:11434/api/tags (IPv4 explicit — most reliable)
+///   2. http://localhost:11434/api/tags (fallback)
+///   3. OLLAMA_HOST env var (if set)
+#[tauri::command]
+async fn ollama_health() -> String {
+    let urls = vec![
+        "http://127.0.0.1:11434/api/tags".to_string(),
+        "http://localhost:11434/api/tags".to_string(),
+    ];
+
+    // Also check OLLAMA_HOST env var
+    if let Ok(host) = std::env::var("OLLAMA_HOST") {
+        let normalized = if host.starts_with("http://") || host.starts_with("https://") {
+            host
+        } else if host.contains(':') {
+            format!("http://{}", host)
+        } else {
+            format!("http://{}:11434", host)
+        };
+        let url = format!("{}/api/tags", normalized);
+        if !urls.contains(&url) {
+            urls.insert(0, url);
+        }
+    }
+
+    let client = reqwest::Client::builder()
+        .no_proxy()
+        .timeout(Duration::from_secs(5))
+        .build();
+
+    match client {
+        Ok(c) => {
+            for url in &urls {
+                match c.get(url).send().await {
+                    Ok(r) if r.status().is_success() => {
+                        info!(target: "ollama", "ollama healthy via: {}", url);
+                        return serde_json::json!({
+                            "healthy": true,
+                            "url": url,
+                            "message": "Ollama is running"
+                        }).to_string();
+                    }
+                    Ok(r) => {
+                        warn!(target: "ollama", "ollama {} returned: {}", url, r.status());
+                    }
+                    Err(e) => {
+                        warn!(target: "ollama", "ollama {} failed: {}", url, e);
+                    }
+                }
+            }
+            serde_json::json!({
+                "healthy": false,
+                "url": null,
+                "message": "Ollama is not running. Start it with `ollama serve`."
+            }).to_string()
+        }
+        Err(e) => {
+            serde_json::json!({
+                "healthy": false,
+                "url": null,
+                "message": format!("Failed to create HTTP client: {}", e)
+            }).to_string()
+        }
+    }
 }
 
 pub fn run() {
@@ -325,7 +396,7 @@ pub fn run() {
                 sidecar.shutdown();
             }
         })
-        .invoke_handler(tauri::generate_handler![engine_health, sidecar_status])
+        .invoke_handler(tauri::generate_handler![engine_health, sidecar_status, ollama_health])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
