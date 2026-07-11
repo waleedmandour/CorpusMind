@@ -1,9 +1,10 @@
 /**
- * UI store -- theme, language/dir, sidebar navigation, onboarding.
+ * UI store -- theme, language/dir, sidebar navigation, onboarding,
+ * collapsible sidebar groups.
  *
- * Theme is persisted to localStorage; dir is auto-detected from the user's
- * preferred language (Arabic -> RTL, everything else -> LTR) and can be
- * flipped at runtime for bilingual workflows (section 13.3).
+ * Theme + expandedGroups are persisted to localStorage; dir is auto-detected
+ * from the user's preferred language (Arabic -> RTL, everything else -> LTR)
+ * and can be flipped at runtime for bilingual workflows (section 13.3).
  */
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
@@ -13,7 +14,7 @@ type Dir = "ltr" | "rtl";
 type Lang = "en" | "ar";
 
 export type NavTarget =
-  | "home" | "file" | "concordance" | "frequency" | "collocation"
+  | "home" | "corpus-target" | "corpus-reference" | "concordance" | "frequency" | "collocation"
   | "keyness" | "dispersion" | "ngrams" | "pos" | "grammar" | "dependency"
   | "discourse" | "vocab" | "sentiment" | "metaphor"
   | "arabic" | "vision" | "assistant" | "settings" | "about" | "userguide";
@@ -26,6 +27,9 @@ interface UIState {
   activeNav: NavTarget;
   onboardingComplete: boolean;
   onboardingOpen: boolean;
+  /** Which sidebar groups are expanded. Persisted so the user's
+   * collapse/expand preference survives app restarts. */
+  expandedGroups: Record<string, boolean>;
   setTheme: (t: Theme) => void;
   toggleTheme: () => void;
   setDir: (d: Dir) => void;
@@ -36,6 +40,8 @@ interface UIState {
   setActiveNav: (nav: NavTarget) => void;
   setOnboardingComplete: (done: boolean) => void;
   setOnboardingOpen: (open: boolean) => void;
+  toggleGroup: (groupId: string) => void;
+  setGroupExpanded: (groupId: string, expanded: boolean) => void;
 }
 
 export const useUI = create<UIState>()(
@@ -48,6 +54,16 @@ export const useUI = create<UIState>()(
       activeNav: "home",
       onboardingComplete: false,
       onboardingOpen: false,
+      // Default expand state: Corpora + Analyze expanded; others collapsed.
+      // This follows the linguist workflow: load data first, then pick a tool.
+      expandedGroups: {
+        corpora: true,
+        analyze: true,
+        arabic: false,
+        vision: false,
+        ai: false,
+        system: false,
+      },
       setTheme: (theme) => set({ theme }),
       toggleTheme: () => {
         const current = get().theme;
@@ -67,6 +83,20 @@ export const useUI = create<UIState>()(
       setActiveNav: (activeNav) => set({ activeNav }),
       setOnboardingComplete: (onboardingComplete) => set({ onboardingComplete }),
       setOnboardingOpen: (onboardingOpen) => set({ onboardingOpen }),
+      toggleGroup: (groupId) =>
+        set((state) => ({
+          expandedGroups: {
+            ...state.expandedGroups,
+            [groupId]: !state.expandedGroups[groupId],
+          },
+        })),
+      setGroupExpanded: (groupId, expanded) =>
+        set((state) => ({
+          expandedGroups: {
+            ...state.expandedGroups,
+            [groupId]: expanded,
+          },
+        })),
     }),
     { name: "corpusmind-ui" },
   ),

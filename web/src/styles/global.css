@@ -2631,3 +2631,296 @@ html[dir="rtl"] .app-name {
   padding: 1px 5px;
   margin: 0 2px;
 }
+
+/* =========================================================================
+   Sidebar — collapsible groups + pinned active corpus
+   ========================================================================= */
+
+.sidebar-group-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  text-align: start;
+  background: transparent;
+  border: none;
+  padding: var(--space-2) var(--space-4);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-subtle);
+  cursor: pointer;
+  min-height: 28px;
+  transition: color 0.12s;
+}
+.sidebar-group-header:hover {
+  color: var(--text-muted);
+}
+.sidebar-group-header.has-active {
+  color: var(--brand-500);
+}
+
+.sidebar-group-chevron {
+  font-size: 9px;
+  transition: transform 0.15s;
+  display: inline-block;
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+.sidebar-group-chevron.expanded {
+  transform: rotate(90deg);
+}
+
+.sidebar-group-items {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Pinned active corpus card */
+.sidebar-active-corpus {
+  margin: var(--space-2) var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background: var(--ribbon-tab-bg-active);
+  border: 1px solid var(--brand-400);
+  border-radius: var(--radius-md);
+  border-inline-start: 3px solid var(--brand-500);
+}
+.sidebar-active-corpus-label {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--brand-600);
+  margin-block-end: 2px;
+}
+.sidebar-active-corpus-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sidebar-active-corpus-meta {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  margin-block-start: 2px;
+}
+
+/* =========================================================================
+   Corpus Selection view
+   ========================================================================= */
+
+.corpus-selection-view {
+  padding: var(--space-6) var(--space-4);
+  max-inline-size: 1000px;
+  margin: 0 auto;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.corpus-selection-header {
+  margin-block-end: var(--space-4);
+}
+.corpus-selection-header h1 {
+  font-size: 22px;
+  margin: 0 0 var(--space-1) 0;
+  color: var(--text);
+}
+.corpus-selection-subtitle {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.corpus-selection-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+@media (max-width: 800px) {
+  .corpus-selection-grid { grid-template-columns: 1fr; }
+}
+
+.corpus-panel {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-block-size: 300px;
+}
+
+.corpus-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  border-block-end: 1px solid var(--border);
+  background: var(--bg-subtle);
+}
+.corpus-panel-header h2 {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0;
+  color: var(--text);
+}
+
+.corpus-list {
+  list-style: none;
+  margin: 0;
+  padding: var(--space-2);
+  overflow-y: auto;
+  flex: 1;
+}
+
+.corpus-list-item {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.1s;
+  position: relative;
+  margin-block-end: 2px;
+}
+.corpus-list-item:hover {
+  background: var(--ribbon-tab-bg-hover);
+}
+.corpus-list-item.active {
+  background: var(--ribbon-tab-bg-active);
+  border-inline-start: 3px solid var(--brand-500);
+}
+
+.corpus-item-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+}
+.corpus-list-item.active .corpus-item-name {
+  color: var(--brand-600);
+  font-weight: 600;
+}
+.corpus-item-meta {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-block-start: 2px;
+}
+
+.corpus-active-badge {
+  position: absolute;
+  inset-inline-end: var(--space-2);
+  inset-block-start: var(--space-2);
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: var(--brand-500);
+  color: white;
+  padding: 1px 6px;
+  border-radius: 8px;
+  letter-spacing: 0.05em;
+}
+
+.corpus-empty {
+  padding: var(--space-4);
+  text-align: center;
+  color: var(--text-subtle);
+  font-size: 12px;
+}
+
+/* Reference corpus tabs */
+.reference-tabs {
+  display: flex;
+  gap: 2px;
+  padding: var(--space-2);
+  border-block-end: 1px solid var(--border);
+}
+.reference-tab {
+  flex: 1;
+  padding: var(--space-2);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.reference-tab:hover {
+  background: var(--ribbon-tab-bg-hover);
+}
+.reference-tab.active {
+  background: var(--ribbon-tab-bg-active);
+  color: var(--brand-600);
+  font-weight: 600;
+}
+
+.reference-section-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: var(--space-2) 0;
+  line-height: 1.5;
+}
+
+.reference-search-bar {
+  display: flex;
+  gap: var(--space-2);
+  margin-block-end: var(--space-3);
+}
+.reference-search-input {
+  flex: 1;
+}
+
+.reference-select {
+  inline-size: 100%;
+  margin-block-start: var(--space-2);
+}
+
+/* Bundled references */
+.bundled-grid {
+  display: grid;
+  gap: var(--space-2);
+}
+.bundled-card {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+}
+.bundled-card.unavailable {
+  opacity: 0.55;
+}
+.bundled-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-block-end: 2px;
+}
+.bundled-header strong {
+  font-size: 13px;
+  color: var(--text);
+}
+.bundled-size {
+  font-size: 10px;
+  color: var(--text-subtle);
+  font-family: var(--font-mono);
+}
+.bundled-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin: 0 0 var(--space-1) 0;
+}
+
+/* Document list inside corpus panel */
+.document-list-section {
+  padding: var(--space-3);
+  border-block-start: 1px solid var(--border);
+}
+.document-list-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0 0 var(--space-1) 0;
+}

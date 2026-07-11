@@ -1,68 +1,108 @@
 /**
  * Sidebar -- the primary navigation for CorpusMind.
  *
- * Shows the app icon at the top, followed by grouped navigation items.
- * All labels are translated via the i18n system.
+ * Professional, collapsible (accordion) navigation with:
+ *   - Pinned active corpus card at the top (Sketch Engine pattern)
+ *   - Collapsible group headers (click to expand/collapse)
+ *   - Icons on every nav item
+ *   - Persisted expand/collapse state (per user, via zustand persist)
+ *
+ * Groups:
+ *   Overview      — Home
+ *   Corpora       — Your Corpus + Reference Corpus
+ *   Analysis Tools — Concordance, Frequency, Collocation, Keyness, etc.
+ *   Arabic        — Arabic Tools
+ *   Vision        — Vision Suite
+ *   AI            — AI Assistant
+ *   System        — Settings, User Guide, About
+ *
+ * The "Corpora Selection" group replaces the old "File" group and splits
+ * corpus management into two clear roles: the user's study corpus (target)
+ * and the reference corpus (for keyness comparison). This follows the
+ * standard corpus-linguistics workflow: load data → pick a tool → analyze.
  */
 import clsx from "clsx";
 import { useUI, type NavTarget } from "@/store/ui";
+import { useApp } from "@/store/app";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api";
 import { t, type TranslationKey } from "@/lib/i18n";
 
 interface NavItem {
   id: NavTarget;
   labelKey: TranslationKey;
+  icon: string;
 }
 
 interface NavGroup {
+  id: string;
   labelKey: TranslationKey;
   items: NavItem[];
 }
 
 const NAV_GROUPS: NavGroup[] = [
   {
+    id: "overview",
     labelKey: "nav_overview",
-    items: [{ id: "home", labelKey: "nav_home" }],
-  },
-  {
-    labelKey: "nav_file",
-    items: [{ id: "file", labelKey: "nav_projects" }],
-  },
-  {
-    labelKey: "nav_analyze",
     items: [
-      { id: "concordance", labelKey: "nav_concordance" },
-      { id: "frequency", labelKey: "nav_frequency" },
-      { id: "collocation", labelKey: "nav_collocation" },
-      { id: "keyness", labelKey: "nav_keyness" },
-      { id: "dispersion", labelKey: "nav_dispersion" },
-      { id: "ngrams", labelKey: "nav_ngrams" },
-      { id: "pos", labelKey: "nav_pos" },
-      { id: "grammar", labelKey: "nav_grammar" },
-      { id: "dependency", labelKey: "nav_dependency" },
-      { id: "discourse", labelKey: "nav_discourse" },
-      { id: "vocab", labelKey: "nav_vocab" },
-      { id: "sentiment", labelKey: "nav_sentiment" },
-      { id: "metaphor", labelKey: "nav_metaphor" },
+      { id: "home", labelKey: "nav_home", icon: "\u2302" },
     ],
   },
   {
+    id: "corpora",
+    labelKey: "nav_file",
+    items: [
+      { id: "corpus-target", labelKey: "nav_corpus_target", icon: "\u25A4" },
+      { id: "corpus-reference", labelKey: "nav_corpus_reference", icon: "\u25C8" },
+    ],
+  },
+  {
+    id: "analyze",
+    labelKey: "nav_analyze",
+    items: [
+      { id: "concordance", labelKey: "nav_concordance", icon: "\u2727" },
+      { id: "frequency", labelKey: "nav_frequency", icon: "\u2111" },
+      { id: "collocation", labelKey: "nav_collocation", icon: "\u2726" },
+      { id: "keyness", labelKey: "nav_keyness", icon: "\u2605" },
+      { id: "dispersion", labelKey: "nav_dispersion", icon: "\u2234" },
+      { id: "ngrams", labelKey: "nav_ngrams", icon: "\u224B" },
+      { id: "pos", labelKey: "nav_pos", icon: "\u2135" },
+      { id: "grammar", labelKey: "nav_grammar", icon: "\u2699" },
+      { id: "dependency", labelKey: "nav_dependency", icon: "\u2192" },
+      { id: "discourse", labelKey: "nav_discourse", icon: "\u201D" },
+      { id: "vocab", labelKey: "nav_vocab", icon: "\u4E00" },
+      { id: "sentiment", labelKey: "nav_sentiment", icon: "\u263A" },
+      { id: "metaphor", labelKey: "nav_metaphor", icon: "\u2248" },
+    ],
+  },
+  {
+    id: "arabic",
     labelKey: "nav_arabic",
-    items: [{ id: "arabic", labelKey: "nav_arabic_tools" }],
+    items: [
+      { id: "arabic", labelKey: "nav_arabic_tools", icon: "\u0639" },
+    ],
   },
   {
+    id: "vision",
     labelKey: "nav_vision",
-    items: [{ id: "vision", labelKey: "nav_vision_suite" }],
+    items: [
+      { id: "vision", labelKey: "nav_vision_suite", icon: "\u25A3" },
+    ],
   },
   {
+    id: "ai",
     labelKey: "nav_ai",
-    items: [{ id: "assistant", labelKey: "nav_assistant" }],
+    items: [
+      { id: "assistant", labelKey: "nav_assistant", icon: "\u272B" },
+    ],
   },
   {
+    id: "system",
     labelKey: "nav_system",
     items: [
-      { id: "settings", labelKey: "nav_settings" },
-      { id: "userguide", labelKey: "nav_userguide" },
-      { id: "about", labelKey: "nav_about" },
+      { id: "settings", labelKey: "nav_settings", icon: "\u2699" },
+      { id: "userguide", labelKey: "nav_userguide", icon: "\u2139" },
+      { id: "about", labelKey: "nav_about", icon: "\u24D8" },
     ],
   },
 ];
@@ -71,29 +111,82 @@ export function Sidebar() {
   const activeNav = useUI((s) => s.activeNav);
   const setActiveNav = useUI((s) => s.setActiveNav);
   const lang = useUI((s) => s.lang);
+  const expandedGroups = useUI((s) => s.expandedGroups);
+  const toggleGroup = useUI((s) => s.toggleGroup);
+
+  const activeCorpusId = useApp((s) => s.activeCorpusId);
+
+  // Fetch the active corpus info to show its name + token count
+  const activeCorpus = useQuery({
+    queryKey: ["corpus", activeCorpusId],
+    queryFn: () => activeCorpusId ? api.getCorpus(activeCorpusId) : Promise.resolve(null),
+    enabled: !!activeCorpusId,
+  });
 
   return (
     <nav className="sidebar" role="navigation" aria-label="Main navigation">
       <div className="sidebar-logo">
-        <img src="/icon-32.png" alt="CorpusMind" width="32" height="32" />
-        <span className="sidebar-logo-text">CorpusMind</span>
-      </div>
-      {NAV_GROUPS.map((group) => (
-        <div key={group.labelKey} className="sidebar-group">
-          <div className="sidebar-group-label">{t(lang, group.labelKey)}</div>
-          {group.items.map((item) => (
-            <button
-              key={item.id}
-              className={clsx("sidebar-item", { active: activeNav === item.id })}
-              onClick={() => setActiveNav(item.id)}
-              title={t(lang, item.labelKey)}
-              aria-current={activeNav === item.id ? "page" : undefined}
-            >
-              <span className="sidebar-item-label">{t(lang, item.labelKey)}</span>
-            </button>
-          ))}
+        <img src="/icon-32.png" alt="CorpusMind" width="28" height="28" />
+        <div className="sidebar-logo-text-group">
+          <span className="sidebar-logo-text">CorpusMind</span>
+          <span className="sidebar-logo-version">v0.1.0</span>
         </div>
-      ))}
+      </div>
+
+      {/* Pinned active corpus card (Sketch Engine pattern) */}
+      {activeCorpus.data && (
+        <div className="sidebar-active-corpus">
+          <div className="sidebar-active-corpus-label">Active Corpus</div>
+          <div className="sidebar-active-corpus-name">{activeCorpus.data.name}</div>
+          <div className="sidebar-active-corpus-meta">
+            {activeCorpus.data.language} · {(activeCorpus.data.stats?.token_count ?? 0).toLocaleString()} tokens
+          </div>
+        </div>
+      )}
+
+      <div className="sidebar-nav">
+        {NAV_GROUPS.map((group) => {
+          const isExpanded = expandedGroups[group.id] ?? true;
+          const hasActiveItem = group.items.some((item) => item.id === activeNav);
+
+          return (
+            <div key={group.id} className="sidebar-group">
+              <button
+                className={clsx("sidebar-group-header", { "has-active": hasActiveItem })}
+                onClick={() => toggleGroup(group.id)}
+                aria-expanded={isExpanded}
+              >
+                <span className={clsx("sidebar-group-chevron", { expanded: isExpanded })}>
+                  {"\u25B8"}
+                </span>
+                <span className="sidebar-group-label">{t(lang, group.labelKey)}</span>
+              </button>
+              {isExpanded && (
+                <div className="sidebar-group-items">
+                  {group.items.map((item) => (
+                    <button
+                      key={item.id}
+                      className={clsx("sidebar-item", { active: activeNav === item.id })}
+                      onClick={() => setActiveNav(item.id)}
+                      title={t(lang, item.labelKey)}
+                      aria-current={activeNav === item.id ? "page" : undefined}
+                    >
+                      <span className="sidebar-item-icon" aria-hidden>{item.icon}</span>
+                      <span className="sidebar-item-label">{t(lang, item.labelKey)}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="sidebar-footer">
+        <span className="sidebar-footer-text">AGPL-3.0</span>
+        <span className="sidebar-footer-dot" />
+        <span className="sidebar-footer-text">Local-first</span>
+      </div>
     </nav>
   );
 }

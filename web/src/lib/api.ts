@@ -892,12 +892,22 @@ export const api = {
 
   // --- Smart Troubleshooting ---
   troubleshootStatus: () =>
-    jsonFetch<{ available: boolean; model: string }>("/api/v1/troubleshoot/status"),
+    jsonFetch<{ available: boolean; model: string; source: string }>("/api/v1/troubleshoot/status"),
   interpretError: (req: InterpretErrorRequest) =>
     jsonFetch<InterpretErrorResponse>("/api/v1/troubleshoot/interpret", {
       method: "POST",
       body: JSON.stringify(req),
     }),
+
+  // --- Corpus Hub (search + download open-access corpora) ---
+  hubCatalogue: () =>
+    jsonFetch<HubCatalogue>("/api/v1/hub/catalogue"),
+  hubSearch: (q: string, language: string, hub: string = "all", limit: number = 20) =>
+    jsonFetch<HubSearchResponse>(
+      `/api/v1/hub/search?q=${encodeURIComponent(q)}&language=${language}&hub=${hub}&limit=${limit}`,
+    ),
+  hubDownloadUrl: (hub: string, corpusId: string, title: string, extra: Record<string, unknown>) =>
+    `${ENGINE_BASE}/api/v1/hub/download?hub=${encodeURIComponent(hub)}&corpus_id=${encodeURIComponent(corpusId)}&title=${encodeURIComponent(title)}&extra=${encodeURIComponent(JSON.stringify(extra))}`,
 };
 
 // ----------------------------------------------------------------------- //
@@ -933,4 +943,51 @@ export function downloadBlob(blob: Blob, filename: string) {
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
+}
+
+// ----------------------------------------------------------------------- //
+// Corpus Hub types
+// ----------------------------------------------------------------------- //
+
+export interface HubInfo {
+  id: string;
+  name: string;
+  description: string;
+  requires_key: boolean;
+  languages: string[];
+}
+
+export interface HubFeaturedItem {
+  hub: string;
+  id: string;
+  title: string;
+  language: string;
+  size: string;
+  license: string;
+}
+
+export interface HubCatalogue {
+  hubs: HubInfo[];
+  featured: HubFeaturedItem[];
+}
+
+export interface HubSearchResult {
+  hub: string;
+  id: string;
+  title: string;
+  description: string;
+  language: string;
+  size: string;
+  license: string;
+  download_url: string | null;
+  download_format: string;
+  extra: Record<string, unknown>;
+}
+
+export interface HubSearchResponse {
+  query: string;
+  language: string;
+  hub: string;
+  total: number;
+  results: HubSearchResult[];
 }

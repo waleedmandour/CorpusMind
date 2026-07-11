@@ -15,7 +15,7 @@ import { TroubleshootingBar } from "@/components/TroubleshootingBar";
 import { HomeView } from "@/views/HomeView";
 import { AboutView } from "@/views/AboutView";
 import { AssistantView } from "@/views/AssistantView";
-import { CorpusManagerView } from "@/views/CorpusManagerView";
+import { CorpusSelectionView } from "@/views/CorpusSelectionView";
 import { ConcordancerView } from "@/views/ConcordancerView";
 import { AnalysisView } from "@/views/AnalysisView";
 import { ArabicView } from "@/views/ArabicView";
@@ -86,7 +86,8 @@ export default function App() {
         <Sidebar />
         <main className="app-main" id="main-content" role="main">
           {activeNav === "home" && <HomeView />}
-          {activeNav === "file" && <CorpusManagerView />}
+          {activeNav === "corpus-target" && <CorpusSelectionView mode="target" />}
+          {activeNav === "corpus-reference" && <CorpusSelectionView mode="reference" />}
           {activeNav === "concordance" && <ConcordancerView />}
           {activeNav === "frequency" && <AnalysisView />}
           {activeNav === "collocation" && <AnalysisView />}

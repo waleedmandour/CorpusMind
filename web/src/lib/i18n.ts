@@ -24,8 +24,8 @@ export const translations = {
 
     // Sidebar groups
     nav_overview: "Overview",
-    nav_file: "File",
-    nav_analyze: "Analyze",
+    nav_file: "Corpora Selection",
+    nav_analyze: "Analysis Tools",
     nav_arabic: "Arabic",
     nav_vision: "Vision",
     nav_ai: "AI",
@@ -34,6 +34,8 @@ export const translations = {
     // Sidebar items
     nav_home: "Home",
     nav_projects: "Projects",
+    nav_corpus_target: "Your Corpus",
+    nav_corpus_reference: "Reference Corpus",
     nav_concordance: "Concordance",
     nav_frequency: "Frequency",
     nav_collocation: "Collocation",
@@ -155,8 +157,8 @@ export const translations = {
 
     // Sidebar groups
     nav_overview: "نظرة عامة",
-    nav_file: "ملف",
-    nav_analyze: "تحليل",
+    nav_file: "اختيار المصادر",
+    nav_analyze: "أدوات التحليل",
     nav_arabic: "العربية",
     nav_vision: "التحليل البصري",
     nav_ai: "الذكاء الاصطناعي",
@@ -165,6 +167,8 @@ export const translations = {
     // Sidebar items
     nav_home: "الرئيسية",
     nav_projects: "المشاريع",
+    nav_corpus_target: "متنك",
+    nav_corpus_reference: "المتن المرجعي",
     nav_concordance: "الكوكوردانس",
     nav_frequency: "التكرار",
     nav_collocation: "الترابط",

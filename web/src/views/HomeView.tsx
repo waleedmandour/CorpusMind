@@ -20,7 +20,7 @@ export function HomeView() {
   const ollamaOk = providers.data?.providers.find((p) => p.name === "ollama")?.healthy ?? false;
 
   const quickActions = [
-    { label: "Create Project", nav: "file" as const, icon: "\u2630", desc: "Set up a new research project and upload texts" },
+    { label: "Create Project", nav: "corpus-target" as const, icon: "\u2630", desc: "Set up a new research project and upload texts" },
     { label: "Concordance Search", nav: "concordance" as const, icon: "\u2727", desc: "Search your corpus with KWIC view" },
     { label: "Frequency Analysis", nav: "frequency" as const, icon: "\u2727", desc: "Word, lemma, and POS frequency with STTR" },
     { label: "Collocation", nav: "collocation" as const, icon: "\u2727", desc: "All 7 measures: MI, T-score, LL, Dice, LogDice, chi-square, Delta P" },
@@ -78,7 +78,7 @@ export function HomeView() {
         <div className="home-callout">
           <h3>Get Started</h3>
           <p>You have not selected a project yet. Click <strong>Projects</strong> in the sidebar to create one and upload your text files.</p>
-          <button className="btn-primary" onClick={() => setActiveNav("file")}>Create a Project</button>
+          <button className="btn-primary" onClick={() => setActiveNav("corpus-target")}>Create a Project</button>
         </div>
       )}
 

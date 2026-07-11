@@ -66,19 +66,19 @@ const TABS: RibbonTab[] = [
       {
         label: "Manage",
         items: [
-          { label: "Projects & Corpora", phase: "Phase 1", onClick: () => useUI.getState().setActiveNav("file") },
-          { label: "Upload Corpus", phase: "Phase 1", onClick: () => useUI.getState().setActiveNav("file") },
-          { label: "Pipeline Recipe", phase: "Phase 1", onClick: () => useUI.getState().setActiveNav("file") },
+          { label: "Projects & Corpora", phase: "Phase 1", onClick: () => useUI.getState().setActiveNav("corpus-target") },
+          { label: "Upload Corpus", phase: "Phase 1", onClick: () => useUI.getState().setActiveNav("corpus-target") },
+          { label: "Pipeline Recipe", phase: "Phase 1", onClick: () => useUI.getState().setActiveNav("corpus-target") },
         ],
       },
       {
         label: "Analyze",
         items: [
-          { label: "Concordance", phase: "Phase 1", onClick: () => useUI.getState().setActiveNav("file") },
-          { label: "Frequency", phase: "Phase 1", onClick: () => useUI.getState().setActiveNav("file") },
-          { label: "Collocation", phase: "Phase 1", onClick: () => useUI.getState().setActiveNav("file") },
-          { label: "Keyness", phase: "Phase 1", onClick: () => useUI.getState().setActiveNav("file") },
-          { label: "Dispersion", phase: "Phase 1", onClick: () => useUI.getState().setActiveNav("file") },
+          { label: "Concordance", phase: "Phase 1", onClick: () => useUI.getState().setActiveNav("corpus-target") },
+          { label: "Frequency", phase: "Phase 1", onClick: () => useUI.getState().setActiveNav("corpus-target") },
+          { label: "Collocation", phase: "Phase 1", onClick: () => useUI.getState().setActiveNav("corpus-target") },
+          { label: "Keyness", phase: "Phase 1", onClick: () => useUI.getState().setActiveNav("corpus-target") },
+          { label: "Dispersion", phase: "Phase 1", onClick: () => useUI.getState().setActiveNav("corpus-target") },
         ],
       },
       {
@@ -180,7 +180,7 @@ export function Ribbon() {
             onClick={() => {
               if (t.id === "assistant") setActiveNav("assistant");
               else if (t.id === "view") setActiveNav("settings");
-              else if (t.id === "text") setActiveNav("file");
+              else if (t.id === "text") setActiveNav("corpus-target");
               else if (t.id === "vision") setActiveNav("vision");
               else setActiveNav("assistant");
             }}

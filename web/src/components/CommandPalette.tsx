@@ -24,7 +24,8 @@ export function CommandPalette() {
   const actions = useMemo<Action[]>(() => {
     return [
       { id: "nav.home", label: "Go to Home", run: () => ui.setActiveNav("home") },
-      { id: "nav.file", label: "Go to Projects", run: () => ui.setActiveNav("file") },
+      { id: "nav.corpus-target", label: "Go to Your Corpus", run: () => ui.setActiveNav("corpus-target") },
+      { id: "nav.corpus-reference", label: "Go to Reference Corpus", run: () => ui.setActiveNav("corpus-reference") },
       { id: "nav.concordance", label: "Go to Concordance", run: () => ui.setActiveNav("concordance") },
       { id: "nav.frequency", label: "Go to Frequency", run: () => ui.setActiveNav("frequency") },
       { id: "nav.collocation", label: "Go to Collocation", run: () => ui.setActiveNav("collocation") },
