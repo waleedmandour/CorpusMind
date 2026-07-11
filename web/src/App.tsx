@@ -22,6 +22,7 @@ import { ArabicView } from "@/views/ArabicView";
 import { VisionView } from "@/views/VisionView";
 import { SettingsView } from "@/views/SettingsView";
 import { UserGuideView } from "@/views/UserGuideView";
+import { CorpusHubView } from "@/views/CorpusHubView";
 import { applyHtmlAttrs, useUI } from "@/store/ui";
 import { useApp } from "@/store/app";
 
@@ -106,6 +107,7 @@ export default function App() {
           {activeNav === "assistant" && <AssistantView />}
           {activeNav === "settings" && <SettingsView />}
           {activeNav === "userguide" && <UserGuideView />}
+          {activeNav === "hub" && <CorpusHubView />}
           {activeNav === "about" && <AboutView />}
         </main>
       </div>

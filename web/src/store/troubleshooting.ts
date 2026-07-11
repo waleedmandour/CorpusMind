@@ -16,6 +16,7 @@
  * interpretation + suggested fix.
  */
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 import { api, type InterpretErrorResponse } from "@/lib/api";
 
 export type IssueSeverity = "info" | "warning" | "error";
@@ -52,6 +53,12 @@ interface TroubleshootState {
   panelOpen: boolean;
   /** Whether the detailed troubleshooting view is open (sidebar). */
   detailedViewOpen: boolean;
+  /** Whether the user has muted Smart Troubleshooting notifications.
+   * When muted, errors are still captured silently (stored in the issues
+   * list) but the taskbar badge does NOT appear and the panel does NOT
+   * auto-open. The user can still open the panel manually from Settings.
+   * Persisted to localStorage so it survives app restarts. */
+  muted: boolean;
 
   captureError: (params: {
     message: string;
@@ -67,6 +74,7 @@ interface TroubleshootState {
   setDetailedViewOpen: (open: boolean) => void;
   setBackendReachable: (reachable: boolean) => void;
   setGeminiAvailable: (available: boolean) => void;
+  setMuted: (muted: boolean) => void;
   fetchInterpretation: (issueId: string) => Promise<void>;
   startHealthPolling: () => void;
   stopHealthPolling: () => void;
@@ -95,13 +103,16 @@ function extractCode(message: string): string | number {
   return "UNKNOWN";
 }
 
-export const useTroubleshoot = create<TroubleshootState>((set, get) => ({
-  issues: [],
-  backendReachable: true,
-  polling: false,
-  geminiAvailable: false,
-  panelOpen: false,
-  detailedViewOpen: false,
+export const useTroubleshoot = create<TroubleshootState>()(
+  persist(
+    (set, get) => ({
+      issues: [],
+      backendReachable: true,
+      polling: false,
+      geminiAvailable: false,
+      panelOpen: false,
+      detailedViewOpen: false,
+      muted: false,  // OFF by default — user must explicitly unmute to get notifications
 
   captureError: (params) => {
     const code = params.code ?? extractCode(params.message);
@@ -135,13 +146,18 @@ export const useTroubleshoot = create<TroubleshootState>((set, get) => ({
       interpretation: undefined,
     };
 
+    // If muted, store the issue silently but do NOT auto-open the panel
+    // or show the taskbar badge. The user can still see muted issues by
+    // opening the panel manually from Settings.
+    const isMuted = get().muted;
     set((state) => ({
       issues: [issue, ...state.issues].slice(0, MAX_ISSUES),
-      // Auto-open the panel when a new error arrives (only if not already open)
-      panelOpen: true,
+      // Only auto-open the panel if NOT muted
+      panelOpen: isMuted ? state.panelOpen : true,
     }));
 
-    // Auto-fetch interpretation if Gemini is available
+    // Auto-fetch interpretation if Gemini is available (even when muted —
+    // the user might unmute later and want the interpretation ready)
     if (get().geminiAvailable) {
       void get().fetchInterpretation(issue.id);
     }
@@ -161,6 +177,7 @@ export const useTroubleshoot = create<TroubleshootState>((set, get) => ({
   setDetailedViewOpen: (detailedViewOpen) => set({ detailedViewOpen }),
   setBackendReachable: (backendReachable) => set({ backendReachable }),
   setGeminiAvailable: (geminiAvailable) => set({ geminiAvailable }),
+  setMuted: (muted) => set({ muted }),
 
   fetchInterpretation: async (issueId) => {
     const issue = get().issues.find((i) => i.id === issueId);
@@ -254,4 +271,11 @@ export const useTroubleshoot = create<TroubleshootState>((set, get) => ({
     }
     set({ polling: false });
   },
-}));
+    }),
+    {
+      name: "corpusmind-troubleshooting",
+      // Only persist the muted preference — issues are session-scoped
+      partialize: (state) => ({ muted: state.muted }),
+    },
+  ),
+);

@@ -71,20 +71,30 @@ impl EngineSidecar {
             .map_err(|e| SidecarError::Spawn(format!("create {}: {e}", stderr_path.display())))?;
 
         // Try the bundled sidecar binary first; fall back to `python -m app.main`
-        // for dev when the binary isn't present.
-        let (program, args) = self.resolve_command(app);
+        // for dev when the binary isn't present. Returns (program, args, working_dir).
+        let (program, args, working_dir) = self.resolve_command(app);
 
         info!(target: "sidecar", "spawning engine: {} {}", program, args.join(" "));
+        if let Some(ref wd) = working_dir {
+            info!(target: "sidecar", "working dir: {}", wd.display());
+        }
         info!(target: "sidecar", "stdout → {}", stdout_path.display());
         info!(target: "sidecar", "stderr → {}", stderr_path.display());
 
-        let child = Command::new(&program)
-            .args(&args)
+        let mut cmd = Command::new(&program);
+        cmd.args(&args)
             .env("CORPUSMIND_HOST", ENGINE_HOST)
             .env("CORPUSMIND_PORT", ENGINE_PORT.to_string())
             .stdout(Stdio::from(stdout))
-            .stderr(Stdio::from(stderr))
-            .spawn()
+            .stderr(Stdio::from(stderr));
+
+        // Set the working directory if we have one (needed for `python -m app.main`
+        // to find the `app` package — Python resolves modules relative to CWD).
+        if let Some(ref wd) = working_dir {
+            cmd.current_dir(wd);
+        }
+
+        let child = cmd.spawn()
             .map_err(|e| SidecarError::Spawn(format!("{program}: {e}")))?;
 
         *child_opt = Some(child);
@@ -96,31 +106,26 @@ impl EngineSidecar {
     ///   2. Otherwise, fall back to `python -m app.main` from the engine/ directory
     ///      (dev mode — assumes the developer has the venv active).
     ///   3. Otherwise, fall back to `corpusmind-engine` on PATH.
-    fn resolve_command(&self, app: &tauri::AppHandle) -> (String, Vec<String>) {
+    ///
+    /// Returns (program, args, working_dir). The working_dir is Some when running
+    /// via `python -m app.main` (needed so Python can find the `app` package).
+    fn resolve_command(&self, app: &tauri::AppHandle) -> (String, Vec<String>, Option<std::path::PathBuf>) {
         // Tauri's externalBin lookup expects the binary to be suffixed with the
-        // Rust target triple of the build host. `std::env::consts::{ARCH,OS,FAMILY}`
-        // do NOT produce a valid triple (they yield e.g. "aarch64-macos-unix" on
-        // Apple Silicon, but the real triple is "aarch64-apple-darwin"). We map
-        // (ARCH, OS) to the canonical triples Tauri's bundler uses.
+        // Rust target triple of the build host.
         let target_triple = target_triple();
 
-        // The bundled binary lives in the app's resources directory after install
-        // (Tauri copies externalBin entries there with the triple suffix).
+        // 1. The bundled binary lives in the app's resources directory after install
+        //    (Tauri copies externalBin entries there with the triple suffix).
         if let Ok(resource) = app.path().resource_dir() {
             let candidate = resource.join(format!("corpusmind-engine-{target_triple}"));
             if candidate.exists() {
-                return (candidate.to_string_lossy().into_owned(), vec![]);
+                info!(target: "sidecar", "found bundled sidecar binary: {}", candidate.display());
+                return (candidate.to_string_lossy().into_owned(), vec![], None);
             }
         }
 
-        // Dev fallback: run the engine from ../engine/ via Python.
-        // Check several candidate locations in order:
-        //   1. CORPUSMIND_ENGINE_DIR env var (explicit user override)
-        //   2. ../engine/ relative to the current executable (works when the
-        //      .app is placed next to the repo, or when running from the
-        //      desktop/src-tauri/ target directory during dev)
-        //   3. ../engine/ relative to the current working directory (dev mode)
-        let engine_dir = std::env::var("CORPUSMIND_ENGINE_DIR").ok().map(Into::into)
+        // 2-6. Find the engine directory (env var, relative paths, common install locations)
+        let engine_dir = std::env::var("CORPUSMIND_ENGINE_DIR").ok().map(std::path::PathBuf::from)
             .or_else(|| {
                 std::env::current_exe()
                     .ok()
@@ -133,9 +138,32 @@ impl EngineSidecar {
                     .ok()
                     .and_then(|cwd| cwd.parent().map(|p| p.join("engine")))
                     .filter(|d| d.exists())
+            })
+            .or_else(|| {
+                // Windows: check Documents\CorpusMind\engine
+                #[cfg(windows)]
+                {
+                    std::env::var("USERPROFILE").ok()
+                        .map(|home| std::path::PathBuf::from(home).join("Documents").join("CorpusMind").join("engine"))
+                        .filter(|d| d.exists())
+                }
+                #[cfg(not(windows))]
+                { None }
+            })
+            .or_else(|| {
+                // macOS: check ~/Documents/CorpusMind/engine
+                #[cfg(target_os = "macos")]
+                {
+                    std::env::var("HOME").ok()
+                        .map(|home| std::path::PathBuf::from(home).join("Documents").join("CorpusMind").join("engine"))
+                        .filter(|d| d.exists())
+                }
+                #[cfg(not(target_os = "macos"))]
+                { None }
             });
 
         if let Some(dir) = engine_dir {
+            info!(target: "sidecar", "found engine dir: {}", dir.display());
             // Try the venv first, then system python.
             let venv_python = if cfg!(windows) {
                 dir.join(".venv").join("Scripts").join("python.exe")
@@ -143,20 +171,25 @@ impl EngineSidecar {
                 dir.join(".venv").join("bin").join("python")
             };
             if venv_python.exists() {
+                info!(target: "sidecar", "using venv python: {}", venv_python.display());
                 return (
                     venv_python.to_string_lossy().into_owned(),
                     vec!["-m".into(), "app.main".into()],
+                    Some(dir),
                 );
             }
             // Last-resort: assume `python` is on PATH and CWD is engine/.
+            warn!(target: "sidecar", "venv python not found in {}, trying system python", dir.display());
             return (
                 "python".into(),
                 vec!["-m".into(), "app.main".into()],
+                Some(dir),
             );
         }
 
         // Final fallback: hope the wheel's console script is on PATH.
-        ("corpusmind-engine".into(), vec![])
+        warn!(target: "sidecar", "no engine dir found — trying corpusmind-engine on PATH");
+        ("corpusmind-engine".into(), vec![], None)
     }
 
     fn wait_for_health(&self) -> Result<(), SidecarError> {
@@ -225,6 +258,23 @@ async fn engine_health() -> Result<String, String> {
     Ok(body)
 }
 
+#[tauri::command]
+fn sidecar_status(app: tauri::AppHandle) -> String {
+    // Diagnostic command — returns what the sidecar resolver would pick.
+    // Useful for debugging "engine not found" issues from the UI.
+    let sidecar: State<EngineSidecar> = app.state();
+    let (program, args, working_dir) = sidecar.resolve_command(&app);
+    let wd_str = working_dir
+        .map(|d| d.display().to_string())
+        .unwrap_or_else(|| "(none)".to_string());
+    format!(
+        "program: {}\nargs: {}\nworking_dir: {}",
+        program,
+        args.join(" "),
+        wd_str
+    )
+}
+
 pub fn run() {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info"))
         .format_timestamp_secs()
@@ -275,7 +325,7 @@ pub fn run() {
                 sidecar.shutdown();
             }
         })
-        .invoke_handler(tauri::generate_handler![engine_health])
+        .invoke_handler(tauri::generate_handler![engine_health, sidecar_status])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

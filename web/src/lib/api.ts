@@ -849,33 +849,61 @@ export const api = {
     jsonFetch<{ enabled: boolean; method: string; notice: string; key_present: boolean }>(`/api/v1/encryption/status`),
 
   // --- Export ---
-  exportConcordanceXlsx: (cid: string, query: string, level = "word", window = 5, limit = 1000) =>
-    fetch(`${ENGINE_BASE}/api/v1/corpora/${cid}/export/concordance.xlsx`, {
+  // Multi-format export: xlsx, csv, tsv, txt, json. The old .xlsx-only
+  // endpoints are kept for backwards compatibility but the frontend now
+  // uses these format-parameterized versions.
+  exportConcordance: (cid: string, query: string, fmt: ExportFormat = "xlsx", level = "word", window = 5, limit = 1000) =>
+    fetch(`${ENGINE_BASE}/api/v1/corpora/${cid}/export/concordance?fmt=${fmt}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ query, level, window, limit }),
     }).then((r) => r.blob()),
 
-  exportFrequencyXlsx: (cid: string, unit = "word", limit = 1000) =>
-    fetch(`${ENGINE_BASE}/api/v1/corpora/${cid}/export/frequency.xlsx`, {
+  exportFrequency: (cid: string, unit = "word", fmt: ExportFormat = "xlsx", limit = 1000) =>
+    fetch(`${ENGINE_BASE}/api/v1/corpora/${cid}/export/frequency?fmt=${fmt}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ unit, limit }),
     }).then((r) => r.blob()),
 
-  exportCollocationsXlsx: (cid: string, node: string, level = "word", window = 5, min_freq = 3) =>
-    fetch(`${ENGINE_BASE}/api/v1/corpora/${cid}/export/collocations.xlsx`, {
+  exportCollocations: (cid: string, node: string, fmt: ExportFormat = "xlsx", level = "word", window = 5, min_freq = 3) =>
+    fetch(`${ENGINE_BASE}/api/v1/corpora/${cid}/export/collocations?fmt=${fmt}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ node, level, window, min_freq }),
     }).then((r) => r.blob()),
 
-  exportKeynessXlsx: (cid: string, reference_corpus_id: string) =>
-    fetch(`${ENGINE_BASE}/api/v1/corpora/${cid}/export/keyness.xlsx`, {
+  exportKeyness: (cid: string, reference_corpus_id: string, fmt: ExportFormat = "xlsx") =>
+    fetch(`${ENGINE_BASE}/api/v1/corpora/${cid}/export/keyness?fmt=${fmt}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ reference_corpus_id }),
     }).then((r) => r.blob()),
+
+  // Collocation network diagram export (SVG vector + PNG raster)
+  exportCollocationNetworkSvg: (cid: string, node: string, level = "word", window = 5, min_freq = 3) =>
+    fetch(`${ENGINE_BASE}/api/v1/corpora/${cid}/export/collocations.network.svg`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ node, level, window, min_freq }),
+    }).then((r) => r.blob()),
+
+  exportCollocationNetworkPng: (cid: string, node: string, level = "word", window = 5, min_freq = 3) =>
+    fetch(`${ENGINE_BASE}/api/v1/corpora/${cid}/export/collocations.network.png`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ node, level, window, min_freq }),
+    }).then((r) => r.blob()),
+
+  // Backwards-compatible xlsx-only shortcuts (delegate to the multi-format versions)
+  exportConcordanceXlsx: (cid: string, query: string, level = "word", window = 5, limit = 1000) =>
+    api.exportConcordance(cid, query, "xlsx", level, window, limit),
+  exportFrequencyXlsx: (cid: string, unit = "word", limit = 1000) =>
+    api.exportFrequency(cid, unit, "xlsx", limit),
+  exportCollocationsXlsx: (cid: string, node: string, level = "word", window = 5, min_freq = 3) =>
+    api.exportCollocations(cid, node, "xlsx", level, window, min_freq),
+  exportKeynessXlsx: (cid: string, reference_corpus_id: string) =>
+    api.exportKeyness(cid, reference_corpus_id, "xlsx"),
 
   exportMethodsPdf: (cid: string) =>
     fetch(`${ENGINE_BASE}/api/v1/corpora/${cid}/methods.pdf`).then((r) => r.blob()),
@@ -898,6 +926,33 @@ export const api = {
       method: "POST",
       body: JSON.stringify(req),
     }),
+  setGeminiKey: (apiKey: string) =>
+    jsonFetch<{ ok: boolean; available: boolean; source: string }>("/api/v1/troubleshoot/gemini-key", {
+      method: "POST",
+      body: JSON.stringify({ api_key: apiKey }),
+    }),
+  clearGeminiKey: () =>
+    jsonFetch<{ ok: boolean; available: boolean; source: string }>("/api/v1/troubleshoot/gemini-key", {
+      method: "DELETE",
+    }),
+
+  // --- Ollama model catalogue + pull ---
+  ollamaCatalogue: () =>
+    jsonFetch<{ models: OllamaModel[] }>("/api/v1/ollama/catalogue"),
+  ollamaPull: (model: string) =>
+    jsonFetch<{ ok: boolean; model: string; message: string }>("/api/v1/ollama/pull", {
+      method: "POST",
+      body: JSON.stringify({ model }),
+    }),
+  ollamaPullStatus: (model: string) =>
+    jsonFetch<OllamaPullStatus>(`/api/v1/ollama/pull/status?model=${encodeURIComponent(model)}`),
+
+  // --- Corpus Cleaning ---
+  cleanCorpus: (cid: string, options: CleaningOptions) =>
+    jsonFetch<CleaningResponse>(`/api/v1/corpora/${cid}/clean`, {
+      method: "POST",
+      body: JSON.stringify(options),
+    }),
 
   // --- Corpus Hub (search + download open-access corpora) ---
   hubCatalogue: () =>
@@ -909,6 +964,34 @@ export const api = {
   hubDownloadUrl: (hub: string, corpusId: string, title: string, extra: Record<string, unknown>) =>
     `${ENGINE_BASE}/api/v1/hub/download?hub=${encodeURIComponent(hub)}&corpus_id=${encodeURIComponent(corpusId)}&title=${encodeURIComponent(title)}&extra=${encodeURIComponent(JSON.stringify(extra))}`,
 };
+
+// ----------------------------------------------------------------------- //
+// Export types
+// ----------------------------------------------------------------------- //
+
+export type ExportFormat = "xlsx" | "csv" | "tsv" | "txt" | "json";
+
+// ----------------------------------------------------------------------- //
+// Ollama model catalogue + pull types
+// ----------------------------------------------------------------------- //
+
+export interface OllamaModel {
+  name: string;
+  size: string;
+  params: string;
+  ram: string;
+  description: string;
+  languages: string[];
+  recommended: boolean;
+}
+
+export interface OllamaPullStatus {
+  model: string;
+  status: "starting" | "pulling" | "success" | "error" | "not_started" | string;
+  completed: number;
+  total: number;
+  error: string | null;
+}
 
 // ----------------------------------------------------------------------- //
 // Smart Troubleshooting types
@@ -933,16 +1016,38 @@ export interface InterpretErrorResponse {
   model: string;
 }
 
-/** Helper: trigger a browser download for a Blob. */
-export function downloadBlob(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+// ----------------------------------------------------------------------- //
+// Corpus Cleaning types
+// ----------------------------------------------------------------------- //
+
+export interface CleaningOptions {
+  collapse_whitespace?: boolean;
+  strip_leading_trailing?: boolean;
+  remove_empty_lines?: boolean;
+  remove_urls?: boolean;
+  remove_email_addresses?: boolean;
+  remove_html_entities?: boolean;
+  lowercase?: boolean;
+  remove_punctuation?: boolean;
+  remove_numbers?: boolean;
+  remove_extra_symbols?: boolean;
+  remove_stopwords?: boolean;
+  min_token_length?: number;
+  normalize_arabic?: boolean;
+  strip_arabic_diacritics?: boolean;
+  remove_arabic_tatweel?: boolean;
+  create_new_version?: boolean;
+}
+
+export interface CleaningResponse {
+  corpus_id: string;
+  documents_cleaned: number;
+  old_token_count: number;
+  new_token_count: number;
+  old_type_count: number;
+  new_type_count: number;
+  new_version_id: string | null;
+  options_applied: Record<string, boolean | number>;
 }
 
 // ----------------------------------------------------------------------- //
@@ -990,4 +1095,16 @@ export interface HubSearchResponse {
   hub: string;
   total: number;
   results: HubSearchResult[];
+}
+
+/** Helper: trigger a browser download for a Blob. */
+export function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }

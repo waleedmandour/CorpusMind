@@ -55,6 +55,7 @@ export const translations = {
     nav_settings: "Settings",
     nav_about: "About",
     nav_userguide: "User Guide",
+    nav_hub: "Corpus Hub",
 
     // Home view
     home_welcome: "Welcome to CorpusMind",
@@ -117,7 +118,7 @@ export const translations = {
     about_author1_role: "Lead Architect and Assistant Lecturer of English Language",
     about_author2: "Prof. Wesam Ibrahim",
     about_author2_orcid: "Princess Nourah Bint Abdulrahman University | ORCID: 0000-0003-0710-6038",
-    about_author2_role: "Co-author, corpus linguistics and discourse analysis methodology",
+    about_author2_role: "Applied Linguistics & Corpus Studies",
     about_citation: "Citation",
     about_citation_text: "If you use CorpusMind in your research, please cite it as:",
     about_dev_ack: "Development Acknowledgement",
@@ -188,6 +189,7 @@ export const translations = {
     nav_settings: "الإعدادات",
     nav_about: "حول البرنامج",
     nav_userguide: "دليل المستخدم",
+    nav_hub: "مستودع النصوص",
 
     // Home view
     home_welcome: "مرحباً بك في CorpusMind",
@@ -250,7 +252,7 @@ export const translations = {
     about_author1_role: "المهندس الرئيسي ومدرس اللغة الإنجليزية المساعد",
     about_author2: "أ.د. وسام إبراهيم",
     about_author2_orcid: "جامعة الأميرة نورة بنت عبدالرحمن | ORCID: 0000-0003-0710-6038",
-    about_author2_role: "مؤلف مشارك، منهجية تحليل اللغة والخطاب",
+    about_author2_role: "اللغويات التطبيقية ودراسات المصدر",
     about_citation: "الاقتباس",
     about_citation_text: "إذا استخدمت CorpusMind في بحثك، يُرجى الاستشهاد به كالتالي:",
     about_dev_ack: "شكر وتقدير للتطوير",

@@ -180,33 +180,42 @@ export function TroubleshootingBar() {
   const clearResolved = useTroubleshoot((s) => s.clearResolved);
   const clearAll = useTroubleshoot((s) => s.clearAll);
   const backendReachable = useTroubleshoot((s) => s.backendReachable);
+  const muted = useTroubleshoot((s) => s.muted);
+  const setMuted = useTroubleshoot((s) => s.setMuted);
 
   const unresolved = issues.filter((i) => !i.resolved);
 
-  // Don't render anything if everything is healthy
-  if (unresolved.length === 0 && backendReachable) {
+  // When muted, don't show the taskbar badge (errors are still captured
+  // silently and visible if the user opens the panel from Settings).
+  // Still render the container so the panel can be opened from Settings.
+  const showBadge = !muted && (unresolved.length > 0 || !backendReachable);
+
+  // Don't render anything if everything is healthy AND not muted
+  if (!showBadge && !panelOpen) {
     return null;
   }
 
   return (
     <div className="trouble-bar-container">
-      {/* The taskbar indicator */}
-      <button
-        className={`trouble-bar-indicator ${unresolved.length > 0 ? "has-issues" : "backend-down"}`}
-        onClick={() => setPanelOpen(!panelOpen)}
-        aria-expanded={panelOpen}
-        aria-label={`${unresolved.length} unresolved issue${unresolved.length === 1 ? "" : "s"}`}
-      >
-        <span className="trouble-bar-dot" aria-hidden />
-        {unresolved.length > 0 ? (
-          <span>
-            {unresolved.length} issue{unresolved.length === 1 ? "" : "s"} detected
-          </span>
-        ) : (
-          <span>Backend offline</span>
-        )}
-        <span className="trouble-bar-chevron">{panelOpen ? "\u25BC" : "\u25C2"}</span>
-      </button>
+      {/* The taskbar indicator — hidden when muted */}
+      {showBadge && (
+        <button
+          className={`trouble-bar-indicator ${unresolved.length > 0 ? "has-issues" : "backend-down"}`}
+          onClick={() => setPanelOpen(!panelOpen)}
+          aria-expanded={panelOpen}
+          aria-label={`${unresolved.length} unresolved issue${unresolved.length === 1 ? "" : "s"}`}
+        >
+          <span className="trouble-bar-dot" aria-hidden />
+          {unresolved.length > 0 ? (
+            <span>
+              {unresolved.length} issue{unresolved.length === 1 ? "" : "s"} detected
+            </span>
+          ) : (
+            <span>Backend offline</span>
+          )}
+          <span className="trouble-bar-chevron">{panelOpen ? "\u25BC" : "\u25C2"}</span>
+        </button>
+      )}
 
       {/* The expandable panel */}
       {panelOpen && (
@@ -214,6 +223,13 @@ export function TroubleshootingBar() {
           <div className="trouble-panel-header">
             <strong>Smart Troubleshooting</strong>
             <div className="trouble-panel-actions">
+              <button
+                className="trouble-panel-btn mute-toggle"
+                onClick={() => setMuted(!muted)}
+                title={muted ? "Unmute notifications" : "Mute notifications"}
+              >
+                {muted ? "\u23F8 Muted" : "\u1F50A On"}
+              </button>
               {issues.some((i) => i.resolved) && (
                 <button className="trouble-panel-btn" onClick={clearResolved}>
                   Clear resolved
@@ -234,11 +250,20 @@ export function TroubleshootingBar() {
             </div>
           </div>
 
+          {muted && (
+            <div className="trouble-muted-banner">
+              Notifications are muted. Errors are still being captured
+              silently — you can review them here anytime.
+            </div>
+          )}
+
           <div className="trouble-panel-body">
             {issues.length === 0 ? (
               <div className="trouble-empty">
-                No issues recorded. The backend is currently unreachable — check that
-                <code> corpusmind-engine</code> is running on port 8765.
+                No issues recorded. {muted && "Muted — the badge will not appear even if errors occur."}
+                {!backendReachable && " The backend is currently unreachable — check that "}
+                {!backendReachable && <code>corpusmind-engine</code>}
+                {!backendReachable && " is running on port 8765."}
               </div>
             ) : (
               issues.map((issue) => <IssueCard key={issue.id} issue={issue} />)

@@ -502,6 +502,104 @@ corpusmind-engine`}</pre>
     ),
   },
   {
+    id: "exporting",
+    title: "Exporting Results",
+    icon: "\u25B6",
+    body: (
+      <>
+        <p>
+          Every analysis result in CorpusMind can be exported in multiple formats.
+          Click the <strong>Export</strong> dropdown button in any analysis view
+          (Concordance, Frequency, Collocation, Keyness) and pick a format.
+        </p>
+        <h4>Tabular formats (concordance, frequency, collocation, keyness)</h4>
+        <table className="guide-shortcut-table">
+          <thead>
+            <tr><th>Format</th><th>Use case</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>Excel (.xlsx)</strong></td><td>Styled spreadsheet — opens in Excel or Google Sheets. Good for sharing with collaborators.</td></tr>
+            <tr><td><strong>CSV (.csv)</strong></td><td>Universal comma-separated — opens in any tool (R, Python, Excel, SPSS).</td></tr>
+            <tr><td><strong>TSV (.tsv)</strong></td><td>Tab-separated — paste directly into Excel or Google Sheets.</td></tr>
+            <tr><td><strong>Plain text (.txt)</strong></td><td>Fixed-width table — for emails, quick inspection, or plain-text notes.</td></tr>
+            <tr><td><strong>JSON (.json)</strong></td><td>Structured — for programmatic use, re-import into scripts, or feeding into another pipeline.</td></tr>
+          </tbody>
+        </table>
+        <h4>Diagram export (collocations)</h4>
+        <p>
+          The Collocation view has a separate <strong>Export diagram</strong> dropdown
+          that produces a collocation network diagram:
+        </p>
+        <ul>
+          <li><strong>SVG (.svg)</strong> — vector graphics. Scales to any size
+            without quality loss. Open in a browser, Inkscape, or Adobe Illustrator.
+            Best for papers, posters, and slides.</li>
+          <li><strong>PNG (.png)</strong> — raster image at 1600×1200. Best for
+            Word documents, social media, or anywhere SVG isn&apos;t supported.
+            Requires the optional <code>cairosvg</code> package (<code>pip install -e &quot;.[export]&quot;</code>).</li>
+        </ul>
+        <p>
+          In the diagram, the node word sits in the center with each collocate
+          placed in a circle around it. Edge thickness is proportional to the
+          association strength; node radius is proportional to raw frequency.
+        </p>
+        <h4>Methods PDF</h4>
+        <p>
+          The Keyness view has a <strong>Methods PDF</strong> button that auto-drafts
+          a methodology paragraph naming the exact tools, model versions, and formulas
+          used for your corpus. You can paste this directly into a manuscript&apos;s
+          Methods section so peer reviewers can verify your workflow.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "corpus-hub",
+    title: "Corpus Hub (download corpora)",
+    icon: "\u25B6",
+    body: (
+      <>
+        <p>
+          The <strong>Corpus Hub</strong> (sidebar: File → Corpus Hub) lets you
+          search and download open-access corpora in Arabic and English from
+          three hubs:
+        </p>
+        <ul>
+          <li><strong>HuggingFace Datasets</strong> — Wikipedia (Arabic + English),
+            OSCAR, CC-100, Arabic Pile. Full-text search inside Wikipedia.</li>
+          <li><strong>Wikipedia (live)</strong> — fetch fresh articles directly
+            from Arabic or English Wikipedia. CC-BY-SA 3.0.</li>
+          <li><strong>OPUS</strong> — 1,200+ parallel corpora (Arabic ↔ English
+            translation pairs). Per-corpus licensing.</li>
+        </ul>
+        <h4>How to use it</h4>
+        <ol>
+          <li>Go to <strong>File → Corpus Hub</strong> in the sidebar.</li>
+          <li>Type a search query (keyword or topic).</li>
+          <li>Pick a language: English, Arabic, or Arabic-English (parallel).</li>
+          <li>Optionally filter to a specific hub.</li>
+          <li>Click <strong>Search</strong>.</li>
+          <li>Review the results — each shows the hub, title, description,
+            language, size, license, and format.</li>
+          <li>Click <strong>Download</strong> on the result you want.</li>
+          <li>The file downloads to your browser&apos;s default location.</li>
+          <li>Go to <strong>Projects</strong>, create or open a corpus, and upload
+            the downloaded file.</li>
+        </ol>
+        <p className="hint">
+          Always check the license of each corpus before redistributing. Wikipedia
+          is CC-BY-SA 3.0 (attribution required); OPUS corpora vary per source.
+        </p>
+        <h4>Privacy</h4>
+        <p>
+          Searches and downloads are proxied through the CorpusMind engine on your
+          machine. Your existing corpus data is never sent to any hub — only search
+          queries and the IDs of corpora you choose to download.
+        </p>
+      </>
+    ),
+  },
+  {
     id: "reproducibility",
     title: "Reproducibility",
     icon: "\u25B6",

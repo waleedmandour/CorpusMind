@@ -1,12 +1,12 @@
 /**
  * CorpusManager — project list, corpus list, document upload (drag-drop),
- * pipeline-recipe display (§8.1, §8.2).
+ * pipeline-recipe display (§8.1, §8.2), and on-demand corpus cleaning.
  */
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
 
-import { api } from "@/lib/api";
+import { api, type CleaningOptions } from "@/lib/api";
 import { useApp } from "@/store/app";
 
 export function CorpusManagerView() {
@@ -82,6 +82,9 @@ export function CorpusManagerView() {
               <div className="item-meta">
                 {c.language} · {c.stats?.document_count ?? 0} docs · {(c.stats?.token_count ?? 0).toLocaleString()} tokens
               </div>
+              <div className="item-actions" onClick={(e) => e.stopPropagation()}>
+                <CleanCorpusButton cid={c.id} language={c.language} />
+              </div>
               {c.id === activeCorpusId && c.pipeline_recipe && (
                 <PipelineRecipe recipe={c.pipeline_recipe} />
               )}
@@ -123,6 +126,7 @@ function PipelineRecipe({ recipe }: { recipe: Record<string, unknown> }) {
 function DocumentUploader({ cid }: { cid: string }) {
   const qc = useQueryClient();
   const [dragging, setDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const upload = useMutation({
     mutationFn: (files: File[]) => api.uploadDocuments(cid, files),
@@ -142,6 +146,12 @@ function DocumentUploader({ cid }: { cid: string }) {
   const onFilePicker = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     if (files.length > 0) upload.mutate(files);
+    // Reset the input so the same file can be selected again
+    e.target.value = "";
+  };
+
+  const openFilePicker = () => {
+    fileInputRef.current?.click();
   };
 
   return (
@@ -150,22 +160,31 @@ function DocumentUploader({ cid }: { cid: string }) {
       onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
       onDragLeave={() => setDragging(false)}
       onDrop={onDrop}
+      onClick={openFilePicker}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openFilePicker(); } }}
     >
       <input
+        ref={fileInputRef}
         type="file"
         multiple
         accept=".txt,.md,.docx,.pdf,.html,.htm,.xml,.csv"
         onChange={onFilePicker}
-        style={{ display: "none" }}
-        id="file-input"
+        style={{ position: "absolute", width: 0, height: 0, opacity: 0, pointerEvents: "none" }}
+        aria-hidden="true"
       />
-      <label htmlFor="file-input" className="dropzone-label">
+      <div className="dropzone-icon">{"\u2191"}</div>
+      <div className="dropzone-label">
         {upload.isPending
           ? "Uploading & tagging…"
           : dragging
             ? "Drop files here"
-            : "Drop files here or click to choose (.txt, .md, .docx, .pdf, .html, .xml, .csv)"}
-      </label>
+            : "Drop files here or click to upload"}
+      </div>
+      <div className="dropzone-formats">
+        .txt · .md · .docx · .pdf · .html · .xml · .csv
+      </div>
       {upload.isError && <div className="error">{String(upload.error)}</div>}
       {upload.data && (
         <div className="success">Ingested {upload.data.length} document(s).</div>
@@ -255,6 +274,136 @@ function NewCorpusDialog({ onCreate }: { onCreate: (name: string, language: stri
               <button onClick={() => setOpen(false)}>Cancel</button>
               <button className="primary" disabled={!name} onClick={() => { onCreate(name, language); setOpen(false); setName(""); }}>Create</button>
             </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+
+function CleanCorpusButton({ cid, language }: { cid: string; language: string }) {
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [opts, setOpts] = useState<CleaningOptions>({
+    collapse_whitespace: true,
+    strip_leading_trailing: true,
+    remove_empty_lines: false,
+    remove_urls: false,
+    remove_email_addresses: false,
+    remove_html_entities: false,
+    lowercase: false,
+    remove_punctuation: false,
+    remove_numbers: false,
+    remove_extra_symbols: false,
+    remove_stopwords: false,
+    min_token_length: 0,
+    normalize_arabic: false,
+    strip_arabic_diacritics: false,
+    remove_arabic_tatweel: false,
+    create_new_version: true,
+  });
+
+  const clean = useMutation({
+    mutationFn: () => api.cleanCorpus(cid, opts),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["corpora"] });
+      qc.invalidateQueries({ queryKey: ["documents", cid] });
+      setOpen(false);
+      const delta = data.new_token_count - data.old_token_count;
+      alert(
+        `Corpus cleaned.\n\n` +
+        `Documents: ${data.documents_cleaned}\n` +
+        `Tokens: ${data.old_token_count.toLocaleString()} -> ${data.new_token_count.toLocaleString()} (${delta >= 0 ? "+" : ""}${delta.toLocaleString()})\n` +
+        `Types: ${data.old_type_count.toLocaleString()} -> ${data.new_type_count.toLocaleString()}`
+      );
+    },
+    onError: (e: Error) => {
+      alert(`Cleaning failed: ${e.message}`);
+    },
+  });
+
+  const isArabic = language === "ar";
+  const toggle = (key: keyof CleaningOptions, value: boolean | number) =>
+    setOpts((o) => ({ ...o, [key]: value }));
+
+  return (
+    <>
+      <button
+        className="btn-small clean-btn"
+        onClick={() => setOpen(true)}
+        title="Clean this corpus (remove URLs, lowercase, strip punctuation, etc.)"
+      >
+        Clean
+      </button>
+      {open && (
+        <div className="modal-backdrop" onClick={() => setOpen(false)}>
+          <div className="modal clean-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>Clean Corpus</h3>
+            <p className="clean-warning">
+              Warning: This re-cleans every document in this corpus and re-runs the
+              NLP pipeline. The old annotations are replaced. This cannot be undone.
+            </p>
+
+            <div className="clean-options">
+              <div className="clean-group">
+                <div className="clean-group-label">Structure</div>
+                <label><input type="checkbox" checked={opts.collapse_whitespace ?? false} onChange={(e) => toggle("collapse_whitespace", e.target.checked)} /> Collapse whitespace</label>
+                <label><input type="checkbox" checked={opts.strip_leading_trailing ?? false} onChange={(e) => toggle("strip_leading_trailing", e.target.checked)} /> Strip leading/trailing whitespace</label>
+                <label><input type="checkbox" checked={opts.remove_empty_lines ?? false} onChange={(e) => toggle("remove_empty_lines", e.target.checked)} /> Remove empty lines</label>
+                <label><input type="checkbox" checked={opts.remove_urls ?? false} onChange={(e) => toggle("remove_urls", e.target.checked)} /> Remove URLs</label>
+                <label><input type="checkbox" checked={opts.remove_email_addresses ?? false} onChange={(e) => toggle("remove_email_addresses", e.target.checked)} /> Remove email addresses</label>
+                <label><input type="checkbox" checked={opts.remove_html_entities ?? false} onChange={(e) => toggle("remove_html_entities", e.target.checked)} /> Remove HTML entities</label>
+              </div>
+
+              <div className="clean-group">
+                <div className="clean-group-label">Case &amp; Punctuation</div>
+                <label><input type="checkbox" checked={opts.lowercase ?? false} onChange={(e) => toggle("lowercase", e.target.checked)} /> Lowercase all text</label>
+                <label><input type="checkbox" checked={opts.remove_punctuation ?? false} onChange={(e) => toggle("remove_punctuation", e.target.checked)} /> Remove punctuation</label>
+                <label><input type="checkbox" checked={opts.remove_numbers ?? false} onChange={(e) => toggle("remove_numbers", e.target.checked)} /> Remove numbers</label>
+                <label><input type="checkbox" checked={opts.remove_extra_symbols ?? false} onChange={(e) => toggle("remove_extra_symbols", e.target.checked)} /> Remove emoji &amp; symbols</label>
+              </div>
+
+              <div className="clean-group">
+                <div className="clean-group-label">Linguistic</div>
+                <label><input type="checkbox" checked={opts.remove_stopwords ?? false} onChange={(e) => toggle("remove_stopwords", e.target.checked)} /> Remove stopwords ({isArabic ? "Arabic" : "English"})</label>
+                <label>
+                  Min token length:
+                  <input
+                    type="number"
+                    min={0}
+                    max={20}
+                    value={opts.min_token_length ?? 0}
+                    onChange={(e) => toggle("min_token_length", parseInt(e.target.value, 10) || 0)}
+                    style={{ inlineSize: "60px", marginInlineStart: "8px" }}
+                  />
+                  <span className="hint-inline">(0 = no filter)</span>
+                </label>
+              </div>
+
+              {isArabic && (
+                <div className="clean-group">
+                  <div className="clean-group-label">Arabic-specific</div>
+                  <label><input type="checkbox" checked={opts.normalize_arabic ?? false} onChange={(e) => toggle("normalize_arabic", e.target.checked)} /> Normalize alef variants</label>
+                  <label><input type="checkbox" checked={opts.strip_arabic_diacritics ?? false} onChange={(e) => toggle("strip_arabic_diacritics", e.target.checked)} /> Strip diacritics (harakat)</label>
+                  <label><input type="checkbox" checked={opts.remove_arabic_tatweel ?? false} onChange={(e) => toggle("remove_arabic_tatweel", e.target.checked)} /> Remove tatweel/kashida</label>
+                </div>
+              )}
+            </div>
+
+            <div className="modal-actions">
+              <button onClick={() => setOpen(false)} disabled={clean.isPending}>Cancel</button>
+              <button
+                className="primary danger"
+                disabled={clean.isPending}
+                onClick={() => clean.mutate()}
+              >
+                {clean.isPending ? "Cleaning..." : "Clean Corpus"}
+              </button>
+            </div>
+            {clean.isError && (
+              <div className="error">Error: {String(clean.error)}</div>
+            )}
           </div>
         </div>
       )}

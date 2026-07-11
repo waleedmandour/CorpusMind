@@ -191,7 +191,7 @@ async def test_arabic_normalization(client):
     assert r.status_code == 200
     data = r.json()
     # Normalization converts teh marbuta ة → ه
-    assert "ه" in data["normalized"]  # noqa: RUF001 - Arabic character in test assertion
+    assert "ه" in data["normalized"]
 
 
 @pytest.mark.asyncio
