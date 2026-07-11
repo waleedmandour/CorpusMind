@@ -147,11 +147,36 @@ class SpaCyPipeline:
 def get_pipeline(backend: str = "spacy", language: str = "en", model_name: str | None = None) -> Pipeline:
     """Return a cached pipeline instance.
 
-    Defaults: spaCy + en_core_web_sm. Phase 3 will branch on language == 'ar'
-    and load the Arabic backend (CAMeL Tools / SinaTools).
+    For Arabic (language == 'ar'), this delegates to the CAMeL Tools
+    pipeline (nlp/arabic/pipeline.py) which provides proper Arabic
+    morphology, POS, lemma, and root extraction.
+
+    For other languages, it uses spaCy with the correct model naming
+    convention: most languages use `_core_news_sm` (not `_core_web_sm`).
+    Only English and Chinese use `_core_web_sm`.
+
+    Raises ValueError with an actionable message if the language has
+    no available spaCy model.
     """
+    # Arabic: delegate to the CAMeL Tools pipeline
+    if language == "ar" and backend == "spacy":
+        try:
+            from nlp.arabic.pipeline import ArabicPipeline
+            return ArabicPipeline()
+        except ImportError as exc:
+            raise ValueError(
+                "Arabic NLP requires CAMeL Tools. Install with: "
+                "pip install camel-tools && camel_data -i morphology-db-msa-r13"
+            ) from exc
+
     if backend == "spacy":
         if model_name is None:
-            model_name = "en_core_web_sm" if language == "en" else f"{language}_core_web_sm"
+            # English and Chinese use _core_web_sm; everything else uses _core_news_sm
+            if language == "en":
+                model_name = "en_core_web_sm"
+            elif language == "zh":
+                model_name = "zh_core_web_sm"
+            else:
+                model_name = f"{language}_core_news_sm"
         return SpaCyPipeline(model_name=model_name, language=language)
     raise ValueError(f"Unknown NLP backend: {backend}")

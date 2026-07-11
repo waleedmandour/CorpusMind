@@ -445,3 +445,132 @@ def detect_arabic_register(text: str) -> dict[str, float]:
         "msa": round(1 / total, 3),
         "dialectal": round(d_score / total, 3),
     }
+
+
+# --------------------------------------------------------------------------- #
+# Adapter: wraps ArabicBackend to implement the general Pipeline protocol
+# so Arabic corpora can be ingested through the same code path as English.
+# --------------------------------------------------------------------------- #
+
+
+class ArabicPipeline:
+    """Adapter that wraps an ArabicBackend to implement the general Pipeline
+    protocol (info/parse/parse_document).
+
+    This lets the ingestion service call `get_pipeline(language='ar')` and
+    get back an object that produces ParsedToken/ParsedSentence/ParsedDocument
+    — the same shapes the storage layer expects — without knowing or caring
+    that the underlying analysis is done by CAMeL Tools rather than spaCy.
+
+    The mapping from ArabicToken to ParsedToken:
+      text      → text
+      lemma     → lemma (or dediacritized if lemma is empty)
+      pos       → pos (mapped to UD-style if possible)
+      stem      → pos_fine
+      root      → morph (stored as "root=ك.ت.ب|pattern=يُ1ْ2ِ3")
+      is_punct  → True if pos == "punct"
+    """
+
+    def __init__(self, backend_name: str = "camel") -> None:
+        if backend_name == "camel":
+            self._backend = CamelBackend()
+        elif backend_name == "farasa":
+            self._backend = FarasaBackend()
+        elif backend_name == "sinatools":
+            self._backend = SinaToolsBackend()
+        else:
+            self._backend = CamelBackend()
+
+        self._info: ArabicBackendInfo | None = None
+
+    def info(self):
+        from nlp.general.pipeline import PipelineInfo
+
+        if self._info is None:
+            bi = self._backend.info()
+            self._info = PipelineInfo(
+                backend=f"arabic-{bi.name}",
+                model_name=bi.model,
+                model_version=bi.version,
+                spacy_version="(CAMeL Tools)",
+                language="ar",
+            )
+        return self._info
+
+    def parse(self, text: str):
+        from nlp.general.pipeline import ParsedSentence, ParsedToken
+
+        analysis = self._backend.analyze(text, dediacritize=False)
+
+        # Map ArabicToken → ParsedToken
+        tokens: list[ParsedToken] = []
+        for at in analysis.tokens:
+            # Map Arabic POS to a UD-compatible tag (best effort)
+            pos = self._map_pos(at.pos)
+            # Store root + pattern in the morph field
+            morph_parts = []
+            if at.root:
+                morph_parts.append(f"root={at.root}")
+            if at.pattern:
+                morph_parts.append(f"pattern={at.pattern}")
+            morph = "|".join(morph_parts) if morph_parts else ""
+
+            tokens.append(ParsedToken(
+                text=at.text,
+                lemma=at.lemma or at.dediacritized or at.text,
+                pos=pos,
+                pos_fine=at.stem or at.pos,
+                morph=morph,
+                dep_head=0,  # Arabic backend doesn't produce dependency parse
+                dep_rel="dep",
+                is_punct=at.pos.lower() == "punct",
+                is_stop=False,  # CAMeL doesn't have a stopword list built-in
+            ))
+
+        yield ParsedSentence(tokens=tokens)
+
+    def parse_document(self, text: str):
+        from nlp.general.pipeline import ParsedDocument
+
+        sentences = list(self.parse(text))
+        return ParsedDocument(sentences=sentences)
+
+    @staticmethod
+    def _map_pos(arabic_pos: str) -> str:
+        """Map CAMeL POS tags to Universal Dependencies (UPOS) tags.
+
+        CAMeL uses its own tag set; we map to the closest UPOS equivalent
+        so downstream analysis (POS distribution, POS n-grams, etc.) works
+        consistently with English corpora.
+        """
+        pos_lower = arabic_pos.lower().strip()
+        mapping = {
+            "noun": "NOUN",
+            "verb": "VERB",
+            "adj": "ADJ",
+            "adj_num": "ADJ",
+            "adv": "ADV",
+            "prep": "ADP",
+            "prep_comp": "ADP",
+            "pron": "PRON",
+            "pron_dem": "PRON",
+            "pron_rel": "PRON",
+            "pron_inter": "PRON",
+            "conj": "CCONJ",
+            "conj_sub": "SCONJ",
+            "punct": "PUNCT",
+            "num": "NUM",
+            "digit": "NUM",
+            "interj": "INTJ",
+            "part": "PART",
+            "det": "DET",
+            "part_focus": "PART",
+            "part_neg": "PART",
+            "part_inter": "PART",
+            "part_voc": "PART",
+            "abbrev": "X",
+            "foreign": "X",
+            "pseudo_verb": "VERB",
+            "noun_prop": "PROPN",
+        }
+        return mapping.get(pos_lower, "X")

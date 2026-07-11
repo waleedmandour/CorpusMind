@@ -15,6 +15,21 @@ The Gemini API key can be provided two ways:
 
 The runtime key takes precedence. The key is never exposed back to the
 browser — only its presence (boolean) is reported via the /status endpoint.
+
+ARCHITECTURE NOTE: This is a deliberate separate cloud-AI integration,
+distinct from the main ModelProvider abstraction (ai/providers.py).
+The rationale:
+  - Smart Troubleshooting sends error text (not corpus data) to Gemini.
+    It's a diagnostic feature, not a corpus-analysis feature.
+  - The main ModelProvider (Ollama/LM Studio/Cloud) handles corpus-
+    related AI tasks (chat, interpretation, tool-calling). These are
+    subject to the "cloud indicator must be unmissable" principle.
+  - Smart Troubleshooting's Gemini calls are lower-stakes: they diagnose
+    engine errors, not interpret research findings.
+  - Keeping them separate means a Gemini key for troubleshooting doesn't
+    accidentally enable cloud corpus analysis, and vice versa.
+This separation is documented in THIRD_PARTY_LICENSES.md under
+"Cloud API services" and in the privacy docs.
 """
 from __future__ import annotations
 

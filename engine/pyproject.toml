@@ -11,7 +11,7 @@ requires-python = ">=3.12"
 license = "AGPL-3.0-only"
 authors = [
     { name = "Dr. Waleed Mandour", email = "waleed.mandour@squ.edu.om" },
-    { name = "Prof. Wessam Ibrahim" },
+    { name = "Prof. Wesam Ibrahim" },
 ]
 keywords = ["corpus-linguistics", "discourse-analysis", "nlp", "arabic", "multimodal", "visual-grammar", "cda", "tauri", "local-llm"]
 classifiers = [

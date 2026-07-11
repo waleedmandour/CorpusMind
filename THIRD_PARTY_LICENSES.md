@@ -197,6 +197,27 @@ recorded in this document before the build proceeds.
 
 ---
 
+## Cloud API services (opt-in, NOT bundled)
+
+### Google Gemini API
+
+- **Used for:** Smart Troubleshooting error interpretation (optional)
+- **What data is sent:** Error text only (error message, HTTP status code,
+  endpoint path, and what the user was doing). **No corpus data is ever sent.**
+- **Off by default:** The Gemini integration is disabled unless the user
+  explicitly enters an API key in Settings or sets the
+  `CORPUSMIND_GEMINI_API_KEY` environment variable.
+- **API key storage:** If entered via the UI, the key is stored in-memory
+  in the engine process only (never written to disk). If set via env var,
+  it follows the user's environment configuration.
+- **Google's terms:** https://ai.google.dev/terms
+- **Privacy:** https://ai.google.dev/privacy
+- **License:** Google Generative AI API is governed by Google's Terms of
+  Service. The user is responsible for complying with Google's terms when
+  using the Smart Troubleshooting interpretation feature.
+
+---
+
 ## Updating this file
 
 When adding a new dependency (Python, Node, or Rust):

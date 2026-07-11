@@ -2,7 +2,7 @@
 name = "corpusmind-desktop"
 version = "0.1.0"
 description = "CorpusMind desktop shell (Tauri 2) — manages the engine sidecar lifecycle and OS integration."
-authors = ["Dr. Waleed Mandour", "Prof. Wessam Ibrahim"]
+authors = ["Dr. Waleed Mandour", "Prof. Wesam Ibrahim"]
 license = "AGPL-3.0-only"
 repository = "https://github.com/waleedmandour/CorpusMind"
 edition = "2021"
@@ -30,6 +30,7 @@ env_logger = "0.11"
 thiserror = "1"
 tokio = { version = "1", features = ["full"] }
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "blocking"] }
+dirs = "5"
 
 [features]
 # This feature is used for production builds or when a dev server is not specified, DO NOT REMOVE!!

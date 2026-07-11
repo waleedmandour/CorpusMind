@@ -142,11 +142,36 @@ impl OllamaManager {
         info!(target: "ollama", "starting ollama serve from: {}", ollama_exe);
 
         // Spawn `ollama serve` — it runs as a daemon and listens on 11434
-        let child = Command::new(&ollama_exe)
-            .arg("serve")
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .spawn()
+        // Redirect output to a log file so Smart Troubleshooting can read it.
+        let log_dir = dirs::data_dir()
+            .or_else(|| std::env::var("HOME").ok().map(std::path::PathBuf::from))
+            .unwrap_or_else(|| std::path::PathBuf::from("."));
+        let log_dir = log_dir.join("corpusmind").join("logs");
+        std::fs::create_dir_all(&log_dir).ok();
+        let ollama_log = log_dir.join("ollama.log");
+
+        let mut cmd = Command::new(&ollama_exe);
+        cmd.arg("serve");
+
+        // Try to open log file; fall back to null if it fails
+        match std::fs::File::create(&ollama_log) {
+            Ok(f) => {
+                let stderr = std::fs::OpenOptions::new()
+                    .create(true).append(true).open(&ollama_log)
+                    .unwrap_or_else(|_| std::fs::File::create(&ollama_log).unwrap_or_else(|_| {
+                        // Last resort: null
+                        return std::fs::File::create(
+                            if cfg!(windows) { "NUL" } else { "/dev/null" }
+                        ).unwrap();
+                    }));
+                cmd.stdout(Stdio::from(f)).stderr(Stdio::from(stderr));
+            }
+            Err(_) => {
+                cmd.stdout(Stdio::null()).stderr(Stdio::null());
+            }
+        }
+
+        let child = cmd.spawn()
             .map_err(|e| format!("Failed to start ollama: {e}"))?;
 
         *child_opt = Some(child);

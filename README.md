@@ -34,7 +34,12 @@ run entirely on the researcher's own machine.
 
 ## Status
 
-Phase 1 — **Suite A MVP** (per the [phased roadmap](docs/AI_AGENT_BUILD_PROMPT.md#16-phased-delivery-roadmap)).
+**Suite A (Text):** complete through Phase 6 (cleaning, corpus hub, research features,
+deterministic AI layer, Ollama auto-start, multi-format export, professional UI).
+
+**Suite B (Vision):** backend implemented (20+ endpoints for image analysis, Visual
+Grammar, multimodal alignment), UI integration in progress — currently shows
+"Coming Soon" in the app.
 
 ### Phase 0 — Foundations ✅
 - ✅ Monorepo scaffold
@@ -112,7 +117,7 @@ These translate the [research-basis gap analysis](docs/AI_AGENT_BUILD_PROMPT.md#
 4. **Zero-code, not zero-transparency.** Every one-click automatic output (a POS tag, a keyness list, a "power relation" score) is inspectable: the user can always see which model / formula / version produced it, and can export that as citeable methodology text.
 5. **Interpretive claims are hypotheses, framework-lensed, not facts.** Anything in the CDA / MCDA / ideology / power / persuasion family is labeled with the theoretical framework that produced it and phrased as *"under a [Framework] reading, X may indicate Y"* — never as a bare assertion.
 6. **Arabic is a first-class citizen, not a bolt-on.** RTL layout, dialect-aware tooling, and the CAMeL Tools / SinaTools / Farasa ecosystem are part of the core architecture from day one.
-7. **Practical scale, honestly stated.** Designed for disk-backed, incrementally-indexed corpora in the hundreds-of-millions-of-tokens range on consumer hardware, with graceful degradation — not an unqualified "no limit" claim.
+7. **Practical scale, honestly stated.** Currently tested with corpora up to ~100K tokens on consumer hardware. The collocation and concordance analysis loads token streams into memory per query (MVP implementation). A SQLite FTS5 positional index for production-scale corpora (millions of tokens) is a roadmap item, not yet implemented.
 8. **Reproducibility is a feature.** Every project pins the exact tokenizer, tagger, model, and formula versions used, and can emit a "Methods" paragraph for a paper's methodology section.
 9. **Consent and restraint around biometric-adjacent features.** Facial/body "age group," "gender presentation," "emotion," "gaze," and dominance/submission inference ship as an opt-in module, disabled by default, and never perform identity recognition or re-identification of real individuals.
 
