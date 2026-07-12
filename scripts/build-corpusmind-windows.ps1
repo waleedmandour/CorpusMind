@@ -62,7 +62,7 @@ if (-not $python -and (Get-Command python3 -ErrorAction SilentlyContinue)) {
     $python = "python3"
 }
 if (-not $python) { DieMsg "Python not found. Install Python 3.12 from https://python.org and re-run." }
-$pyVer = & $python --version 2>&1
+$pyVer = Invoke-Expression "$python --version" 2>&1
 OkMsg "Python: $pyVer"
 $pyVerNum = ($pyVer -replace "Python ", "")
 try {
@@ -193,7 +193,11 @@ $Pip = Join-Path $venvPath "Scripts\pip.exe"
 $PyExe = Join-Path $venvPath "Scripts\python.exe"
 & $PyExe -m pip install --upgrade pip wheel --quiet
 & $PyExe -m pip install pyinstaller python-multipart cryptography --quiet
-& $PyExe -m pip install -e "$EngineDir[dev,vision]" --quiet
+# Install CORE engine deps only - NOT [dev,vision].
+# [dev] pulls in pytest/ruff/mypy (not needed in production).
+# [vision] pulls in opencv-python (~60MB) which makes PyInstaller extremely slow.
+& $PyExe -m pip install -e "$EngineDir" --quiet
+& $PyExe -m pip install pillow --quiet
 OkMsg "engine deps installed"
 
 Log "downloading spaCy English model..."
