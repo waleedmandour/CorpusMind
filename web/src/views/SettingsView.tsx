@@ -30,6 +30,9 @@ export function SettingsView() {
   const [recheckingEngine, setRecheckingEngine] = useState(false);
   const [recheckingOllama, setRecheckingOllama] = useState(false);
   const [diagMessage, setDiagMessage] = useState("");
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
+  const [engineLogs, setEngineLogs] = useState<string>("");
+  const [sidecarInfo, setSidecarInfo] = useState<string>("");
 
   // Check if we're running in Tauri (desktop app)
   const isTauri = typeof window !== "undefined" &&
@@ -77,6 +80,56 @@ export function SettingsView() {
     }
   };
 
+  const runDiagnostics = async () => {
+    setShowDiagnostics(true);
+    setEngineLogs("Loading...");
+    setSidecarInfo("Loading...");
+    if (!isTauri) {
+      setEngineLogs("Diagnostics only available in the desktop app.");
+      setSidecarInfo("Diagnostics only available in the desktop app.");
+      return;
+    }
+    try {
+      const invoke = (window as any).__TAURI_INTERNALS__?.invoke || (window as any).__TAURI__?.core?.invoke;
+      if (invoke) {
+        // Get engine logs
+        const logsResult = await invoke("engine_logs");
+        const logsData = JSON.parse(logsResult as string);
+        const logText = [
+          `stdout log: ${logsData.stdout_path || "(not found)"}`,
+          "─".repeat(60),
+          logsData.stdout || "(empty)",
+          "",
+          `stderr log: ${logsData.stderr_path || "(not found)"}`,
+          "─".repeat(60),
+          logsData.stderr || "(empty)",
+        ].join("\n");
+        setEngineLogs(logText);
+
+        // Get sidecar verification
+        const sidecarResult = await invoke("verify_sidecar");
+        const sidecarData = JSON.parse(sidecarResult as string);
+        const sidecarText = [
+          `Sidecar found: ${sidecarData.sidecar_found ? "YES" : "NO"}`,
+          `Expected name: ${sidecarData.expected_name}`,
+          `Target triple: ${sidecarData.target_triple}`,
+          `Resource dir: ${sidecarData.resource_dir || "(not resolved)"}`,
+          `Sidecar path: ${sidecarData.sidecar_path || "(not found)"}`,
+          "",
+          `Resolved program: ${sidecarData.resolved_program}`,
+          `Resolved args: ${sidecarData.resolved_args}`,
+          `Resolved working dir: ${sidecarData.resolved_working_dir}`,
+          "",
+          `Message: ${sidecarData.message}`,
+        ].join("\n");
+        setSidecarInfo(sidecarText);
+      }
+    } catch (e: any) {
+      setEngineLogs(`Diagnostics failed: ${e?.message || String(e)}`);
+      setSidecarInfo(`Diagnostics failed: ${e?.message || String(e)}`);
+    }
+  };
+
   return (
     <div className="settings-view">
       <div className="settings-header">
@@ -115,9 +168,10 @@ export function SettingsView() {
               <strong style={{ color: "var(--danger)" }}>Engine is offline</strong>
               <p className="settings-text-muted">
                 The engine should start automatically when the app launches.
-                If it didn't, click "Recheck" to try again.
+                If it didn't, click "Recheck" to try again. If it still fails,
+                click "Run Diagnostics" to see the engine logs and find out why.
               </p>
-              <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
+              <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center", flexWrap: "wrap" }}>
                 <button
                   className="btn-primary"
                   onClick={recheckEngine}
@@ -126,9 +180,53 @@ export function SettingsView() {
                 >
                   {recheckingEngine ? "Restarting..." : "Recheck Engine"}
                 </button>
+                <button
+                  className="btn-secondary"
+                  onClick={runDiagnostics}
+                  disabled={!isTauri}
+                  title={!isTauri ? "Diagnostics only available in the desktop app" : ""}
+                >
+                  Run Diagnostics
+                </button>
                 {!isTauri && <span className="settings-text-muted">(desktop app only)</span>}
               </div>
               {diagMessage && <p className="settings-text-muted" style={{ marginTop: "var(--space-2)" }}>{diagMessage}</p>}
+            </div>
+          )}
+          {showDiagnostics && (
+            <div style={{ marginTop: "var(--space-3)" }}>
+              <h3 style={{ fontSize: "0.95em", marginBottom: "var(--space-2)" }}>Engine Logs</h3>
+              <pre style={{
+                background: "var(--surface-2, #1a1a1a)",
+                color: "var(--text-2, #e0e0e0)",
+                padding: "var(--space-2)",
+                borderRadius: "6px",
+                fontSize: "0.8em",
+                maxHeight: "300px",
+                overflow: "auto",
+                whiteSpace: "pre-wrap",
+                wordBreak: "break-word",
+                fontFamily: "monospace",
+              }}>{engineLogs}</pre>
+
+              <h3 style={{ fontSize: "0.95em", marginTop: "var(--space-3)", marginBottom: "var(--space-2)" }}>Sidecar Verification</h3>
+              <pre style={{
+                background: "var(--surface-2, #1a1a1a)",
+                color: "var(--text-2, #e0e0e0)",
+                padding: "var(--space-2)",
+                borderRadius: "6px",
+                fontSize: "0.8em",
+                maxHeight: "200px",
+                overflow: "auto",
+                whiteSpace: "pre-wrap",
+                wordBreak: "break-word",
+                fontFamily: "monospace",
+              }}>{sidecarInfo}</pre>
+
+              <p className="settings-text-muted" style={{ marginTop: "var(--space-2)", fontSize: "0.85em" }}>
+                Copy the above text and share it with support if the engine won't start.
+                The stderr log shows the exact Python error that prevented the engine from starting.
+              </p>
             </div>
           )}
         </div>

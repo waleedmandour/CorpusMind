@@ -132,7 +132,7 @@ export const translations = {
     status_version: "CorpusMind v0.1.0",
     status_license: "AGPL-3.0",
     status_commands: "Press Ctrl/Cmd+K for commands",
-    status_live_pwa: "Live PWA",
+    status_live_pwa: "Local Desktop App",
 
     // Common
     select_corpus: "Select a corpus to analyze. Go to Corpora Selection → Your Corpus in the sidebar to create a corpus and upload texts.",

@@ -56,12 +56,14 @@ impl OllamaManager {
             }
         }
 
-        // 2. Check common Windows install locations
+        // 2. Check common Windows install locations (expanded for Ollama 0.4+)
         #[cfg(windows)]
         {
             let mut locations: Vec<String> = Vec::new();
             if let Ok(la) = std::env::var("LOCALAPPDATA") {
                 locations.push(format!("{}\\Programs\\Ollama\\ollama.exe", la));
+                // Newer Ollama installers sometimes place it directly here
+                locations.push(format!("{}\\Ollama\\ollama.exe", la));
             }
             // Ollama's default installer puts it in AppData\Local\Ollama
             if let Ok(la) = std::env::var("LOCALAPPDATA") {
@@ -77,25 +79,34 @@ impl OllamaManager {
             if let Ok(la) = std::env::var("LOCALAPPDATA") {
                 locations.push(format!("{}\\Microsoft\\WindowsApps\\ollama.exe", la));
             }
+            // Some installs go to the user profile
+            if let Ok(home) = std::env::var("USERPROFILE") {
+                locations.push(format!("{}\\AppData\\Local\\Programs\\Ollama\\ollama.exe", home));
+                locations.push(format!("{}\\AppData\\Local\\Ollama\\ollama.exe", home));
+            }
             for loc in &locations {
                 if std::path::Path::new(loc).exists() {
                     return Some(loc.clone());
                 }
             }
 
-            // 2b. As a last resort, try `where ollama` on Windows
+            // 3. Windows fallback: use `where ollama` (like `which` on Unix)
+            //    This catches cases where Ollama is on PATH but the PATH env
+            //    var seen by the Tauri process differs from the user's shell.
             if let Ok(output) = std::process::Command::new("where").arg("ollama").output() {
                 if output.status.success() {
                     let stdout = String::from_utf8_lossy(&output.stdout);
-                    let first_line = stdout.lines().next().unwrap_or("").trim();
-                    if !first_line.is_empty() && std::path::Path::new(first_line).exists() {
-                        return Some(first_line.to_string());
+                    if let Some(first_line) = stdout.lines().next() {
+                        let path = first_line.trim();
+                        if !path.is_empty() && std::path::Path::new(path).exists() {
+                            return Some(path.to_string());
+                        }
                     }
                 }
             }
         }
 
-        // 3. Check macOS install location
+        // 4. Check macOS install location
         #[cfg(target_os = "macos")]
         {
             let loc = "/usr/local/bin/ollama";
@@ -110,6 +121,22 @@ impl OllamaManager {
             let loc = "/Applications/Ollama.app/Contents/Resources/ollama";
             if std::path::Path::new(loc).exists() {
                 return Some(loc.to_string());
+            }
+        }
+
+        // 5. Unix fallback: use `which ollama`
+        #[cfg(unix)]
+        {
+            if let Ok(output) = std::process::Command::new("which").arg("ollama").output() {
+                if output.status.success() {
+                    let stdout = String::from_utf8_lossy(&output.stdout);
+                    if let Some(first_line) = stdout.lines().next() {
+                        let path = first_line.trim();
+                        if !path.is_empty() && std::path::Path::new(path).exists() {
+                            return Some(path.to_string());
+                        }
+                    }
+                }
             }
         }
 
@@ -711,6 +738,97 @@ async fn restart_ollama(app: tauri::AppHandle) -> String {
     }
 }
 
+/// Read the engine's stdout and stderr log files so the UI can display
+/// WHY the engine failed to start. This is the #1 diagnostic tool for
+/// "engine offline" issues — the logs contain Python tracebacks, import
+/// errors, port conflicts, etc.
+#[tauri::command]
+fn engine_logs(app: tauri::AppHandle) -> String {
+    let log_path = match app.path().app_log_dir() {
+        Ok(p) => p,
+        Err(e) => return serde_json::json!({
+            "ok": false,
+            "stdout": "",
+            "stderr": "",
+            "message": format!("Cannot resolve log dir: {e}")
+        }).to_string(),
+    };
+
+    let stdout_path = log_path.join("engine.stdout.log");
+    let stderr_path = log_path.join("engine.stderr.log");
+
+    let stdout = std::fs::read_to_string(&stdout_path).unwrap_or_default();
+    let stderr = std::fs::read_to_string(&stderr_path).unwrap_or_default();
+
+    // Truncate to last 8 KB to avoid sending megabytes to the webview
+    let truncate = |s: String| -> String {
+        const MAX: usize = 8 * 1024;
+        if s.len() > MAX {
+            let start = s.len() - MAX;
+            format!("...[truncated, showing last 8KB]...\n{}", &s[start..])
+        } else {
+            s
+        }
+    };
+
+    serde_json::json!({
+        "ok": true,
+        "stdout_path": stdout_path.display().to_string(),
+        "stderr_path": stderr_path.display().to_string(),
+        "stdout": truncate(stdout),
+        "stderr": truncate(stderr),
+    }).to_string()
+}
+
+/// Verify that the bundled PyInstaller sidecar binary exists in the app's
+/// resources directory. This is the #1 diagnostic for "engine offline" on
+/// fresh installs — if the sidecar isn't there, the installer was built
+/// without it (local build script failure) and the app falls back to
+/// looking for Python on the system (which usually isn't installed).
+#[tauri::command]
+fn verify_sidecar(app: tauri::AppHandle) -> String {
+    let target = target_triple();
+    let exe_name = if cfg!(windows) {
+        format!("corpusmind-engine-{target}.exe")
+    } else {
+        format!("corpusmind-engine-{target}")
+    };
+
+    let mut sidecar_found = false;
+    let mut sidecar_path = String::new();
+    let mut resource_dir = String::new();
+
+    if let Ok(resource) = app.path().resource_dir() {
+        resource_dir = resource.display().to_string();
+        let candidate = resource.join(&exe_name);
+        if candidate.exists() {
+            sidecar_found = true;
+            sidecar_path = candidate.display().to_string();
+        }
+    }
+
+    // Also check what resolve_command would pick
+    let sidecar_state: State<EngineSidecar> = app.state();
+    let (program, args, wd) = sidecar_state.resolve_command(&app);
+
+    serde_json::json!({
+        "ok": sidecar_found,
+        "sidecar_found": sidecar_found,
+        "sidecar_path": sidecar_path,
+        "resource_dir": resource_dir,
+        "expected_name": exe_name,
+        "target_triple": target,
+        "resolved_program": program,
+        "resolved_args": args.join(" "),
+        "resolved_working_dir": wd.map(|d| d.display().to_string()).unwrap_or_else(|| "(none)".to_string()),
+        "message": if sidecar_found {
+            "Bundled sidecar binary found — engine should work."
+        } else {
+            "Bundled sidecar binary NOT found. The installer was built without the engine embedded. Use the GitHub Actions release build, or rebuild with the full build script."
+        }
+    }).to_string()
+}
+
 /// Returns the full system status: engine running? ollama running? ollama path?
 #[tauri::command]
 async fn system_status(app: tauri::AppHandle) -> String {
@@ -819,7 +937,7 @@ pub fn run() {
                 ollama.shutdown();
             }
         })
-        .invoke_handler(tauri::generate_handler![engine_health, sidecar_status, ollama_health, system_status, restart_engine, restart_ollama])
+        .invoke_handler(tauri::generate_handler![engine_health, sidecar_status, ollama_health, system_status, restart_engine, restart_ollama, engine_logs, verify_sidecar])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

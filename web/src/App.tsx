@@ -117,6 +117,8 @@ export default function App() {
         <span>AGPL-3.0</span>
         <span className="status-sep">|</span>
         <span>Press Ctrl/Cmd+K for commands</span>
+        <span className="status-sep">|</span>
+        <span>Local Desktop App</span>
         <div className="statusbar-spacer" />
         <TroubleshootingBar />
       </footer>

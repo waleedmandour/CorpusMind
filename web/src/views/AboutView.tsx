@@ -124,7 +124,7 @@ export function AboutView() {
         <h2>Links</h2>
         <div className="about-links">
           <a href="https://github.com/waleedmandour/CorpusMind" className="about-link">GitHub Repository</a>
-          <a href="https://corpus-mind-web.vercel.app/" className="about-link">Live PWA on Vercel</a>
+          <a href="https://corpus-mind-web.vercel.app/" className="about-link">Web Version (PWA)</a>
           <a href="https://github.com/waleedmandour/CorpusMind/releases" className="about-link">Releases</a>
           <a href="https://doi.org/10.5281/zenodo.21226650" className="about-link">Zenodo DOI</a>
           <a href="https://github.com/waleedmandour/CorpusMind/blob/main/docs/USER_GUIDE.md" className="about-link">User Guide</a>

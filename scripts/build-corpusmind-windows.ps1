@@ -41,50 +41,35 @@ Write-Host ""
 # --- 0. Prerequisites ---
 Log "checking prerequisites..."
 
-# Python - prefer 3.12 over 3.13/3.14 (spaCy needs 3.12)
+# Python - prefer py -3.12 (Windows launcher), then python, then python3
+# CRITICAL: the engine requires Python 3.12. Python 3.13+ may lack wheels
+# for scientific packages (spaCy, CAMeL Tools, etc.)
 $python = $null
-$pyVer = ""
-
-# Try py launcher first (Windows Python Launcher) - can specify version
 if (Get-Command py -ErrorAction SilentlyContinue) {
-    $py312Test = & py -3.12 --version 2>&1
-    if ($LASTEXITCODE -eq 0 -and $py312Test -match "3\.12") {
-        $python = "py -3.12"
-        $pyVer = $py312Test
-        OkMsg "Found Python 3.12 via py launcher"
-    }
+    # Try py -3.12 first (most reliable on Windows with multiple Python installs)
+    try {
+        $py312Ver = & py -3.12 --version 2>&1
+        if ($LASTEXITCODE -eq 0) {
+            $python = "py -3.12"
+            OkMsg "Using py -3.12 (Windows launcher)"
+        }
+    } catch { }
 }
-
-# Fall back to checking python / python3
-if (-not $python) {
-    if (Get-Command python -ErrorAction SilentlyContinue) {
-        $python = "python"
-    } elseif (Get-Command python3 -ErrorAction SilentlyContinue) {
-        $python = "python3"
-    }
+if (-not $python -and (Get-Command python -ErrorAction SilentlyContinue)) {
+    $python = "python"
+}
+if (-not $python -and (Get-Command python3 -ErrorAction SilentlyContinue)) {
+    $python = "python3"
 }
 if (-not $python) { DieMsg "Python not found. Install Python 3.12 from https://python.org and re-run." }
-
-if (-not $pyVer) {
-    $pyVer = & $python --version 2>&1
-}
+$pyVer = & $python --version 2>&1
 OkMsg "Python: $pyVer"
-
-# Check for Python 3.13+ - spaCy does NOT have wheels for 3.13/3.14
 $pyVerNum = ($pyVer -replace "Python ", "")
 try {
     $pyVersion = [version]$pyVerNum
     if ($pyVersion -ge [version]"3.13") {
-        WarnMsg "Python $pyVerNum - spaCy does NOT have wheels for this version!"
+        WarnMsg "Python $pyVerNum detected - some packages may not have wheels yet."
         WarnMsg "Install Python 3.12 from https://python.org and re-run."
-        if (Get-Command py -ErrorAction SilentlyContinue) {
-            $py312Test = & py -3.12 --version 2>&1
-            if ($LASTEXITCODE -eq 0 -and $py312Test -match "3\.12") {
-                $python = "py -3.12"
-                $pyVer = $py312Test
-                OkMsg "Switched to Python 3.12: $pyVer"
-            }
-        }
     }
 } catch { }
 
@@ -196,7 +181,13 @@ Log "setting up Python engine venv..."
 $EngineDir = Join-Path $RepoRoot "engine"
 $venvPath = Join-Path $EngineDir ".venv"
 if (-not (Test-Path $venvPath)) {
-    & $python -m venv $venvPath
+    # Handle "py -3.12" (split into exe + arg) vs "python" (single exe)
+    $pyParts = $python -split ' '
+    if ($pyParts.Count -gt 1) {
+        & $pyParts[0] $pyParts[1..($pyParts.Count-1)] -m venv $venvPath
+    } else {
+        & $python -m venv $venvPath
+    }
 }
 $Pip = Join-Path $venvPath "Scripts\pip.exe"
 $PyExe = Join-Path $venvPath "Scripts\python.exe"
@@ -302,6 +293,26 @@ $nsisSize = [math]::Round($nsisExe.Length / 1MB, 1)
 $msiSize = [math]::Round($msiFile.Length / 1MB, 1)
 OkMsg "NSIS installer: $($nsisExe.FullName) ($nsisSize MB)"
 OkMsg "MSI installer:  $($msiFile.FullName) ($msiSize MB)"
+Write-Host ""
+
+# --- 6.5. Verify the sidecar was embedded in the installer ---
+Log "verifying sidecar was embedded in installer..."
+$stagedSidecar = Join-Path $BinariesDir "corpusmind-engine-x86_64-pc-windows-msvc.exe"
+if (Test-Path $stagedSidecar) {
+    $sidecarSize = [math]::Round((Get-Item $stagedSidecar).Length / 1MB, 1)
+    OkMsg "sidecar staged: $stagedSidecar ($sidecarSize MB)"
+    if ($sidecarSize -lt 10) {
+        WarnMsg "sidecar is suspiciously small ($sidecarSize MB) - PyInstaller may have failed."
+        WarnMsg "the engine will NOT work. Check the PyInstaller output above for errors."
+    }
+} else {
+    WarnMsg "sidecar NOT staged at $stagedSidecar"
+    WarnMsg "the installer will NOT include the engine - it will be offline after install."
+}
+if ($nsisSize -lt 50) {
+    WarnMsg "NSIS installer is only $nsisSize MB - the sidecar was probably NOT embedded."
+    WarnMsg "a working installer should be 50-200 MB."
+}
 Write-Host ""
 
 # --- 7. Install the NSIS .exe silently for the current user ---
