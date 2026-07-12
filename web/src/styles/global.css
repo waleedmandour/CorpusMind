@@ -4096,3 +4096,80 @@ html[dir="rtl"] .toggle-switch input:checked + .toggle-slider::before {
 .project-name-input {
   min-inline-size: 150px;
 }
+
+/* Open-access corpus download */
+.oa-source-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-block-end: var(--space-3);
+}
+.oa-source-tab {
+  padding: 4px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.12s;
+  background: transparent;
+}
+.oa-source-tab:hover { background: var(--bg-subtle); }
+.oa-source-tab.active {
+  background: var(--brand-500);
+  color: white;
+  border-color: var(--brand-500);
+}
+.oa-source-tab.has-key::after {
+  content: " \u2713";
+  color: var(--success);
+}
+.oa-key-section {
+  padding: var(--space-3);
+  background: var(--bg-subtle);
+  border-radius: var(--radius-md);
+  margin-block-end: var(--space-3);
+}
+.oa-key-row {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+.oa-key-input {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.oa-key-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-block-start: var(--space-1);
+}
+.oa-key-hint a { color: var(--brand-500); }
+.oa-search-bar {
+  display: flex;
+  gap: var(--space-2);
+  margin-block-end: var(--space-3);
+}
+.oa-result-card {
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  margin-block-end: var(--space-2);
+  background: var(--bg-elevated);
+}
+.oa-result-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin-block-end: 2px;
+}
+.oa-result-meta {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.oa-result-actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-block-start: var(--space-2);
+}

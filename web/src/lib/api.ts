@@ -1000,6 +1000,29 @@ export const api = {
   getBundledReference: (name: string) =>
     jsonFetch<{ name: string; items: Array<{ word: string; freq: number }>; total_tokens: number; total_types: number }>(`/api/v1/research/bundled-references/${name}`),
 
+  // --- Open-access academic corpus download (API-key-based) ---
+  oaSources: () =>
+    jsonFetch<{ sources: OASource[] }>("/api/v1/open-access/sources"),
+  oaSetKey: (source: string, apiKey: string) =>
+    jsonFetch<{ ok: boolean; source: string; has_key: boolean }>("/api/v1/open-access/api-key", {
+      method: "POST",
+      body: JSON.stringify({ source, api_key: apiKey }),
+    }),
+  oaDeleteKey: (source: string) =>
+    jsonFetch<{ ok: boolean; source: string; has_key: boolean }>(`/api/v1/open-access/api-key/${source}`, {
+      method: "DELETE",
+    }),
+  oaSearch: (source: string, query: string, limit: number = 20, language?: string) =>
+    jsonFetch<OASearchResponse>("/api/v1/open-access/search", {
+      method: "POST",
+      body: JSON.stringify({ source, query, limit, language }),
+    }),
+  oaDownload: (source: string, itemId: string, title: string = "") =>
+    jsonFetch<OADownloadResponse>("/api/v1/open-access/download", {
+      method: "POST",
+      body: JSON.stringify({ source, item_id: itemId, title }),
+    }),
+
   // --- Corpus Cleaning ---
   cleanCorpus: (cid: string, options: CleaningOptions) =>
     jsonFetch<CleaningResponse>(`/api/v1/corpora/${cid}/clean`, {
@@ -1216,4 +1239,45 @@ export interface CompareConcordanceResponse {
   query: string;
   target: CompareConcordanceSide;
   reference: CompareConcordanceSide;
+}
+
+// ----------------------------------------------------------------------- //
+// Open-access academic corpus types
+// ----------------------------------------------------------------------- //
+
+export interface OASource {
+  id: string;
+  name: string;
+  description: string;
+  registration_url: string | null;
+  registration_note: string;
+  has_key: boolean;
+  needs_key: boolean;
+}
+
+export interface OASearchResult {
+  id: string;
+  title: string;
+  authors: string[];
+  year: number | string | null;
+  has_full_text: boolean;
+  source: string;
+  download_url: string | null;
+  size?: string;
+  files?: Array<{ name: string; size: number }>;
+}
+
+export interface OASearchResponse {
+  results: OASearchResult[];
+  total: number;
+  error?: string;
+}
+
+export interface OADownloadResponse {
+  type: "text" | "url";
+  filename?: string;
+  content?: string;
+  url?: string;
+  size?: number;
+  title?: string;
 }
