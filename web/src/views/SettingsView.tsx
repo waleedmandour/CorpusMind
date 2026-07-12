@@ -15,6 +15,7 @@ import { useUI } from "@/store/ui";
 import { useApp } from "@/store/app";
 
 export function SettingsView() {
+  const qc = useQueryClient();
   const health = useQuery({ queryKey: ["health"], queryFn: api.health, refetchInterval: 5_000 });
   const providers = useQuery({ queryKey: ["providers"], queryFn: api.providers, refetchInterval: 5_000 });
   const version = useQuery({ queryKey: ["version"], queryFn: api.version });
@@ -25,6 +26,56 @@ export function SettingsView() {
   const ollamaOk = providers.data?.providers.find((p) => p.name === "ollama")?.healthy ?? false;
   const lmstudioOk = providers.data?.providers.find((p) => p.name === "lmstudio")?.healthy ?? false;
   const cloudOk = providers.data?.providers.find((p) => p.name === "cloud")?.healthy ?? false;
+
+  const [recheckingEngine, setRecheckingEngine] = useState(false);
+  const [recheckingOllama, setRecheckingOllama] = useState(false);
+  const [diagMessage, setDiagMessage] = useState("");
+
+  // Check if we're running in Tauri (desktop app)
+  const isTauri = typeof window !== "undefined" &&
+    (typeof (window as any).__TAURI_INTERNALS__ !== "undefined" ||
+     typeof (window as any).__TAURI__ !== "undefined");
+
+  const recheckEngine = async () => {
+    setRecheckingEngine(true);
+    setDiagMessage("");
+    try {
+      if (isTauri) {
+        const invoke = (window as any).__TAURI_INTERNALS__?.invoke || (window as any).__TAURI__?.core?.invoke;
+        if (invoke) {
+          const result = await invoke("restart_engine");
+          const data = JSON.parse(result as string);
+          setDiagMessage(data.message || data.diagnostics?.hint || "");
+        }
+      }
+      qc.invalidateQueries({ queryKey: ["health"] });
+      qc.invalidateQueries({ queryKey: ["providers"] });
+    } catch (e: any) {
+      setDiagMessage(`Recheck failed: ${e?.message || String(e)}`);
+    } finally {
+      setRecheckingEngine(false);
+    }
+  };
+
+  const recheckOllama = async () => {
+    setRecheckingOllama(true);
+    setDiagMessage("");
+    try {
+      if (isTauri) {
+        const invoke = (window as any).__TAURI_INTERNALS__?.invoke || (window as any).__TAURI__?.core?.invoke;
+        if (invoke) {
+          const result = await invoke("restart_ollama");
+          const data = JSON.parse(result as string);
+          setDiagMessage(data.message || data.hint || "");
+        }
+      }
+      qc.invalidateQueries({ queryKey: ["providers"] });
+    } catch (e: any) {
+      setDiagMessage(`Recheck failed: ${e?.message || String(e)}`);
+    } finally {
+      setRecheckingOllama(false);
+    }
+  };
 
   return (
     <div className="settings-view">
@@ -59,6 +110,27 @@ export function SettingsView() {
             <dt>Endpoint</dt>
             <dd><code>http://127.0.0.1:8765</code></dd>
           </dl>
+          {!engineOk && (
+            <div className="settings-status-row" style={{ marginTop: "var(--space-3)", flexDirection: "column", alignItems: "stretch" }}>
+              <strong style={{ color: "var(--danger)" }}>Engine is offline</strong>
+              <p className="settings-text-muted">
+                The engine should start automatically when the app launches.
+                If it didn't, click "Recheck" to try again.
+              </p>
+              <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
+                <button
+                  className="btn-primary"
+                  onClick={recheckEngine}
+                  disabled={recheckingEngine || !isTauri}
+                  title={!isTauri ? "Recheck is only available in the desktop app" : ""}
+                >
+                  {recheckingEngine ? "Restarting..." : "Recheck Engine"}
+                </button>
+                {!isTauri && <span className="settings-text-muted">(desktop app only)</span>}
+              </div>
+              {diagMessage && <p className="settings-text-muted" style={{ marginTop: "var(--space-2)" }}>{diagMessage}</p>}
+            </div>
+          )}
         </div>
       </section>
 
@@ -100,6 +172,30 @@ export function SettingsView() {
               description="Opt-in cloud provider (Anthropic / OpenAI). Off by default for privacy."
             />
           </div>
+
+          {/* Ollama recheck button */}
+          {!ollamaOk && (
+            <div className="settings-status-row" style={{ marginTop: "var(--space-3)", flexDirection: "column", alignItems: "stretch" }}>
+              <strong style={{ color: "var(--danger)" }}>Ollama is not detected</strong>
+              <p className="settings-text-muted">
+                The app should auto-start Ollama when it launches. If it didn't,
+                click "Recheck" to try again. Make sure Ollama is installed from
+                <a href="https://ollama.com" target="_blank" rel="noreferrer"> ollama.com</a>.
+              </p>
+              <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
+                <button
+                  className="btn-primary"
+                  onClick={recheckOllama}
+                  disabled={recheckingOllama || !isTauri}
+                  title={!isTauri ? "Recheck is only available in the desktop app" : ""}
+                >
+                  {recheckingOllama ? "Restarting..." : "Recheck Ollama"}
+                </button>
+                {!isTauri && <span className="settings-text-muted">(desktop app only)</span>}
+              </div>
+              {diagMessage && <p className="settings-text-muted" style={{ marginTop: "var(--space-2)" }}>{diagMessage}</p>}
+            </div>
+          )}
 
           {/* Ollama model downloader */}
           <OllamaModelManager ollamaHealthy={ollamaOk} />

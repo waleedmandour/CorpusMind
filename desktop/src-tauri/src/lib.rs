@@ -334,11 +334,27 @@ impl EngineSidecar {
             })
             .or_else(|| {
                 // Windows: check Documents\CorpusMind\engine
+                // Also check OneDrive\Documents (common on Windows 10/11)
                 #[cfg(windows)]
                 {
-                    std::env::var("USERPROFILE").ok()
-                        .map(|home| std::path::PathBuf::from(home).join("Documents").join("CorpusMind").join("engine"))
-                        .filter(|d| d.exists())
+                    // Try standard Documents
+                    if let Ok(home) = std::env::var("USERPROFILE") {
+                        let p = std::path::PathBuf::from(&home).join("Documents").join("CorpusMind").join("engine");
+                        if p.exists() {
+                            return Some(p);
+                        }
+                        // Try OneDrive Documents
+                        let p2 = std::path::PathBuf::from(&home).join("OneDrive").join("Documents").join("CorpusMind").join("engine");
+                        if p2.exists() {
+                            return Some(p2);
+                        }
+                        // Try OneDrive - Personal
+                        let p3 = std::path::PathBuf::from(&home).join("OneDrive - Personal").join("Documents").join("CorpusMind").join("engine");
+                        if p3.exists() {
+                            return Some(p3);
+                        }
+                    }
+                    None
                 }
                 #[cfg(not(windows))]
                 { None }
@@ -539,6 +555,116 @@ async fn ollama_health() -> String {
     }
 }
 
+/// Restart the engine sidecar — callable from the UI "Recheck" button.
+/// Shuts down any existing engine process, then spawns a new one.
+#[tauri::command]
+async fn restart_engine(app: tauri::AppHandle) -> String {
+    let sidecar: State<EngineSidecar> = app.state();
+
+    // Shut down existing engine
+    sidecar.shutdown();
+
+    // Small delay to let the port free up
+    std::thread::sleep(Duration::from_millis(500));
+
+    // Spawn new engine
+    match sidecar.spawn(&app) {
+        Ok(()) => {
+            // Wait for health in a blocking thread
+            let handle = app.clone();
+            let result = tauri::async_runtime::spawn_blocking(move || {
+                let sidecar_ref = handle.state::<EngineSidecar>();
+                sidecar_ref.wait_for_health()
+            }).await;
+
+            match result {
+                Ok(Ok(())) => serde_json::json!({
+                    "ok": true,
+                    "engine_running": true,
+                    "message": "Engine restarted successfully"
+                }).to_string(),
+                Ok(Err(e)) => serde_json::json!({
+                    "ok": false,
+                    "engine_running": false,
+                    "message": format!("Engine started but health check failed: {}", e)
+                }).to_string(),
+                Err(e) => serde_json::json!({
+                    "ok": false,
+                    "engine_running": false,
+                    "message": format!("Health check task panicked: {}", e)
+                }).to_string(),
+            }
+        }
+        Err(e) => {
+            // Return diagnostic info about what was tried
+            let (program, args, wd) = sidecar.resolve_command(&app);
+            serde_json::json!({
+                "ok": false,
+                "engine_running": false,
+                "message": format!("Failed to spawn engine: {}", e),
+                "diagnostics": {
+                    "program": program,
+                    "args": args.join(" "),
+                    "working_dir": wd.map(|d| d.display().to_string()).unwrap_or_else(|| "(none)".to_string()),
+                    "hint": "Make sure the engine venv exists at Documents\\CorpusMind\\engine\\.venv"
+                }
+            }).to_string()
+        }
+    }
+}
+
+/// Restart Ollama — callable from the UI "Recheck" button.
+#[tauri::command]
+async fn restart_ollama(app: tauri::AppHandle) -> String {
+    let ollama: State<OllamaManager> = app.state();
+
+    // Shut down any existing Ollama we started
+    ollama.shutdown();
+    std::thread::sleep(Duration::from_millis(500));
+
+    // Try to start Ollama
+    match ollama.start() {
+        Ok(_) => {
+            // Wait for ready in a blocking thread
+            let handle = app.clone();
+            let _ = tauri::async_runtime::spawn_blocking(move || {
+                let ollama_ref = handle.state::<OllamaManager>();
+                ollama_ref.wait_for_ready();
+            }).await;
+
+            // Check if it's actually running now
+            let client = reqwest::Client::builder()
+                .no_proxy()
+                .timeout(Duration::from_secs(3))
+                .build();
+            let running = match client {
+                Ok(c) => c.get("http://127.0.0.1:11434/api/tags").send().await
+                    .map(|r| r.status().is_success())
+                    .unwrap_or(false),
+                Err(_) => false,
+            };
+
+            let path = OllamaManager::find_ollama().unwrap_or_else(|| "not found".to_string());
+            serde_json::json!({
+                "ok": running,
+                "ollama_running": running,
+                "ollama_path": path,
+                "message": if running { "Ollama started successfully" } else { "Ollama found but failed to start. Check if ollama.exe is accessible." }
+            }).to_string()
+        }
+        Err(e) => {
+            let path = OllamaManager::find_ollama().unwrap_or_else(|| "not found".to_string());
+            serde_json::json!({
+                "ok": false,
+                "ollama_running": false,
+                "ollama_path": path,
+                "message": format!("Failed to start Ollama: {}", e),
+                "hint": "Install Ollama from https://ollama.com and make sure it's on your PATH."
+            }).to_string()
+        }
+    }
+}
+
 /// Returns the full system status: engine running? ollama running? ollama path?
 #[tauri::command]
 async fn system_status(app: tauri::AppHandle) -> String {
@@ -647,7 +773,7 @@ pub fn run() {
                 ollama.shutdown();
             }
         })
-        .invoke_handler(tauri::generate_handler![engine_health, sidecar_status, ollama_health, system_status])
+        .invoke_handler(tauri::generate_handler![engine_health, sidecar_status, ollama_health, system_status, restart_engine, restart_ollama])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
