@@ -93,6 +93,8 @@ a = Analysis(
     excludes=[
         # Trim test / dev tooling from the bundle
         "pytest",
+        "pytest-asyncio",
+        "pytest-cov",
         "mypy",
         "ruff",
         "pip",
@@ -102,6 +104,22 @@ a = Analysis(
         "jupyter",
         "matplotlib",
         "tkinter",
+        # Heavy ML packages not needed at runtime — cv2 is a lazy import
+        # in vision/facial.py (opt-in Phase 5 feature). PIL is installed
+        # separately and IS included.
+        "cv2",
+        "opencv-python",
+        "sklearn",
+        "scikit-learn",
+        "pandas",
+        "torch",
+        "torchvision",
+        "tensorflow",
+        "keras",
+        # Cairosvg (PNG export) — needs system libcairo which isn't available
+        # on Windows. SVG export works without it.
+        "cairosvg",
+        "cairocffi",
     ],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,

@@ -52,30 +52,33 @@ jobs:
           key: windows-cargo-${{ hashFiles('desktop/src-tauri/Cargo.toml') }}
           restore-keys: windows-cargo-
 
-      - name: Install PyInstaller + engine deps
+      - name: Install PyInstaller + engine deps (production only)
         working-directory: engine
         run: |
           python -m pip install --upgrade pip wheel
           pip install pyinstaller python-multipart cryptography
-          pip install -e ".[dev,vision]"
+          # Install CORE engine deps only — NOT [dev,vision].
+          # [dev] pulls in pytest/ruff/mypy (not needed in production).
+          # [vision] pulls in opencv-python (~60MB compiled) which makes
+          # PyInstaller extremely slow. We install pillow directly instead
+          # since the vision module only needs PIL (cv2 is a lazy import
+          # for the optional facial analysis feature).
+          pip install -e .
+          pip install pillow
 
       - name: Build engine sidecar (PyInstaller)
         working-directory: engine
-        run: pyinstaller corpusmind-engine.spec --noconfirm
+        run: pyinstaller corpusmind-engine.spec --noconfirm --log-level WARN
 
       - name: Stage sidecar for Tauri (onedir)
         working-directory: desktop/src-tauri
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path binaries | Out-Null
-          # PyInstaller onedir mode produces dist/corpusmind-engine/ directory
-          # Copy the entire directory to binaries/corpusmind-engine/
           Copy-Item ..\..\engine\dist\corpusmind-engine `
                     binaries\corpusmind-engine -Recurse -Force
           Write-Host "Staged sidecar directory:"
           Get-ChildItem binaries/corpusmind-engine/ | Format-Table Name, Length
-          Write-Host "Internal dir:"
-          Get-ChildItem binaries/corpusmind-engine/_internal/ -ErrorAction SilentlyContinue | Measure-Object | ForEach-Object { Write-Host "  $($_.Count) files in _internal/" }
 
       - name: Build web PWA
         working-directory: web
@@ -150,22 +153,22 @@ jobs:
           key: macos-arm64-cargo-${{ hashFiles('desktop/src-tauri/Cargo.toml') }}
           restore-keys: macos-arm64-cargo-
 
-      - name: Install PyInstaller + engine deps
+      - name: Install PyInstaller + engine deps (production only)
         working-directory: engine
         run: |
           python -m pip install --upgrade pip wheel
           pip install pyinstaller python-multipart cryptography
-          pip install -e ".[dev,vision]"
+          pip install -e .
+          pip install pillow
 
       - name: Build engine sidecar (PyInstaller)
         working-directory: engine
-        run: pyinstaller corpusmind-engine.spec --noconfirm
+        run: pyinstaller corpusmind-engine.spec --noconfirm --log-level WARN
 
       - name: Stage sidecar for Tauri (onedir)
         working-directory: desktop/src-tauri
         run: |
           mkdir -p binaries
-          # PyInstaller onedir mode produces dist/corpusmind-engine/ directory
           cp -r ../../engine/dist/corpusmind-engine binaries/corpusmind-engine
           chmod +x binaries/corpusmind-engine/corpusmind-engine
           ls -lh binaries/corpusmind-engine/
@@ -231,16 +234,17 @@ jobs:
             libglib2.0-dev \
             libfuse2
 
-      - name: Install PyInstaller + engine deps
+      - name: Install PyInstaller + engine deps (production only)
         working-directory: engine
         run: |
           python -m pip install --upgrade pip wheel
           pip install pyinstaller python-multipart cryptography
-          pip install -e ".[dev,vision]"
+          pip install -e .
+          pip install pillow
 
       - name: Build engine sidecar (PyInstaller)
         working-directory: engine
-        run: pyinstaller corpusmind-engine.spec --noconfirm
+        run: pyinstaller corpusmind-engine.spec --noconfirm --log-level WARN
 
       - name: Stage sidecar for Tauri (onedir)
         working-directory: desktop/src-tauri
