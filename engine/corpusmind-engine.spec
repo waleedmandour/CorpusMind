@@ -58,7 +58,7 @@ _hidden_imports = [
     "spacy.pipeline",
     "spacy.language",
     "spacy.tokenizer",
-    "spacy.lemmatizer",
+    # Note: spacy.lemmatizer was removed in spaCy 3.5+ — do not include it
     # File parsers
     "magic",
     "lxml",
