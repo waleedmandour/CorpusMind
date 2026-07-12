@@ -851,7 +851,7 @@ fn verify_sidecar(app: tauri::AppHandle) -> String {
         "message": if sidecar_found {
             format!("Bundled sidecar found ({layout} layout) — engine should work.")
         } else {
-            "Bundled sidecar NOT found. The installer was built without the engine embedded. Use the GitHub Actions release build, or rebuild with the full build script."
+            "Bundled sidecar NOT found. The installer was built without the engine embedded. Use the GitHub Actions release build, or rebuild with the full build script.".to_string()
         }
     }).to_string()
 }
