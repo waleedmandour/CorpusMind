@@ -16,7 +16,10 @@ name: Release
 #     listed in the per-job steps below.
 #   - Linux builds target AppImage + .deb for x86_64 and arm64.
 
-on:
+# NOTE: "on" is quoted because YAML 1.1 treats unquoted `on` as a boolean
+# (True), which causes GitHub Actions to misparse the trigger section and
+# run the workflow on every push instead of only on tag pushes.
+"on":
   push:
     tags:
       - "v*"
