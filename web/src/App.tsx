@@ -110,15 +110,13 @@ export default function App() {
         </main>
       </div>
 
-      {/* Status bar — includes Smart Troubleshooting indicator */}
+      {/* Status bar */}
       <footer className="app-statusbar" role="contentinfo">
         <span>CorpusMind v0.1.0</span>
         <span className="status-sep">|</span>
         <span>AGPL-3.0</span>
         <span className="status-sep">|</span>
         <span>Press Ctrl/Cmd+K for commands</span>
-        <span className="status-sep">|</span>
-        <a href="https://corpus-mind-web.vercel.app/" style={{ color: "inherit" }}>Live PWA</a>
         <div className="statusbar-spacer" />
         <TroubleshootingBar />
       </footer>

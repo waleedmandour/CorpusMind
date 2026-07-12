@@ -4173,3 +4173,37 @@ html[dir="rtl"] .toggle-switch input:checked + .toggle-slider::before {
   gap: var(--space-2);
   margin-block-start: var(--space-2);
 }
+
+/* Engine offline banner */
+.engine-offline-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: rgba(192, 57, 43, 0.08);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius-md);
+  margin-block-end: var(--space-4);
+}
+.engine-offline-icon {
+  font-size: 24px;
+  color: var(--danger);
+  flex-shrink: 0;
+}
+.engine-offline-content {
+  flex: 1;
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.5;
+}
+.engine-offline-cmd {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  background: var(--bg-elevated);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow-x: auto;
+}

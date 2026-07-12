@@ -14,10 +14,16 @@ export function HomeView() {
   const activeProjectId = useApp((s) => s.activeProjectId);
   const activeCorpusId = useApp((s) => s.activeCorpusId);
 
-  const health = useQuery({ queryKey: ["health"], queryFn: api.health });
-  const providers = useQuery({ queryKey: ["providers"], queryFn: api.providers });
+  const health = useQuery({ queryKey: ["health"], queryFn: api.health, retry: 1 });
+  const providers = useQuery({ queryKey: ["providers"], queryFn: api.providers, retry: 1 });
 
+  const engineOk = health.data?.status === "ok";
   const ollamaOk = providers.data?.providers.find((p) => p.name === "ollama")?.healthy ?? false;
+
+  // Check if we're in Tauri (desktop app)
+  const isTauri = typeof window !== "undefined" &&
+    (typeof (window as any).__TAURI_INTERNALS__ !== "undefined" ||
+     typeof (window as any).__TAURI__ !== "undefined");
 
   const quickActions = [
     { label: "Create Project", nav: "corpus-target" as const, icon: "\u2630", desc: "Set up a new research project and upload texts" },
@@ -37,14 +43,36 @@ export function HomeView() {
         <p className="home-subtitle">Local-first, AI-native research environment for corpus linguistics and multimodal discourse analysis</p>
       </div>
 
+      {/* Engine offline banner — prominent, actionable */}
+      {!engineOk && (
+        <div className="engine-offline-banner">
+          <div className="engine-offline-icon">{"\u26A0"}</div>
+          <div className="engine-offline-content">
+            <strong>Engine is offline.</strong> The Python backend is not running.
+            {!isTauri && <span> In the desktop app, the engine starts automatically. In browser mode, start it manually:</span>}
+            {isTauri && <span> The engine should have started automatically. Go to <strong>Settings</strong> and click <strong>Recheck Engine</strong> to diagnose.</span>}
+          </div>
+          {!isTauri && (
+            <div className="engine-offline-cmd">
+              <code>cd engine && source .venv/bin/activate && corpusmind-engine</code>
+            </div>
+          )}
+          {isTauri && (
+            <button className="btn-primary" onClick={() => setActiveNav("settings")}>
+              Go to Settings
+            </button>
+          )}
+        </div>
+      )}
+
       <div className="home-status-bar">
-        <div className={`status-chip ${health.data?.status === "ok" ? "ok" : "bad"}`}>
+        <div className={`status-chip ${engineOk ? "ok" : "bad"}`}>
           <span className="status-dot" />
-          Engine: {health.data?.status === "ok" ? "Running" : "Offline"}
+          Engine: {engineOk ? "Running" : "Offline"}
         </div>
         <div className={`status-chip ${ollamaOk ? "ok" : "warn"}`}>
           <span className="status-dot" />
-          Ollama: {ollamaOk ? "Connected" : "Not running"}
+          Ollama: {ollamaOk ? "Connected" : "Not detected"}
         </div>
         {activeCorpusId && (
           <div className="status-chip ok">

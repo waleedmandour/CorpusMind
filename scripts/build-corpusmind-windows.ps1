@@ -41,23 +41,50 @@ Write-Host ""
 # --- 0. Prerequisites ---
 Log "checking prerequisites..."
 
-# Python (PS 5.1 compatible - no ternary operator)
+# Python - prefer 3.12 over 3.13/3.14 (spaCy needs 3.12)
 $python = $null
-if (Get-Command python -ErrorAction SilentlyContinue) {
-    $python = "python"
-} elseif (Get-Command python3 -ErrorAction SilentlyContinue) {
-    $python = "python3"
+$pyVer = ""
+
+# Try py launcher first (Windows Python Launcher) - can specify version
+if (Get-Command py -ErrorAction SilentlyContinue) {
+    $py312Test = & py -3.12 --version 2>&1
+    if ($LASTEXITCODE -eq 0 -and $py312Test -match "3\.12") {
+        $python = "py -3.12"
+        $pyVer = $py312Test
+        OkMsg "Found Python 3.12 via py launcher"
+    }
+}
+
+# Fall back to checking python / python3
+if (-not $python) {
+    if (Get-Command python -ErrorAction SilentlyContinue) {
+        $python = "python"
+    } elseif (Get-Command python3 -ErrorAction SilentlyContinue) {
+        $python = "python3"
+    }
 }
 if (-not $python) { DieMsg "Python not found. Install Python 3.12 from https://python.org and re-run." }
-$pyVer = & $python --version 2>&1
+
+if (-not $pyVer) {
+    $pyVer = & $python --version 2>&1
+}
 OkMsg "Python: $pyVer"
-# Check for Python 3.13+ - some scientific packages may not have wheels
+
+# Check for Python 3.13+ - spaCy does NOT have wheels for 3.13/3.14
 $pyVerNum = ($pyVer -replace "Python ", "")
 try {
     $pyVersion = [version]$pyVerNum
     if ($pyVersion -ge [version]"3.13") {
-        WarnMsg "Python $pyVerNum detected - some packages may not have wheels yet."
-        WarnMsg "If pip install fails, install Python 3.12 from https://python.org"
+        WarnMsg "Python $pyVerNum - spaCy does NOT have wheels for this version!"
+        WarnMsg "Install Python 3.12 from https://python.org and re-run."
+        if (Get-Command py -ErrorAction SilentlyContinue) {
+            $py312Test = & py -3.12 --version 2>&1
+            if ($LASTEXITCODE -eq 0 -and $py312Test -match "3\.12") {
+                $python = "py -3.12"
+                $pyVer = $py312Test
+                OkMsg "Switched to Python 3.12: $pyVer"
+            }
+        }
     }
 } catch { }
 
