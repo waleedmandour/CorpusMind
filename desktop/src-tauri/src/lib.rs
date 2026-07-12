@@ -63,15 +63,34 @@ impl OllamaManager {
             if let Ok(la) = std::env::var("LOCALAPPDATA") {
                 locations.push(format!("{}\\Programs\\Ollama\\ollama.exe", la));
             }
+            // Ollama's default installer puts it in AppData\Local\Ollama
+            if let Ok(la) = std::env::var("LOCALAPPDATA") {
+                locations.push(format!("{}\\Ollama\\ollama.exe", la));
+            }
             if let Ok(pf) = std::env::var("PROGRAMFILES") {
                 locations.push(format!("{}\\Ollama\\ollama.exe", pf));
             }
             if let Ok(pf86) = std::env::var("PROGRAMFILES(X86)") {
                 locations.push(format!("{}\\Ollama\\ollama.exe", pf86));
             }
+            // WindowsApps (if installed via winget)
+            if let Ok(la) = std::env::var("LOCALAPPDATA") {
+                locations.push(format!("{}\\Microsoft\\WindowsApps\\ollama.exe", la));
+            }
             for loc in &locations {
                 if std::path::Path::new(loc).exists() {
                     return Some(loc.clone());
+                }
+            }
+
+            // 2b. As a last resort, try `where ollama` on Windows
+            if let Ok(output) = std::process::Command::new("where").arg("ollama").output() {
+                if output.status.success() {
+                    let stdout = String::from_utf8_lossy(&output.stdout);
+                    let first_line = stdout.lines().next().unwrap_or("").trim();
+                    if !first_line.is_empty() && std::path::Path::new(first_line).exists() {
+                        return Some(first_line.to_string());
+                    }
                 }
             }
         }
@@ -84,6 +103,11 @@ impl OllamaManager {
                 return Some(loc.to_string());
             }
             let loc = "/opt/homebrew/bin/ollama";
+            if std::path::Path::new(loc).exists() {
+                return Some(loc.to_string());
+            }
+            // /Applications/Ollama.app (GUI install)
+            let loc = "/Applications/Ollama.app/Contents/Resources/ollama";
             if std::path::Path::new(loc).exists() {
                 return Some(loc.to_string());
             }
@@ -285,6 +309,10 @@ impl EngineSidecar {
         // to find the `app` package — Python resolves modules relative to CWD).
         if let Some(ref wd) = working_dir {
             cmd.current_dir(wd);
+            // Also set PYTHONPATH to the engine dir so Python can find
+            // the `app` package even if the CWD resolution doesn't work.
+            // This is critical on Windows where path resolution can differ.
+            cmd.env("PYTHONPATH", wd);
         }
 
         let child = cmd.spawn()
@@ -387,10 +415,28 @@ impl EngineSidecar {
                     Some(dir),
                 );
             }
-            // Last-resort: assume `python` is on PATH and CWD is engine/.
-            warn!(target: "sidecar", "venv python not found in {}, trying system python", dir.display());
+
+            // Windows: also try the corpusmind-engine console script
+            // (installed by pip install -e . in the venv)
+            #[cfg(windows)]
+            {
+                let console_script = dir.join(".venv").join("Scripts").join("corpusmind-engine.exe");
+                if console_script.exists() {
+                    info!(target: "sidecar", "using console script: {}", console_script.display());
+                    return (
+                        console_script.to_string_lossy().into_owned(),
+                        vec![],
+                        None,  // console script doesn't need a working dir
+                    );
+                }
+            }
+
+            // Last-resort: try `python` on PATH with the engine dir as CWD.
+            // But first check if `python` actually exists.
+            let python_cmd = if cfg!(windows) { "python" } else { "python3" };
+            warn!(target: "sidecar", "venv python not found in {}, trying system python: {}", dir.display(), python_cmd);
             return (
-                "python".into(),
+                python_cmd.to_string(),
                 vec!["-m".into(), "app.main".into()],
                 Some(dir),
             );
