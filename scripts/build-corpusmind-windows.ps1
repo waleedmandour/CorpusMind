@@ -223,8 +223,9 @@ Push-Location $EngineDir
 if ($LASTEXITCODE -ne 0) { Pop-Location; DieMsg "PyInstaller build failed" }
 Pop-Location
 
-$sidecarSrc = Join-Path $EngineDir "dist\corpusmind-engine.exe"
-if (-not (Test-Path $sidecarSrc)) { DieMsg "sidecar not found at $sidecarSrc" }
+$sidecarSrcDir = Join-Path $EngineDir "dist\corpusmind-engine"
+$sidecarSrc = Join-Path $sidecarSrcDir "corpusmind-engine.exe"
+if (-not (Test-Path $sidecarSrc)) { DieMsg "sidecar not found at $sidecarSrc (onedir output expected)" }
 $sidecarSize = [math]::Round((Get-Item $sidecarSrc).Length / 1MB, 1)
 OkMsg "sidecar built: $sidecarSrc ($sidecarSize MB)"
 Write-Host ""
@@ -233,9 +234,10 @@ Write-Host ""
 Log "staging sidecar for Tauri..."
 $BinariesDir = Join-Path $RepoRoot "desktop\src-tauri\binaries"
 New-Item -ItemType Directory -Force -Path $BinariesDir | Out-Null
-$sidecarDest = Join-Path $BinariesDir "corpusmind-engine-x86_64-pc-windows-msvc.exe"
-Copy-Item -Force $sidecarSrc $sidecarDest
-OkMsg "staged: $sidecarDest"
+$sidecarDest = Join-Path $BinariesDir "corpusmind-engine"
+# Copy entire onedir directory (exe + _internal/ deps)
+Copy-Item -Force $sidecarSrcDir $sidecarDest -Recurse
+OkMsg "staged: $sidecarDest (onedir)"
 Write-Host ""
 
 # --- 5. Build web PWA ---
@@ -297,7 +299,7 @@ Write-Host ""
 
 # --- 6.5. Verify the sidecar was embedded in the installer ---
 Log "verifying sidecar was embedded in installer..."
-$stagedSidecar = Join-Path $BinariesDir "corpusmind-engine-x86_64-pc-windows-msvc.exe"
+$stagedSidecar = Join-Path $BinariesDir "corpusmind-engine\corpusmind-engine.exe"
 if (Test-Path $stagedSidecar) {
     $sidecarSize = [math]::Round((Get-Item $stagedSidecar).Length / 1MB, 1)
     OkMsg "sidecar staged: $stagedSidecar ($sidecarSize MB)"

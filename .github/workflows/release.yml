@@ -63,15 +63,19 @@ jobs:
         working-directory: engine
         run: pyinstaller corpusmind-engine.spec --noconfirm
 
-      - name: Stage sidecar for Tauri
+      - name: Stage sidecar for Tauri (onedir)
         working-directory: desktop/src-tauri
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path binaries | Out-Null
-          Copy-Item ..\..\engine\dist\corpusmind-engine.exe `
-                    binaries\corpusmind-engine-x86_64-pc-windows-msvc.exe
-          Write-Host "Staged sidecar:"
-          Get-ChildItem binaries/ | Format-Table Name, Length
+          # PyInstaller onedir mode produces dist/corpusmind-engine/ directory
+          # Copy the entire directory to binaries/corpusmind-engine/
+          Copy-Item ..\..\engine\dist\corpusmind-engine `
+                    binaries\corpusmind-engine -Recurse -Force
+          Write-Host "Staged sidecar directory:"
+          Get-ChildItem binaries/corpusmind-engine/ | Format-Table Name, Length
+          Write-Host "Internal dir:"
+          Get-ChildItem binaries/corpusmind-engine/_internal/ -ErrorAction SilentlyContinue | Measure-Object | ForEach-Object { Write-Host "  $($_.Count) files in _internal/" }
 
       - name: Build web PWA
         working-directory: web
@@ -157,14 +161,14 @@ jobs:
         working-directory: engine
         run: pyinstaller corpusmind-engine.spec --noconfirm
 
-      - name: Stage sidecar for Tauri
+      - name: Stage sidecar for Tauri (onedir)
         working-directory: desktop/src-tauri
         run: |
           mkdir -p binaries
-          cp ../../engine/dist/corpusmind-engine \
-             binaries/corpusmind-engine-aarch64-apple-darwin
-          chmod +x binaries/corpusmind-engine-aarch64-apple-darwin
-          ls -lh binaries/
+          # PyInstaller onedir mode produces dist/corpusmind-engine/ directory
+          cp -r ../../engine/dist/corpusmind-engine binaries/corpusmind-engine
+          chmod +x binaries/corpusmind-engine/corpusmind-engine
+          ls -lh binaries/corpusmind-engine/
 
       - name: Build web PWA
         working-directory: web
@@ -238,13 +242,14 @@ jobs:
         working-directory: engine
         run: pyinstaller corpusmind-engine.spec --noconfirm
 
-      - name: Stage sidecar for Tauri
+      - name: Stage sidecar for Tauri (onedir)
         working-directory: desktop/src-tauri
         run: |
           mkdir -p binaries
-          cp ../../engine/dist/corpusmind-engine \
-             binaries/corpusmind-engine-x86_64-unknown-linux-gnu
-          chmod +x binaries/corpusmind-engine-x86_64-unknown-linux-gnu
+          # PyInstaller onedir mode produces dist/corpusmind-engine/ directory
+          cp -r ../../engine/dist/corpusmind-engine binaries/corpusmind-engine
+          chmod +x binaries/corpusmind-engine/corpusmind-engine
+          ls -lh binaries/corpusmind-engine/
 
       - name: Build web PWA
         working-directory: web

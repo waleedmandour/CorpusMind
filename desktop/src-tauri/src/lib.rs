@@ -362,12 +362,24 @@ impl EngineSidecar {
         // Rust target triple of the build host.
         let target_triple = target_triple();
 
-        // 1. The bundled binary lives in the app's resources directory after install
-        //    (Tauri copies externalBin entries there with the triple suffix).
+        // 1a. Onedir mode: the sidecar is a directory inside resources/
+        //     (corpusmind-engine/corpusmind-engine.exe)
+        //     This is the preferred layout — much faster to build than onefile.
+        if let Ok(resource) = app.path().resource_dir() {
+            let exe_name = if cfg!(windows) { "corpusmind-engine.exe" } else { "corpusmind-engine" };
+            let candidate = resource.join("corpusmind-engine").join(exe_name);
+            if candidate.exists() {
+                info!(target: "sidecar", "found bundled sidecar (onedir): {}", candidate.display());
+                return (candidate.to_string_lossy().into_owned(), vec![], None);
+            }
+        }
+
+        // 1b. Onefile mode (legacy): the sidecar is a single binary with the
+        //     target triple suffix (corpusmind-engine-x86_64-pc-windows-msvc.exe)
         if let Ok(resource) = app.path().resource_dir() {
             let candidate = resource.join(format!("corpusmind-engine-{target_triple}"));
             if candidate.exists() {
-                info!(target: "sidecar", "found bundled sidecar binary: {}", candidate.display());
+                info!(target: "sidecar", "found bundled sidecar (onefile): {}", candidate.display());
                 return (candidate.to_string_lossy().into_owned(), vec![], None);
             }
         }
@@ -788,22 +800,37 @@ fn engine_logs(app: tauri::AppHandle) -> String {
 #[tauri::command]
 fn verify_sidecar(app: tauri::AppHandle) -> String {
     let target = target_triple();
-    let exe_name = if cfg!(windows) {
-        format!("corpusmind-engine-{target}.exe")
-    } else {
-        format!("corpusmind-engine-{target}")
-    };
 
     let mut sidecar_found = false;
     let mut sidecar_path = String::new();
     let mut resource_dir = String::new();
+    let mut layout = "none";
 
     if let Ok(resource) = app.path().resource_dir() {
         resource_dir = resource.display().to_string();
-        let candidate = resource.join(&exe_name);
-        if candidate.exists() {
+
+        // Check onedir layout first (preferred)
+        let exe_name = if cfg!(windows) { "corpusmind-engine.exe" } else { "corpusmind-engine" };
+        let onedir_candidate = resource.join("corpusmind-engine").join(exe_name);
+        if onedir_candidate.exists() {
             sidecar_found = true;
-            sidecar_path = candidate.display().to_string();
+            sidecar_path = onedir_candidate.display().to_string();
+            layout = "onedir";
+        }
+
+        // Check onefile layout (legacy)
+        if !sidecar_found {
+            let onefile_name = if cfg!(windows) {
+                format!("corpusmind-engine-{target}.exe")
+            } else {
+                format!("corpusmind-engine-{target}")
+            };
+            let onefile_candidate = resource.join(&onefile_name);
+            if onefile_candidate.exists() {
+                sidecar_found = true;
+                sidecar_path = onefile_candidate.display().to_string();
+                layout = "onefile";
+            }
         }
     }
 
@@ -816,15 +843,15 @@ fn verify_sidecar(app: tauri::AppHandle) -> String {
         "sidecar_found": sidecar_found,
         "sidecar_path": sidecar_path,
         "resource_dir": resource_dir,
-        "expected_name": exe_name,
+        "layout": layout,
         "target_triple": target,
         "resolved_program": program,
         "resolved_args": args.join(" "),
         "resolved_working_dir": wd.map(|d| d.display().to_string()).unwrap_or_else(|| "(none)".to_string()),
         "message": if sidecar_found {
-            "Bundled sidecar binary found — engine should work."
+            format!("Bundled sidecar found ({layout} layout) — engine should work.")
         } else {
-            "Bundled sidecar binary NOT found. The installer was built without the engine embedded. Use the GitHub Actions release build, or rebuild with the full build script."
+            "Bundled sidecar NOT found. The installer was built without the engine embedded. Use the GitHub Actions release build, or rebuild with the full build script."
         }
     }).to_string()
 }

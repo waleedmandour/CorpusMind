@@ -41,8 +41,8 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "resources": [],
-    "externalBin": ["binaries/corpusmind-engine"],
+    "resources": ["binaries/corpusmind-engine/**/*"],
+    "externalBin": [],
     "macOS": {
       "signingIdentity": null,
       "entitlements": null,

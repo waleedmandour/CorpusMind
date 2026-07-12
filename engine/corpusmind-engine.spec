@@ -1,20 +1,27 @@
 # -*- mode: python ; coding: utf-8 -*-
 """PyInstaller spec for the CorpusMind engine sidecar.
 
-Builds a single-file (onefile) executable that the Tauri desktop shell spawns
-as a child process. The binary listens on 127.0.0.1:8765 by default (overridable
-via CORPUSMIND_HOST / CORPUSMIND_PORT env vars).
+Builds a one-directory (onedir) distribution that the Tauri desktop shell
+spawns as a child process. The executable listens on 127.0.0.1:8765 by
+default (overridable via CORPUSMIND_HOST / CORPUSMIND_PORT env vars).
+
+We use onedir mode (not onefile) because:
+  1. On Windows, onefile mode is extremely slow (3+ hours) because Windows
+     Defender scans every file as it's being compressed into the single EXE.
+  2. Onedir startup is faster (no extraction to temp dir on each run).
+  3. Tauri can bundle the directory as a resource.
 
 Build:
     cd engine
     pyinstaller corpusmind-engine.spec --noconfirm
 
 Output:
-    dist/corpusmind-engine              (Linux/macOS)
-    dist/corpusmind-engine.exe          (Windows)
+    dist/corpusmind-engine/corpusmind-engine          (Linux/macOS)
+    dist/corpusmind-engine/corpusmind-engine.exe      (Windows)
+    dist/corpusmind-engine/_internal/                  (all deps)
 
-The Tauri bundler renames it to `corpusmind-engine-<target-triple>` and places
-it in the app's resources directory at install time. See:
+The Tauri bundler copies the entire directory into the app's resources.
+See:
     desktop/src-tauri/src/lib.rs  ->  resolve_command()
 """
 from __future__ import annotations
@@ -22,21 +29,6 @@ from __future__ import annotations
 from pathlib import Path
 
 block_cipher = None
-
-# Engine package roots that must be collected as packages (not just imported).
-# These are the top-level packages defined in pyproject.toml.
-_engine_packages = [
-    "app",
-    "api",
-    "ingestion",
-    "nlp",
-    "stats",
-    "discourse",
-    "vision",
-    "multimodal",
-    "ai",
-    "storage",
-]
 
 # Hidden imports that PyInstaller's static analysis misses (dynamic imports,
 # entry-point plugins, lazy-loaded optional deps).
@@ -119,27 +111,31 @@ a = Analysis(
 
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
-# one-file build: faster startup for a long-running server, smaller disk
-# footprint, and matches the Tauri sidecar model (single binary dropped into
-# resources/).
+# onedir mode: much faster to build than onefile (no compression into single
+# file), faster startup (no extraction to temp dir), and works well with
+# Tauri's resource bundling.
 exe = EXE(
     pyz,
     a.scripts,
-    a.binaries,
-    a.zipfiles,
-    a.datas,
     [],
+    exclude_binaries=True,
     name="corpusmind-engine",
     debug=False,
     bootloader_ignore_signals=False,
-    strip=False,  # keep debug symbols for crash logs
-    upack=False,  # UPX breaks code signing on macOS — disabled
-    upx_exclude=[],
-    runtime_tmpdir=None,
-    console=True,  # engine logs go to stderr; Tauri redirects to a file
+    strip=False,
+    upx=False,
+    console=True,
     disable_windowed_traceback=False,
     argv_emulation=False,
-    target_arch=None,  # build for the host arch (arm64 on Apple Silicon)
-    codesign_identity=None,  # sign separately in CI / notarize step
+    target_arch=None,
+    codesign_identity=None,
     entitlements_file=None,
+)
+
+coll = COLLECT(
+    exe,
+    a.binaries,
+    a.zipfiles,
+    a.datas,
+    name="corpusmind-engine",
 )
