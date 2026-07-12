@@ -1,5 +1,5 @@
 /**
- * Ribbon — Office-style top navigation (§8.25, §10.3).
+ * Ribbon — Office-style top navigation (8.25, 10.3).
  *
  * Phase 0 ships the shell with File / Text / Vision / Assistant / View tabs.
  * Most tabs are placeholders that render "Coming in Phase N" — the goal of

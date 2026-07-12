@@ -601,7 +601,7 @@ corpusmind-engine`}</pre>
   },
   {
     id: "reproducibility",
-    title: "Reproducibility",
+    title: "Reproducibility & Research Features",
     icon: "\u25B6",
     body: (
       <>
@@ -614,15 +614,46 @@ corpusmind-engine`}</pre>
         <h4>Methods PDF export</h4>
         <p>
           The <strong>Export Methods PDF</strong> feature auto-drafts a methodology paragraph
-          naming the exact tools, versions, and formulas used for a given analysis. You can paste
-          this directly into a manuscript's Methods section so peer reviewers can verify your
-          workflow.
+          naming the exact tools, versions, and formulas used for a given analysis — including
+          AI usage disclosure and human verification sections. You can paste this directly into
+          a manuscript's Methods section so peer reviewers can verify your workflow.
         </p>
-        <h4>Excel exports</h4>
+        <h4>Multi-format export</h4>
         <p>
-          Every analysis view has an <strong>Export Excel</strong> button that downloads the
-          current results as a spreadsheet. The export includes the parameters used (window size,
-          threshold, etc.) so the analysis can be reproduced exactly.
+          Every analysis view has an <strong>Export</strong> dropdown with five formats: Excel,
+          CSV, TSV, Plain text, and JSON. The Collocation view also has an <strong>Export
+          diagram</strong> dropdown for SVG (vector) and PNG (raster) collocation network
+          diagrams.
+        </p>
+        <h4>Pre-publication check</h4>
+        <p>
+          In Settings, the Research &amp; Reproducibility card includes a pre-publication check
+          that audits your corpus for: annotation version pinned, AI non-determinism flagged,
+          pipeline recipe complete, and document count.
+        </p>
+        <h4>AI usage disclosure</h4>
+        <p>
+          The Research &amp; Reproducibility card generates a disclosure paragraph summarizing
+          all AI usage for your project: providers, models, total turns, grounded/ungrounded
+          counts, verified/rejected counts, and tools called. Include this in your Methods
+          section for transparency.
+        </p>
+        <h4>Frequency list import/export</h4>
+        <p>
+          Export a frequency list as a portable <code>.lst</code> file (tab-separated) that can
+          be shared even when the corpus can&apos;t be (copyright). Import a <code>.lst</code>
+          file to use as a reference frequency list for keyness comparison.
+        </p>
+        <h4>Side-by-side concordance comparison</h4>
+        <p>
+          Run the same concordance query against two corpora (target + reference) and see the
+          results side by side. Useful for contrastive analysis.
+        </p>
+        <h4>Student mode</h4>
+        <p>
+          Toggle Student Mode in Settings to hide the AI&apos;s interpretation until the student
+          writes their own. The student then clicks &quot;Reveal AI answer&quot; to compare
+          their interpretation with the AI&apos;s for learning.
         </p>
       </>
     ),

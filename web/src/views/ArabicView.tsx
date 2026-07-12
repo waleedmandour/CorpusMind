@@ -1,5 +1,5 @@
 /**
- * ArabicView — §8.21 Arabic-specific analysis.
+ * ArabicView — 8.21 Arabic-specific analysis.
  *
  * Tools:
  *  - Morphology analyzer (root, pattern, lemma, POS, Buckwalter)
@@ -85,7 +85,7 @@ export function ArabicView() {
   return (
     <div className="arabic-view">
       <div className="grounding-notice">
-        <strong>§8.21:</strong> Arabic is a first-class citizen, not a bolt-on. Backend: CAMeL Tools
+        <strong>8.21:</strong> Arabic is a first-class citizen, not a bolt-on. Backend: CAMeL Tools
         (calima-msa-r13). Roots (الجذر) and patterns (الوزن) are extracted via the
         SAMA/CALIMA-style morphological analyzer. Farasa and SinaTools are stubbed
         and can be swapped in without touching the rest of the engine.

@@ -1,5 +1,5 @@
 /**
- * VisionView — Suite B (§9.1–9.10).
+ * VisionView — Suite B (9.1–9.10).
  *
  * Coming Soon — the Vision Suite is under active development.
  * When complete, it will include:

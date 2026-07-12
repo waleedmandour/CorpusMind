@@ -1,5 +1,5 @@
 /**
- * Command palette (§10.3 power-user complement to the ribbon).
+ * Command palette (10.3 power-user complement to the ribbon).
  *
  * Phase 0 ships the bare scaffolding: open with Ctrl/Cmd+K, fuzzy-filter the
  * list of registered actions. Real actions get registered as features land.

@@ -48,46 +48,46 @@ Grammar, multimodal alignment), UI integration in progress — currently shows
 - ✅ `corpusmind-desktop` Tauri 2 shell that can spawn the engine as a sidecar
 - ✅ `ModelProvider` abstraction wired to Ollama, LM Studio, and an opt-in Cloud provider
 - ✅ Working "hello world" grounded-AI chat round-trip (with citation-or-flag contract)
-- ✅ Statistical measures from §12 (collocation, keyness, dispersion, STTR) with unit tests
+- ✅ Statistical measures from 12 (collocation, keyness, dispersion, STTR) with unit tests
 - ✅ Ribbon-style shell UI and theme system (dark/light, RTL-ready)
 
 ### Phase 1 — Suite A MVP ✅
 - ✅ Storage layer — SQLAlchemy 2.0 async models (projects, corpora, documents, tokens, annotation versions, persisted conversations)
 - ✅ Ingestion — TXT / DOCX / PDF / HTML / XML / CSV / MD parsing with charset detection + spaCy NLP
-- ✅ Corpus management — full CRUD + drag-and-drop upload + visible pipeline recipe (§4.8 reproducibility)
+- ✅ Corpus management — full CRUD + drag-and-drop upload + visible pipeline recipe (4.8 reproducibility)
 - ✅ Concordancer — KWIC search with stable line IDs (cited by the AI Assistant), lemma/word/POS levels, wildcards
 - ✅ Frequency analysis — word / lemma / POS with STTR as the comparably valid default
-- ✅ Collocation analysis — all 7 §12 measures (MI, T-score, LL, Dice, LogDice, χ², ΔP) with configurable window
-- ✅ Keyness analysis — significance (LL, χ²) AND effect size (Log Ratio, %DIFF, Simple Maths, Odds Ratio) always together (§4 Principle 3)
+- ✅ Collocation analysis — all 7 12 measures (MI, T-score, LL, Dice, LogDice, χ², ΔP) with configurable window
+- ✅ Keyness analysis — significance (LL, χ²) AND effect size (Log Ratio, %DIFF, Simple Maths, Odds Ratio) always together (4 Principle 3)
 - ✅ Dispersion — Juilland's D and Gries' DP across documents
 - ✅ Grounded-AI tool surface — `search_concordance`, `get_frequency`, `compute_collocations`, `compute_keyness`, `get_dispersion`; conversations persist in SQLite
 - ✅ Export — Excel + CSV + TSV + TXT + JSON (concordance/frequency/collocation/keyness) + collocation network diagrams (SVG + PNG) + auto-drafted Methods PDF
 - ✅ Web UI — corpus manager, concordancer, analysis tabs, Assistant with clickable evidence citations
 
 ### Phase 2 — Suite A completion ✅
-- ✅ §8.8 N-grams + lexical bundles (frequency-and-range criterion, Biber et al.)
-- ✅ §8.10 Vocabulary profiling (K1/K2-K9/AWL/Off-list bands; rare words; academic words)
-- ✅ §8.11 POS analysis (distribution + POS n-grams 1–5)
-- ✅ §8.12 Grammar analysis (dependency-driven: passive, modal, negation, relative clause, complex NP, tense)
-- ✅ §8.13 Dependency analysis (governor-dependent pairs for any UD relation)
-- ✅ §8.15 Discourse analysis (Hyland's interactive + interactional metadiscourse taxonomy)
-- ✅ §8.17 Metaphor candidates (MIPVU-inspired, LLM-triaged, human-verified gate)
-- ✅ §8.18 Sentiment analysis (lexicon-based, per-sentence timeline)
+- ✅ 8.8 N-grams + lexical bundles (frequency-and-range criterion, Biber et al.)
+- ✅ 8.10 Vocabulary profiling (K1/K2-K9/AWL/Off-list bands; rare words; academic words)
+- ✅ 8.11 POS analysis (distribution + POS n-grams 1–5)
+- ✅ 8.12 Grammar analysis (dependency-driven: passive, modal, negation, relative clause, complex NP, tense)
+- ✅ 8.13 Dependency analysis (governor-dependent pairs for any UD relation)
+- ✅ 8.15 Discourse analysis (Hyland's interactive + interactional metadiscourse taxonomy)
+- ✅ 8.17 Metaphor candidates (MIPVU-inspired, LLM-triaged, human-verified gate)
+- ✅ 8.18 Sentiment analysis (lexicon-based, per-sentence timeline)
 - ✅ 8 new grounded-AI tools (14 total): `get_ngrams`, `get_pos_analysis`, `grammar_query`, `dependency_query`, `discourse_analysis`, `vocab_profile`, `sentiment`, `metaphor_candidates`
 - ✅ 46 tests passing (23 stats + 9 Phase 1 API + 14 Phase 2 API)
 - ✅ Code review completed: 149 ruff lint errors → 0; spec compliance audit documented
 
 ### Phase 3 — Arabic depth pass ✅
-- ✅ §8.21 CAMeL Tools integration (calima-msa-r13 morphology DB; Egyptian/Gulf/Levantine DBs available)
-- ✅ §8.21 Root extraction (الجذر) — e.g. `المكتبة → ك.ت.ب`
-- ✅ §8.21 Pattern (وزن) identification — e.g. `يُ1ْ2ِ3`, `المَ1ْ2َ3َة`
-- ✅ §8.21 Lemma normalization + diacritics handling (user-controlled)
-- ✅ §8.21 Buckwalter transliteration — `الطلاب → AlTlAb`
-- ✅ §8.21 Clitic segmentation
-- ✅ §8.21 Dialect identification (MSA/Egyptian/Gulf/Levantine; heuristic starter)
-- ✅ §8.21 Register detection (Classical / MSA / Dialectal)
-- ✅ §8.21 Normalization (alef variants, teh marbuta, alef maksura)
-- ✅ §8.21 Backend abstraction (CAMeL default; Farasa + SinaTools stubbed — swappable per §3.3)
+- ✅ 8.21 CAMeL Tools integration (calima-msa-r13 morphology DB; Egyptian/Gulf/Levantine DBs available)
+- ✅ 8.21 Root extraction (الجذر) — e.g. `المكتبة → ك.ت.ب`
+- ✅ 8.21 Pattern (وزن) identification — e.g. `يُ1ْ2ِ3`, `المَ1ْ2َ3َة`
+- ✅ 8.21 Lemma normalization + diacritics handling (user-controlled)
+- ✅ 8.21 Buckwalter transliteration — `الطلاب → AlTlAb`
+- ✅ 8.21 Clitic segmentation
+- ✅ 8.21 Dialect identification (MSA/Egyptian/Gulf/Levantine; heuristic starter)
+- ✅ 8.21 Register detection (Classical / MSA / Dialectal)
+- ✅ 8.21 Normalization (alef variants, teh marbuta, alef maksura)
+- ✅ 8.21 Backend abstraction (CAMeL default; Farasa + SinaTools stubbed — swappable per 3.3)
 - ✅ 5 new grounded-AI tools (19 total): `arabic_morphology`, `arabic_dialect_id`, `arabic_roots`, `arabic_register`, `arabic_transliterate`
 - ✅ Web UI: 8-tool Arabic workbench with RTL input + sample texts + dialect picker
 - ✅ 56 tests passing (23 stats + 9 Phase 1 + 14 Phase 2 + 10 Phase 3 Arabic)
@@ -103,7 +103,7 @@ Grammar, multimodal alignment), UI integration in progress — currently shows
 - ✅ **CI fixes** — Desktop (Rust) job now passes (externalBin clearing pattern + E0597 lifetime fix); engine tests improved from 71→88 passing by downloading the spaCy model in CI
 
 ### 🚧 Phase 4 — Suite B MVP (Vision)
-- 🚧 Image ingestion, OCR, Visual Grammar (Kress & van Leeuwen), multimodal image–text alignment; + §8.22 bilingual tools + full CAMeL DialectIdentifier model
+- 🚧 Image ingestion, OCR, Visual Grammar (Kress & van Leeuwen), multimodal image–text alignment; + 8.22 bilingual tools + full CAMeL DialectIdentifier model
 
 ---
 
@@ -245,7 +245,7 @@ corpusmind/
 │   ├── nlp/           # tokenization, POS, lemmatization, dependency parsing
 │   │   ├── general/   # spaCy / Stanza / Trankit pipelines
 │   │   └── arabic/    # CAMeL Tools, Farasa, SinaTools, CamelParser2.0 wrapper
-│   ├── stats/         # frequency, collocation, keyness, dispersion, n-grams  ← §12 formulas
+│   ├── stats/         # frequency, collocation, keyness, dispersion, n-grams  ← 12 formulas
 │   ├── discourse/     # metadiscourse, stance/appraisal, metaphor (MIP/MIPVU), sentiment
 │   ├── vision/        # OCR, object/scene detection, composition/color analysis
 │   ├── multimodal/    # image-text alignment, cross-modal meaning, visual grammar scoring

@@ -1,6 +1,6 @@
 /**
  * CorpusManager — project list, corpus list, document upload (drag-drop),
- * pipeline-recipe display (§8.1, §8.2), and on-demand corpus cleaning.
+ * pipeline-recipe display (8.1, 8.2), and on-demand corpus cleaning.
  */
 import { useState, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -110,7 +110,7 @@ export function CorpusManagerView() {
 function PipelineRecipe({ recipe }: { recipe: Record<string, unknown> }) {
   return (
     <details className="recipe">
-      <summary>Pipeline recipe (§8.1)</summary>
+      <summary>Pipeline recipe (8.1)</summary>
       <dl>
         <dt>Backend</dt><dd>{String(recipe.backend ?? "—")}</dd>
         <dt>Model</dt><dd>{String(recipe.model_name ?? "—")}</dd>

@@ -1,5 +1,5 @@
 /**
- * AssistantView — grounded chat (§11).
+ * AssistantView — grounded chat (11).
  *
  * The most important UI contract in the whole product: every answer is either
  *   - grounded (has tool_calls / evidence) → rendered with green checkmark + citations

@@ -292,7 +292,7 @@ function KeynessPanel({ cid }: { cid: string }) {
       </div>
 
       <div className="grounding-notice">
-        <strong>§4 Principle 3:</strong> a "key" word is never reported as important on
+        <strong>4 Principle 3:</strong> a "key" word is never reported as important on
         frequency-of-occurrence-in-a-huge-corpus grounds alone. Log Ratio, %DIFF,
         Simple Maths, and Odds Ratio ride alongside log-likelihood — never report
         one without the other.
@@ -431,7 +431,7 @@ function NGramsPanel({ cid }: { cid: string }) {
       </div>
 
       <div className="grounding-notice">
-        <strong>§8.8:</strong> Lexical bundles require BOTH a minimum frequency per million words
+        <strong>8.8:</strong> Lexical bundles require BOTH a minimum frequency per million words
         AND a minimum number of distinct texts — raw frequency alone is not enough to
         distinguish genuine bundles from single-text artifacts (Biber et al.).
       </div>
@@ -526,7 +526,7 @@ function GrammarPanel({ cid }: { cid: string }) {
       </div>
 
       <div className="grounding-notice">
-        <strong>§8.12:</strong> Grammar pattern detectors are <em>dependency-parse-driven</em>,
+        <strong>8.12:</strong> Grammar pattern detectors are <em>dependency-parse-driven</em>,
         not regex over surface text — so they generalize across genres.
       </div>
 
@@ -592,8 +592,8 @@ function DependencyPanel({ cid }: { cid: string }) {
       </div>
 
       <div className="grounding-notice">
-        <strong>§8.13:</strong> Built as thin queries over the same dependency parses already
-        produced in §8.1 — not a separate pipeline.
+        <strong>8.13:</strong> Built as thin queries over the same dependency parses already
+        produced in 8.1 — not a separate pipeline.
       </div>
 
       {result.data && (
@@ -619,7 +619,7 @@ function DiscoursePanel({ cid }: { cid: string }) {
   return (
     <div className="panel-content">
       <div className="grounding-notice">
-        <strong>§8.15:</strong> Metadiscourse categories follow Hyland's interactive/interactional
+        <strong>8.15:</strong> Metadiscourse categories follow Hyland's interactive/interactional
         taxonomy (Hyland 2005) — this makes results citable and comparable across studies.
       </div>
 
@@ -659,7 +659,7 @@ function VocabPanel({ cid }: { cid: string }) {
   return (
     <div className="panel-content">
       <div className="grounding-notice">
-        <strong>§8.10:</strong> Vocabulary profiling uses an open frequency-band approximation
+        <strong>8.10:</strong> Vocabulary profiling uses an open frequency-band approximation
         (CC-0 wordlist). EVP-style CEFR wordlists carry redistribution restrictions and are
         not bundled without confirmed rights.
       </div>
@@ -709,9 +709,9 @@ function SentimentPanel({ cid }: { cid: string }) {
   return (
     <div className="panel-content">
       <div className="grounding-notice">
-        <strong>§8.18:</strong> Phase 2 uses a lexicon-based sentiment scorer. Phase 3 will swap
+        <strong>8.18:</strong> Phase 2 uses a lexicon-based sentiment scorer. Phase 3 will swap
         in VADER or a transformers-based model behind the same interface — results stay comparable
-        because the model + version is pinned per project (§4 Principle 8).
+        because the model + version is pinned per project (4 Principle 8).
       </div>
 
       {result.data && (
@@ -763,7 +763,7 @@ function MetaphorPanel({ cid }: { cid: string }) {
   return (
     <div className="panel-content">
       <div className="grounding-notice">
-        <strong>§8.17 (load-bearing):</strong> These are <em>candidates only</em>.
+        <strong>8.17 (load-bearing):</strong> These are <em>candidates only</em>.
         The LLM triages them via MIPVU decision steps (contextual vs. basic meaning,
         contrast-but-comprehensible-via-comparison test), and a <strong>human must
         verify</strong> before any candidate counts as a confirmed metaphor in export

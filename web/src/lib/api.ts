@@ -314,7 +314,7 @@ export interface MetaphorResult {
 }
 
 // ----------------------------------------------------------------------- //
-// Phase 3 types — Arabic (§8.21)
+// Phase 3 types — Arabic (8.21)
 // ----------------------------------------------------------------------- //
 
 export interface ArabicToken {
@@ -353,7 +353,7 @@ export interface ArabicBackendInfo {
   dialects_supported?: string[];
 }
 
-// Phase 3 polish — bilingual (§8.22)
+// Phase 3 polish — bilingual (8.22)
 export interface AlignedPair {
   ar_sentence: string;
   en_sentence: string;
@@ -396,7 +396,7 @@ export interface TranslationResult {
 }
 
 // ----------------------------------------------------------------------- //
-// Phase 4 types — Vision (§9.1–9.10)
+// Phase 4 types — Vision (9.1–9.10)
 // ----------------------------------------------------------------------- //
 
 export interface ImageSet {
@@ -500,7 +500,7 @@ export interface AlignmentResult {
   cross_modal_relations: CrossModalRelation[];
 }
 
-// Phase 5 — multimodal discourse (§9.11–9.18)
+// Phase 5 — multimodal discourse (9.11–9.18)
 export interface DiscourseClaim {
   framework: string;
   category: string;
@@ -657,7 +657,7 @@ export const api = {
       body: JSON.stringify({ limit }),
     }),
 
-  // --- Phase 3 Arabic (§8.21) ---
+  // --- Phase 3 Arabic (8.21) ---
   arabicAnalyze: (text: string, dialect = "msa") =>
     jsonFetch<ArabicAnalysisResult>(`/api/v1/arabic/analyze`, {
       method: "POST",
@@ -709,7 +709,7 @@ export const api = {
   arabicBackends: () =>
     jsonFetch<{ backends: ArabicBackendInfo[] }>(`/api/v1/arabic/backends`),
 
-  // --- Phase 3 polish — bilingual (§8.22) ---
+  // --- Phase 3 polish — bilingual (8.22) ---
   bilingualAlign: (ar_corpus_id: string, en_corpus_id: string) =>
     jsonFetch<AlignmentResult>(`/api/v1/bilingual/align`, {
       method: "POST",
@@ -729,7 +729,7 @@ export const api = {
       body: JSON.stringify({ word, direction }),
     }),
 
-  // --- Phase 4 Vision (§9.1–9.10) ---
+  // --- Phase 4 Vision (9.1–9.10) ---
   createImageSet: (cid: string, name: string) =>
     jsonFetch<ImageSet>(`/api/v1/corpora/${cid}/image-sets`, {
       method: "POST",
@@ -767,7 +767,7 @@ export const api = {
       body: JSON.stringify({ text }),
     }),
 
-  // --- Phase 5 multimodal discourse (§9.11–9.18) ---
+  // --- Phase 5 multimodal discourse (9.11–9.18) ---
   socialSemiotic: (imgId: string) =>
     jsonFetch<DiscourseResult>(`/api/v1/images/${imgId}/social-semiotic`, { method: "POST" }),
 
@@ -804,7 +804,7 @@ export const api = {
   cdaFrameworks: () =>
     jsonFetch<{ frameworks: Record<string, string> }>(`/api/v1/cda-frameworks`),
 
-  // --- Phase 6 research workflow (§8.23) + collaboration (§10.2) ---
+  // --- Phase 6 research workflow (8.23) + collaboration (10.2) ---
   savedSearches: {
     list: (pid: string) =>
       jsonFetch<any[]>(`/api/v1/projects/${pid}/saved-searches`),

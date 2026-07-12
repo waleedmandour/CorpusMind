@@ -1,5 +1,5 @@
 /**
- * Concordancer — KWIC view with color coding, sort, filter, stable line IDs (§8.4).
+ * Concordancer — KWIC view with color coding, sort, filter, stable line IDs (8.4).
  */
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";

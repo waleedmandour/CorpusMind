@@ -38,10 +38,29 @@ explicitly choose to use a cloud AI provider.
 
 ## 2. Installation
 
+### Option A: Desktop App (Windows — recommended)
+
+1. Install [Ollama](https://ollama.com) (the app auto-starts it — you don't need to open it manually)
+2. Clone the repo and build:
+```
+cd C:\Users\<YourUser>\Documents
+git clone https://github.com/waleedmandour/CorpusMind.git
+cd CorpusMind
+powershell -ExecutionPolicy Bypass -File scripts\build-corpusmind-windows.ps1
+```
+3. Launch from Start Menu → CorpusMind
+
+The desktop app automatically:
+- Starts the Python engine in the background
+- Starts Ollama in the background (if installed)
+- Connects to both without you opening a terminal
+
+### Option B: Development Mode
+
 You need three things:
 
-1. **Python 3.12 or newer** from python.org
-2. **Node.js 20 or newer** from nodejs.org
+1. **Python 3.12** from python.org
+2. **Node.js 20** from nodejs.org
 3. **Ollama** from ollama.com (for the AI Assistant to work locally)
 
 After installing Ollama, open a terminal and run:
@@ -71,7 +90,15 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5173 in your browser.
+Open http://localhost:5173 in your browser. The engine runs on port 8765.
+
+### Desktop App (macOS Apple Silicon)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/waleedmandour/CorpusMind/main/scripts/build-corpusmind-mac.sh -o build.sh
+chmod +x build.sh
+./build-corpusmind-mac.sh
+```
 
 ### Optional: Arabic Support
 
@@ -85,18 +112,34 @@ camel_data -i dialectid-model6
 
 ## 3. Creating a Project and Uploading Texts
 
-1. Click **Projects** in the sidebar.
-2. Click **+ New** to create a project. Enter a name and select a language.
-3. Click your project to select it.
-4. Click **+ New** under Corpora to create a corpus.
-5. Drag and drop text files into the upload area.
+1. Click **Corpora Selection → Your Corpus** in the sidebar.
+2. Select an existing project from the dropdown at the top, or click **+ New Project**.
+3. Click **+ New** under Corpora to create a corpus. Enter a name, language, and genre.
+4. Click your corpus to select it.
+5. Click the upload area (or drag and drop) to select text files.
 
 Supported formats: TXT, DOCX, PDF, HTML, XML, CSV, Markdown.
 
 The engine automatically detects encoding, cleans the text, tokenizes,
-tags with POS, lemmatizes, and parses dependencies using spaCy. The
-pipeline recipe (model name and version) is visible and exportable for
-reproducibility.
+tags with POS, lemmatizes, and parses dependencies. For Arabic corpora,
+the engine uses CAMeL Tools (if installed) for morphology, root extraction,
+and dialect identification. The pipeline recipe (model name and version)
+is visible and exportable for reproducibility.
+
+### Corpus Cleaning
+
+Each corpus has a **Clean** button that opens a dialog with 16 options:
+collapse whitespace, remove URLs/emails, lowercase, remove punctuation/
+numbers/emoji, remove stopwords, min token length, and Arabic-specific
+options (normalize alef variants, strip diacritics, remove tatweel).
+
+### Reference Corpus
+
+Click **Corpora Selection → Reference Corpus** to choose or download a
+reference corpus for keyness comparison. Three options:
+- **Download**: search HuggingFace + Wikipedia + OPUS
+- **Upload**: upload your own reference files
+- **Bundled**: use the built-in BE06 frequency list
 
 ---
 
@@ -188,9 +231,12 @@ Click **Arabic Tools** in the sidebar. Available tools:
 
 ---
 
-## 8. Vision Suite (Multimodal Analysis)
+## 8. Vision Suite (Multimodal Analysis) — Coming Soon
 
-Click **Vision Suite** in the sidebar.
+The Vision Suite is currently under active development. The backend is
+implemented (20+ endpoints for image analysis, Visual Grammar, multimodal
+alignment), but the UI integration is in progress. When complete, it will
+support:
 
 1. Create an image set within your corpus.
 2. Drag and drop images (JPG, PNG, TIFF, WebP).
@@ -204,18 +250,19 @@ rule of thirds, visual balance, framing), and OCR text extraction.
 
 **Visual Grammar**: Analyses the image against Kress and van Leeuwen's
 (2006) three metafunctions: Representational, Interactive, and
-Compositional. Every claim is phrased as a hypothesis: "Under a Kress and
-van Leeuwen reading, X may indicate Y."
+Compositional. Every claim is phrased as a hypothesis.
 
 **Align**: Multimodal image-text alignment. Type the co-occurring text and
 click Align. The engine extracts image regions and text spans, then matches
-them with confidence scores. Cross-modal relations (reinforcement,
-complementarity, silence) are detected.
+them with confidence scores.
 
 **Discourse**: 8 framework-lensed analyses: Social Semiotic, CDA (4
 frameworks: Fairclough, van Dijk, Wodak, Machin and Mayr), Persuasion
 (Aristotle + Toulmin), Framing (Entman), Narrative (Labov), Visual
 Metaphor, Combined Emotion, and Cultural analysis.
+
+The sidebar shows "Vision Suite (Soon)" — all other features are fully
+functional now.
 
 ---
 
@@ -229,6 +276,27 @@ output.
 If the Assistant calls a tool, the answer is marked **grounded** (green
 badge). If no tool was called, the answer is marked **ungrounded** (orange
 badge). The UI never silently presents an ungrounded answer as fact.
+
+### Confidence Layer
+
+After producing an answer, the Assistant assesses its own confidence
+(0-100%) based on how well the cited evidence supports the interpretation.
+- If confidence is high (70%+): the answer is shown with a green confidence bar.
+- If confidence is low (<70%): the user must answer 2-3 multiple-choice
+  questions (MCQs) to verify the key claims before the answer is revealed.
+
+### Human Verification
+
+Each AI answer has three buttons: **Accept**, **Reject**, and **Edit**.
+The verification state is recorded in the audit trail and included in
+the AI usage disclosure for your Methods section.
+
+### Student Mode
+
+In Settings → Research & Reproducibility, toggle Student Mode to hide
+the AI's interpretation until the student writes their own. The student
+then clicks "Reveal AI answer" to compare their interpretation with the
+AI's for learning.
 
 Example questions:
 - "What are the top 10 most frequent words in this corpus?"
@@ -272,22 +340,23 @@ remove stopwords (English or Arabic), min token length, and Arabic-specific
 normalization (alef variants, diacritics, tatweel). The cleaning is
 destructive — it re-cleans every document and re-runs the NLP pipeline.
 
-**Corpus Hub**: The sidebar's File → Corpus Hub lets you search and download
+**Corpus Hub**: The Reference Corpus view lets you search and download
 open-access corpora in Arabic and English from three hubs:
-- **HuggingFace Datasets** — Wikipedia (ar/en), OSCAR, CC-100, Arabic Pile
+- **HuggingFace Datasets** — Wikipedia (ar/en), OSCAR, CC-100, Arabic Pile,
+  Arabic Billion Words, OSIAN, Arabic Text Classification, and more
 - **Wikipedia (live)** — fresh article fetch, CC-BY-SA 3.0
-- **OPUS** — 1,200+ parallel corpora (ar↔en translation pairs)
+- **OPUS** — 1,200+ parallel corpora (ar-en translation pairs)
 
 Downloaded files land in your browser's download folder; upload them into a
-corpus via Projects. All searches are proxied through the engine — your
+corpus via Your Corpus. All searches are proxied through the engine — your
 existing corpus data never leaves your machine.
 
 **Smart Troubleshooting**: When a backend error occurs during use, it appears
-in the taskbar at the bottom of the window. If you configure a Gemini API key
-(`CORPUSMIND_GEMINI_API_KEY` in the engine environment), the error is
-auto-interpreted by Google's Gemini model — you get a plain-language
-explanation, likely cause, and suggested fix. A "Report to developer" button
-opens a pre-filled email to `w.abumandour@squ.edu.om`.
+in the taskbar at the bottom of the window. Notifications are OFF by default
+— you can enable them in Settings. If you configure a Gemini API key in
+Settings, the error is auto-interpreted by Google's Gemini model — you get
+a plain-language explanation, likely cause, and suggested fix. A "Report to
+developer" button opens a pre-filled email to `w.abumandour@squ.edu.om`.
 
 **Saved Searches and Bookmarks**: Save queries with parameters for re-use.
 Bookmark specific concordance lines or statistics with notes.
