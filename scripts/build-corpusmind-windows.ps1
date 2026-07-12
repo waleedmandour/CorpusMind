@@ -86,6 +86,30 @@ if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
 }
 OkMsg "Git: $(git --version)"
 
+# --- 0.5. Pull latest code from GitHub ---
+Log "pulling latest code from GitHub..."
+Push-Location $RepoRoot
+try {
+    git fetch origin
+    $localHash = git rev-parse HEAD
+    $remoteHash = git rev-parse origin/main
+    if ($localHash -ne $remoteHash) {
+        WarnMsg "local code is behind remote - pulling latest..."
+        git stash 2>$null
+        git pull origin main
+        if ($LASTEXITCODE -ne 0) {
+            DieMsg "git pull failed. Run 'git pull origin main' manually and resolve conflicts."
+        }
+        OkMsg "code updated to latest"
+    } else {
+        OkMsg "code is already up to date"
+    }
+} catch {
+    WarnMsg "could not pull from GitHub (non-fatal) - building with local code"
+}
+Pop-Location
+Write-Host ""
+
 # Tauri CLI
 if (-not (Get-Command cargo-tauri -ErrorAction SilentlyContinue)) {
     WarnMsg "Tauri CLI not found. Installing (this takes ~3 minutes)..."
