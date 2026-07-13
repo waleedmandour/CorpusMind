@@ -201,12 +201,26 @@ $PyExe = Join-Path $venvPath "Scripts\python.exe"
 OkMsg "engine deps installed"
 
 Log "downloading spaCy English model..."
-# Note: spaCy download writes progress to stderr. We use 2>&1 to merge
-# it into stdout so PowerShell does not treat it as a fatal error.
-# This is non-fatal - the build can proceed without the model.
+# spaCy's downloader writes progress to stderr. With
+# $ErrorActionPreference set to "Stop" (top of script), PowerShell treats
+# ANY stderr output from a native command as a terminating error, so the
+# previous `2>&1` + try/catch approach aborted on the FIRST progress line,
+# before the download completed. Temporarily relax EAP for this one call.
+# This is non-fatal - the build can proceed without the model (Hardening C
+# in corpusmind-engine.spec collects the model data if present, skips if not).
+$prevEAP = $ErrorActionPreference
+$ErrorActionPreference = "Continue"
 try {
-    $spacyOutput = & $PyExe -m spacy download en_core_web_sm 2>&1
+    & $PyExe -m spacy download en_core_web_sm
     $spacyExit = $LASTEXITCODE
+    if ($spacyExit -ne 0) {
+        # Fallback: `spacy download` is a thin wrapper around pip. If it
+        # fails (e.g. spaCy's release server is unreachable), install the
+        # model wheel directly from PyPI.
+        WarnMsg "spacy download failed (exit $spacyExit); trying direct pip install..."
+        & $PyExe -m pip install en-core-web-sm
+        $spacyExit = $LASTEXITCODE
+    }
     if ($spacyExit -eq 0) {
         OkMsg "spaCy model ready"
     } else {
@@ -217,6 +231,8 @@ try {
 } catch {
     WarnMsg "spaCy model download failed - non-fatal"
     WarnMsg "install it later with: $PyExe -m spacy download en_core_web_sm"
+} finally {
+    $ErrorActionPreference = $prevEAP
 }
 Write-Host ""
 

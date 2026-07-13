@@ -66,6 +66,12 @@ jobs:
           pip install -e .
           pip install pillow
 
+      - name: Download spaCy model (en_core_web_sm)
+        working-directory: engine
+        run: |
+          python -m spacy download en_core_web_sm
+          python -c "import en_core_web_sm; print('spaCy model OK:', en_core_web_sm.__version__)"
+
       - name: Build engine sidecar (PyInstaller)
         working-directory: engine
         run: pyinstaller corpusmind-engine.spec --noconfirm --log-level WARN
@@ -167,6 +173,12 @@ jobs:
           pip install -e .
           pip install pillow
 
+      - name: Download spaCy model (en_core_web_sm)
+        working-directory: engine
+        run: |
+          python -m spacy download en_core_web_sm
+          python -c "import en_core_web_sm; print('spaCy model OK:', en_core_web_sm.__version__)"
+
       - name: Build engine sidecar (PyInstaller)
         working-directory: engine
         run: pyinstaller corpusmind-engine.spec --noconfirm --log-level WARN
@@ -253,6 +265,12 @@ jobs:
           pip install pyinstaller python-multipart cryptography
           pip install -e .
           pip install pillow
+
+      - name: Download spaCy model (en_core_web_sm)
+        working-directory: engine
+        run: |
+          python -m spacy download en_core_web_sm
+          python -c "import en_core_web_sm; print('spaCy model OK:', en_core_web_sm.__version__)"
 
       - name: Build engine sidecar (PyInstaller)
         working-directory: engine
