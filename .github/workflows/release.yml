@@ -313,13 +313,11 @@ jobs:
         with:
           name: linux-x64
           path: |
-            desktop/src-tauri/target/release/bundle/appimage/*.AppImage
             desktop/src-tauri/target/release/bundle/deb/*.deb
 
       - name: Attach to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            desktop/src-tauri/target/release/bundle/appimage/*.AppImage
             desktop/src-tauri/target/release/bundle/deb/*.deb
           fail_on_unmatched_files: false
