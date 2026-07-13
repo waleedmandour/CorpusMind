@@ -299,6 +299,13 @@ jobs:
 
       - name: Build Tauri app (AppImage + deb)
         working-directory: desktop/src-tauri
+        env:
+          # linuxdeploy is itself an AppImage that needs FUSE to mount itself.
+          # GitHub Actions Ubuntu runners have FUSE but fusermount often fails
+          # with permission errors. This env var tells AppImage-based tools
+          # (linuxdeploy, appimagetool) to extract to a temp dir instead of
+          # mounting via FUSE — the standard CI workaround.
+          APPIMAGE_EXTRACT_AND_RUN: "1"
         run: cargo tauri build
 
       - name: Upload artifacts

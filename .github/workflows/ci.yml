@@ -133,7 +133,7 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('desktop/src-tauri/Cargo.toml') }}
           restore-keys: ${{ runner.os }}-cargo-
 
-      - name: Temporarily clear externalBin (no sidecar in CI)
+      - name: Temporarily clear externalBin + resources (no sidecar in CI)
         working-directory: desktop/src-tauri
         run: |
           cp tauri.conf.json tauri.conf.json.bak
@@ -142,10 +142,15 @@ jobs:
           p = "tauri.conf.json"
           with open(p) as f:
               c = json.load(f)
+          # Clear both externalBin AND resources — tauri-build validates both
+          # at compile time (build.rs), and CI doesn't build the sidecar, so
+          # both globs would fail. externalBin is checked for the target-triple
+          # suffixed binary; resources is checked for the glob pattern.
           c["bundle"]["externalBin"] = []
+          c["bundle"]["resources"] = []
           with open(p, "w") as f:
               json.dump(c, f, indent=2)
-          print("externalBin cleared for CI cargo check")
+          print("externalBin + resources cleared for CI cargo check")
           PY
 
       - name: Cargo check
