@@ -12,6 +12,13 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: "autoUpdate",
+      // Do NOT auto-inject the service worker registration script into the
+      // HTML. The SW must not run inside the Tauri desktop webview — it
+      // intercepts every fetch to http://127.0.0.1:8765 and breaks them all
+      // with net::ERR_FAILED (WebView2's service worker can't make cross-
+      // origin fetches to localhost the same way the page can). We register
+      // the SW manually in main.tsx, guarded by !isTauriRuntime().
+      injectRegister: false,
       includeAssets: ["favicon.svg", "robots.txt", "icon-192.png", "icon-512.png"],
       manifest: {
         name: "CorpusMind",

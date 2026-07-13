@@ -5,7 +5,27 @@ import { QueryClient, QueryClientProvider, QueryCache, MutationCache } from "@ta
 import App from "@/App";
 import "@/styles/global.css";
 import { useTroubleshoot } from "@/store/troubleshooting";
-import { api } from "@/lib/api";
+import { api, isTauriRuntime } from "@/lib/api";
+
+// ----------------------------------------------------------------------- //
+// PWA service worker registration.
+//
+// The service worker is ONLY for the browser PWA (offline support). It must
+// NOT run inside the Tauri desktop webview — inside WebView2 (Windows), the
+// service worker intercepts every fetch to http://127.0.0.1:8765 and fails
+// with net::ERR_FAILED, breaking all engine API calls. This is the root cause
+// of the "Detected (API unreachable)" amber state on Windows desktop builds.
+// ----------------------------------------------------------------------- //
+if (!isTauriRuntime()) {
+  // vite-plugin-pwa provides the virtual module; the import is tree-shaken
+  // out of the Tauri build because isTauriRuntime() is false at runtime, but
+  // the module is still bundled (the SW file is generated regardless).
+  import("virtual:pwa-register").then(({ registerSW }) => {
+    registerSW({ immediate: true });
+  }).catch(() => {
+    // Non-fatal: the SW is optional (offline PWA support only).
+  });
+}
 
 // ----------------------------------------------------------------------- //
 // React Query setup with global error handler that feeds Smart Troubleshooting.
