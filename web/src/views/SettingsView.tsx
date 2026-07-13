@@ -9,7 +9,8 @@
  */
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { invoke } from "@tauri-apps/api/core";
+import { api, isTauriRuntime } from "@/lib/api";
 import { useTroubleshoot } from "@/store/troubleshooting";
 import { useUI } from "@/store/ui";
 import { useApp } from "@/store/app";
@@ -34,22 +35,18 @@ export function SettingsView() {
   const [engineLogs, setEngineLogs] = useState<string>("");
   const [sidecarInfo, setSidecarInfo] = useState<string>("");
 
-  // Check if we're running in Tauri (desktop app)
-  const isTauri = typeof window !== "undefined" &&
-    (typeof (window as any).__TAURI_INTERNALS__ !== "undefined" ||
-     typeof (window as any).__TAURI__ !== "undefined");
+  // True when running inside the Tauri desktop webview. Reuses the shared
+  // helper from lib/api.ts so the detection logic lives in one place.
+  const isTauri = isTauriRuntime();
 
   const recheckEngine = async () => {
     setRecheckingEngine(true);
     setDiagMessage("");
     try {
       if (isTauri) {
-        const invoke = (window as any).__TAURI_INTERNALS__?.invoke || (window as any).__TAURI__?.core?.invoke;
-        if (invoke) {
-          const result = await invoke("restart_engine");
-          const data = JSON.parse(result as string);
-          setDiagMessage(data.message || data.diagnostics?.hint || "");
-        }
+        const result = await invoke<string>("restart_engine");
+        const data = JSON.parse(result);
+        setDiagMessage(data.message || data.diagnostics?.hint || "");
       }
       qc.invalidateQueries({ queryKey: ["health"] });
       qc.invalidateQueries({ queryKey: ["providers"] });
@@ -65,12 +62,9 @@ export function SettingsView() {
     setDiagMessage("");
     try {
       if (isTauri) {
-        const invoke = (window as any).__TAURI_INTERNALS__?.invoke || (window as any).__TAURI__?.core?.invoke;
-        if (invoke) {
-          const result = await invoke("restart_ollama");
-          const data = JSON.parse(result as string);
-          setDiagMessage(data.message || data.hint || "");
-        }
+        const result = await invoke<string>("restart_ollama");
+        const data = JSON.parse(result);
+        setDiagMessage(data.message || data.hint || "");
       }
       qc.invalidateQueries({ queryKey: ["providers"] });
     } catch (e: any) {
@@ -90,40 +84,37 @@ export function SettingsView() {
       return;
     }
     try {
-      const invoke = (window as any).__TAURI_INTERNALS__?.invoke || (window as any).__TAURI__?.core?.invoke;
-      if (invoke) {
-        // Get engine logs
-        const logsResult = await invoke("engine_logs");
-        const logsData = JSON.parse(logsResult as string);
-        const logText = [
-          `stdout log: ${logsData.stdout_path || "(not found)"}`,
-          "─".repeat(60),
-          logsData.stdout || "(empty)",
-          "",
-          `stderr log: ${logsData.stderr_path || "(not found)"}`,
-          "─".repeat(60),
-          logsData.stderr || "(empty)",
-        ].join("\n");
-        setEngineLogs(logText);
+      // Get engine logs
+      const logsResult = await invoke<string>("engine_logs");
+      const logsData = JSON.parse(logsResult);
+      const logText = [
+        `stdout log: ${logsData.stdout_path || "(not found)"}`,
+        "─".repeat(60),
+        logsData.stdout || "(empty)",
+        "",
+        `stderr log: ${logsData.stderr_path || "(not found)"}`,
+        "─".repeat(60),
+        logsData.stderr || "(empty)",
+      ].join("\n");
+      setEngineLogs(logText);
 
-        // Get sidecar verification
-        const sidecarResult = await invoke("verify_sidecar");
-        const sidecarData = JSON.parse(sidecarResult as string);
-        const sidecarText = [
-          `Sidecar found: ${sidecarData.sidecar_found ? "YES" : "NO"}`,
-          `Expected name: ${sidecarData.expected_name}`,
-          `Target triple: ${sidecarData.target_triple}`,
-          `Resource dir: ${sidecarData.resource_dir || "(not resolved)"}`,
-          `Sidecar path: ${sidecarData.sidecar_path || "(not found)"}`,
-          "",
-          `Resolved program: ${sidecarData.resolved_program}`,
-          `Resolved args: ${sidecarData.resolved_args}`,
-          `Resolved working dir: ${sidecarData.resolved_working_dir}`,
-          "",
-          `Message: ${sidecarData.message}`,
-        ].join("\n");
-        setSidecarInfo(sidecarText);
-      }
+      // Get sidecar verification
+      const sidecarResult = await invoke<string>("verify_sidecar");
+      const sidecarData = JSON.parse(sidecarResult);
+      const sidecarText = [
+        `Sidecar found: ${sidecarData.sidecar_found ? "YES" : "NO"}`,
+        `Expected name: ${sidecarData.expected_name}`,
+        `Target triple: ${sidecarData.target_triple}`,
+        `Resource dir: ${sidecarData.resource_dir || "(not resolved)"}`,
+        `Sidecar path: ${sidecarData.sidecar_path || "(not found)"}`,
+        "",
+        `Resolved program: ${sidecarData.resolved_program}`,
+        `Resolved args: ${sidecarData.resolved_args}`,
+        `Resolved working dir: ${sidecarData.resolved_working_dir}`,
+        "",
+        `Message: ${sidecarData.message}`,
+      ].join("\n");
+      setSidecarInfo(sidecarText);
     } catch (e: any) {
       setEngineLogs(`Diagnostics failed: ${e?.message || String(e)}`);
       setSidecarInfo(`Diagnostics failed: ${e?.message || String(e)}`);

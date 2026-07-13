@@ -62,11 +62,22 @@ class Settings(BaseSettings):
     cloud_disabled_hard: bool = False
 
     # --- CORS (for PWA running in browser pointed at a non-localhost engine) ---
+    # NOTE: the Tauri desktop webview sends a real `Origin` header and this
+    # CORSMiddleware enforces it like for any other client — Tauri does NOT
+    # bypass CORS for plain window.fetch() calls made from the frontend (only
+    # Rust-side reqwest calls bypass it). The webview's origin differs per OS:
+    #   - macOS / Linux (Tauri v2 default): tauri://localhost
+    #   - Windows (Tauri v2 default, useHttpsScheme=false): http://tauri.localhost
+    #   - Windows (if useHttpsScheme=true is ever enabled): https://tauri.localhost
+    # Omitting the Windows origin silently breaks Engine/Ollama detection (and
+    # every other API call) ONLY on Windows desktop builds.
     cors_origins: list[str] = Field(
         default_factory=lambda: [
             "http://localhost:5173",
             "http://127.0.0.1:5173",
             "tauri://localhost",
+            "http://tauri.localhost",
+            "https://tauri.localhost",
             "https://localhost",
         ]
     )

@@ -250,6 +250,10 @@ $WebDir = Join-Path $RepoRoot "web"
 Push-Location $WebDir
 npm install --silent
 if ($LASTEXITCODE -ne 0) { Pop-Location; DieMsg "npm install failed" }
+# Bake the engine sidecar's fixed address into the bundle so the Tauri
+# webview (served from a *.localhost origin, with no Vite dev proxy) can
+# reach http://127.0.0.1:8765. See web/src/lib/api.ts for the full story.
+$env:VITE_ENGINE_URL = "http://127.0.0.1:8765"
 npm run build
 if ($LASTEXITCODE -ne 0) { Pop-Location; DieMsg "PWA build failed" }
 Pop-Location

@@ -146,8 +146,11 @@ cd "$WORKDIR"
 # ─── 8. Build the web PWA ─────────────────────────────────────────────────
 log "building web PWA..."
 cd "$WORKDIR/web"
-npm install
-npm run build
+# Bake the engine sidecar's fixed address into the bundle so the Tauri
+# webview (served from tauri://localhost, with no Vite dev proxy) can reach
+# http://127.0.0.1:8765. See web/src/lib/api.ts for the full story.
+VITE_ENGINE_URL="http://127.0.0.1:8765" npm install
+VITE_ENGINE_URL="http://127.0.0.1:8765" npm run build
 cd "$WORKDIR"
 [[ -f "web/dist/index.html" ]] || die "web build failed — missing dist/index.html"
 ok "PWA built → web/dist/"

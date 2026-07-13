@@ -142,8 +142,11 @@ fi
 if [[ $BUILD_WEB -eq 1 ]]; then
     log "building web PWA"
     cd "$WEB_DIR"
-    npm install
-    npm run build
+    # Bake the engine sidecar's fixed address into the bundle so the Tauri
+    # webview (served from tauri://localhost, with no Vite dev proxy) can
+    # reach http://127.0.0.1:8765. See web/src/lib/api.ts for the full story.
+    VITE_ENGINE_URL="http://127.0.0.1:8765" npm install
+    VITE_ENGINE_URL="http://127.0.0.1:8765" npm run build
     cd "$REPO_ROOT"
     [[ -f "$WEB_DIR/dist/index.html" ]] || die "web build missing dist/index.html"
     ok "PWA artifacts in web/dist/"

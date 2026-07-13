@@ -1,12 +1,48 @@
 /**
  * Engine API client.
  *
- * Talks to corpusmind-engine over HTTP. In dev, Vite proxies /api → :8765.
- * In the Tauri desktop shell, the engine runs as a sidecar on 127.0.0.1:8765.
+ * Talks to corpusmind-engine over HTTP.
+ *
+ *  - `vite dev` (localhost:5173):        relative "/api/..." paths, proxied to
+ *                                        :8765 by vite.config.ts's server.proxy.
+ *  - Hosted PWA (e.g. Vercel):            VITE_ENGINE_URL baked in at build time
+ *                                        (see docs/BUILD_GUIDE.md).
+ *  - Tauri desktop app (packaged build):  the bundled frontend is served from a
+ *                                        tauri://localhost / *.localhost origin,
+ *                                        NOT the Vite dev server, so relative
+ *                                        "/api/..." fetches never reach the
+ *                                        sidecar unless VITE_ENGINE_URL was
+ *                                        baked in at build time. We self-heal:
+ *                                        if no VITE_ENGINE_URL was configured
+ *                                        AND we detect we're running inside
+ *                                        Tauri, default to the sidecar's fixed,
+ *                                        hardcoded address (see ENGINE_HOST /
+ *                                        ENGINE_PORT constants in
+ *                                        desktop/src-tauri/src/lib.rs — always
+ *                                        127.0.0.1:8765 for the desktop shell).
  */
 
+/**
+ * Detect whether the frontend is running inside the Tauri desktop webview.
+ *
+ * Tauri v2 injects `window.__TAURI_INTERNALS__` (the IPC bridge) even when
+ * `withGlobalTauri` is false (this project's config). `window.__TAURI__` is
+ * only present when `withGlobalTauri` is true, but we check it too for
+ * robustness across configs. This helper is exported so other modules
+ * (HomeView, SettingsView) can reuse it instead of re-implementing the same
+ * global sniff.
+ */
+export function isTauriRuntime(): boolean {
+  if (typeof window === "undefined") return false;
+  const w = window as any;
+  return typeof w.__TAURI_INTERNALS__ !== "undefined" || typeof w.__TAURI__ !== "undefined";
+}
+
+const configuredEngineUrl = import.meta.env.VITE_ENGINE_URL as string | undefined;
+
 export const ENGINE_BASE =
-  (import.meta.env.VITE_ENGINE_URL as string | undefined) ?? ""; // empty → same-origin (proxied in dev)
+  configuredEngineUrl ?? (isTauriRuntime() ? "http://127.0.0.1:8765" : "");
+// empty string ("") → same-origin, relies on the Vite dev proxy in `vite dev`.
 
 // ----------------------------------------------------------------------- //
 // Types

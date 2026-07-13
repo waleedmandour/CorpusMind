@@ -28,6 +28,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
+# PyInstaller utilities for collecting a package's data files + submodules.
+# Used below to bundle the spaCy `en_core_web_sm` model's package data
+# (weights, vocab, tokenizer config, etc.) — not just the `spacy` framework.
+from PyInstaller.utils.hooks import collect_data_files, collect_submodules
+
 block_cipher = None
 
 # Hidden imports that PyInstaller's static analysis misses (dynamic imports,
@@ -80,6 +85,25 @@ _repo_root = Path(SPECPATH).parent  # noqa: F821 — SPECPATH is provided by PyI
 _reference_data = _repo_root / "reference-data"
 if _reference_data.exists():
     _datas.append((str(_reference_data), "reference-data"))
+
+# Bundle the spaCy `en_core_web_sm` model's package DATA (not just the importable
+# Python modules). PyInstaller's static analysis picks up the model package's
+# .py files via the hidden import below, but historically does NOT collect the
+# model's binary assets (weights, vocab, vectors, config JSONs) — they live as
+# package data, not as code. Without this, `spacy.load("en_core_web_sm")` fails
+# at runtime inside the bundled engine with "Can't find model 'en_core_web_sm'"
+# or a missing-data error. This is a DISTINCT failure mode from the engine
+# detection bug: the process crashes/errors on NLP ingestion rather than being
+# healthy-but-undetected. We collect defensively; if the model isn't installed
+# in the build venv (spaCy download is non-fatal in the build scripts), these
+# calls simply return empty lists and the build proceeds without the model.
+try:
+    _datas += collect_data_files("en_core_web_sm", include_py_files=False)
+    _hidden_imports += collect_submodules("en_core_web_sm")
+except Exception:
+    # Model not installed in this build venv — non-fatal. The engine will still
+    # build and run; NLP ingestion just won't work until the model is present.
+    pass
 
 a = Analysis(
     ["app/main.py"],

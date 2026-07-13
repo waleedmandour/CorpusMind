@@ -82,6 +82,12 @@ jobs:
 
       - name: Build web PWA
         working-directory: web
+        env:
+          # Bake the engine sidecar's fixed address into the bundle so the
+          # Tauri webview (served from http://tauri.localhost on Windows,
+          # with no Vite dev proxy) can reach http://127.0.0.1:8765.
+          # See web/src/lib/api.ts for the full story.
+          VITE_ENGINE_URL: http://127.0.0.1:8765
         run: |
           npm install
           npm run build
@@ -175,6 +181,12 @@ jobs:
 
       - name: Build web PWA
         working-directory: web
+        env:
+          # Bake the engine sidecar's fixed address into the bundle so the
+          # Tauri webview (served from tauri://localhost on macOS, with no
+          # Vite dev proxy) can reach http://127.0.0.1:8765.
+          # See web/src/lib/api.ts for the full story.
+          VITE_ENGINE_URL: http://127.0.0.1:8765
         run: |
           npm install
           npm run build
@@ -257,6 +269,12 @@ jobs:
 
       - name: Build web PWA
         working-directory: web
+        env:
+          # Bake the engine sidecar's fixed address into the bundle so the
+          # Tauri webview (served from tauri://localhost on Linux, with no
+          # Vite dev proxy) can reach http://127.0.0.1:8765.
+          # See web/src/lib/api.ts for the full story.
+          VITE_ENGINE_URL: http://127.0.0.1:8765
         run: |
           npm install
           npm run build
