@@ -20,6 +20,18 @@
  *                                        ENGINE_PORT constants in
  *                                        desktop/src-tauri/src/lib.rs — always
  *                                        127.0.0.1:8765 for the desktop shell).
+ *
+ * CRITICAL (Windows desktop fix, 2026-07):
+ *   Inside the Tauri webview we use @tauri-apps/plugin-http's `fetch()`
+ *   instead of the browser's native `fetch()`. The plugin routes the request
+ *   through Rust's `reqwest`, which is NOT subject to the webview's CORS
+ *   preflight, Private/Local Network Access (PNA/LNA) restrictions, or
+ *   mixed-content rules. This is the Tauri team's official recommendation
+ *   (tauri-apps/tauri#11260) and eliminates the "Detected (API unreachable)"
+ *   amber state on Windows desktop builds where the webview origin
+ *   (http://tauri.localhost) cannot reach the sidecar (http://127.0.0.1:8765)
+ *   via native fetch due to these browser-security checks.
+ *   In browser/PWA mode (not Tauri) we fall back to the native fetch.
  */
 
 /**
@@ -554,10 +566,43 @@ export interface DiscourseResult {
 
 // ----------------------------------------------------------------------- //
 // Fetch helper
+//
+// Inside the Tauri desktop webview, we use @tauri-apps/plugin-http's `fetch()`
+// which executes on the Rust side (reqwest) and is immune to CORS / PNA / LNA.
+// In browser/PWA mode we use the native `fetch()` (same-origin via Vite proxy
+// or cross-origin with proper CORS headers on the engine).
+//
+// The plugin is lazy-loaded so the PWA build doesn't bundle Tauri APIs.
 // ----------------------------------------------------------------------- //
 
+/** Lazy-loaded Tauri HTTP plugin fetch. Cached after first call. */
+let _tauriFetch: ((input: string, init?: RequestInit) => Promise<Response>) | null = null;
+async function getTauriFetch(): Promise<(input: string, init?: RequestInit) => Promise<Response>> {
+  if (_tauriFetch) return _tauriFetch;
+  const mod = await import("@tauri-apps/plugin-http");
+  // The plugin's fetch has the same signature as the native fetch but executes
+  // on the Rust side (reqwest). We cast to our narrower type for TS compatibility.
+  _tauriFetch = mod.fetch as unknown as (input: string, init?: RequestInit) => Promise<Response>;
+  return _tauriFetch;
+}
+
+/**
+ * Unified fetch that picks the Tauri plugin inside the desktop webview and
+ * the native fetch everywhere else. The Tauri plugin requires an absolute
+ * URL, so we always pass the full `${ENGINE_BASE}${path}` (in Tauri mode
+ * ENGINE_BASE is "http://127.0.0.1:8765").
+ */
+async function smartFetch(path: string, init?: RequestInit): Promise<Response> {
+  const url = `${ENGINE_BASE}${path}`;
+  if (isTauriRuntime()) {
+    const tFetch = await getTauriFetch();
+    return tFetch(url, init);
+  }
+  return fetch(url, init);
+}
+
 async function jsonFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const r = await fetch(`${ENGINE_BASE}${path}`, {
+  const r = await smartFetch(path, {
     ...init,
     headers: {
       "Content-Type": "application/json",

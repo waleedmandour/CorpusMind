@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from ai import ProviderRegistry
@@ -72,9 +72,36 @@ def create_app() -> FastAPI:
         CORSMiddleware,
         allow_origins=settings.cors_origins,
         allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        # NOTE: When allow_credentials=True, the Fetch spec forbids "*"
+        # for allow_methods and allow_headers — the wildcard is treated as
+        # the literal token "*" (matching nothing), so every preflighted
+        # request (POST, JSON Content-Type, Authorization header, ...) is
+        # rejected. This was the root cause of the "Detected (API unreachable)"
+        # amber state on Windows desktop builds. Explicit lists are required.
+        # See: https://fastapi.tiangolo.com/tutorial/cors/
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+        allow_headers=["Authorization", "Content-Type", "X-Requested-With"],
     )
+
+    # Private Network Access (PNA) preflight header.
+    #
+    # Chrome/WebView2's PNA spec (formerly CORS-RFC1918) requires the server
+    # to send `Access-Control-Allow-Private-Network: true` on OPTIONS
+    # preflight responses when a page from a less-private origin (e.g.
+    # http://tauri.localhost) requests a resource on a more-private address
+    # (e.g. http://127.0.0.1:8765). FastAPI's CORSMiddleware does NOT add
+    # this header automatically (fastapi/fastapi#11145), so we add it here.
+    #
+    # As of 2026, LNA is OFF by default in WebView2 (kill-switched), but it
+    # is ON in the Edge browser and will eventually ship in WebView2. Adding
+    # the header now is forward-compatible and harmless.
+    # See: https://developer.chrome.com/blog/private-network-access-preflight
+    @app.middleware("http")
+    async def add_pna_header(request: Request, call_next):
+        resp = await call_next(request)
+        if request.method == "OPTIONS":
+            resp.headers["Access-Control-Allow-Private-Network"] = "true"
+        return resp
 
     app.include_router(health.router, prefix="/api/v1", tags=["health"])
     app.include_router(system.router, prefix="/api/v1", tags=["system"])
