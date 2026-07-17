@@ -117,6 +117,15 @@ jobs:
                     binaries\corpusmind-engine -Recurse -Force
           Write-Host "Staged sidecar directory:"
           Get-ChildItem binaries/corpusmind-engine/ | Format-Table Name, Length
+          # Verify the main executable exists in the staged directory
+          $exePath = "binaries\corpusmind-engine\corpusmind-engine.exe"
+          if (-not (Test-Path $exePath)) {
+            Write-Host "ERROR: Sidecar exe not found at $exePath" -ForegroundColor Red
+            Write-Host "Contents of binaries/corpusmind-engine/:"
+            Get-ChildItem binaries/corpusmind-engine/ -Recurse | Select-Object FullName
+            exit 1
+          }
+          Write-Host "OK: Sidecar exe verified at $exePath" -ForegroundColor Green
 
       - name: Build web PWA
         working-directory: web
@@ -223,6 +232,13 @@ jobs:
           cp -r ../../engine/dist/corpusmind-engine binaries/corpusmind-engine
           chmod +x binaries/corpusmind-engine/corpusmind-engine
           ls -lh binaries/corpusmind-engine/
+          # Verify the main executable exists
+          if [ ! -f binaries/corpusmind-engine/corpusmind-engine ]; then
+            echo "ERROR: Sidecar binary not found!"
+            find binaries/corpusmind-engine/ -type f
+            exit 1
+          fi
+          echo "OK: Sidecar binary verified"
 
       - name: Build web PWA
         working-directory: web
@@ -318,6 +334,13 @@ jobs:
           cp -r ../../engine/dist/corpusmind-engine binaries/corpusmind-engine
           chmod +x binaries/corpusmind-engine/corpusmind-engine
           ls -lh binaries/corpusmind-engine/
+          # Verify the main executable exists
+          if [ ! -f binaries/corpusmind-engine/corpusmind-engine ]; then
+            echo "ERROR: Sidecar binary not found!"
+            find binaries/corpusmind-engine/ -type f
+            exit 1
+          fi
+          echo "OK: Sidecar binary verified"
 
       - name: Build web PWA
         working-directory: web

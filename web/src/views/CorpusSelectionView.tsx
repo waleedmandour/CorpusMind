@@ -18,7 +18,14 @@ import { useState, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
 
-import { api, type HubSearchResult, type CleaningOptions } from "@/lib/api";
+import {
+  api,
+  isTauriRuntime,
+  nativePickCorpusFiles,
+  nativeReadFile,
+  type HubSearchResult,
+  type CleaningOptions,
+} from "@/lib/api";
 import { useApp } from "@/store/app";
 
 type CorpusMode = "target" | "reference";
@@ -399,9 +406,14 @@ function ReferenceUpload() {
   const activeReferenceId = useApp((s) => s.referenceCorpusId);
   const qc = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isTauri = isTauriRuntime();
   const [showNewCorpus, setShowNewCorpus] = useState(false);
   const [newCorpusName, setNewCorpusName] = useState("");
   const [newCorpusLang, setNewCorpusLang] = useState("en");
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [statusMsg, setStatusMsg] = useState("");
+
+  const ACCEPT = ".txt,.md,.docx,.pdf,.html,.htm,.xml,.csv,.tsv,.json,.rtf,.log,.srt";
 
   const corpora = useQuery({
     queryKey: ["corpora", activeProjectId],
@@ -413,7 +425,7 @@ function ReferenceUpload() {
     mutationFn: async ({ name, lang, files }: { name: string; lang: string; files: File[] }) => {
       if (!activeProjectId) throw new Error("No active project");
       const corpus = await api.createCorpus(activeProjectId, name, lang);
-      await api.uploadDocuments(corpus.id, files);
+      await api.uploadDocuments(corpus.id, files, lang);
       return corpus;
     },
     onSuccess: (corpus) => {
@@ -421,20 +433,52 @@ function ReferenceUpload() {
       qc.invalidateQueries({ queryKey: ["corpora"] });
       setShowNewCorpus(false);
       setNewCorpusName("");
+      setSelectedFiles([]);
+      setStatusMsg(`Created "${corpus.name}" and uploaded successfully`);
+      setTimeout(() => setStatusMsg(""), 5000);
     },
+    onError: (e: Error) => setStatusMsg(`Upload failed: ${e.message}`),
   });
 
   const uploadToSelected = useMutation({
     mutationFn: ({ cid, files }: { cid: string; files: File[] }) => api.uploadDocuments(cid, files),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["corpora"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["corpora"] });
+      setSelectedFiles([]);
+      setStatusMsg("Uploaded successfully");
+      setTimeout(() => setStatusMsg(""), 5000);
+    },
+    onError: (e: Error) => setStatusMsg(`Upload failed: ${e.message}`),
   });
 
   const onUploadFiles = (files: File[]) => {
     if (files.length === 0) return;
+    setSelectedFiles(files);
+    setStatusMsg(`${files.length} file(s) ready. Click "Upload & Tag" to ingest.`);
+  };
+
+  const doUpload = () => {
+    if (selectedFiles.length === 0) return;
     if (activeReferenceId) {
-      uploadToSelected.mutate({ cid: activeReferenceId, files });
+      uploadToSelected.mutate({ cid: activeReferenceId, files: selectedFiles });
     } else if (showNewCorpus && newCorpusName.trim() && activeProjectId) {
-      createAndUpload.mutate({ name: newCorpusName.trim(), lang: newCorpusLang, files });
+      createAndUpload.mutate({ name: newCorpusName.trim(), lang: newCorpusLang, files: selectedFiles });
+    }
+  };
+
+  /** Native file picker for reference corpus files. */
+  const browseNative = async () => {
+    try {
+      const result = await nativePickCorpusFiles();
+      if (result.ok && result.paths.length > 0) {
+        const files: File[] = [];
+        for (const p of result.paths) {
+          try { files.push(await nativeReadFile(p)); } catch { /* skip */ }
+        }
+        if (files.length > 0) onUploadFiles(files);
+      }
+    } catch (e: any) {
+      setStatusMsg(`File picker failed: ${e?.message || String(e)}`);
     }
   };
 
@@ -463,15 +507,25 @@ function ReferenceUpload() {
         {!showNewCorpus ? (
           <>
             {activeReferenceId ? (
-              <div className="dropzone" onClick={() => fileInputRef.current?.click()} role="button" tabIndex={0}
-                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fileInputRef.current?.click(); } }}>
-                <input ref={fileInputRef} type="file" multiple accept=".txt,.md,.docx,.pdf,.html,.htm,.xml,.csv"
-                  onChange={(e) => { const files = Array.from(e.target.files ?? []); if (files.length > 0) onUploadFiles(files); e.target.value = ""; }}
-                  style={{ position: "absolute", width: 0, height: 0, opacity: 0, pointerEvents: "none" }} aria-hidden="true" />
-                <div className="dropzone-icon">{"\u2191"}</div>
-                <div className="dropzone-label">{uploadToSelected.isPending ? "Uploading..." : "Drop reference files here or click to upload"}</div>
-                <div className="dropzone-formats">.txt · .md · .docx · .pdf · .html · .xml · .csv</div>
-              </div>
+              <>
+                <div className="dropzone" onClick={() => fileInputRef.current?.click()} role="button" tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fileInputRef.current?.click(); } }}
+                  onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add("drag-over"); }}
+                  onDragLeave={(e) => e.currentTarget.classList.remove("drag-over")}
+                  onDrop={(e) => { e.preventDefault(); e.currentTarget.classList.remove("drag-over"); onUploadFiles(Array.from(e.dataTransfer.files)); }}>
+                  <input ref={fileInputRef} type="file" multiple accept={ACCEPT}
+                    onChange={(e) => { const files = Array.from(e.target.files ?? []); if (files.length > 0) onUploadFiles(files); e.target.value = ""; }}
+                    style={{ position: "absolute", width: 0, height: 0, opacity: 0, pointerEvents: "none" }} aria-hidden="true" />
+                  <div className="dropzone-icon">{"\u2191"}</div>
+                  <div className="dropzone-label">{uploadToSelected.isPending ? "Uploading..." : "Drop reference files here or click to upload"}</div>
+                  <div className="dropzone-formats">.txt · .md · .docx · .pdf · .html · .xml · .csv · .tsv · .json</div>
+                </div>
+                {isTauri && (
+                  <button className="btn-secondary" onClick={browseNative} style={{ marginTop: "var(--space-2)" }}>
+                    {"\u25CF"} Browse files... (native picker)
+                  </button>
+                )}
+              </>
             ) : (
               <button className="btn-primary" onClick={() => setShowNewCorpus(true)}>+ Create a new reference corpus</button>
             )}
@@ -486,18 +540,57 @@ function ReferenceUpload() {
             </select>
             <div className="dropzone" onClick={() => newCorpusName.trim() && fileInputRef.current?.click()} role="button" tabIndex={0}
               onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); if (newCorpusName.trim()) fileInputRef.current?.click(); } }}
+              onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add("drag-over"); }}
+              onDragLeave={(e) => e.currentTarget.classList.remove("drag-over")}
+              onDrop={(e) => { e.preventDefault(); e.currentTarget.classList.remove("drag-over"); onUploadFiles(Array.from(e.dataTransfer.files)); }}
               style={{ opacity: newCorpusName.trim() ? 1 : 0.5 }}>
-              <input ref={fileInputRef} type="file" multiple accept=".txt,.md,.docx,.pdf,.html,.htm,.xml,.csv"
+              <input ref={fileInputRef} type="file" multiple accept={ACCEPT}
                 onChange={(e) => { const files = Array.from(e.target.files ?? []); if (files.length > 0) onUploadFiles(files); e.target.value = ""; }}
                 style={{ position: "absolute", width: 0, height: 0, opacity: 0, pointerEvents: "none" }} aria-hidden="true" />
               <div className="dropzone-icon">{"\u2191"}</div>
               <div className="dropzone-label">{createAndUpload.isPending ? "Creating + uploading..." : "Drop reference files here or click to upload"}</div>
               <div className="dropzone-formats">.txt · .md · .docx · .pdf · .html · .xml · .csv</div>
             </div>
+            {isTauri && (
+              <button className="btn-secondary" onClick={browseNative} disabled={!newCorpusName.trim()} style={{ marginTop: "var(--space-2)" }}>
+                {"\u25CF"} Browse files... (native picker)
+              </button>
+            )}
             <button className="btn-small" onClick={() => setShowNewCorpus(false)}>Cancel</button>
           </div>
         )}
       </div>
+
+      {selectedFiles.length > 0 && (
+        <div className="uploader-file-list">
+          <div className="uploader-file-list-header">
+            <strong>{selectedFiles.length} file(s) selected</strong>
+            <button className="btn-small" onClick={() => setSelectedFiles([])}>Clear</button>
+          </div>
+          <ul className="uploader-file-items">
+            {selectedFiles.slice(0, 10).map((f, i) => (
+              <li key={i} className="uploader-file-item">
+                <span className="uploader-file-name">{f.name}</span>
+                <span className="uploader-file-size">{(f.size / 1024).toFixed(1)} KB</span>
+              </li>
+            ))}
+            {selectedFiles.length > 10 && (
+              <li className="uploader-file-item uploader-file-more">...and {selectedFiles.length - 10} more</li>
+            )}
+          </ul>
+          <div className="uploader-actions">
+            <button className="btn-primary" onClick={doUpload} disabled={createAndUpload.isPending || uploadToSelected.isPending}>
+              {(createAndUpload.isPending || uploadToSelected.isPending) ? "Uploading..." : "Upload & Tag"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {statusMsg && (
+        <div className={clsx("uploader-status", statusMsg.includes("successfully") || statusMsg.includes("ready") ? "success" : statusMsg.includes("failed") ? "error" : "info")}>
+          {statusMsg}
+        </div>
+      )}
     </div>
   );
 }
@@ -538,45 +631,159 @@ function BundledReferences() {
 function DocumentUploader({ cid }: { cid: string }) {
   const qc = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isTauri = isTauriRuntime();
+  const [language, setLanguage] = useState<string>("auto");
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [uploadStatus, setUploadStatus] = useState<string>("");
 
   const upload = useMutation({
-    mutationFn: (files: File[]) => api.uploadDocuments(cid, files),
-    onSuccess: () => {
+    mutationFn: (files: File[]) => api.uploadDocuments(cid, files, language === "auto" ? undefined : language),
+    onSuccess: (docs) => {
       qc.invalidateQueries({ queryKey: ["documents", cid] });
       qc.invalidateQueries({ queryKey: ["corpora"] });
+      setUploadStatus(`✓ ${docs.length} document(s) ingested and tagged`);
+      setSelectedFiles([]);
+      setTimeout(() => setUploadStatus(""), 5000);
+    },
+    onError: (e: Error) => {
+      setUploadStatus(`✗ Upload failed: ${e.message}`);
     },
   });
 
   const openFilePicker = () => fileInputRef.current?.click();
 
+  /** Native file picker (Tauri desktop only) — picks multiple files via OS dialog. */
+  const browseNative = async () => {
+    try {
+      const result = await nativePickCorpusFiles();
+      if (result.ok && result.paths.length > 0) {
+        const files: File[] = [];
+        for (const p of result.paths) {
+          try {
+            const f = await nativeReadFile(p);
+            files.push(f);
+          } catch (e) {
+            console.error(`Failed to read ${p}:`, e);
+          }
+        }
+        if (files.length > 0) {
+          setSelectedFiles(files);
+          setUploadStatus(`${files.length} file(s) ready. Click "Upload & Tag" to ingest.`);
+        }
+      }
+    } catch (e: any) {
+      setUploadStatus(`File picker failed: ${e?.message || String(e)}`);
+    }
+  };
+
+  const onInputChange = (files: FileList | null) => {
+    const arr = Array.from(files ?? []);
+    if (arr.length > 0) {
+      setSelectedFiles(arr);
+      setUploadStatus(`${arr.length} file(s) ready. Click "Upload & Tag" to ingest.`);
+    }
+  };
+
+  const doUpload = () => {
+    if (selectedFiles.length === 0) return;
+    upload.mutate(selectedFiles);
+  };
+
   return (
-    <div
-      className="dropzone"
-      onClick={openFilePicker}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openFilePicker(); } }}
-    >
-      <input
-        ref={fileInputRef}
-        type="file"
-        multiple
-        accept=".txt,.md,.docx,.pdf,.html,.htm,.xml,.csv"
-        onChange={(e) => {
-          const files = Array.from(e.target.files ?? []);
-          if (files.length > 0) upload.mutate(files);
-          e.target.value = "";
-        }}
-        style={{ position: "absolute", width: 0, height: 0, opacity: 0, pointerEvents: "none" }}
-        aria-hidden="true"
-      />
-      <div className="dropzone-icon">{"\u2191"}</div>
-      <div className="dropzone-label">
-        {upload.isPending ? "Uploading & tagging..." : "Drop files here or click to upload"}
+    <div className="document-uploader">
+      <div className="uploader-header">
+        <h3 className="uploader-title">Upload Corpus Files</h3>
+        <div className="uploader-lang-select">
+          <label className="uploader-lang-label">Language:</label>
+          <select value={language} onChange={(e) => setLanguage(e.target.value)} className="uploader-lang-dropdown">
+            <option value="auto">Auto-detect</option>
+            <option value="en">English</option>
+            <option value="ar">Arabic</option>
+            <option value="fr">French</option>
+            <option value="de">German</option>
+            <option value="es">Spanish</option>
+            <option value="zh">Chinese</option>
+          </select>
+        </div>
       </div>
-      <div className="dropzone-formats">.txt · .md · .docx · .pdf · .html · .xml · .csv</div>
-      {upload.isError && <div className="error">{String(upload.error)}</div>}
-      {upload.data && <div className="success">Ingested {upload.data.length} document(s).</div>}
+
+      <div
+        className="dropzone"
+        onClick={openFilePicker}
+        onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add("drag-over"); }}
+        onDragLeave={(e) => e.currentTarget.classList.remove("drag-over")}
+        onDrop={(e) => {
+          e.preventDefault();
+          e.currentTarget.classList.remove("drag-over");
+          onInputChange(e.dataTransfer.files);
+        }}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openFilePicker(); } }}
+      >
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          accept=".txt,.md,.docx,.pdf,.html,.htm,.xml,.csv,.tsv,.json,.rtf,.log,.srt"
+          onChange={(e) => onInputChange(e.target.files)}
+          style={{ position: "absolute", width: 0, height: 0, opacity: 0, pointerEvents: "none" }}
+          aria-hidden="true"
+        />
+        <div className="dropzone-icon">{"\u2191"}</div>
+        <div className="dropzone-label">Drop files here or click to upload</div>
+        <div className="dropzone-formats">.txt · .md · .docx · .pdf · .html · .xml · .csv · .tsv · .json · .rtf</div>
+      </div>
+
+      {isTauri && (
+        <div className="uploader-native-picker">
+          <button className="btn-secondary uploader-browse-btn" onClick={browseNative}>
+            {"\u25CF"} Browse files... (native picker)
+          </button>
+        </div>
+      )}
+
+      {selectedFiles.length > 0 && (
+        <div className="uploader-file-list">
+          <div className="uploader-file-list-header">
+            <strong>{selectedFiles.length} file(s) selected</strong>
+            <button className="btn-small" onClick={() => setSelectedFiles([])}>Clear</button>
+          </div>
+          <ul className="uploader-file-items">
+            {selectedFiles.slice(0, 10).map((f, i) => (
+              <li key={i} className="uploader-file-item">
+                <span className="uploader-file-name">{f.name}</span>
+                <span className="uploader-file-size">{(f.size / 1024).toFixed(1)} KB</span>
+              </li>
+            ))}
+            {selectedFiles.length > 10 && (
+              <li className="uploader-file-item uploader-file-more">
+                ...and {selectedFiles.length - 10} more
+              </li>
+            )}
+          </ul>
+          <div className="uploader-actions">
+            <button
+              className="btn-primary"
+              onClick={doUpload}
+              disabled={upload.isPending}
+            >
+              {upload.isPending ? "Uploading & tagging..." : "Upload & Tag"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {uploadStatus && (
+        <div className={clsx("uploader-status", upload.isError ? "error" : upload.isSuccess ? "success" : "info")}>
+          {uploadStatus}
+        </div>
+      )}
+
+      <div className="uploader-pipeline-info">
+        <strong>Pipeline:</strong> Upload → Format detection → Encoding detection →
+        Tokenization → POS tagging → Lemmatization → Dependency parsing
+      </div>
     </div>
   );
 }

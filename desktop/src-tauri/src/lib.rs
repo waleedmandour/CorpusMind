@@ -383,12 +383,23 @@ impl EngineSidecar {
         // 1a. Onedir mode: the sidecar is a directory inside resources/
         //     (corpusmind-engine/corpusmind-engine.exe)
         //     This is the preferred layout — much faster to build than onefile.
+        //     The resources config maps "binaries/corpusmind-engine/" → "corpusmind-engine/"
+        //     so the sidecar lands at resources/corpusmind-engine/corpusmind-engine.exe
         if let Ok(resource) = app.path().resource_dir() {
             let exe_name = if cfg!(windows) { "corpusmind-engine.exe" } else { "corpusmind-engine" };
+            // Primary path: resources/corpusmind-engine/corpusmind-engine.exe
+            // (matches the map-form resources config)
             let candidate = resource.join("corpusmind-engine").join(exe_name);
             if candidate.exists() {
                 info!(target: "sidecar", "found bundled sidecar (onedir): {}", candidate.display());
                 return (candidate.to_string_lossy().into_owned(), vec![], None);
+            }
+            // Fallback path: resources/binaries/corpusmind-engine/corpusmind-engine.exe
+            // (matches the glob-form resources config, for backward compat)
+            let candidate_glob = resource.join("binaries").join("corpusmind-engine").join(exe_name);
+            if candidate_glob.exists() {
+                info!(target: "sidecar", "found bundled sidecar (glob layout): {}", candidate_glob.display());
+                return (candidate_glob.to_string_lossy().into_owned(), vec![], None);
             }
         }
 
@@ -860,6 +871,45 @@ async fn pick_model_file(app: tauri::AppHandle) -> String {
     }
 }
 
+/// Open a native file picker dialog to select multiple corpus text files.
+/// Returns the selected file paths, or an empty list if the user cancelled.
+///
+/// Supports all common text file formats: .txt, .md, .csv, .tsv, .html, .htm,
+/// .xml, .docx, .pdf, .json, .rtf, .log, .srt, .sub.
+#[tauri::command]
+async fn pick_corpus_files(app: tauri::AppHandle) -> String {
+    use tauri_plugin_dialog::DialogExt;
+
+    let result = app.dialog()
+        .file()
+        .add_filter("Text files", &["txt", "md", "csv", "tsv", "log", "srt", "sub"])
+        .add_filter("Documents", &["docx", "pdf", "rtf"])
+        .add_filter("Web & markup", &["html", "htm", "xml", "json"])
+        .add_filter("All files", &["*"])
+        .blocking_pick_files();
+
+    match result {
+        Some(paths) => {
+            let path_strs: Vec<String> = paths.iter().map(|p| p.to_string()).collect();
+            info!(target: "dialog", "picked {} corpus files", path_strs.len());
+            serde_json::json!({
+                "ok": true,
+                "paths": path_strs,
+                "count": path_strs.len(),
+                "message": format!("{} file(s) selected", path_strs.len())
+            }).to_string()
+        }
+        None => {
+            serde_json::json!({
+                "ok": false,
+                "paths": [],
+                "count": 0,
+                "message": "No files selected (user cancelled)"
+            }).to_string()
+        }
+    }
+}
+
 /// Read the engine's stdout and stderr log files so the UI can display
 /// WHY the engine failed to start. This is the #1 diagnostic tool for
 /// "engine offline" issues — the logs contain Python tracebacks, import
@@ -1234,6 +1284,7 @@ pub fn run() {
             restart_ollama,
             check_lmstudio,
             pick_model_file,
+            pick_corpus_files,
             engine_logs,
             verify_sidecar
         ])

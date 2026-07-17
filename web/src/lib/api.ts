@@ -234,6 +234,42 @@ export async function nativePickModelFile(): Promise<{
   return JSON.parse(raw);
 }
 
+/**
+ * Open a native file picker dialog to select multiple corpus text files.
+ * Returns the selected file paths (array), or empty array if cancelled.
+ * Used by the "Your Corpus" and "Reference Corpus" upload flows.
+ */
+export async function nativePickCorpusFiles(): Promise<{
+  ok: boolean;
+  paths: string[];
+  count: number;
+  message: string;
+}> {
+  if (!isTauriRuntime()) {
+    throw new Error("File picker is only available in the desktop app.");
+  }
+  const invoke = await getInvoke();
+  const raw = (await invoke("pick_corpus_files")) as string;
+  return JSON.parse(raw);
+}
+
+/**
+ * Read a local file (by path) into a File object. Used to convert
+ * native-picked file paths into File objects for upload via FormData.
+ * Inside Tauri, the file is read via the fs plugin; in browser mode,
+ * this throws (the caller should use the <input type="file"> path instead).
+ */
+export async function nativeReadFile(path: string): Promise<File> {
+  if (!isTauriRuntime()) {
+    throw new Error("File reading is only available in the desktop app.");
+  }
+  // Use the Tauri fs plugin to read the file as binary
+  const fs = await import("@tauri-apps/plugin-fs");
+  const data = await fs.readFile(path);
+  const filename = path.split(/[/\\]/).pop() ?? "file";
+  return new File([data], filename);
+}
+
 export interface ChatRequest {
   message: string;
   provider?: "ollama" | "lmstudio" | "cloud";
@@ -811,7 +847,11 @@ export const api = {
     const fd = new FormData();
     files.forEach((f) => fd.append("files", f));
     if (language) fd.append("language", language);
-    return fetch(`${ENGINE_BASE}/api/v1/corpora/${cid}/documents`, { method: "POST", body: fd }).then(async (r) => {
+    // Use smartFetch (Tauri plugin-http inside Tauri, native fetch in browser)
+    // so file uploads bypass CORS/PNA restrictions inside the desktop webview.
+    // NOTE: Do NOT set Content-Type — the browser sets it automatically with
+    // the correct multipart boundary for FormData.
+    return smartFetch(`/api/v1/corpora/${cid}/documents`, { method: "POST", body: fd }).then(async (r) => {
       if (!r.ok) throw new Error(await r.text());
       return (await r.json()) as Document[];
     });

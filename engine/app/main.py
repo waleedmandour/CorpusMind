@@ -126,7 +126,16 @@ app = create_app()
 
 
 def run() -> None:
-    """Entry point for `corpusmind-engine` console script."""
+    """Entry point for `corpusmind-engine` console script.
+
+    Uvicorn config notes (per FastAPI deployment docs + PyInstaller research):
+      - workers=1: single process; avoids spawn/signal issues under PyInstaller
+      - loop="asyncio": Windows-safe; uvloop is Unix-only and PyInstaller-hostile
+      - http="h11": pure-Python, always present, no native dep to bundle
+      - ws="websockets": pure-Python websockets impl (no httptools native dep)
+      - lifespan="on": enables FastAPI's startup/shutdown events
+      - access_log=False: reduces noise for an internal sidecar
+    """
     import uvicorn
 
     settings = get_settings()
@@ -136,4 +145,10 @@ def run() -> None:
         port=settings.port,
         log_level=settings.log_level,
         reload=False,
+        workers=1,
+        loop="asyncio",
+        http="h11",
+        ws="websockets",
+        lifespan="on",
+        access_log=False,
     )
