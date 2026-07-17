@@ -57,7 +57,12 @@ _hidden_imports = [
     "spacy.tokenizer",
     # Note: spacy.lemmatizer was removed in spaCy 3.5+ — do not include it
     # File parsers
-    "magic",
+    # NOTE: 'magic' (python-magic) is NOT included — it requires the native
+    # libmagic DLL which is not available on Windows. The engine uses file
+    # extensions for format detection (ingestion/parsing.py:detect_format),
+    # not libmagic. Including it causes PyInstaller to crash on Windows with
+    # "Isolated subprocess crashed while importing package 'magic'" (exit code
+    # 3221226505 = STATUS_DLL_NOT_FOUND).
     "lxml",
     "bs4",
     "docx",
@@ -128,6 +133,11 @@ a = Analysis(
         "jupyter",
         "matplotlib",
         "tkinter",
+        # python-magic requires the native libmagic DLL which is not available
+        # on Windows. The engine uses file extensions for format detection,
+        # not libmagic, so we exclude it to avoid the PyInstaller crash:
+        # "Isolated subprocess crashed while importing package 'magic'"
+        "magic",
         # Heavy ML packages not needed at runtime — cv2 is a lazy import
         # in vision/facial.py (opt-in Phase 5 feature). PIL is installed
         # separately and IS included.

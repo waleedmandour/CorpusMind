@@ -56,7 +56,9 @@ dependencies = [
     "openapi-core>=0.19.2",
     # --- Phase 1: ingestion + NLP + export ---
     # File parsing
-    "python-magic>=0.4.27",
+    # NOTE: python-magic is NOT a dependency — it requires the native libmagic
+    # DLL which is not available on Windows. The engine uses file extensions
+    # for format detection (ingestion/parsing.py:detect_format), not libmagic.
     "beautifulsoup4>=4.12.3",
     "python-docx>=1.1.2",
     "pypdf>=5.1.0",
