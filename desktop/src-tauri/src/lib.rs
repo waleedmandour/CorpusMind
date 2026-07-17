@@ -342,7 +342,7 @@ impl EngineSidecar {
             cmd.env("PYTHONPATH", wd);
         }
 
-        let child = cmd.spawn()
+        let mut child = cmd.spawn()
             .map_err(|e| SidecarError::Spawn(format!("{program}: {e}")))?;
 
         // Post-spawn liveness check: wait 2 seconds, then verify the process
@@ -814,7 +814,7 @@ async fn check_lmstudio() -> String {
     ];
 
     for url in &urls {
-        match client.get(url).send().await {
+        match client.get(*url).send().await {
             Ok(r) if r.status().is_success() => {
                 info!(target: "lmstudio", "LM Studio healthy via: {}", url);
                 return serde_json::json!({
@@ -1105,14 +1105,14 @@ async fn all_providers_health() -> String {
     let ollama = serde_json::json!({
         "healthy": ollama_healthy,
         "url": if ollama_healthy { ollama_url_used } else { "http://127.0.0.1:11434".to_string() },
-        "error": if ollama_healthy { null } else { ollama_error.as_str() },
+        "error": if ollama_healthy { serde_json::Value::Null } else { serde_json::Value::String(ollama_error) },
         "path": ollama_path,
     });
 
     // LM Studio: check /v1/models (OpenAI-compatible)
     let lmstudio_urls = vec![
-        "http://127.0.0.1:1234/v1/models",
-        "http://localhost:1234/v1/models",
+        "http://127.0.0.1:1234/v1/models".to_string(),
+        "http://localhost:1234/v1/models".to_string(),
     ];
     let mut lmstudio_healthy = false;
     let mut lmstudio_error = "All URLs failed".to_string();
@@ -1133,7 +1133,7 @@ async fn all_providers_health() -> String {
     let lmstudio = serde_json::json!({
         "healthy": lmstudio_healthy,
         "url": if lmstudio_healthy { lmstudio_url_used } else { "http://127.0.0.1:1234/v1".to_string() },
-        "error": if lmstudio_healthy { null } else { lmstudio_error.as_str() },
+        "error": if lmstudio_healthy { serde_json::Value::Null } else { serde_json::Value::String(lmstudio_error) },
     });
 
     serde_json::json!({
