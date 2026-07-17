@@ -2,7 +2,7 @@
 
 [![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.21226650-blue)](https://doi.org/10.5281/zenodo.21226650)
 [![License: AGPL-3.0-only](https://img.shields.io/badge/License-AGPL--3.0--only-blue.svg)](https://www.gnu.org/licenses/agpl-3.0.html)
-[![GitHub release](https://img.shields.io/badge/release-v0.1.0-blue)](https://github.com/waleedmandour/CorpusMind/releases)
+[![GitHub release](https://img.shields.io/badge/release-v0.1.2-blue)](https://github.com/waleedmandour/CorpusMind/releases)
 [![Build Status](https://img.shields.io/badge/CI-passing-brightgreen)](https://github.com/waleedmandour/CorpusMind/actions)
 
 > A local-first, AI-native research environment for corpus linguistics and multimodal discourse analysis.
@@ -146,7 +146,7 @@ Health check:
 
 ```bash
 curl http://127.0.0.1:8765/api/v1/health
-# {"status":"ok","engine":"corpusmind-engine","version":"0.1.0"}
+# {"status":"ok","engine":"corpusmind-engine","version":"0.1.2"}
 ```
 
 ### 2. Run the web frontend (PWA)
@@ -382,7 +382,7 @@ If you use CorpusMind in your research, please cite it as:
 
 > Mandour, W., & Ibrahim, W. (2026). *CorpusMind: A local-first, AI-native
 > research environment for corpus linguistics and multimodal discourse
-> analysis* (Version 0.1.0) [Computer software]. Zenodo.
+> analysis* (Version 0.1.2) [Computer software]. Zenodo.
 > https://doi.org/10.5281/zenodo.21226650
 >
 > Dr. Waleed Mandour, Sultan Qaboos University, ORCID: 0000-0002-9262-5993
@@ -397,7 +397,7 @@ If you use CorpusMind in your research, please cite it as:
                    for corpus linguistics and multimodal discourse analysis}},
   month        = jul,
   year         = 2026,
-  version      = {0.1.0},
+  version      = {0.1.2},
   publisher    = {Zenodo},
   doi          = {10.5281/zenodo.21226650},
   url          = {https://doi.org/10.5281/zenodo.21226650}

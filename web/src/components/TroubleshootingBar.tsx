@@ -60,7 +60,7 @@ function buildMailto(issue: TroubleshootIssue): string {
 
   lines.push(
     "=== ENVIRONMENT ===",
-    `CorpusMind version: 0.1.0`,
+    `CorpusMind version: 0.1.2`,
     `Browser: ${navigator.userAgent}`,
     `URL: ${window.location.href}`,
     "",
