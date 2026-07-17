@@ -30,6 +30,8 @@ interface UIState {
   /** Which sidebar groups are expanded. Persisted so the user's
    * collapse/expand preference survives app restarts. */
   expandedGroups: Record<string, boolean>;
+  /** Whether the sidebar is in collapsed (icon-only) mode. Persisted. */
+  sidebarCollapsed: boolean;
   /** Student mode: hides the AI Assistant until the student has done
    * their own interpretation. Prevents over-reliance while still
    * teaching the tools. Persisted to localStorage. */
@@ -46,6 +48,8 @@ interface UIState {
   setOnboardingOpen: (open: boolean) => void;
   toggleGroup: (groupId: string) => void;
   setGroupExpanded: (groupId: string, expanded: boolean) => void;
+  toggleSidebar: () => void;
+  setSidebarCollapsed: (collapsed: boolean) => void;
   setStudentMode: (enabled: boolean) => void;
 }
 
@@ -69,6 +73,7 @@ export const useUI = create<UIState>()(
         ai: false,
         system: false,
       },
+      sidebarCollapsed: false,
       studentMode: false,
       setTheme: (theme) => set({ theme }),
       toggleTheme: () => {
@@ -103,6 +108,8 @@ export const useUI = create<UIState>()(
             [groupId]: expanded,
           },
         })),
+      toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
+      setSidebarCollapsed: (sidebarCollapsed) => set({ sidebarCollapsed }),
       setStudentMode: (studentMode) => set({ studentMode }),
     }),
     { name: "corpusmind-ui" },

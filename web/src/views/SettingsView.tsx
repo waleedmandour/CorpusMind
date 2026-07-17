@@ -28,6 +28,7 @@ import {
   nativeCheckLmStudio,
   nativeEngineLogs,
   nativeVerifySidecar,
+  nativePickModelFile,
 } from "@/lib/api";
 import { useTroubleshoot } from "@/store/troubleshooting";
 import { useUI } from "@/store/ui";
@@ -791,6 +792,7 @@ function MuteToggle() {
 
 function OllamaModelManager({ ollamaHealthy }: { ollamaHealthy: boolean }) {
   const qc = useQueryClient();
+  const isTauri = isTauriRuntime();
   const catalogue = useQuery({ queryKey: ["ollama-catalogue"], queryFn: api.ollamaCatalogue });
   const installedModels = useQuery({
     queryKey: ["ollama-models"],
@@ -803,6 +805,26 @@ function OllamaModelManager({ ollamaHealthy }: { ollamaHealthy: boolean }) {
   const [showImport, setShowImport] = useState(false);
   const [importName, setImportName] = useState("");
   const [importPath, setImportPath] = useState("");
+  const [importError, setImportError] = useState("");
+
+  /** Open the native file picker to select a .gguf file. */
+  const browseForModel = async () => {
+    try {
+      const result = await nativePickModelFile();
+      if (result.ok && result.path) {
+        setImportPath(result.path);
+        setImportError("");
+        // Auto-suggest a model name from the filename if the user hasn't set one
+        if (!importName.trim()) {
+          const filename = result.path.split(/[/\\]/).pop() ?? "";
+          const baseName = filename.replace(/\.gguf$/i, "").replace(/[^a-zA-Z0-9_-]/g, "-").toLowerCase();
+          if (baseName) setImportName(baseName);
+        }
+      }
+    } catch (e: any) {
+      setImportError(`File picker failed: ${e?.message || String(e)}`);
+    }
+  };
 
   const importMutation = useMutation({
     mutationFn: ({ name, path }: { name: string; path: string }) => api.ollamaImport(name, path),
@@ -811,10 +833,10 @@ function OllamaModelManager({ ollamaHealthy }: { ollamaHealthy: boolean }) {
       setShowImport(false);
       setImportName("");
       setImportPath("");
-      alert("Model imported successfully! It now appears in your Ollama model list.");
+      setImportError("");
     },
     onError: (e: Error) => {
-      alert(`Import failed: ${e.message}`);
+      setImportError(`Import failed: ${e.message}`);
     },
   });
 
@@ -888,8 +910,9 @@ function OllamaModelManager({ ollamaHealthy }: { ollamaHealthy: boolean }) {
         ) : (
           <div className="ollama-import-form">
             <p className="settings-text-muted">
-              Import a local .gguf model file (e.g. downloaded from HuggingFace).
-              The engine calls <code>ollama create</code> to register it.
+              Import a local <code>.gguf</code> model file (e.g. downloaded from HuggingFace).
+              The engine calls <code>ollama create</code> to register it with your Ollama daemon.
+              {isTauri && " Click \"Browse...\" to pick the file with the native file picker."}
             </p>
             <input
               type="text"
@@ -898,13 +921,36 @@ function OllamaModelManager({ ollamaHealthy }: { ollamaHealthy: boolean }) {
               placeholder="Model name (e.g. 'my-gemma-4b')"
               className="ollama-import-input"
             />
-            <input
-              type="text"
-              value={importPath}
-              onChange={(e) => setImportPath(e.target.value)}
-              placeholder="Full path to .gguf file (e.g. C:\Users\...\gemma-4b.gguf)"
-              className="ollama-import-input"
-            />
+            <div className="ollama-import-path-row">
+              <input
+                type="text"
+                value={importPath}
+                onChange={(e) => setImportPath(e.target.value)}
+                placeholder="Full path to .gguf file"
+                className="ollama-import-input"
+                style={{ flex: 1 }}
+              />
+              {isTauri && (
+                <button
+                  className="btn-small"
+                  onClick={browseForModel}
+                  title="Open file picker"
+                  style={{ flexShrink: 0 }}
+                >
+                  Browse...
+                </button>
+              )}
+            </div>
+            {importError && (
+              <p className="settings-text-muted" style={{ color: "var(--danger)", fontSize: "0.85em" }}>
+                {importError}
+              </p>
+            )}
+            {importMutation.isSuccess && (
+              <p className="settings-text-muted" style={{ color: "var(--success, #2d8a4e)", fontSize: "0.85em" }}>
+                {"\u2713"} Model imported successfully! It now appears in your model list.
+              </p>
+            )}
             <div className="ollama-import-actions">
               <button
                 className="btn-primary"
@@ -913,7 +959,7 @@ function OllamaModelManager({ ollamaHealthy }: { ollamaHealthy: boolean }) {
               >
                 {importMutation.isPending ? "Importing..." : "Import model"}
               </button>
-              <button className="btn-small" onClick={() => setShowImport(false)}>Cancel</button>
+              <button className="btn-small" onClick={() => { setShowImport(false); setImportError(""); }}>Cancel</button>
             </div>
           </div>
         )}

@@ -143,24 +143,6 @@ impl OllamaManager {
         None
     }
 
-    /// Check if Ollama is already running by trying to reach /api/tags.
-    async fn is_running() -> bool {
-        let client = reqwest::Client::builder()
-            .no_proxy()
-            .timeout(Duration::from_secs(3))
-            .build();
-        if let Ok(c) = client {
-            for url in &["http://127.0.0.1:11434/api/tags", "http://localhost:11434/api/tags"] {
-                if let Ok(r) = c.get(*url).send().await {
-                    if r.status().is_success() {
-                        return true;
-                    }
-                }
-            }
-        }
-        false
-    }
-
     /// Start `ollama serve` as a background process if not already running.
     fn start(&self) -> Result<bool, String> {
         let mut child_opt = self.child.lock().unwrap();
@@ -841,6 +823,43 @@ async fn check_lmstudio() -> String {
     }).to_string()
 }
 
+/// Open a native file picker dialog to select a local model file (.gguf).
+/// Returns the selected file path, or null if the user cancelled.
+///
+/// This is used by the Settings → Model Providers → Ollama → Import from file
+/// flow so the user doesn't have to type the full path manually. The selected
+/// path is passed to the engine's /api/v1/ollama/import endpoint, which calls
+/// `ollama create <name> -f <path>` to register the model.
+#[tauri::command]
+async fn pick_model_file(app: tauri::AppHandle) -> String {
+    use tauri_plugin_dialog::DialogExt;
+
+    let result = app.dialog()
+        .file()
+        .add_filter("GGUF model files", &["gguf"])
+        .add_filter("All files", &["*"])
+        .blocking_pick_file();
+
+    match result {
+        Some(file_path) => {
+            let path_str = file_path.to_string();
+            info!(target: "dialog", "picked model file: {}", path_str);
+            serde_json::json!({
+                "ok": true,
+                "path": path_str,
+                "message": "File selected"
+            }).to_string()
+        }
+        None => {
+            serde_json::json!({
+                "ok": false,
+                "path": null,
+                "message": "No file selected (user cancelled)"
+            }).to_string()
+        }
+    }
+}
+
 /// Read the engine's stdout and stderr log files so the UI can display
 /// WHY the engine failed to start. This is the #1 diagnostic tool for
 /// "engine offline" issues — the logs contain Python tracebacks, import
@@ -1214,6 +1233,7 @@ pub fn run() {
             restart_engine,
             restart_ollama,
             check_lmstudio,
+            pick_model_file,
             engine_logs,
             verify_sidecar
         ])

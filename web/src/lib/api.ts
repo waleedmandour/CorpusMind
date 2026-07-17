@@ -215,6 +215,25 @@ export async function nativeVerifySidecar(): Promise<{
   return JSON.parse(raw);
 }
 
+/**
+ * Open a native file picker dialog to select a local model file (.gguf).
+ * Returns the selected file path, or throws if the user cancelled.
+ * Used by the Ollama "Import from file" flow so the user doesn't have to
+ * type the full path manually.
+ */
+export async function nativePickModelFile(): Promise<{
+  ok: boolean;
+  path: string | null;
+  message: string;
+}> {
+  if (!isTauriRuntime()) {
+    throw new Error("File picker is only available in the desktop app.");
+  }
+  const invoke = await getInvoke();
+  const raw = (await invoke("pick_model_file")) as string;
+  return JSON.parse(raw);
+}
+
 export interface ChatRequest {
   message: string;
   provider?: "ollama" | "lmstudio" | "cloud";

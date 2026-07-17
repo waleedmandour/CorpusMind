@@ -1,11 +1,13 @@
 /**
  * Sidebar -- the primary navigation for CorpusMind.
  *
- * Professional, collapsible (accordion) navigation with:
- *   - Pinned active corpus card at the top (Sketch Engine pattern)
- *   - Collapsible group headers (click to expand/collapse)
- *   - Icons on every nav item
- *   - Persisted expand/collapse state (per user, via zustand persist)
+ * Modernized design (2026-07):
+ *   - Collapsible to icon-only rail (toggle button in header)
+ *   - Active item: left accent bar + filled background + brand-color icon
+ *   - Group headers: subtle, with chevron rotation animation
+ *   - Smooth width transition when collapsing/expanding
+ *   - Active corpus card with language badge
+ *   - Footer with license + local-first indicator
  *
  * Groups:
  *   Overview      — Home
@@ -108,6 +110,8 @@ export function Sidebar() {
   const lang = useUI((s) => s.lang);
   const expandedGroups = useUI((s) => s.expandedGroups);
   const toggleGroup = useUI((s) => s.toggleGroup);
+  const sidebarCollapsed = useUI((s) => s.sidebarCollapsed);
+  const toggleSidebar = useUI((s) => s.toggleSidebar);
   const activeCorpusId = useApp((s) => s.activeCorpusId);
 
   const activeCorpus = useQuery({
@@ -117,25 +121,45 @@ export function Sidebar() {
   });
 
   return (
-    <nav className="sidebar" role="navigation" aria-label="Main navigation">
-      <div className="sidebar-logo">
-        <img src="/icon-32.png" alt="CorpusMind" width="28" height="28" />
-        <div className="sidebar-logo-text-group">
-          <span className="sidebar-logo-text">CorpusMind</span>
-          <span className="sidebar-logo-version">v0.1.0</span>
+    <nav
+      className={clsx("sidebar", { "sidebar-collapsed": sidebarCollapsed })}
+      role="navigation"
+      aria-label="Main navigation"
+    >
+      {/* Logo + collapse toggle */}
+      <div className="sidebar-header">
+        <div className="sidebar-logo">
+          <img src="/icon-32.png" alt="CorpusMind" width="28" height="28" />
+          {!sidebarCollapsed && (
+            <div className="sidebar-logo-text-group">
+              <span className="sidebar-logo-text">CorpusMind</span>
+              <span className="sidebar-logo-version">v0.1.1</span>
+            </div>
+          )}
         </div>
+        <button
+          className="sidebar-collapse-btn"
+          onClick={toggleSidebar}
+          title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          {sidebarCollapsed ? "\u25B6" : "\u25C0"}
+        </button>
       </div>
 
-      {activeCorpus.data && (
+      {/* Active corpus card */}
+      {activeCorpus.data && !sidebarCollapsed && (
         <div className="sidebar-active-corpus">
           <div className="sidebar-active-corpus-label">Active Corpus</div>
           <div className="sidebar-active-corpus-name">{activeCorpus.data.name}</div>
           <div className="sidebar-active-corpus-meta">
-            {activeCorpus.data.language} · {(activeCorpus.data.stats?.token_count ?? 0).toLocaleString()} tokens
+            <span className="sidebar-lang-badge">{activeCorpus.data.language.toUpperCase()}</span>
+            {(activeCorpus.data.stats?.token_count ?? 0).toLocaleString()} tokens
           </div>
         </div>
       )}
 
+      {/* Navigation */}
       <div className="sidebar-nav">
         {NAV_GROUPS.map((group) => {
           const isExpanded = expandedGroups[group.id] ?? true;
@@ -143,17 +167,19 @@ export function Sidebar() {
 
           return (
             <div key={group.id} className="sidebar-group">
-              <button
-                className={clsx("sidebar-group-header", { "has-active": hasActiveItem })}
-                onClick={() => toggleGroup(group.id)}
-                aria-expanded={isExpanded}
-              >
-                <span className={clsx("sidebar-group-chevron", { expanded: isExpanded })}>
-                  {"\u25B8"}
-                </span>
-                <span className="sidebar-group-label">{t(lang, group.labelKey)}</span>
-              </button>
-              {isExpanded && (
+              {!sidebarCollapsed && (
+                <button
+                  className={clsx("sidebar-group-header", { "has-active": hasActiveItem })}
+                  onClick={() => toggleGroup(group.id)}
+                  aria-expanded={isExpanded}
+                >
+                  <span className={clsx("sidebar-group-chevron", { expanded: isExpanded })}>
+                    {"\u25B8"}
+                  </span>
+                  <span className="sidebar-group-label">{t(lang, group.labelKey)}</span>
+                </button>
+              )}
+              {(sidebarCollapsed || isExpanded) && (
                 <div className="sidebar-group-items">
                   {group.items.map((item) => (
                     <button
@@ -162,9 +188,12 @@ export function Sidebar() {
                       onClick={() => setActiveNav(item.id)}
                       title={t(lang, item.labelKey)}
                       aria-current={activeNav === item.id ? "page" : undefined}
+                      aria-label={t(lang, item.labelKey)}
                     >
                       <span className="sidebar-item-icon" aria-hidden>{item.icon}</span>
-                      <span className="sidebar-item-label">{t(lang, item.labelKey)}</span>
+                      {(sidebarCollapsed || true) && (
+                        <span className="sidebar-item-label">{t(lang, item.labelKey)}</span>
+                      )}
                     </button>
                   ))}
                 </div>
@@ -174,11 +203,18 @@ export function Sidebar() {
         })}
       </div>
 
-      <div className="sidebar-footer">
-        <span className="sidebar-footer-text">AGPL-3.0</span>
-        <span className="sidebar-footer-dot" />
-        <span className="sidebar-footer-text">Local-first</span>
-      </div>
+      {/* Footer */}
+      {!sidebarCollapsed ? (
+        <div className="sidebar-footer">
+          <span className="sidebar-footer-text">AGPL-3.0</span>
+          <span className="sidebar-footer-dot" />
+          <span className="sidebar-footer-text">Local-first</span>
+        </div>
+      ) : (
+        <div className="sidebar-footer sidebar-footer-collapsed" title="AGPL-3.0 · Local-first">
+          <span className="sidebar-footer-dot" />
+        </div>
+      )}
     </nav>
   );
 }
