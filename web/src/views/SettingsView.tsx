@@ -6,48 +6,86 @@
  * Each section is a card with an icon, title, and structured content.
  * Status indicators use colored badges (green = ok, red = problem,
  * amber = warning) so the user can scan the page in one glance.
+ *
+ * STATUS SOURCE OF TRUTH (2026-07 fix):
+ *   Inside the Tauri desktop app, provider health comes from the Rust-side
+ *   `all_providers_health` command (queried via nativeProvidersHealth()).
+ *   This checks each provider directly with reqwest (.no_proxy()), so it
+ *   works even when the engine is down — eliminating the circular
+ *   dependency where Ollama/LM Studio appeared "not detected" just because
+ *   the engine was unreachable.
+ *   In browser/PWA mode, we fall back to the engine's /api/v1/providers
+ *   endpoint (which is fine — in browser mode the engine is always remote).
  */
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { invoke } from "@tauri-apps/api/core";
-import { api, isTauriRuntime } from "@/lib/api";
+import {
+  api,
+  isTauriRuntime,
+  nativeProvidersHealth,
+  nativeRestartEngine,
+  nativeRestartOllama,
+  nativeCheckLmStudio,
+  nativeEngineLogs,
+  nativeVerifySidecar,
+} from "@/lib/api";
 import { useTroubleshoot } from "@/store/troubleshooting";
 import { useUI } from "@/store/ui";
 import { useApp } from "@/store/app";
 
 export function SettingsView() {
   const qc = useQueryClient();
+  const isTauri = isTauriRuntime();
+
+  // Native (Rust-side) provider health — the authoritative source of truth
+  // inside the Tauri desktop app. Polled every 5s. Returns null in browser mode.
+  const nativeHealth = useQuery({
+    queryKey: ["native-providers-health"],
+    queryFn: nativeProvidersHealth,
+    refetchInterval: 5_000,
+    enabled: isTauri,
+  });
+
+  // Engine health + providers (used for version info, default models, and as
+  // a fallback in browser/PWA mode where nativeHealth is null).
   const health = useQuery({ queryKey: ["health"], queryFn: api.health, refetchInterval: 5_000 });
   const providers = useQuery({ queryKey: ["providers"], queryFn: api.providers, refetchInterval: 5_000 });
   const version = useQuery({ queryKey: ["version"], queryFn: api.version });
   const encryption = useQuery({ queryKey: ["encryption"], queryFn: api.encryptionStatus });
   const troubleshoot = useQuery({ queryKey: ["troubleshoot-status"], queryFn: api.troubleshootStatus });
 
-  const engineOk = health.data?.status === "ok";
-  const ollamaOk = providers.data?.providers.find((p) => p.name === "ollama")?.healthy ?? false;
-  const lmstudioOk = providers.data?.providers.find((p) => p.name === "lmstudio")?.healthy ?? false;
+  // Resolve the final status: native health wins when available (Tauri),
+  // otherwise fall back to the engine's /providers endpoint (browser/PWA).
+  const engineOk = isTauri
+    ? (nativeHealth.data?.engine.healthy ?? false)
+    : (health.data?.status === "ok");
+  const ollamaOk = isTauri
+    ? (nativeHealth.data?.ollama.healthy ?? false)
+    : (providers.data?.providers.find((p) => p.name === "ollama")?.healthy ?? false);
+  const lmstudioOk = isTauri
+    ? (nativeHealth.data?.lmstudio.healthy ?? false)
+    : (providers.data?.providers.find((p) => p.name === "lmstudio")?.healthy ?? false);
   const cloudOk = providers.data?.providers.find((p) => p.name === "cloud")?.healthy ?? false;
 
   const [recheckingEngine, setRecheckingEngine] = useState(false);
   const [recheckingOllama, setRecheckingOllama] = useState(false);
+  const [recheckingLmStudio, setRecheckingLmStudio] = useState(false);
   const [diagMessage, setDiagMessage] = useState("");
   const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [engineLogs, setEngineLogs] = useState<string>("");
   const [sidecarInfo, setSidecarInfo] = useState<string>("");
-
-  // True when running inside the Tauri desktop webview. Reuses the shared
-  // helper from lib/api.ts so the detection logic lives in one place.
-  const isTauri = isTauriRuntime();
 
   const recheckEngine = async () => {
     setRecheckingEngine(true);
     setDiagMessage("");
     try {
       if (isTauri) {
-        const result = await invoke<string>("restart_engine");
-        const data = JSON.parse(result);
+        const data = await nativeRestartEngine();
         setDiagMessage(data.message || data.diagnostics?.hint || "");
       }
+      // Invalidate BOTH the native and engine-side health queries so the
+      // UI reflects the new state immediately.
+      qc.invalidateQueries({ queryKey: ["native-providers-health"] });
       qc.invalidateQueries({ queryKey: ["health"] });
       qc.invalidateQueries({ queryKey: ["providers"] });
     } catch (e: any) {
@@ -62,15 +100,33 @@ export function SettingsView() {
     setDiagMessage("");
     try {
       if (isTauri) {
-        const result = await invoke<string>("restart_ollama");
-        const data = JSON.parse(result);
+        const data = await nativeRestartOllama();
         setDiagMessage(data.message || data.hint || "");
       }
+      // Invalidate the native health query so the Ollama badge updates.
+      qc.invalidateQueries({ queryKey: ["native-providers-health"] });
       qc.invalidateQueries({ queryKey: ["providers"] });
     } catch (e: any) {
       setDiagMessage(`Recheck failed: ${e?.message || String(e)}`);
     } finally {
       setRecheckingOllama(false);
+    }
+  };
+
+  const recheckLmStudio = async () => {
+    setRecheckingLmStudio(true);
+    setDiagMessage("");
+    try {
+      if (isTauri) {
+        const data = await nativeCheckLmStudio();
+        setDiagMessage(data.message);
+      }
+      qc.invalidateQueries({ queryKey: ["native-providers-health"] });
+      qc.invalidateQueries({ queryKey: ["providers"] });
+    } catch (e: any) {
+      setDiagMessage(`Recheck failed: ${e?.message || String(e)}`);
+    } finally {
+      setRecheckingLmStudio(false);
     }
   };
 
@@ -85,8 +141,7 @@ export function SettingsView() {
     }
     try {
       // Get engine logs
-      const logsResult = await invoke<string>("engine_logs");
-      const logsData = JSON.parse(logsResult);
+      const logsData = await nativeEngineLogs();
       const logText = [
         `stdout log: ${logsData.stdout_path || "(not found)"}`,
         "─".repeat(60),
@@ -99,11 +154,10 @@ export function SettingsView() {
       setEngineLogs(logText);
 
       // Get sidecar verification
-      const sidecarResult = await invoke<string>("verify_sidecar");
-      const sidecarData = JSON.parse(sidecarResult);
+      const sidecarData = await nativeVerifySidecar();
       const sidecarText = [
         `Sidecar found: ${sidecarData.sidecar_found ? "YES" : "NO"}`,
-        `Expected name: ${sidecarData.expected_name}`,
+        `Layout: ${sidecarData.layout || "(unknown)"}`,
         `Target triple: ${sidecarData.target_triple}`,
         `Resource dir: ${sidecarData.resource_dir || "(not resolved)"}`,
         `Sidecar path: ${sidecarData.sidecar_path || "(not found)"}`,
@@ -279,6 +333,31 @@ export function SettingsView() {
                   title={!isTauri ? "Recheck is only available in the desktop app" : ""}
                 >
                   {recheckingOllama ? "Restarting..." : "Recheck Ollama"}
+                </button>
+                {!isTauri && <span className="settings-text-muted">(desktop app only)</span>}
+              </div>
+              {diagMessage && <p className="settings-text-muted" style={{ marginTop: "var(--space-2)" }}>{diagMessage}</p>}
+            </div>
+          )}
+
+          {/* LM Studio recheck button */}
+          {!lmstudioOk && (
+            <div className="settings-status-row" style={{ marginTop: "var(--space-3)", flexDirection: "column", alignItems: "stretch" }}>
+              <strong style={{ color: "var(--danger)" }}>LM Studio is not detected</strong>
+              <p className="settings-text-muted">
+                LM Studio is a GUI app — the CorpusMind app cannot auto-start it.
+                Open LM Studio, load a model, then click
+                <strong> Developer {"\u2192"} Start Local Server</strong>.
+                Once the server is running on port 1234, click "Recheck" below.
+              </p>
+              <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
+                <button
+                  className="btn-primary"
+                  onClick={recheckLmStudio}
+                  disabled={recheckingLmStudio || !isTauri}
+                  title={!isTauri ? "Recheck is only available in the desktop app" : ""}
+                >
+                  {recheckingLmStudio ? "Checking..." : "Recheck LM Studio"}
                 </button>
                 {!isTauri && <span className="settings-text-muted">(desktop app only)</span>}
               </div>

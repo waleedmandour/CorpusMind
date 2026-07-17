@@ -345,6 +345,42 @@ impl EngineSidecar {
         let child = cmd.spawn()
             .map_err(|e| SidecarError::Spawn(format!("{program}: {e}")))?;
 
+        // Post-spawn liveness check: wait 2 seconds, then verify the process
+        // is still alive. If it exited immediately (common causes: missing
+        // dependencies, port conflict, broken venv, "No module named app"),
+        // we log the exit code and read the stderr log so the user can see
+        // WHY it failed in the diagnostics panel. Without this check, a
+        // crash leaves empty logs and a confusing "amber" state where the
+        // native check fails too (engine truly offline, not just unreachable).
+        let child_id = child.id();
+        std::thread::sleep(Duration::from_secs(2));
+        // try_wait returns Ok(None) if the process is still running
+        match child.try_wait() {
+            Ok(None) => {
+                // Still running — good
+                info!(target: "sidecar", "engine process alive (PID: {})", child_id);
+            }
+            Ok(Some(status)) => {
+                // Process exited — read the stderr log to find out why
+                let stderr_content = std::fs::read_to_string(&stderr_path).unwrap_or_default();
+                error!(target: "sidecar", "engine process exited immediately: {} (exit code: {:?})", status, status.code());
+                if !stderr_content.is_empty() {
+                    error!(target: "sidecar", "engine stderr:\n{}", stderr_content);
+                } else {
+                    error!(target: "sidecar", "engine stderr is EMPTY — process may have crashed before writing any output (broken venv, missing python.exe, or antivirus interference)");
+                }
+                // Don't store the dead child — let the caller know spawn failed
+                return Err(SidecarError::Spawn(format!(
+                    "Engine process exited immediately: {}. stderr: {}",
+                    status,
+                    if stderr_content.is_empty() { "(empty — likely broken venv or missing deps)" } else { stderr_content.trim() }
+                )));
+            }
+            Err(e) => {
+                warn!(target: "sidecar", "could not check engine process status: {e}");
+            }
+        }
+
         *child_opt = Some(child);
         Ok(())
     }
@@ -750,6 +786,61 @@ async fn restart_ollama(app: tauri::AppHandle) -> String {
     }
 }
 
+/// Check LM Studio health — callable from the UI "Recheck" button.
+/// LM Studio is a GUI app with no CLI, so unlike Ollama we can't auto-start
+/// it. This command just does a fresh health probe and returns the result.
+/// The UI uses this to refresh the status badge after the user manually
+/// starts LM Studio.
+#[tauri::command]
+async fn check_lmstudio() -> String {
+    let client = match reqwest::Client::builder()
+        .no_proxy()
+        .timeout(Duration::from_secs(5))
+        .build()
+    {
+        Ok(c) => c,
+        Err(e) => {
+            return serde_json::json!({
+                "ok": false,
+                "lmstudio_running": false,
+                "message": format!("Failed to create HTTP client: {}", e)
+            }).to_string();
+        }
+    };
+
+    let urls = vec![
+        "http://127.0.0.1:1234/v1/models",
+        "http://localhost:1234/v1/models",
+    ];
+
+    for url in &urls {
+        match client.get(url).send().await {
+            Ok(r) if r.status().is_success() => {
+                info!(target: "lmstudio", "LM Studio healthy via: {}", url);
+                return serde_json::json!({
+                    "ok": true,
+                    "lmstudio_running": true,
+                    "url": url,
+                    "message": "LM Studio is running"
+                }).to_string();
+            }
+            Ok(r) => {
+                warn!(target: "lmstudio", "{} returned: {}", url, r.status());
+            }
+            Err(e) => {
+                let msg = if e.is_connect() { "Connection refused" } else { "Timeout/Network error" };
+                warn!(target: "lmstudio", "{} failed: {}", url, msg);
+            }
+        }
+    }
+
+    serde_json::json!({
+        "ok": false,
+        "lmstudio_running": false,
+        "message": "LM Studio is not running. Start the LM Studio desktop app and enable the local server (Developer → Start Local Server)."
+    }).to_string()
+}
+
 /// Read the engine's stdout and stderr log files so the UI can display
 /// WHY the engine failed to start. This is the #1 diagnostic tool for
 /// "engine offline" issues — the logs contain Python tracebacks, import
@@ -884,6 +975,18 @@ async fn system_status(app: tauri::AppHandle) -> String {
         Err(_) => false,
     };
 
+    // Check LM Studio
+    let lmstudio_ok = match reqwest::Client::builder()
+        .no_proxy()
+        .timeout(Duration::from_secs(3))
+        .build()
+    {
+        Ok(c) => c.get("http://127.0.0.1:1234/v1/models").send().await
+            .map(|r| r.status().is_success())
+            .unwrap_or(false),
+        Err(_) => false,
+    };
+
     // Get sidecar info
     let sidecar: State<EngineSidecar> = app.state();
     let (program, args, wd) = sidecar.resolve_command(&app);
@@ -895,10 +998,148 @@ async fn system_status(app: tauri::AppHandle) -> String {
     serde_json::json!({
         "engine_running": engine_ok,
         "ollama_running": ollama_ok,
+        "lmstudio_running": lmstudio_ok,
         "ollama_path": ollama_path,
         "engine_program": program,
         "engine_args": args.join(" "),
         "engine_working_dir": wd_str,
+    }).to_string()
+}
+
+// ─── Unified provider health check ─────────────────────────────────
+//
+// The UI needs a single, authoritative source of truth for whether each
+// provider (engine, Ollama, LM Studio) is reachable. Previously the UI
+// relied on the engine's /api/v1/providers endpoint for Ollama + LM Studio
+// health, but that creates a circular dependency: if the engine is down,
+// ALL providers appear "not detected" even if they're running fine.
+//
+// This command checks ALL providers directly from Rust (via reqwest with
+// no_proxy), giving the UI a reliable status that doesn't depend on the
+// engine being up. The webview calls this on mount and polls every 5s.
+
+/// Probe a URL with a no-proxy reqwest client. Returns Ok(()) on HTTP 2xx,
+/// Err(message) on any failure.
+async fn probe_url(client: &reqwest::Client, url: &str) -> Result<(), String> {
+    match client.get(url).send().await {
+        Ok(r) if r.status().is_success() => Ok(()),
+        Ok(r) => Err(format!("HTTP {}", r.status())),
+        Err(e) => {
+            let msg = if e.is_connect() {
+                "Connection refused".to_string()
+            } else if e.is_timeout() {
+                "Timeout".to_string()
+            } else {
+                e.to_string()
+            };
+            Err(msg)
+        }
+    }
+}
+
+/// Check ALL providers (engine + Ollama + LM Studio) from Rust in one call.
+/// This is the authoritative source of truth for the UI's status badges.
+///
+/// Each provider is checked with .no_proxy() to bypass corporate VPNs that
+/// would silently intercept loopback traffic. OLLAMA_HOST env var is
+/// respected for custom Ollama configurations.
+#[tauri::command]
+async fn all_providers_health() -> String {
+    let client = match reqwest::Client::builder()
+        .no_proxy()
+        .timeout(Duration::from_secs(5))
+        .build()
+    {
+        Ok(c) => c,
+        Err(e) => {
+            return serde_json::json!({
+                "engine": {"healthy": false, "error": format!("HTTP client: {e}")},
+                "ollama": {"healthy": false, "error": format!("HTTP client: {e}")},
+                "lmstudio": {"healthy": false, "error": format!("HTTP client: {e}")},
+            }).to_string();
+        }
+    };
+
+    // Engine: check /api/v1/health
+    let engine_url = format!("http://{}:{}/api/v1/health", ENGINE_HOST, ENGINE_PORT);
+    let engine = match probe_url(&client, &engine_url).await {
+        Ok(()) => serde_json::json!({"healthy": true, "url": engine_url, "error": null}),
+        Err(e) => serde_json::json!({"healthy": false, "url": engine_url, "error": e}),
+    };
+
+    // Ollama: try OLLAMA_HOST env var first, then 127.0.0.1, then localhost
+    let ollama_urls = {
+        let mut urls = vec![
+            "http://127.0.0.1:11434/api/tags".to_string(),
+            "http://localhost:11434/api/tags".to_string(),
+        ];
+        if let Ok(host) = std::env::var("OLLAMA_HOST") {
+            let normalized = if host.starts_with("http://") || host.starts_with("https://") {
+                host
+            } else if host.contains(':') {
+                format!("http://{}", host)
+            } else {
+                format!("http://{}:11434", host)
+            };
+            urls.insert(0, format!("{}/api/tags", normalized));
+        }
+        urls
+    };
+    let mut ollama_healthy = false;
+    let mut ollama_error = "All URLs failed".to_string();
+    let mut ollama_url_used = String::new();
+    for url in &ollama_urls {
+        match probe_url(&client, url).await {
+            Ok(()) => {
+                ollama_healthy = true;
+                ollama_url_used = url.clone();
+                ollama_error.clear();
+                break;
+            }
+            Err(e) => {
+                ollama_error = format!("{} | {}", url, e);
+            }
+        }
+    }
+    let ollama_path = OllamaManager::find_ollama().unwrap_or_else(|| "not found".to_string());
+    let ollama = serde_json::json!({
+        "healthy": ollama_healthy,
+        "url": if ollama_healthy { ollama_url_used } else { "http://127.0.0.1:11434".to_string() },
+        "error": if ollama_healthy { null } else { ollama_error.as_str() },
+        "path": ollama_path,
+    });
+
+    // LM Studio: check /v1/models (OpenAI-compatible)
+    let lmstudio_urls = vec![
+        "http://127.0.0.1:1234/v1/models",
+        "http://localhost:1234/v1/models",
+    ];
+    let mut lmstudio_healthy = false;
+    let mut lmstudio_error = "All URLs failed".to_string();
+    let mut lmstudio_url_used = String::new();
+    for url in &lmstudio_urls {
+        match probe_url(&client, url).await {
+            Ok(()) => {
+                lmstudio_healthy = true;
+                lmstudio_url_used = url.clone();
+                lmstudio_error.clear();
+                break;
+            }
+            Err(e) => {
+                lmstudio_error = format!("{} | {}", url, e);
+            }
+        }
+    }
+    let lmstudio = serde_json::json!({
+        "healthy": lmstudio_healthy,
+        "url": if lmstudio_healthy { lmstudio_url_used } else { "http://127.0.0.1:1234/v1".to_string() },
+        "error": if lmstudio_healthy { null } else { lmstudio_error.as_str() },
+    });
+
+    serde_json::json!({
+        "engine": engine,
+        "ollama": ollama,
+        "lmstudio": lmstudio,
     }).to_string()
 }
 
@@ -964,7 +1205,18 @@ pub fn run() {
                 ollama.shutdown();
             }
         })
-        .invoke_handler(tauri::generate_handler![engine_health, sidecar_status, ollama_health, system_status, restart_engine, restart_ollama, engine_logs, verify_sidecar])
+        .invoke_handler(tauri::generate_handler![
+            engine_health,
+            sidecar_status,
+            ollama_health,
+            system_status,
+            all_providers_health,
+            restart_engine,
+            restart_ollama,
+            check_lmstudio,
+            engine_logs,
+            verify_sidecar
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

@@ -78,6 +78,143 @@ export interface ProvidersResponse {
   providers: ProviderInfo[];
 }
 
+// ----------------------------------------------------------------------- //
+// Native (Rust-side) provider health — the authoritative source of truth.
+//
+// The `all_providers_health` Tauri command checks engine + Ollama + LM Studio
+// directly from Rust (via reqwest with .no_proxy()), bypassing the webview's
+// fetch path entirely. This avoids the circular dependency where Ollama/LM
+// Studio health was previously read from the engine's /api/v1/providers
+// endpoint — which fails when the engine itself is down, making ALL
+// providers appear "not detected" even when they're running fine.
+//
+// The UI uses this as the PRIMARY status source; the engine's /providers
+// endpoint is now only used for the model list (default_model, base_url).
+// ----------------------------------------------------------------------- //
+
+export interface NativeProviderHealth {
+  healthy: boolean;
+  url: string;
+  error: string | null;
+  path?: string;
+}
+
+export interface NativeProvidersHealth {
+  engine: NativeProviderHealth;
+  ollama: NativeProviderHealth;
+  lmstudio: NativeProviderHealth;
+}
+
+/** Lazy-loaded Tauri invoke, cached after first call. */
+let _invoke: ((cmd: string, args?: Record<string, unknown>) => Promise<unknown>) | null = null;
+async function getInvoke(): Promise<typeof import("@tauri-apps/api/core").invoke> {
+  if (_invoke) return _invoke as typeof import("@tauri-apps/api/core").invoke;
+  const mod = await import("@tauri-apps/api/core");
+  _invoke = mod.invoke;
+  return mod.invoke;
+}
+
+/**
+ * Query the Rust-side `all_providers_health` command for the authoritative
+ * status of all three providers. Returns null when not running inside Tauri
+ * (browser/PWA mode — the UI falls back to the engine's /providers endpoint).
+ */
+export async function nativeProvidersHealth(): Promise<NativeProvidersHealth | null> {
+  if (!isTauriRuntime()) return null;
+  try {
+    const invoke = await getInvoke();
+    const raw = (await invoke("all_providers_health")) as string;
+    return JSON.parse(raw) as NativeProvidersHealth;
+  } catch (e) {
+    console.error("[nativeProvidersHealth] failed:", e);
+    return null;
+  }
+}
+
+/** Restart the engine sidecar from Rust. Returns the result message. */
+export async function nativeRestartEngine(): Promise<{
+  ok: boolean;
+  engine_running: boolean;
+  message: string;
+  diagnostics?: { program: string; args: string; working_dir: string; hint: string };
+}> {
+  if (!isTauriRuntime()) {
+    throw new Error("Engine restart is only available in the desktop app.");
+  }
+  const invoke = await getInvoke();
+  const raw = (await invoke("restart_engine")) as string;
+  return JSON.parse(raw);
+}
+
+/** Restart Ollama from Rust. Returns the result message + path. */
+export async function nativeRestartOllama(): Promise<{
+  ok: boolean;
+  ollama_running: boolean;
+  ollama_path: string;
+  message: string;
+  hint?: string;
+}> {
+  if (!isTauriRuntime()) {
+    throw new Error("Ollama restart is only available in the desktop app.");
+  }
+  const invoke = await getInvoke();
+  const raw = (await invoke("restart_ollama")) as string;
+  return JSON.parse(raw);
+}
+
+/** Check LM Studio health from Rust (no auto-start — it's a GUI app). */
+export async function nativeCheckLmStudio(): Promise<{
+  ok: boolean;
+  lmstudio_running: boolean;
+  url?: string;
+  message: string;
+}> {
+  if (!isTauriRuntime()) {
+    throw new Error("LM Studio check is only available in the desktop app.");
+  }
+  const invoke = await getInvoke();
+  const raw = (await invoke("check_lmstudio")) as string;
+  return JSON.parse(raw);
+}
+
+/** Fetch engine stdout/stderr logs from Rust (for the diagnostics panel). */
+export async function nativeEngineLogs(): Promise<{
+  ok: boolean;
+  stdout_path: string;
+  stderr_path: string;
+  stdout: string;
+  stderr: string;
+}> {
+  if (!isTauriRuntime()) {
+    throw new Error("Engine logs are only available in the desktop app.");
+  }
+  const invoke = await getInvoke();
+  const raw = (await invoke("engine_logs")) as string;
+  return JSON.parse(raw);
+}
+
+/** Verify the bundled sidecar binary exists (for the diagnostics panel). */
+export async function nativeVerifySidecar(): Promise<{
+  ok: boolean;
+  sidecar_found: boolean;
+  sidecar_path: string;
+  resource_dir: string;
+  layout: string;
+  target_triple: string;
+  expected_name?: string;
+  resolved_program: string;
+  resolved_args: string;
+  resolved_working_dir: string;
+  message: string;
+}> {
+  if (!isTauriRuntime()) {
+    throw new Error("Sidecar verification is only available in the desktop app.");
+  }
+  const invoke = await getInvoke();
+  const raw = (await invoke("verify_sidecar")) as string;
+  return JSON.parse(raw);
+}
+
 export interface ChatRequest {
   message: string;
   provider?: "ollama" | "lmstudio" | "cloud";
