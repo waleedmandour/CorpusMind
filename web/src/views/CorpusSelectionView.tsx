@@ -22,7 +22,7 @@ import {
   api,
   isTauriRuntime,
   nativePickCorpusFiles,
-  nativeReadFile,
+  nativeUploadCorpusFiles,
   type HubSearchResult,
   type CleaningOptions,
 } from "@/lib/api";
@@ -411,6 +411,7 @@ function ReferenceUpload() {
   const [newCorpusName, setNewCorpusName] = useState("");
   const [newCorpusLang, setNewCorpusLang] = useState("en");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [nativePaths, setNativePaths] = useState<string[]>([]);
   const [statusMsg, setStatusMsg] = useState("");
 
   const ACCEPT = ".txt,.md,.docx,.pdf,.html,.htm,.xml,.csv,.tsv,.json,.rtf,.log,.srt";
@@ -422,10 +423,15 @@ function ReferenceUpload() {
   });
 
   const createAndUpload = useMutation({
-    mutationFn: async ({ name, lang, files }: { name: string; lang: string; files: File[] }) => {
+    mutationFn: async ({ name, lang }: { name: string; lang: string }) => {
       if (!activeProjectId) throw new Error("No active project");
       const corpus = await api.createCorpus(activeProjectId, name, lang);
-      await api.uploadDocuments(corpus.id, files, lang);
+      // Upload via native path if available, else browser path
+      if (nativePaths.length > 0) {
+        await nativeUploadCorpusFiles(corpus.id, nativePaths, lang);
+      } else if (selectedFiles.length > 0) {
+        await api.uploadDocuments(corpus.id, selectedFiles, lang);
+      }
       return corpus;
     },
     onSuccess: (corpus) => {
@@ -434,6 +440,7 @@ function ReferenceUpload() {
       setShowNewCorpus(false);
       setNewCorpusName("");
       setSelectedFiles([]);
+      setNativePaths([]);
       setStatusMsg(`Created "${corpus.name}" and uploaded successfully`);
       setTimeout(() => setStatusMsg(""), 5000);
     },
@@ -441,10 +448,17 @@ function ReferenceUpload() {
   });
 
   const uploadToSelected = useMutation({
-    mutationFn: ({ cid, files }: { cid: string; files: File[] }) => api.uploadDocuments(cid, files),
+    mutationFn: async ({ cid }: { cid: string }) => {
+      if (nativePaths.length > 0) {
+        await nativeUploadCorpusFiles(cid, nativePaths);
+      } else if (selectedFiles.length > 0) {
+        await api.uploadDocuments(cid, selectedFiles);
+      }
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["corpora"] });
       setSelectedFiles([]);
+      setNativePaths([]);
       setStatusMsg("Uploaded successfully");
       setTimeout(() => setStatusMsg(""), 5000);
     },
@@ -454,15 +468,16 @@ function ReferenceUpload() {
   const onUploadFiles = (files: File[]) => {
     if (files.length === 0) return;
     setSelectedFiles(files);
+    setNativePaths([]);
     setStatusMsg(`${files.length} file(s) ready. Click "Upload & Tag" to ingest.`);
   };
 
   const doUpload = () => {
-    if (selectedFiles.length === 0) return;
+    if (selectedFiles.length === 0 && nativePaths.length === 0) return;
     if (activeReferenceId) {
-      uploadToSelected.mutate({ cid: activeReferenceId, files: selectedFiles });
+      uploadToSelected.mutate({ cid: activeReferenceId });
     } else if (showNewCorpus && newCorpusName.trim() && activeProjectId) {
-      createAndUpload.mutate({ name: newCorpusName.trim(), lang: newCorpusLang, files: selectedFiles });
+      createAndUpload.mutate({ name: newCorpusName.trim(), lang: newCorpusLang });
     }
   };
 
@@ -471,16 +486,17 @@ function ReferenceUpload() {
     try {
       const result = await nativePickCorpusFiles();
       if (result.ok && result.paths.length > 0) {
-        const files: File[] = [];
-        for (const p of result.paths) {
-          try { files.push(await nativeReadFile(p)); } catch { /* skip */ }
-        }
-        if (files.length > 0) onUploadFiles(files);
+        setNativePaths(result.paths);
+        setSelectedFiles([]);
+        setStatusMsg(`${result.paths.length} file(s) selected. Click "Upload & Tag" to ingest.`);
       }
     } catch (e: any) {
       setStatusMsg(`File picker failed: ${e?.message || String(e)}`);
     }
   };
+
+  const hasFiles = selectedFiles.length > 0 || nativePaths.length > 0;
+  const fileCount = Math.max(selectedFiles.length, nativePaths.length);
 
   return (
     <div className="reference-upload">
@@ -561,11 +577,11 @@ function ReferenceUpload() {
         )}
       </div>
 
-      {selectedFiles.length > 0 && (
+      {hasFiles && (
         <div className="uploader-file-list">
           <div className="uploader-file-list-header">
-            <strong>{selectedFiles.length} file(s) selected</strong>
-            <button className="btn-small" onClick={() => setSelectedFiles([])}>Clear</button>
+            <strong>{fileCount} file(s) selected</strong>
+            <button className="btn-small" onClick={() => { setSelectedFiles([]); setNativePaths([]); }}>Clear</button>
           </div>
           <ul className="uploader-file-items">
             {selectedFiles.slice(0, 10).map((f, i) => (
@@ -574,8 +590,14 @@ function ReferenceUpload() {
                 <span className="uploader-file-size">{(f.size / 1024).toFixed(1)} KB</span>
               </li>
             ))}
-            {selectedFiles.length > 10 && (
-              <li className="uploader-file-item uploader-file-more">...and {selectedFiles.length - 10} more</li>
+            {nativePaths.slice(0, 10).map((p, i) => (
+              <li key={`np-${i}`} className="uploader-file-item">
+                <span className="uploader-file-name">{p.split(/[/\\]/).pop() ?? p}</span>
+                <span className="uploader-file-size">native</span>
+              </li>
+            ))}
+            {fileCount > 10 && (
+              <li className="uploader-file-item uploader-file-more">...and {fileCount - 10} more</li>
             )}
           </ul>
           <div className="uploader-actions">
@@ -634,16 +656,27 @@ function DocumentUploader({ cid }: { cid: string }) {
   const isTauri = isTauriRuntime();
   const [language, setLanguage] = useState<string>("auto");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [nativePaths, setNativePaths] = useState<string[]>([]);
   const [uploadStatus, setUploadStatus] = useState<string>("");
 
   const upload = useMutation({
-    mutationFn: (files: File[]) => api.uploadDocuments(cid, files, language === "auto" ? undefined : language),
+    mutationFn: async () => {
+      const lang = language === "auto" ? undefined : language;
+      if (isTauri && nativePaths.length > 0) {
+        // Native path: Rust reads files from disk + uploads via reqwest multipart
+        return await nativeUploadCorpusFiles(cid, nativePaths, lang);
+      } else {
+        // Browser path: FormData with File objects
+        return await api.uploadDocuments(cid, selectedFiles, lang);
+      }
+    },
     onSuccess: (docs) => {
       qc.invalidateQueries({ queryKey: ["documents", cid] });
       qc.invalidateQueries({ queryKey: ["corpora"] });
-      setUploadStatus(`✓ ${docs.length} document(s) ingested and tagged`);
+      setUploadStatus(`✓ ${docs.length} document(s) ingested, cleaned, tagged, and parsed`);
       setSelectedFiles([]);
-      setTimeout(() => setUploadStatus(""), 5000);
+      setNativePaths([]);
+      setTimeout(() => setUploadStatus(""), 6000);
     },
     onError: (e: Error) => {
       setUploadStatus(`✗ Upload failed: ${e.message}`);
@@ -652,24 +685,15 @@ function DocumentUploader({ cid }: { cid: string }) {
 
   const openFilePicker = () => fileInputRef.current?.click();
 
-  /** Native file picker (Tauri desktop only) — picks multiple files via OS dialog. */
+  /** Native file picker (Tauri desktop only) — picks multiple files via OS dialog,
+   *  then uploads them directly through Rust (bypasses FormData limitation). */
   const browseNative = async () => {
     try {
       const result = await nativePickCorpusFiles();
       if (result.ok && result.paths.length > 0) {
-        const files: File[] = [];
-        for (const p of result.paths) {
-          try {
-            const f = await nativeReadFile(p);
-            files.push(f);
-          } catch (e) {
-            console.error(`Failed to read ${p}:`, e);
-          }
-        }
-        if (files.length > 0) {
-          setSelectedFiles(files);
-          setUploadStatus(`${files.length} file(s) ready. Click "Upload & Tag" to ingest.`);
-        }
+        setNativePaths(result.paths);
+        setSelectedFiles([]);
+        setUploadStatus(`${result.paths.length} file(s) selected. Click "Upload & Tag" to ingest.`);
       }
     } catch (e: any) {
       setUploadStatus(`File picker failed: ${e?.message || String(e)}`);
@@ -680,14 +704,18 @@ function DocumentUploader({ cid }: { cid: string }) {
     const arr = Array.from(files ?? []);
     if (arr.length > 0) {
       setSelectedFiles(arr);
-      setUploadStatus(`${arr.length} file(s) ready. Click "Upload & Tag" to ingest.`);
+      setNativePaths([]);
+      setUploadStatus(`${arr.length} file(s) selected. Click "Upload & Tag" to ingest.`);
     }
   };
 
   const doUpload = () => {
-    if (selectedFiles.length === 0) return;
-    upload.mutate(selectedFiles);
+    if (selectedFiles.length === 0 && nativePaths.length === 0) return;
+    upload.mutate();
   };
+
+  const hasFiles = selectedFiles.length > 0 || nativePaths.length > 0;
+  const fileCount = Math.max(selectedFiles.length, nativePaths.length);
 
   return (
     <div className="document-uploader">
@@ -743,11 +771,11 @@ function DocumentUploader({ cid }: { cid: string }) {
         </div>
       )}
 
-      {selectedFiles.length > 0 && (
+      {hasFiles && (
         <div className="uploader-file-list">
           <div className="uploader-file-list-header">
-            <strong>{selectedFiles.length} file(s) selected</strong>
-            <button className="btn-small" onClick={() => setSelectedFiles([])}>Clear</button>
+            <strong>{fileCount} file(s) selected</strong>
+            <button className="btn-small" onClick={() => { setSelectedFiles([]); setNativePaths([]); }}>Clear</button>
           </div>
           <ul className="uploader-file-items">
             {selectedFiles.slice(0, 10).map((f, i) => (
@@ -756,9 +784,15 @@ function DocumentUploader({ cid }: { cid: string }) {
                 <span className="uploader-file-size">{(f.size / 1024).toFixed(1)} KB</span>
               </li>
             ))}
-            {selectedFiles.length > 10 && (
+            {nativePaths.slice(0, 10).map((p, i) => (
+              <li key={`np-${i}`} className="uploader-file-item">
+                <span className="uploader-file-name">{p.split(/[/\\]/).pop() ?? p}</span>
+                <span className="uploader-file-size">native</span>
+              </li>
+            ))}
+            {fileCount > 10 && (
               <li className="uploader-file-item uploader-file-more">
-                ...and {selectedFiles.length - 10} more
+                ...and {fileCount - 10} more
               </li>
             )}
           </ul>
@@ -768,7 +802,7 @@ function DocumentUploader({ cid }: { cid: string }) {
               onClick={doUpload}
               disabled={upload.isPending}
             >
-              {upload.isPending ? "Uploading & tagging..." : "Upload & Tag"}
+              {upload.isPending ? "Uploading & processing..." : "Upload & Tag"}
             </button>
           </div>
         </div>
@@ -781,8 +815,9 @@ function DocumentUploader({ cid }: { cid: string }) {
       )}
 
       <div className="uploader-pipeline-info">
-        <strong>Pipeline:</strong> Upload → Format detection → Encoding detection →
-        Tokenization → POS tagging → Lemmatization → Dependency parsing
+        <strong>Auto-pipeline:</strong> Upload → Format detection → Encoding detection →
+        Text cleaning (whitespace + BOM + zero-width) → Tokenization →
+        POS tagging → Lemmatization → Dependency parsing → Sentence segmentation
       </div>
     </div>
   );

@@ -910,6 +910,116 @@ async fn pick_corpus_files(app: tauri::AppHandle) -> String {
     }
 }
 
+// ─── Corpus file upload (bypasses FormData limitation) ─────────────
+// The @tauri-apps/plugin-http fetch doesn't reliably support FormData with
+// File bodies through the IPC bridge. This command reads files from disk
+// (by path, from the native file picker) and uploads them directly to the
+// engine via reqwest multipart — bypassing the webview's fetch entirely.
+// This is the reliable path for file uploads inside the Tauri desktop app.
+
+/// Upload one or more corpus files to the engine. Reads each file from disk
+/// and POSTs them as multipart/form-data to the engine's /corpora/{cid}/documents
+/// endpoint. Returns the JSON response from the engine (list of Document objects).
+#[tauri::command]
+async fn upload_corpus_files(cid: String, paths: Vec<String>, language: Option<String>) -> String {
+    let url = format!(
+        "http://{}:{}/api/v1/corpora/{}/documents",
+        ENGINE_HOST, ENGINE_PORT, cid
+    );
+
+    let client = match reqwest::Client::builder()
+        .no_proxy()
+        .timeout(Duration::from_secs(300)) // 5 min for large files + NLP processing
+        .build()
+    {
+        Ok(c) => c,
+        Err(e) => {
+            return serde_json::json!({
+                "ok": false,
+                "error": format!("Failed to create HTTP client: {}", e)
+            }).to_string();
+        }
+    };
+
+    // Build the multipart form
+    let mut form = reqwest::multipart::Form::new();
+    if let Some(lang) = &language {
+        form = form.text("language", lang.clone());
+    }
+
+    let mut files_uploaded = 0usize;
+    let mut errors: Vec<String> = Vec::new();
+
+    for path_str in &paths {
+        let path = std::path::Path::new(path_str);
+        let filename = path.file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_else(|| "file".to_string());
+
+        match tokio::fs::read(path).await {
+            Ok(bytes) => {
+                info!(target: "upload", "read file: {} ({} bytes)", filename, bytes.len());
+                let part = reqwest::multipart::Part::bytes(bytes)
+                    .file_name(filename)
+                    .mime_str("application/octet-stream")
+                    .unwrap_or_else(|_| reqwest::multipart::Part::bytes(vec![]));
+                form = form.part("files", part);
+                files_uploaded += 1;
+            }
+            Err(e) => {
+                let msg = format!("Failed to read '{}': {}", path_str, e);
+                error!(target: "upload", "{}", msg);
+                errors.push(msg);
+            }
+        }
+    }
+
+    if files_uploaded == 0 {
+        return serde_json::json!({
+            "ok": false,
+            "error": "No files could be read".to_string(),
+            "errors": errors,
+        }).to_string();
+    }
+
+    info!(target: "upload", "uploading {} files to {}", files_uploaded, url);
+
+    match client.post(&url).multipart(form).send().await {
+        Ok(resp) => {
+            let status = resp.status();
+            let body = resp.text().await.unwrap_or_default();
+            if status.is_success() {
+                info!(target: "upload", "upload succeeded: {} bytes response", body.len());
+                serde_json::json!({
+                    "ok": true,
+                    "status": status.as_u16(),
+                    "body": body,
+                    "files_uploaded": files_uploaded,
+                    "errors": errors,
+                }).to_string()
+            } else {
+                error!(target: "upload", "upload failed: HTTP {} - {}", status, body);
+                serde_json::json!({
+                    "ok": false,
+                    "status": status.as_u16(),
+                    "error": body,
+                    "files_uploaded": files_uploaded,
+                    "errors": errors,
+                }).to_string()
+            }
+        }
+        Err(e) => {
+            error!(target: "upload", "upload request failed: {}", e);
+            serde_json::json!({
+                "ok": false,
+                "error": format!("Request failed: {}", e),
+                "files_uploaded": files_uploaded,
+                "errors": errors,
+            }).to_string()
+        }
+    }
+}
+
 /// Read the engine's stdout and stderr log files so the UI can display
 /// WHY the engine failed to start. This is the #1 diagnostic tool for
 /// "engine offline" issues — the logs contain Python tracebacks, import
@@ -1285,6 +1395,7 @@ pub fn run() {
             check_lmstudio,
             pick_model_file,
             pick_corpus_files,
+            upload_corpus_files,
             engine_logs,
             verify_sidecar
         ])

@@ -130,10 +130,95 @@ def parse_html(raw: bytes) -> str:
 
 
 def parse_xml(raw: bytes) -> str:
+    """Parse XML files, preserving structural boundaries for corpus linguistics.
+
+    Handles TEI (Text Encoding Initiative) and BNC-style XML corpora by:
+      - Stripping <teiHeader> (metadata, not corpus text)
+      - Converting <p> tags to paragraph breaks (\\n\\n)
+      - Converting <s> tags to sentence boundaries (\\n)
+      - Converting <w> tags to space-separated tokens
+      - Stripping all other tags but keeping their text content
+
+    For non-TEI XML, falls back to extracting all text content with \\n separators.
+    """
     text, _ = decode_bytes(raw)
     soup = BeautifulSoup(text, "lxml-xml")
-    # Take all leaf text nodes
-    return _clean_text(soup.get_text(separator="\n"))
+
+    # Detect TEI: look for <teiHeader> or TEI namespace
+    is_tei = soup.find("teiheader") is not None or soup.find("tei") is not None
+
+    if is_tei:
+        # Strip the TEI header (metadata, not corpus text)
+        for header in soup.find_all("teiheader"):
+            header.decompose()
+        # Also strip any <front> that's purely metadata (keep <body>)
+        # but preserve <front> text if it contains actual content
+    else:
+        # Strip script/style just in case
+        for tag in soup(["script", "style"]):
+            tag.decompose()
+
+    # Build text with structural preservation
+    # Find the root content element (TEI <body>, <text>, or fallback to root)
+    root = soup.find("body") or soup.find("text") or soup
+
+    parts: list[str] = []
+    _extract_text_recursive(root, parts, is_tei)
+    return _clean_text("".join(parts))
+
+
+def _extract_text_recursive(node, parts: list[str], is_tei: bool) -> None:
+    """Recursively extract text from an XML node, preserving structure.
+
+    - <p> → paragraph break (\\n\\n)
+    - <s> → sentence boundary (\\n)
+    - <w> → space-separated token
+    - <lb>, <pb> → line/page break (\\n)
+    - <hi>, <em>, <strong>, <b>, <i> → inline (text only, no separator)
+    - All other tags → text content only
+    """
+    if node.name is None:
+        # It's a NavigableString (text node)
+        text = str(node).strip()
+        if text:
+            parts.append(text)
+        return
+
+    # Tags that introduce structural breaks
+    if node.name in ("p", "div", "head", "section", "article"):
+        _extract_children(node, parts, is_tei)
+        parts.append("\n\n")
+        return
+
+    if node.name in ("s", "seg", "u"):  # sentence, segment, utterance
+        _extract_children(node, parts, is_tei)
+        parts.append("\n")
+        return
+
+    if node.name in ("w", "token"):  # word-level token
+        _extract_children(node, parts, is_tei)
+        parts.append(" ")
+        return
+
+    if node.name in ("lb", "pb", "br"):  # line/page break
+        parts.append("\n")
+        return
+
+    if node.name in ("hi", "em", "strong", "b", "i", "u", "sup", "sub",
+                      "persname", "placename", "orgname", "rs", "ref",
+                      "title", "q", "quote", "cit", "mentioned"):
+        # Inline wrapper — extract text without separator
+        _extract_children(node, parts, is_tei)
+        return
+
+    # Default: extract all children
+    _extract_children(node, parts, is_tei)
+
+
+def _extract_children(node, parts: list[str], is_tei: bool) -> None:
+    """Extract text from all children of a node."""
+    for child in node.children:
+        _extract_text_recursive(child, parts, is_tei)
 
 
 def parse_csv(raw: bytes) -> str:

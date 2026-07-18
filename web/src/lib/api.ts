@@ -270,6 +270,47 @@ export async function nativeReadFile(path: string): Promise<File> {
   return new File([data], filename);
 }
 
+/**
+ * Upload corpus files directly via Rust (bypasses the webview's FormData
+ * limitation). Reads files from disk by path and POSTs them to the engine
+ * via reqwest multipart. This is the reliable upload path inside Tauri.
+ *
+ * Returns the parsed Document[] list from the engine, or throws on error.
+ */
+export async function nativeUploadCorpusFiles(
+  cid: string,
+  paths: string[],
+  language?: string,
+): Promise<Document[]> {
+  if (!isTauriRuntime()) {
+    throw new Error("Direct upload is only available in the desktop app.");
+  }
+  const invoke = await getInvoke();
+  const raw = (await invoke("upload_corpus_files", {
+    cid,
+    paths,
+    language: language ?? null,
+  })) as string;
+  const result = JSON.parse(raw) as {
+    ok: boolean;
+    status?: number;
+    body?: string;
+    error?: string;
+    files_uploaded?: number;
+    errors?: string[];
+  };
+  if (!result.ok) {
+    const errMsg = result.error || result.errors?.join("; ") || "Upload failed";
+    throw new Error(errMsg);
+  }
+  // The engine returns a JSON array of Document objects in result.body
+  try {
+    return JSON.parse(result.body || "[]") as Document[];
+  } catch {
+    return [];
+  }
+}
+
 export interface ChatRequest {
   message: string;
   provider?: "ollama" | "lmstudio" | "cloud";

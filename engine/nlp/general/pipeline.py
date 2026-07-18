@@ -92,8 +92,13 @@ class SpaCyPipeline:
         log.info("spacy_loading", model=self._model_name)
         self._nlp = spacy.load(self._model_name)
         # Sentencizer is built into most models, but add it defensively for
-        # blank/minimal models.
-        if "senter" not in self._nlp.pipe_names and "sentencizer" not in self._nlp.pipe_names:
+        # blank/minimal models. Also check for "parser" since the parser
+        # provides sentence boundaries too.
+        has_sent_pipe = any(
+            p in self._nlp.pipe_names
+            for p in ("senter", "sentencizer", "parser")
+        )
+        if not has_sent_pipe:
             self._nlp.add_pipe("sentencizer")
         spacy_version = spacy.__version__
         model_meta = self._nlp.meta
@@ -114,16 +119,26 @@ class SpaCyPipeline:
     def parse(self, text: str) -> Iterator[ParsedSentence]:
         self._load()
         assert self._nlp is not None
-        # Use nlp.pipe with as_tuples=False for a single doc.
         # Disable pipes we don't need to keep throughput high.
-        for doc in self._nlp.pipe([text], disable=[]):
+        # NER, entity_linker, entity_ruler, spancat, textcat are not used by
+        # CorpusMind's token storage model — disabling them gives ~25-40% speedup.
+        # We keep: tokenizer, tagger, morphologizer, lemmatizer, parser, attribute_ruler
+        # (attribute_ruler is needed by the rule-based lemmatizer for POS assignment).
+        disable = [
+            name for name in self._nlp.pipe_names
+            if name in {"ner", "entity_linker", "entity_ruler", "spancat", "textcat"}
+        ]
+        for doc in self._nlp.pipe([text], disable=disable):
             for sent in doc.sents:
                 tokens: list[ParsedToken] = []
                 for _i, tok in enumerate(sent, start=1):
                     head_idx = tok.head.i - sent.start + 1 if tok.head is not tok else 0
+                    # Preserve surface form when lemmatizer produces nothing
+                    # (e.g., punctuation, unknown words). Don't silently lowercase.
+                    lemma = tok.lemma_ if tok.lemma_ else tok.text
                     tokens.append(ParsedToken(
                         text=tok.text,
-                        lemma=tok.lemma_ or tok.text.lower(),
+                        lemma=lemma,
                         pos=tok.pos_ or "X",
                         pos_fine=tok.tag_ or "",
                         morph=str(tok.morph) if tok.morph else "",
