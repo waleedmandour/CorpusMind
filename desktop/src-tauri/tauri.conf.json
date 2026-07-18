@@ -58,8 +58,7 @@
     "longDescription": "CorpusMind lets a linguist go from raw texts and images to publication-ready quantitative and qualitative analysis — without writing a line of code, without sending unpublished data to a third-party server unless they explicitly choose to, and without losing the methodological transparency that peer review demands.",
     "windows": {
       "nsis": {
-        "installMode": "currentUser",
-        "displayLanguage": "en-US"
+        "installMode": "currentUser"
       },
       "webviewInstallMode": {
         "type": "downloadBootstrapper"
