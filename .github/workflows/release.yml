@@ -127,6 +127,29 @@ jobs:
           }
           Write-Host "OK: Sidecar exe verified at $exePath" -ForegroundColor Green
 
+      - name: Verify VC++ runtime DLLs are bundled
+        shell: pwsh
+        run: |
+          # FIX 4: numpy/scipy/spaCy's compiled extensions require these at load time.
+          # If the build machine doesn't have them, or PyInstaller's dependency
+          # walker misses them, the shipped .exe fails to launch on end-user
+          # machines with ZERO output (the failure happens before Python starts,
+          # so even stderr — which is always unbuffered since Python 3.9 — stays
+          # empty). Catch this at build time, not after a user reports it.
+          $internalDir = "desktop\src-tauri\binaries\corpusmind-engine\_internal"
+          $required = @("vcruntime140.dll", "vcruntime140_1.dll", "msvcp140.dll")
+          $missing = @()
+          foreach ($dll in $required) {
+            $found = Get-ChildItem -Path $internalDir -Filter $dll -Recurse -ErrorAction SilentlyContinue
+            if (-not $found) { $missing += $dll }
+          }
+          if ($missing.Count -gt 0) {
+            Write-Host "ERROR: Missing required runtime DLLs: $($missing -join ', ')" -ForegroundColor Red
+            Write-Host "The build will produce an installer that fails to launch on machines without the VC++ Redistributable pre-installed, with no diagnostic output." -ForegroundColor Red
+            exit 1
+          }
+          Write-Host "OK: all required VC++ runtime DLLs are bundled" -ForegroundColor Green
+
       - name: Build web PWA
         working-directory: web
         env:

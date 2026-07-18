@@ -70,8 +70,9 @@ _hidden_imports = [
     # Stats
     "numpy",
     "scipy",
-    "statsmodels",
-    "pingouin",
+    # NOTE: statsmodels + pingouin removed — never used (grep confirmed zero
+    # imports). They transitively pull in pandas — removing all three reduces
+    # bundle size and DLL load-time risk.
     # Storage
     "sqlalchemy",
     "aiosqlite",

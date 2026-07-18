@@ -2267,7 +2267,11 @@ html[dir="rtl"] {
 
 .app-body {
   display: grid;
-  grid-template-columns: 240px 1fr;
+  /* FIX 6: Changed from fixed '240px 1fr' to 'auto 1fr' so the grid column
+     sizes to the sidebar's actual width — which transitions smoothly between
+     240px (expanded) and 56px (collapsed). With the old fixed 240px, collapsing
+     the sidebar left a ~184px dead gap between the 56px icon rail and content. */
+  grid-template-columns: auto 1fr;
   overflow: hidden;
   min-height: 0;
 }

@@ -323,39 +323,68 @@ impl EngineSidecar {
         cmd.args(&args)
             .env("CORPUSMIND_HOST", ENGINE_HOST)
             .env("CORPUSMIND_PORT", ENGINE_PORT.to_string())
+            .env("PYTHONUNBUFFERED", "1")  // FIX 2: guarantee unbuffered stdio
             .stdout(Stdio::from(stdout))
             .stderr(Stdio::from(stderr));
 
-        // Set the working directory if we have one (needed for `python -m app.main`
-        // to find the `app` package — Python resolves modules relative to CWD).
+        // Set the working directory if we have one.
+        // FIX 5: working_dir now comes from resolve_command() as a single source
+        // of truth — for the bundled onedir exe, it's the exe's parent directory
+        // (so PyInstaller can find _internal/); for dev mode, it's the engine dir
+        // (so Python can find the `app` package).
         if let Some(ref wd) = working_dir {
             let wd_clean = if wd.starts_with(r"\\?\") {
                 wd.strip_prefix(r"\\?\").unwrap_or(wd).to_path_buf()
             } else {
                 wd.clone()
             };
+            info!(target: "sidecar", "setting CWD to: {}", wd_clean.display());
             cmd.current_dir(&wd_clean);
             // Also set PYTHONPATH to the engine dir so Python can find
             // the `app` package even if the CWD resolution doesn't work.
             // This is critical on Windows where path resolution can differ.
+            // (Harmless for the bundled-exe case — PyInstaller doesn't use PYTHONPATH.)
             cmd.env("PYTHONPATH", &wd_clean);
-        } else if program_clean.ends_with("corpusmind-engine.exe") || program_clean.ends_with("corpusmind-engine") {
-            // For the bundled PyInstaller onedir exe: set the working directory
-            // to the exe's parent directory so the bootloader can find _internal/
-            let exe_path = std::path::Path::new(&program_clean);
-            if let Some(parent) = exe_path.parent() {
-                let parent_clean = if parent.starts_with(r"\\?\") {
-                    parent.strip_prefix(r"\\?\").unwrap_or(parent).to_path_buf()
-                } else {
-                    parent.to_path_buf()
-                };
-                info!(target: "sidecar", "setting CWD to sidecar dir: {}", parent_clean.display());
-                cmd.current_dir(&parent_clean);
-            }
         }
 
-        let mut child = cmd.spawn()
-            .map_err(|e| SidecarError::Spawn(format!("{program}: {e}")))?;
+        // FIX 1: If cmd.spawn() fails at the OS level (ERROR_FILE_NOT_FOUND,
+        // ERROR_ACCESS_DENIED, etc.), write a diagnostic message into the
+        // engine.stderr.log file so "Run Diagnostics" in Settings shows it
+        // instead of leaving the user with two empty files and no clue.
+        let sidecar_dir = std::path::Path::new(&program_clean)
+            .parent()
+            .map(|p| p.display().to_string())
+            .unwrap_or_default();
+        let child_result = cmd.spawn();
+        let mut child = match child_result {
+            Ok(c) => c,
+            Err(e) => {
+                let msg = format!(
+                    "CorpusMind engine sidecar FAILED TO LAUNCH.\n\n\
+                     Attempted to run:\n  program: {program_clean}\n  args: {args:?}\n\n\
+                     OS error: {e}\n\n\
+                     This is a native process-launch failure (the operating system \
+                     could not start the executable) — the engine's own Python \
+                     logging never got a chance to run, which is why this log was \
+                     otherwise empty. On Windows, the most common causes are:\n\n\
+                     1. Missing Microsoft Visual C++ Redistributable (x64), required \
+                        by numpy/scipy/spaCy. Download and install:\n\
+                        https://aka.ms/vs/17/release/vc_redist.x64.exe\n\n\
+                     2. Windows Defender or another antivirus quarantined or blocked \
+                        a file inside the installed corpusmind-engine folder. Check \
+                        Windows Security > Protection history, restore/allow the \
+                        item if found, then add a folder exclusion for:\n\
+                        {sidecar_dir}\n\n\
+                     3. The installed files are corrupted or incomplete — try \
+                        reinstalling CorpusMind.\n\n\
+                     You can also double-click the executable below directly to see \
+                     a live console window with the exact error:\n  {program_clean}\n"
+                );
+                let _ = std::fs::write(&stderr_path, &msg);
+                error!(target: "sidecar", "spawn() OS-level failure: {e}");
+                return Err(SidecarError::Spawn(format!("{program}: {e}")));
+            }
+        };
 
         // Post-spawn liveness check: wait 2 seconds, then verify the process
         // is still alive. If it exited immediately (common causes: missing
@@ -379,6 +408,23 @@ impl EngineSidecar {
                 if !stderr_content.is_empty() {
                     error!(target: "sidecar", "engine stderr:\n{}", stderr_content);
                 } else {
+                    // FIX 1b: Write the diagnostic guidance INTO the stderr log file
+                    // (not just the internal log crate) so "Run Diagnostics" shows it.
+                    let msg = format!(
+                        "CorpusMind engine process exited immediately after launch \
+                         (exit status: {status}) with NO output on stdout or stderr.\n\n\
+                         Since Python's stderr is always unbuffered (Python 3.9+), zero \
+                         output means the crash happened BEFORE the Python interpreter \
+                         started — a native/OS-level failure, not an application bug. \
+                         Most likely causes on Windows:\n\n\
+                         1. Missing Microsoft Visual C++ Redistributable (x64):\n\
+                            https://aka.ms/vs/17/release/vc_redist.x64.exe\n\n\
+                         2. Antivirus/Windows Defender blocked or quarantined a file. \
+                            Check Windows Security > Protection history.\n\n\
+                         3. Try double-clicking the executable directly to see a live \
+                            error window:\n  {program_clean}\n"
+                    );
+                    let _ = std::fs::write(&stderr_path, &msg);
                     error!(target: "sidecar", "engine stderr is EMPTY — process may have crashed before writing any output (broken venv, missing python.exe, or antivirus interference)");
                 }
                 // Don't store the dead child — let the caller know spawn failed
@@ -423,16 +469,22 @@ impl EngineSidecar {
             if candidate.exists() {
                 // Strip \\?\ prefix — PyInstaller bootloader doesn't handle it
                 let clean = strip_verbatim_prefix(&candidate);
+                // FIX 5: Return the exe's parent dir as working_dir so spawn()
+                // can set cmd.current_dir() — PyInstaller onedir needs this to
+                // find _internal/. Single source of truth (was previously computed
+                // in a separate branch in spawn()).
+                let wd = clean.parent().map(|p| p.to_path_buf());
                 info!(target: "sidecar", "found bundled sidecar (onedir): {}", clean.display());
-                return (clean.to_string_lossy().into_owned(), vec![], None);
+                return (clean.to_string_lossy().into_owned(), vec![], wd);
             }
             // Fallback path: resources/binaries/corpusmind-engine/corpusmind-engine.exe
             // (matches the glob-form resources config, for backward compat)
             let candidate_glob = resource.join("binaries").join("corpusmind-engine").join(exe_name);
             if candidate_glob.exists() {
                 let clean = strip_verbatim_prefix(&candidate_glob);
+                let wd = clean.parent().map(|p| p.to_path_buf());
                 info!(target: "sidecar", "found bundled sidecar (glob layout): {}", clean.display());
-                return (clean.to_string_lossy().into_owned(), vec![], None);
+                return (clean.to_string_lossy().into_owned(), vec![], wd);
             }
         }
 
@@ -745,6 +797,21 @@ async fn restart_engine(app: tauri::AppHandle) -> String {
         Err(e) => {
             // Return diagnostic info about what was tried
             let (program, args, wd) = sidecar.resolve_command(&app);
+            // FIX 9: Tailor the hint to which resolution branch was used.
+            // The dev-venv hint is only useful when running `python -m app.main`
+            // from Documents\CorpusMind\engine\. For the bundled sidecar exe
+            // (the common case for installed users), the hint should point at
+            // VC++ Redistributable + antivirus — matching Fix 1's guidance.
+            let is_bundled = program.ends_with("corpusmind-engine.exe")
+                || program.ends_with("corpusmind-engine");
+            let hint = if is_bundled {
+                "The bundled engine executable failed to launch. Most common causes on Windows:\n\
+                 1. Missing Microsoft Visual C++ Redistributable (x64): https://aka.ms/vs/17/release/vc_redist.x64.exe\n\
+                 2. Windows Defender quarantined a file — check Protection history.\n\
+                 3. Try double-clicking the executable directly to see the live error."
+            } else {
+                "Make sure the engine venv exists at Documents\\CorpusMind\\engine\\.venv"
+            };
             serde_json::json!({
                 "ok": false,
                 "engine_running": false,
@@ -753,7 +820,7 @@ async fn restart_engine(app: tauri::AppHandle) -> String {
                     "program": program,
                     "args": args.join(" "),
                     "working_dir": wd.map(|d| d.display().to_string()).unwrap_or_else(|| "(none)".to_string()),
-                    "hint": "Make sure the engine venv exists at Documents\\CorpusMind\\engine\\.venv"
+                    "hint": hint
                 }
             }).to_string()
         }
@@ -1508,6 +1575,7 @@ fn test_sidecar(app: tauri::AppHandle) -> String {
     cmd.args(&args)
         .env("CORPUSMIND_HOST", ENGINE_HOST)
         .env("CORPUSMIND_PORT", ENGINE_PORT.to_string())
+        .env("PYTHONUNBUFFERED", "1")
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
 

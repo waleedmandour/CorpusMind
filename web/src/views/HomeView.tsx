@@ -14,9 +14,11 @@ import { useQuery } from "@tanstack/react-query";
 import { useUI } from "@/store/ui";
 import { useApp } from "@/store/app";
 import { api, isTauriRuntime, nativeProvidersHealth } from "@/lib/api";
+import { useEngineVersionDisplay } from "@/hooks/useEngineVersion";
 
 export function HomeView() {
   const setActiveNav = useUI((s) => s.setActiveNav);
+  const versionDisplay = useEngineVersionDisplay();
   const activeProjectId = useApp((s) => s.activeProjectId);
   const activeCorpusId = useApp((s) => s.activeCorpusId);
 
@@ -102,7 +104,7 @@ export function HomeView() {
           </div>
         )}
         <div className="status-chip info">
-          v0.1.3 | AGPL-3.0
+          {versionDisplay} | AGPL-3.0
         </div>
       </div>
 

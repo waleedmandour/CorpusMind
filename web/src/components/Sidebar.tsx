@@ -23,6 +23,7 @@ import { useUI, type NavTarget } from "@/store/ui";
 import { useApp } from "@/store/app";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { useEngineVersionDisplay } from "@/hooks/useEngineVersion";
 import { t, type TranslationKey } from "@/lib/i18n";
 
 interface NavItem {
@@ -113,6 +114,7 @@ export function Sidebar() {
   const sidebarCollapsed = useUI((s) => s.sidebarCollapsed);
   const toggleSidebar = useUI((s) => s.toggleSidebar);
   const activeCorpusId = useApp((s) => s.activeCorpusId);
+  const versionDisplay = useEngineVersionDisplay();
 
   const activeCorpus = useQuery({
     queryKey: ["corpus", activeCorpusId],
@@ -133,7 +135,7 @@ export function Sidebar() {
           {!sidebarCollapsed && (
             <div className="sidebar-logo-text-group">
               <span className="sidebar-logo-text">CorpusMind</span>
-              <span className="sidebar-logo-version">v0.1.3</span>
+              <span className="sidebar-logo-version">{versionDisplay}</span>
             </div>
           )}
         </div>
@@ -191,7 +193,7 @@ export function Sidebar() {
                       aria-label={t(lang, item.labelKey)}
                     >
                       <span className="sidebar-item-icon" aria-hidden>{item.icon}</span>
-                      {(sidebarCollapsed || true) && (
+                      {!sidebarCollapsed && (
                         <span className="sidebar-item-label">{t(lang, item.labelKey)}</span>
                       )}
                     </button>
