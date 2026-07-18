@@ -1,6 +1,6 @@
 [package]
 name = "corpusmind-desktop"
-version = "0.1.2"
+version = "0.1.3"
 description = "CorpusMind desktop shell (Tauri 2) — manages the engine sidecar lifecycle and OS integration."
 authors = ["Dr. Waleed Mandour", "Prof. Wesam Ibrahim"]
 license = "AGPL-3.0-only"

@@ -7,7 +7,7 @@ export function AboutView() {
       <div className="about-hero">
         <img src="/icon-512.png" alt="CorpusMind" width="96" height="96" className="about-logo-img" />
         <h1>CorpusMind</h1>
-        <p className="about-version">Version 0.1.2 | AGPL-3.0-only</p>
+        <p className="about-version">Version 0.1.3 | AGPL-3.0-only</p>
         <p className="about-tagline">
           Local-first, AI-native research environment for corpus linguistics
           and multimodal discourse analysis.
@@ -38,7 +38,7 @@ export function AboutView() {
         <div style={{ background: "var(--bg-subtle)", padding: "var(--space-3)", borderRadius: "var(--radius-md)", fontSize: "13px", lineHeight: 1.6 }}>
           Mandour, W., &amp; Ibrahim, W. (2026). <em>CorpusMind: A local-first,
           AI-native research environment for corpus linguistics and multimodal
-          discourse analysis</em> (Version 0.1.2) [Computer software]. Zenodo.
+          discourse analysis</em> (Version 0.1.3) [Computer software]. Zenodo.
           <a href="https://doi.org/10.5281/zenodo.21226650">https://doi.org/10.5281/zenodo.21226650</a>
         </div>
       </section>

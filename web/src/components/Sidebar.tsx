@@ -133,7 +133,7 @@ export function Sidebar() {
           {!sidebarCollapsed && (
             <div className="sidebar-logo-text-group">
               <span className="sidebar-logo-text">CorpusMind</span>
-              <span className="sidebar-logo-version">v0.1.2</span>
+              <span className="sidebar-logo-version">v0.1.3</span>
             </div>
           )}
         </div>

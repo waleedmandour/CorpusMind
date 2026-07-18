@@ -102,7 +102,7 @@ export function HomeView() {
           </div>
         )}
         <div className="status-chip info">
-          v0.1.2 | AGPL-3.0
+          v0.1.3 | AGPL-3.0
         </div>
       </div>
 

@@ -300,14 +300,26 @@ impl EngineSidecar {
         // for dev when the binary isn't present. Returns (program, args, working_dir).
         let (program, args, working_dir) = self.resolve_command(app);
 
-        info!(target: "sidecar", "spawning engine: {} {}", program, args.join(" "));
+        // CRITICAL: Strip the \\?\ prefix (Windows extended-length path) from the
+        // program path. Tauri's resource_dir() returns paths with this prefix on
+        // Windows, but the PyInstaller bootloader doesn't handle it correctly —
+        // it can't find its _internal/ directory and crashes silently with no
+        // output. Stripping the prefix fixes the most common cause of "engine
+        // fails to load with empty logs" on Windows.
+        let program_clean = if program.starts_with(r"\\?\") {
+            program[4..].to_string()
+        } else {
+            program.clone()
+        };
+
+        info!(target: "sidecar", "spawning engine: {} {}", program_clean, args.join(" "));
         if let Some(ref wd) = working_dir {
             info!(target: "sidecar", "working dir: {}", wd.display());
         }
         info!(target: "sidecar", "stdout → {}", stdout_path.display());
         info!(target: "sidecar", "stderr → {}", stderr_path.display());
 
-        let mut cmd = Command::new(&program);
+        let mut cmd = Command::new(&program_clean);
         cmd.args(&args)
             .env("CORPUSMIND_HOST", ENGINE_HOST)
             .env("CORPUSMIND_PORT", ENGINE_PORT.to_string())
@@ -317,11 +329,29 @@ impl EngineSidecar {
         // Set the working directory if we have one (needed for `python -m app.main`
         // to find the `app` package — Python resolves modules relative to CWD).
         if let Some(ref wd) = working_dir {
-            cmd.current_dir(wd);
+            let wd_clean = if wd.starts_with(r"\\?\") {
+                wd.strip_prefix(r"\\?\").unwrap_or(wd).to_path_buf()
+            } else {
+                wd.clone()
+            };
+            cmd.current_dir(&wd_clean);
             // Also set PYTHONPATH to the engine dir so Python can find
             // the `app` package even if the CWD resolution doesn't work.
             // This is critical on Windows where path resolution can differ.
-            cmd.env("PYTHONPATH", wd);
+            cmd.env("PYTHONPATH", &wd_clean);
+        } else if program_clean.ends_with("corpusmind-engine.exe") || program_clean.ends_with("corpusmind-engine") {
+            // For the bundled PyInstaller onedir exe: set the working directory
+            // to the exe's parent directory so the bootloader can find _internal/
+            let exe_path = std::path::Path::new(&program_clean);
+            if let Some(parent) = exe_path.parent() {
+                let parent_clean = if parent.starts_with(r"\\?\") {
+                    parent.strip_prefix(r"\\?\").unwrap_or(parent).to_path_buf()
+                } else {
+                    parent.to_path_buf()
+                };
+                info!(target: "sidecar", "setting CWD to sidecar dir: {}", parent_clean.display());
+                cmd.current_dir(&parent_clean);
+            }
         }
 
         let mut child = cmd.spawn()
@@ -391,15 +421,18 @@ impl EngineSidecar {
             // (matches the map-form resources config)
             let candidate = resource.join("corpusmind-engine").join(exe_name);
             if candidate.exists() {
-                info!(target: "sidecar", "found bundled sidecar (onedir): {}", candidate.display());
-                return (candidate.to_string_lossy().into_owned(), vec![], None);
+                // Strip \\?\ prefix — PyInstaller bootloader doesn't handle it
+                let clean = strip_verbatim_prefix(&candidate);
+                info!(target: "sidecar", "found bundled sidecar (onedir): {}", clean.display());
+                return (clean.to_string_lossy().into_owned(), vec![], None);
             }
             // Fallback path: resources/binaries/corpusmind-engine/corpusmind-engine.exe
             // (matches the glob-form resources config, for backward compat)
             let candidate_glob = resource.join("binaries").join("corpusmind-engine").join(exe_name);
             if candidate_glob.exists() {
-                info!(target: "sidecar", "found bundled sidecar (glob layout): {}", candidate_glob.display());
-                return (candidate_glob.to_string_lossy().into_owned(), vec![], None);
+                let clean = strip_verbatim_prefix(&candidate_glob);
+                info!(target: "sidecar", "found bundled sidecar (glob layout): {}", clean.display());
+                return (clean.to_string_lossy().into_owned(), vec![], None);
             }
         }
 
@@ -1396,6 +1429,7 @@ pub fn run() {
             pick_model_file,
             pick_corpus_files,
             upload_corpus_files,
+            test_sidecar,
             engine_logs,
             verify_sidecar
         ])
@@ -1423,6 +1457,96 @@ fn target_triple() -> &'static str {
             // take over cleanly.
             warn!(target: "sidecar", "unknown target triple for arch={arch} os={os}, sidecar lookup will fail");
             "unknown-target"
+        }
+    }
+}
+
+/// Strip the Windows extended-length path prefix (\\?\) from a path.
+///
+/// Tauri's `resource_dir()` returns paths with this prefix on Windows (e.g.,
+/// `\\?\C:\Program Files\CorpusMind`). The PyInstaller bootloader doesn't
+/// handle this prefix correctly — it can't find its `_internal/` directory
+/// and crashes silently with no output. Stripping the prefix fixes the most
+/// common cause of "engine fails to load with empty logs" on Windows.
+fn strip_verbatim_prefix(path: &std::path::Path) -> std::path::PathBuf {
+    let s = path.to_string_lossy();
+    if s.starts_with(r"\\?\") {
+        std::path::PathBuf::from(&s[4..])
+    } else {
+        path.to_path_buf()
+    }
+}
+
+/// Diagnostic command: run the sidecar exe directly with --version and capture
+/// its stdout + stderr. This lets the user see the ACTUAL error when the engine
+/// crashes (e.g., missing DLL, Python import error) instead of just empty logs.
+///
+/// The regular spawn redirects stdout/stderr to log files, but if the process
+/// crashes before the PyInstaller bootloader even starts writing, those files
+/// stay empty. This command runs the exe synchronously and captures everything.
+#[tauri::command]
+fn test_sidecar(app: tauri::AppHandle) -> String {
+    let sidecar: State<EngineSidecar> = app.state();
+    let (program, args, _wd) = sidecar.resolve_command(&app);
+
+    // Strip \\?\ prefix
+    let program_clean = if program.starts_with(r"\\?\") {
+        program[4..].to_string()
+    } else {
+        program.clone()
+    };
+
+    info!(target: "sidecar", "test_sidecar: running {} {}", program_clean, args.join(" "));
+
+    // Set the working directory to the exe's parent dir (for PyInstaller _internal/)
+    let exe_path = std::path::Path::new(&program_clean);
+    let working_dir = exe_path.parent().map(|p| {
+        strip_verbatim_prefix(p)
+    });
+
+    let mut cmd = Command::new(&program_clean);
+    cmd.args(&args)
+        .env("CORPUSMIND_HOST", ENGINE_HOST)
+        .env("CORPUSMIND_PORT", ENGINE_PORT.to_string())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+
+    if let Some(ref wd) = working_dir {
+        cmd.current_dir(wd);
+    }
+
+    match cmd.output() {
+        Ok(output) => {
+            let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+            let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+            let exit_code = output.status.code().unwrap_or(-1);
+
+            info!(target: "sidecar", "test_sidecar: exit code={}, stdout={} bytes, stderr={} bytes",
+                  exit_code, stdout.len(), stderr.len());
+
+            serde_json::json!({
+                "ok": output.status.success(),
+                "exit_code": exit_code,
+                "stdout": stdout,
+                "stderr": stderr,
+                "program": program_clean,
+                "message": if output.status.success() {
+                    "Sidecar ran successfully".to_string()
+                } else {
+                    format!("Sidecar exited with code {}. See stderr for details.", exit_code)
+                }
+            }).to_string()
+        }
+        Err(e) => {
+            error!(target: "sidecar", "test_sidecar: failed to run: {}", e);
+            serde_json::json!({
+                "ok": false,
+                "exit_code": null,
+                "stdout": "",
+                "stderr": format!("Failed to execute sidecar: {}", e),
+                "program": program_clean,
+                "message": format!("Could not run sidecar exe: {}. This usually means the file doesn't exist or Windows blocked it (antivirus).", e)
+            }).to_string()
         }
     }
 }
