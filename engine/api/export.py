@@ -502,7 +502,7 @@ async def export_methods_pdf(cid: str, session: AsyncSession = Depends(get_sessi
         Paragraph("Methods Section (auto-drafted)", h1),
         Spacer(1, 12),
         Paragraph(
-            f"The analysis was conducted using <b>CorpusMind</b> v0.1.5. "
+            f"The analysis was conducted using <b>CorpusMind</b> v0.1.6. "
             f"The corpus &ldquo;{c.name}&rdquo; ({c.language}) contained "
             f"{stats.get('document_count', 0)} documents, "
             f"{stats.get('token_count', 0)} tokens, and "

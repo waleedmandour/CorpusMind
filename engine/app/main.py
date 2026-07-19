@@ -63,7 +63,7 @@ def create_app() -> FastAPI:
             "polish — saved searches, bookmarks, favorites, project sharing, "
             "at-rest encryption, accessibility hardening."
         ),
-        version="0.1.5",
+        version="0.1.6",
         license_info={"name": "AGPL-3.0-only", "url": "https://www.gnu.org/licenses/agpl-3.0.html"},
         lifespan=lifespan,
     )
@@ -152,3 +152,20 @@ def run() -> None:
         lifespan="on",
         access_log=False,
     )
+
+
+# CRITICAL: This guard is what makes the PyInstaller-bundled exe actually
+# start the server. Without it, `python app/main.py` (which is what the
+# PyInstaller exe does) just creates the `app` object and exits with code 0
+# — the uvicorn server never starts. The `run()` function is only called via
+# the `corpusmind-engine` console script (pip entry point), which PyInstaller
+# doesn't use. This was the root cause of "engine dies with exit code 0 and
+# empty logs" on Windows.
+if __name__ == "__main__":
+    # Early startup signal — with PYTHONUNBUFFERED=1, this appears in
+    # engine.stdout.log immediately, confirming Python started. If this
+    # line never appears, the hang/crash is happening before Python gets
+    # control (native/OS-level issue).
+    import sys
+    print(f"CorpusMind engine starting (Python {sys.version.split()[0]})...", flush=True)
+    run()
