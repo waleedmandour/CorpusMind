@@ -63,7 +63,7 @@ def create_app() -> FastAPI:
             "polish — saved searches, bookmarks, favorites, project sharing, "
             "at-rest encryption, accessibility hardening."
         ),
-        version="0.1.6",
+        version="0.1.7",
         license_info={"name": "AGPL-3.0-only", "url": "https://www.gnu.org/licenses/agpl-3.0.html"},
         lifespan=lifespan,
     )
@@ -128,7 +128,17 @@ app = create_app()
 def run() -> None:
     """Entry point for `corpusmind-engine` console script.
 
-    Uvicorn config notes (per FastAPI deployment docs + PyInstaller research):
+    CRITICAL PyInstaller FIX: Pass the `app` OBJECT directly to uvicorn.run()
+    instead of the import string "app.main:app". In a PyInstaller frozen
+    environment, the `app` package isn't on sys.path (PyInstaller bundles
+    app/main.py as __main__, not as an importable package), so uvicorn's
+    import-string form fails with:
+      ERROR: Error loading ASGI app. Could not import module "app.main".
+    Passing the object directly avoids the import entirely. This works fine
+    with workers=1 and reload=False (the only two cases where the import
+    string is required).
+
+    Uvicorn config notes (per FastAPI deployment docs):
       - workers=1: single process; avoids spawn/signal issues under PyInstaller
       - loop="asyncio": Windows-safe; uvloop is Unix-only and PyInstaller-hostile
       - http="h11": pure-Python, always present, no native dep to bundle
@@ -140,7 +150,7 @@ def run() -> None:
 
     settings = get_settings()
     uvicorn.run(
-        "app.main:app",
+        app,  # PASS THE OBJECT, not the import string — PyInstaller can't import "app.main"
         host=settings.host,
         port=settings.port,
         log_level=settings.log_level,

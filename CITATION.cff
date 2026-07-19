@@ -51,7 +51,7 @@ date-released: 2026-07-07
 identifiers:
   - type: doi
     value: "10.5281/zenodo.21226650"
-    description: "Zenodo DOI for CorpusMind v0.1.6 (concept DOI — points to the latest version)"
+    description: "Zenodo DOI for CorpusMind v0.1.7 (concept DOI — points to the latest version)"
 preferred-citation:
   type: software
   authors:
