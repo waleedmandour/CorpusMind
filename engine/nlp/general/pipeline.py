@@ -90,7 +90,40 @@ class SpaCyPipeline:
             return
         import spacy
         log.info("spacy_loading", model=self._model_name)
-        self._nlp = spacy.load(self._model_name)
+
+        # PyInstaller FIX: spacy.load("en_core_web_sm") uses spaCy's
+        # data resolution which looks for the model in spaCy's data path.
+        # In a PyInstaller frozen environment, this path resolution can fail
+        # with "[E050] Can't find model 'en_core_web_sm'". The fix is to
+        # import the model package directly and pass the loaded module to
+        # spacy.load() — this bypasses the data-path resolution entirely.
+        try:
+            self._nlp = spacy.load(self._model_name)
+        except OSError:
+            # Fallback: import the model package directly and use its path.
+            # This works in PyInstaller bundles where the model is collected
+            # as a package but spaCy's data-path resolution doesn't find it.
+            log.info("spacy_fallback_import", model=self._model_name)
+            try:
+                model_module = __import__(self._model_name)
+                model_path = model_module.__file__
+                if model_path:
+                    import os
+                    model_dir = os.path.dirname(model_path)
+                    self._nlp = spacy.load(model_dir)
+                else:
+                    raise
+            except (ImportError, OSError) as e2:
+                log.error("spacy_load_failed", model=self._model_name,
+                          error=str(e2),
+                          hint="The spaCy model is not installed. In development, run: "
+                               "python -m spacy download en_core_web_sm")
+                raise ValueError(
+                    f"spaCy model '{self._model_name}' could not be loaded. "
+                    f"In development, install it with: "
+                    f"python -m spacy download {self._model_name}"
+                ) from e2
+
         # Sentencizer is built into most models, but add it defensively for
         # blank/minimal models. Also check for "parser" since the parser
         # provides sentence boundaries too.

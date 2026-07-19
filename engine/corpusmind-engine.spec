@@ -92,19 +92,15 @@ _reference_data = _repo_root / "reference-data"
 if _reference_data.exists():
     _datas.append((str(_reference_data), "reference-data"))
 
-# Bundle the spaCy `en_core_web_sm` model's package DATA (not just the importable
-# Python modules). PyInstaller's static analysis picks up the model package's
-# .py files via the hidden import below, but historically does NOT collect the
-# model's binary assets (weights, vocab, vectors, config JSONs) — they live as
-# package data, not as code. Without this, `spacy.load("en_core_web_sm")` fails
-# at runtime inside the bundled engine with "Can't find model 'en_core_web_sm'"
-# or a missing-data error. This is a DISTINCT failure mode from the engine
-# detection bug: the process crashes/errors on NLP ingestion rather than being
-# healthy-but-undetected. We collect defensively; if the model isn't installed
-# in the build venv (spaCy download is non-fatal in the build scripts), these
-# calls simply return empty lists and the build proceeds without the model.
+# Bundle the spaCy `en_core_web_sm` model as a COMPLETE package (Python files
+# + data files). PyInstaller's static analysis picks up the model package via
+# collect_submodules, but collect_data_files with include_py_files=False only
+# collects the data files, not the __init__.py — so the model can't be
+# imported as a package at runtime. Using include_py_files=True ensures the
+# model is a fully importable package, which our fallback __import__() in
+# pipeline.py relies on.
 try:
-    _datas += collect_data_files("en_core_web_sm", include_py_files=False)
+    _datas += collect_data_files("en_core_web_sm", include_py_files=True)
     _hidden_imports += collect_submodules("en_core_web_sm")
 except Exception:
     # Model not installed in this build venv — non-fatal. The engine will still
