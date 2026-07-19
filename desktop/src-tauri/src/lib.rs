@@ -267,12 +267,19 @@ pub enum SidecarError {
 
 struct EngineSidecar {
     child: Mutex<Option<Child>>,
+    // FIX 10: Path to the current run's stderr log file, set by spawn() and
+    // read by wait_for_health() if the process dies (or we suspect a hang)
+    // after the initial 2-second liveness check — so a later crash gets the
+    // same rich diagnostic treatment as an immediate one, instead of a
+    // generic timeout.
+    stderr_log_path: Mutex<Option<std::path::PathBuf>>,
 }
 
 impl EngineSidecar {
     fn new() -> Self {
         Self {
             child: Mutex::new(None),
+            stderr_log_path: Mutex::new(None),
         }
     }
 
@@ -290,6 +297,10 @@ impl EngineSidecar {
         std::fs::create_dir_all(&log_path).ok();
         let stdout_path = log_path.join("engine.stdout.log");
         let stderr_path = log_path.join("engine.stderr.log");
+
+        // FIX 10 Step 2: Record the stderr log path so wait_for_health() can
+        // read it later if the process dies after the initial 2-second check.
+        *self.stderr_log_path.lock().unwrap() = Some(stderr_path.clone());
 
         let stdout = std::fs::File::create(&stdout_path)
             .map_err(|e| SidecarError::Spawn(format!("create {}: {e}", stdout_path.display())))?;
@@ -613,7 +624,57 @@ impl EngineSidecar {
             .map_err(|e| SidecarError::Health(e.to_string()))?;
 
         loop {
+            // FIX 10 Step 3: Check the child is still alive on EVERY iteration,
+            // not just once at t=2s in spawn(). A crash any time during the
+            // health wait would otherwise go undetected for the full
+            // HEALTH_TIMEOUT, silently wasting up to 30s before reporting a
+            // generic, uninformative timeout with no indication anything died.
+            {
+                let mut child_opt = self.child.lock().unwrap();
+                if let Some(child) = child_opt.as_mut() {
+                    if let Ok(Some(status)) = child.try_wait() {
+                        // Process died while we were waiting for it to become
+                        // healthy. Read whatever it wrote to stderr (if
+                        // anything) and give the same actionable treatment as
+                        // an immediate crash, instead of a bare timeout.
+                        // Clear the dead child first, then drop the lock before
+                        // taking the stderr_log_path lock (avoid lock-ordering).
+                        *child_opt = None;
+                        drop(child_opt);
+                        let stderr_content = self
+                            .stderr_log_path
+                            .lock()
+                            .unwrap()
+                            .as_ref()
+                            .and_then(|p| std::fs::read_to_string(p).ok())
+                            .unwrap_or_default();
+                        let detail = if stderr_content.trim().is_empty() {
+                            "stderr was empty — the process produced no output before dying. \
+                             This is consistent with a native/OS-level crash (missing VC++ \
+                             Redistributable, or antivirus interference) that happened after \
+                             the initial launch succeeded — for example during a delayed DLL load."
+                                .to_string()
+                        } else {
+                            format!("stderr:\n{}", stderr_content.trim())
+                        };
+                        error!(
+                            target: "sidecar",
+                            "engine process died at {:?} while waiting for health: {status}",
+                            start.elapsed()
+                        );
+                        return Err(SidecarError::Health(format!(
+                            "engine process exited unexpectedly (status: {status}) after {:?} — {detail}",
+                            start.elapsed()
+                        )));
+                    }
+                }
+            }
+
             if start.elapsed() > HEALTH_TIMEOUT {
+                // The process is still alive (per the check above) but never
+                // became healthy within the timeout — a genuine hang, not a
+                // crash. Distinguish this clearly so the user isn't told to
+                // look for a crash that didn't happen.
                 return Err(SidecarError::Timeout(HEALTH_TIMEOUT));
             }
             match client.get(&url).send() {
@@ -782,6 +843,21 @@ async fn restart_engine(app: tauri::AppHandle) -> String {
                     "engine_running": true,
                     "message": "Engine restarted successfully"
                 }).to_string(),
+                // FIX 10 Step 4: Surface the died-mid-wait detail in the
+                // Recheck button's returned message, and write to stderr log.
+                Ok(Err(SidecarError::Health(msg))) => {
+                    if let Ok(log_dir) = app.path().app_log_dir() {
+                        let _ = std::fs::write(
+                            log_dir.join("engine.stderr.log"),
+                            format!("CorpusMind engine died while starting up.\n\n{msg}\n"),
+                        );
+                    }
+                    serde_json::json!({
+                        "ok": false,
+                        "engine_running": false,
+                        "message": format!("Engine started but died during health check: {msg}")
+                    }).to_string()
+                }
                 Ok(Err(e)) => serde_json::json!({
                     "ok": false,
                     "engine_running": false,
@@ -1469,6 +1545,19 @@ pub fn run() {
                 }).await;
                 match result {
                     Ok(Ok(())) => info!(target: "sidecar", "engine ready"),
+                    // FIX 10 Step 4: If the engine died mid-wait (SidecarError::Health),
+                    // write the diagnostic into the stderr log file so "Run Diagnostics"
+                    // shows it. (SidecarError::Timeout = genuine hang — process still
+                    // alive — don't overwrite the log, since stderr may still be empty.)
+                    Ok(Err(SidecarError::Health(msg))) => {
+                        error!(target: "sidecar", "engine not ready: {msg}");
+                        if let Ok(log_dir) = handle.path().app_log_dir() {
+                            let _ = std::fs::write(
+                                log_dir.join("engine.stderr.log"),
+                                format!("CorpusMind engine died while starting up.\n\n{msg}\n"),
+                            );
+                        }
+                    }
                     Ok(Err(e)) => error!(target: "sidecar", "engine not ready: {e}"),
                     Err(e) => error!(target: "sidecar", "health check task panicked: {e}"),
                 }

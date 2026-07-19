@@ -162,18 +162,19 @@ jobs:
           npm install
           npm run build
 
-      - name: Build Tauri app (NSIS + MSI)
+      - name: Build Tauri app (NSIS)
         working-directory: desktop/src-tauri
         run: cargo tauri build
 
       - name: Verify installer size
         shell: pwsh
         run: |
-          $msi = Get-ChildItem desktop/src-tauri/target/release/bundle/msi/*.msi | Select-Object -First 1
+          # FIX 11: MSI target removed — it always installs per-machine to
+          # Program Files (Tauri issue #13792), inconsistent with the app's
+          # per-user NSIS design. Only NSIS .exe is shipped now.
           $exe = Get-ChildItem desktop/src-tauri/target/release/bundle/nsis/*.exe | Select-Object -First 1
-          if ($msi) { Write-Host "MSI: $($msi.Name) - $([math]::Round($msi.Length / 1MB, 1)) MB" }
-          if ($exe) { Write-Host "NSIS: $($exe.Name) - $([math]::Round($exe.Length / 1MB, 1)) MB" }
-          if (-not $msi -and -not $exe) { Write-Host "ERROR: No installers produced"; exit 1 }
+          if ($exe) { Write-Host "NSIS (per-user, no admin required): $($exe.Name) - $([math]::Round($exe.Length / 1MB, 1)) MB" }
+          if (-not $exe) { Write-Host "ERROR: No NSIS installer produced"; exit 1 }
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -181,14 +182,12 @@ jobs:
           name: windows-x64
           path: |
             desktop/src-tauri/target/release/bundle/nsis/*.exe
-            desktop/src-tauri/target/release/bundle/msi/*.msi
 
       - name: Attach to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
             desktop/src-tauri/target/release/bundle/nsis/*.exe
-            desktop/src-tauri/target/release/bundle/msi/*.msi
           fail_on_unmatched_files: false
           generate_release_notes: true
 
