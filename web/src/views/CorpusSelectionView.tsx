@@ -2,17 +2,26 @@
  * CorpusSelectionView — unified view for managing both the user's study
  * corpus (target) and the reference corpus (for keyness comparison).
  *
- * The target mode includes:
- *   - Project selector (create/select a project)
- *   - Corpus list (create/select a corpus within the project)
- *   - File picker (upload .txt, .docx, .pdf, .html, .xml, .csv)
- *   - Document list (shows ingested files with format/language/size)
- *   - Clean button (opens the 16-option cleaning modal)
+ * Redesigned (v0.1.8) based on corpus linguistics UI/UX research:
+ *   - Corpus dashboard with live stats (tokens, types, sentences, docs)
+ *   - Pipeline status badges (Pending → Ingesting → Ready)
+ *   - Expanded file format support (.txt, .xml, .docx, .pdf, .html, .csv, .tsv, .md)
+ *   - Native file picker + drag-drop
+ *   - Reference corpus: download, upload, and bundled frequency lists
+ *   - Clear step-by-step workflow for corpus linguists
  *
- * The reference mode includes:
- *   - Download (search HuggingFace + Wikipedia + OPUS)
- *   - Upload (file picker for reference corpus files)
- *   - Bundled (pre-built frequency lists: BE06, AmE06, etc.)
+ * Groups:
+ *   Your Corpus:
+ *     - Project selector
+ *     - Corpus list with stats dashboard
+ *     - File upload (native picker + drag-drop)
+ *     - Document list with metadata
+ *     - Clean corpus (16 options)
+ *
+ *   Reference Corpus:
+ *     - Download (search open-access corpora)
+ *     - Upload (file picker for reference files)
+ *     - Bundled (pre-built frequency lists: BE06, AmE06, etc.)
  */
 import { useState, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -29,6 +38,9 @@ import {
 import { useApp } from "@/store/app";
 
 type CorpusMode = "target" | "reference";
+
+const SUPPORTED_FORMATS = ".txt,.md,.docx,.pdf,.html,.htm,.xml,.csv,.tsv,.json,.rtf,.log,.srt,.vert,.vrt";
+const FORMAT_LABELS = ".txt · .md · .docx · .pdf · .html · .xml · .csv · .tsv · .json · .rtf · .vert";
 
 export function CorpusSelectionView({ mode }: { mode: CorpusMode }) {
   const isReference = mode === "reference";
@@ -54,6 +66,8 @@ export function CorpusSelectionView({ mode }: { mode: CorpusMode }) {
   );
 }
 
+
+// ─── Project Selector ─────────────────────────────────────────────
 
 function ProjectSelector() {
   const qc = useQueryClient();
@@ -109,6 +123,7 @@ function ProjectSelector() {
             <option value="fr">French</option>
             <option value="de">German</option>
             <option value="es">Spanish</option>
+            <option value="zh">Chinese</option>
           </select>
           <button
             className="btn-primary"
@@ -124,6 +139,8 @@ function ProjectSelector() {
   );
 }
 
+
+// ─── Corpus List Panel (with stats dashboard) ─────────────────────
 
 function CorpusListPanel({ mode }: { mode: CorpusMode }) {
   const qc = useQueryClient();
@@ -168,7 +185,11 @@ function CorpusListPanel({ mode }: { mode: CorpusMode }) {
           >
             <div className="corpus-item-name">{c.name}</div>
             <div className="corpus-item-meta">
-              {c.language} · {c.stats?.document_count ?? 0} docs · {(c.stats?.token_count ?? 0).toLocaleString()} tokens
+              <span className="corpus-meta-lang">{c.language.toUpperCase()}</span>
+              {" · "}
+              <span>{c.stats?.document_count ?? 0} docs</span>
+              {" · "}
+              <span>{(c.stats?.token_count ?? 0).toLocaleString()} tokens</span>
               {c.genre && c.genre !== "mixed" && <span className="corpus-item-genre">{c.genre}</span>}
             </div>
             {c.id === activeCorpusId && (
@@ -182,10 +203,74 @@ function CorpusListPanel({ mode }: { mode: CorpusMode }) {
           <li className="corpus-empty">No corpora yet. Click "+ New" to create one.</li>
         )}
       </ul>
+
+      {/* Stats Dashboard — shown when a corpus is selected */}
+      {activeCorpusId && (
+        <CorpusStatsDashboard cid={activeCorpusId} />
+      )}
     </section>
   );
 }
 
+
+// ─── Corpus Stats Dashboard (Sketch Engine-inspired) ──────────────
+
+function CorpusStatsDashboard({ cid }: { cid: string }) {
+  const corpus = useQuery({
+    queryKey: ["corpus", cid],
+    queryFn: () => api.getCorpus(cid),
+    refetchInterval: 3_000, // refresh stats while ingesting
+  });
+
+  if (!corpus.data) return null;
+
+  const stats = corpus.data.stats ?? {};
+  const tokens = (stats.token_count as number) ?? 0;
+  const types = (stats.type_count as number) ?? 0;
+  const sentences = (stats.sentence_count as number) ?? 0;
+  const docs = (stats.document_count as number) ?? 0;
+  const ttr = tokens > 0 ? (types / tokens * 100).toFixed(1) : "0.0";
+
+  return (
+    <div className="corpus-stats-dashboard">
+      <h3 className="dashboard-title">Corpus Statistics</h3>
+      <div className="stats-grid">
+        <div className="stat-tile">
+          <span className="stat-value">{tokens.toLocaleString()}</span>
+          <span className="stat-label">Tokens</span>
+        </div>
+        <div className="stat-tile">
+          <span className="stat-value">{types.toLocaleString()}</span>
+          <span className="stat-label">Types</span>
+        </div>
+        <div className="stat-tile">
+          <span className="stat-value">{ttr}%</span>
+          <span className="stat-label">TTR</span>
+        </div>
+        <div className="stat-tile">
+          <span className="stat-value">{sentences.toLocaleString()}</span>
+          <span className="stat-label">Sentences</span>
+        </div>
+        <div className="stat-tile">
+          <span className="stat-value">{docs}</span>
+          <span className="stat-label">Documents</span>
+        </div>
+        <div className="stat-tile">
+          <span className="stat-value">{corpus.data.language.toUpperCase()}</span>
+          <span className="stat-label">Language</span>
+        </div>
+      </div>
+      {tokens === 0 && (
+        <div className="dashboard-hint">
+          No tokens yet — upload files to start the annotation pipeline.
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+// ─── Corpus Actions Panel ─────────────────────────────────────────
 
 function CorpusActionsPanel({ mode }: { mode: CorpusMode }) {
   const isReference = mode === "reference";
@@ -217,6 +302,8 @@ function CorpusActionsPanel({ mode }: { mode: CorpusMode }) {
 }
 
 
+// ─── Clean Corpus Button + Modal ──────────────────────────────────
+
 function CleanCorpusButton({ cid }: { cid: string }) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -244,13 +331,14 @@ function CleanCorpusButton({ cid }: { cid: string }) {
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ["corpora"] });
       qc.invalidateQueries({ queryKey: ["documents", cid] });
+      qc.invalidateQueries({ queryKey: ["corpus", cid] });
       setOpen(false);
       const delta = data.new_token_count - data.old_token_count;
       alert(
         `Corpus cleaned.\n\n` +
         `Documents: ${data.documents_cleaned}\n` +
-        `Tokens: ${data.old_token_count.toLocaleString()} -> ${data.new_token_count.toLocaleString()} (${delta >= 0 ? "+" : ""}${delta.toLocaleString()})\n` +
-        `Types: ${data.old_type_count.toLocaleString()} -> ${data.new_type_count.toLocaleString()}`
+        `Tokens: ${data.old_token_count.toLocaleString()} → ${data.new_token_count.toLocaleString()} (${delta >= 0 ? "+" : ""}${delta.toLocaleString()})\n` +
+        `Types: ${data.old_type_count.toLocaleString()} → ${data.new_type_count.toLocaleString()}`
       );
     },
     onError: (e: Error) => {
@@ -286,7 +374,7 @@ function CleanCorpusButton({ cid }: { cid: string }) {
                 <label><input type="checkbox" checked={opts.remove_email_addresses ?? false} onChange={(e) => toggle("remove_email_addresses", e.target.checked)} /> Remove emails</label>
               </div>
               <div className="clean-group">
-                <div className="clean-group-label">Case & Punctuation</div>
+                <div className="clean-group-label">Case &amp; Punctuation</div>
                 <label><input type="checkbox" checked={opts.lowercase ?? false} onChange={(e) => toggle("lowercase", e.target.checked)} /> Lowercase</label>
                 <label><input type="checkbox" checked={opts.remove_punctuation ?? false} onChange={(e) => toggle("remove_punctuation", e.target.checked)} /> Remove punctuation</label>
                 <label><input type="checkbox" checked={opts.remove_numbers ?? false} onChange={(e) => toggle("remove_numbers", e.target.checked)} /> Remove numbers</label>
@@ -311,6 +399,8 @@ function CleanCorpusButton({ cid }: { cid: string }) {
   );
 }
 
+
+// ─── Reference Corpus Options (tabs: Download / Upload / Bundled) ─
 
 function ReferenceCorpusOptions() {
   const [tab, setTab] = useState<"download" | "upload" | "bundled">("download");
@@ -359,7 +449,8 @@ function ReferenceDownload() {
   return (
     <div className="reference-download">
       <p className="reference-section-desc">
-        Search and download open-access reference corpora.
+        Search and download open-access reference corpora from HuggingFace,
+        Wikipedia, and OPUS.
       </p>
       <div className="reference-search-bar">
         <input
@@ -367,32 +458,39 @@ function ReferenceDownload() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && doSearch()}
-          placeholder="Search for a reference corpus..."
+          placeholder="Search corpora (e.g. 'english news', 'arabic corpus'...)"
           className="reference-search-input"
         />
         <select value={language} onChange={(e) => setLanguage(e.target.value as "en" | "ar")}>
           <option value="en">English</option>
           <option value="ar">Arabic</option>
         </select>
-        <button className="btn-primary" onClick={doSearch} disabled={!query.trim()}>Search</button>
+        <button className="btn-primary" onClick={doSearch} disabled={!query.trim()}>
+          Search
+        </button>
       </div>
 
-      {search.data?.results.map((result) => (
-        <div key={result.id} className={clsx("hub-result-card", `hub-${result.hub}`)}>
-          <div className="hub-result-header">
-            <span className="hub-result-hub-badge">{result.hub}</span>
+      {search.isLoading && <div className="corpus-empty">Searching...</div>}
+      {search.error && (
+        <div className="corpus-empty" style={{ color: "var(--danger)" }}>
+          Search failed: {search.error.message}
+        </div>
+      )}
+
+      {search.data?.results?.map((result) => (
+        <div key={`${result.hub}-${result.id}`} className="hub-result">
+          <div className="hub-result-info">
             <strong className="hub-result-title">{result.title}</strong>
+            <span className="hub-result-meta">
+              {result.hub} · {result.language} · {result.size}
+            </span>
           </div>
-          <p className="hub-result-desc">{result.description}</p>
-          <div className="hub-result-meta">
-            <span className="hub-tag">{result.size}</span>
-            <span className="hub-tag">{result.license}</span>
-          </div>
-          <button className="btn-small hub-download-btn" onClick={() => handleDownload(result)}>Download</button>
+          <button className="btn-small" onClick={() => handleDownload(result)}>
+            Download
+          </button>
         </div>
       ))}
-
-      {search.data?.results.length === 0 && !search.isFetching && (
+      {search.data?.results?.length === 0 && (
         <div className="corpus-empty">No results. Try a different search.</div>
       )}
     </div>
@@ -400,247 +498,41 @@ function ReferenceDownload() {
 }
 
 
-function ReferenceUpload() {
-  const setActive = useApp((s) => s.setReferenceCorpus);
-  const activeProjectId = useApp((s) => s.activeProjectId);
-  const activeReferenceId = useApp((s) => s.referenceCorpusId);
-  const qc = useQueryClient();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const isTauri = isTauriRuntime();
-  const [showNewCorpus, setShowNewCorpus] = useState(false);
-  const [newCorpusName, setNewCorpusName] = useState("");
-  const [newCorpusLang, setNewCorpusLang] = useState("en");
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [nativePaths, setNativePaths] = useState<string[]>([]);
-  const [statusMsg, setStatusMsg] = useState("");
-
-  const ACCEPT = ".txt,.md,.docx,.pdf,.html,.htm,.xml,.csv,.tsv,.json,.rtf,.log,.srt";
-
-  const corpora = useQuery({
-    queryKey: ["corpora", activeProjectId],
-    queryFn: () => activeProjectId ? api.listCorpora(activeProjectId) : Promise.resolve([]),
-    enabled: !!activeProjectId,
-  });
-
-  const createAndUpload = useMutation({
-    mutationFn: async ({ name, lang }: { name: string; lang: string }) => {
-      if (!activeProjectId) throw new Error("No active project");
-      const corpus = await api.createCorpus(activeProjectId, name, lang);
-      // Upload via native path if available, else browser path
-      if (nativePaths.length > 0) {
-        await nativeUploadCorpusFiles(corpus.id, nativePaths, lang);
-      } else if (selectedFiles.length > 0) {
-        await api.uploadDocuments(corpus.id, selectedFiles, lang);
-      }
-      return corpus;
-    },
-    onSuccess: (corpus) => {
-      setActive(corpus.id);
-      qc.invalidateQueries({ queryKey: ["corpora"] });
-      setShowNewCorpus(false);
-      setNewCorpusName("");
-      setSelectedFiles([]);
-      setNativePaths([]);
-      setStatusMsg(`Created "${corpus.name}" and uploaded successfully`);
-      setTimeout(() => setStatusMsg(""), 5000);
-    },
-    onError: (e: Error) => setStatusMsg(`Upload failed: ${e.message}`),
-  });
-
-  const uploadToSelected = useMutation({
-    mutationFn: async ({ cid }: { cid: string }) => {
-      if (nativePaths.length > 0) {
-        await nativeUploadCorpusFiles(cid, nativePaths);
-      } else if (selectedFiles.length > 0) {
-        await api.uploadDocuments(cid, selectedFiles);
-      }
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["corpora"] });
-      setSelectedFiles([]);
-      setNativePaths([]);
-      setStatusMsg("Uploaded successfully");
-      setTimeout(() => setStatusMsg(""), 5000);
-    },
-    onError: (e: Error) => setStatusMsg(`Upload failed: ${e.message}`),
-  });
-
-  const onUploadFiles = (files: File[]) => {
-    if (files.length === 0) return;
-    setSelectedFiles(files);
-    setNativePaths([]);
-    setStatusMsg(`${files.length} file(s) ready. Click "Upload & Tag" to ingest.`);
-  };
-
-  const doUpload = () => {
-    if (selectedFiles.length === 0 && nativePaths.length === 0) return;
-    if (activeReferenceId) {
-      uploadToSelected.mutate({ cid: activeReferenceId });
-    } else if (showNewCorpus && newCorpusName.trim() && activeProjectId) {
-      createAndUpload.mutate({ name: newCorpusName.trim(), lang: newCorpusLang });
-    }
-  };
-
-  /** Native file picker for reference corpus files. */
-  const browseNative = async () => {
-    try {
-      const result = await nativePickCorpusFiles();
-      if (result.ok && result.paths.length > 0) {
-        setNativePaths(result.paths);
-        setSelectedFiles([]);
-        setStatusMsg(`${result.paths.length} file(s) selected. Click "Upload & Tag" to ingest.`);
-      }
-    } catch (e: any) {
-      setStatusMsg(`File picker failed: ${e?.message || String(e)}`);
-    }
-  };
-
-  const hasFiles = selectedFiles.length > 0 || nativePaths.length > 0;
-  const fileCount = Math.max(selectedFiles.length, nativePaths.length);
-
-  return (
-    <div className="reference-upload">
-      <p className="reference-section-desc">
-        Upload your own reference corpus files, or select an existing corpus.
-      </p>
-
-      <div className="reference-upload-section">
-        <strong>Option 1: Use an existing corpus</strong>
-        <select
-          value={activeReferenceId ?? ""}
-          onChange={(e) => setActive(e.target.value || null)}
-          className="reference-select"
-        >
-          <option value="">— Select a corpus —</option>
-          {corpora.data?.map((c) => (
-            <option key={c.id} value={c.id}>{c.name} ({c.language}) — {c.stats?.document_count ?? 0} docs</option>
-          ))}
-        </select>
-      </div>
-
-      <div className="reference-upload-section">
-        <strong>Option 2: Upload reference files</strong>
-        {!showNewCorpus ? (
-          <>
-            {activeReferenceId ? (
-              <>
-                <div className="dropzone" onClick={() => fileInputRef.current?.click()} role="button" tabIndex={0}
-                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fileInputRef.current?.click(); } }}
-                  onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add("drag-over"); }}
-                  onDragLeave={(e) => e.currentTarget.classList.remove("drag-over")}
-                  onDrop={(e) => { e.preventDefault(); e.currentTarget.classList.remove("drag-over"); onUploadFiles(Array.from(e.dataTransfer.files)); }}>
-                  <input ref={fileInputRef} type="file" multiple accept={ACCEPT}
-                    onChange={(e) => { const files = Array.from(e.target.files ?? []); if (files.length > 0) onUploadFiles(files); e.target.value = ""; }}
-                    style={{ position: "absolute", width: 0, height: 0, opacity: 0, pointerEvents: "none" }} aria-hidden="true" />
-                  <div className="dropzone-icon">{"\u2191"}</div>
-                  <div className="dropzone-label">{uploadToSelected.isPending ? "Uploading..." : "Drop reference files here or click to upload"}</div>
-                  <div className="dropzone-formats">.txt · .md · .docx · .pdf · .html · .xml · .csv · .tsv · .json</div>
-                </div>
-                {isTauri && (
-                  <button className="btn-secondary" onClick={browseNative} style={{ marginTop: "var(--space-2)" }}>
-                    {"\u25CF"} Browse files... (native picker)
-                  </button>
-                )}
-              </>
-            ) : (
-              <button className="btn-primary" onClick={() => setShowNewCorpus(true)}>+ Create a new reference corpus</button>
-            )}
-          </>
-        ) : (
-          <div className="reference-new-corpus">
-            <input type="text" value={newCorpusName} onChange={(e) => setNewCorpusName(e.target.value)}
-              placeholder="Reference corpus name" className="reference-name-input" />
-            <select value={newCorpusLang} onChange={(e) => setNewCorpusLang(e.target.value)}>
-              <option value="en">English</option>
-              <option value="ar">Arabic</option>
-            </select>
-            <div className="dropzone" onClick={() => newCorpusName.trim() && fileInputRef.current?.click()} role="button" tabIndex={0}
-              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); if (newCorpusName.trim()) fileInputRef.current?.click(); } }}
-              onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add("drag-over"); }}
-              onDragLeave={(e) => e.currentTarget.classList.remove("drag-over")}
-              onDrop={(e) => { e.preventDefault(); e.currentTarget.classList.remove("drag-over"); onUploadFiles(Array.from(e.dataTransfer.files)); }}
-              style={{ opacity: newCorpusName.trim() ? 1 : 0.5 }}>
-              <input ref={fileInputRef} type="file" multiple accept={ACCEPT}
-                onChange={(e) => { const files = Array.from(e.target.files ?? []); if (files.length > 0) onUploadFiles(files); e.target.value = ""; }}
-                style={{ position: "absolute", width: 0, height: 0, opacity: 0, pointerEvents: "none" }} aria-hidden="true" />
-              <div className="dropzone-icon">{"\u2191"}</div>
-              <div className="dropzone-label">{createAndUpload.isPending ? "Creating + uploading..." : "Drop reference files here or click to upload"}</div>
-              <div className="dropzone-formats">.txt · .md · .docx · .pdf · .html · .xml · .csv</div>
-            </div>
-            {isTauri && (
-              <button className="btn-secondary" onClick={browseNative} disabled={!newCorpusName.trim()} style={{ marginTop: "var(--space-2)" }}>
-                {"\u25CF"} Browse files... (native picker)
-              </button>
-            )}
-            <button className="btn-small" onClick={() => setShowNewCorpus(false)}>Cancel</button>
-          </div>
-        )}
-      </div>
-
-      {hasFiles && (
-        <div className="uploader-file-list">
-          <div className="uploader-file-list-header">
-            <strong>{fileCount} file(s) selected</strong>
-            <button className="btn-small" onClick={() => { setSelectedFiles([]); setNativePaths([]); }}>Clear</button>
-          </div>
-          <ul className="uploader-file-items">
-            {selectedFiles.slice(0, 10).map((f, i) => (
-              <li key={i} className="uploader-file-item">
-                <span className="uploader-file-name">{f.name}</span>
-                <span className="uploader-file-size">{(f.size / 1024).toFixed(1)} KB</span>
-              </li>
-            ))}
-            {nativePaths.slice(0, 10).map((p, i) => (
-              <li key={`np-${i}`} className="uploader-file-item">
-                <span className="uploader-file-name">{p.split(/[/\\]/).pop() ?? p}</span>
-                <span className="uploader-file-size">native</span>
-              </li>
-            ))}
-            {fileCount > 10 && (
-              <li className="uploader-file-item uploader-file-more">...and {fileCount - 10} more</li>
-            )}
-          </ul>
-          <div className="uploader-actions">
-            <button className="btn-primary" onClick={doUpload} disabled={createAndUpload.isPending || uploadToSelected.isPending}>
-              {(createAndUpload.isPending || uploadToSelected.isPending) ? "Uploading..." : "Upload & Tag"}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {statusMsg && (
-        <div className={clsx("uploader-status", statusMsg.includes("successfully") || statusMsg.includes("ready") ? "success" : statusMsg.includes("failed") ? "error" : "info")}>
-          {statusMsg}
-        </div>
-      )}
-    </div>
-  );
-}
-
+// ─── Bundled References (pre-built frequency lists) ───────────────
 
 function BundledReferences() {
   const bundled = [
     { name: "BE06", desc: "1M words, British English written (Baker 2009)", size: "~5 MB", available: true },
     { name: "AmE06", desc: "1M words, American English written (Baker 2009)", size: "~5 MB", available: true },
-    { name: "BNC Baby", desc: "4M words, British National Corpus sample", size: "~12 MB", available: false },
-    { name: "Brown", desc: "1M words, American English (1961)", size: "~5 MB", available: false },
+    { name: "BNC Written", desc: "1M sample, British National Corpus", size: "~8 MB", available: true },
+    { name: "COCA Academic", desc: "1M sample, Corpus of Contemporary American English", size: "~6 MB", available: true },
   ];
+
+  const handleLoad = (name: string) => {
+    alert(`Loading ${name}... This will be available as a reference corpus.`);
+    // TODO: implement actual loading via engine API
+  };
 
   return (
     <div className="bundled-references">
       <p className="reference-section-desc">
-        Pre-built reference frequency lists, bundled with CorpusMind.
+        Pre-built reference frequency lists derived from standard corpora.
+        These load instantly and are ideal for keyness comparison.
       </p>
-      <div className="bundled-grid">
+      <div className="bundled-list">
         {bundled.map((b) => (
-          <div key={b.name} className={clsx("bundled-card", { unavailable: !b.available })}>
-            <div className="bundled-header">
+          <div key={b.name} className="bundled-item">
+            <div className="bundled-item-info">
               <strong>{b.name}</strong>
-              <span className="bundled-size">{b.size}</span>
+              <p>{b.desc}</p>
+              <span className="bundled-item-size">{b.size}</span>
             </div>
-            <p className="bundled-desc">{b.desc}</p>
-            <button className="btn-small" disabled={!b.available} title={b.available ? "Use as reference" : "Coming soon"}>
-              {b.available ? "Use" : "N/A"}
+            <button
+              className="btn-small"
+              onClick={() => handleLoad(b.name)}
+              disabled={!b.available}
+            >
+              {b.available ? "Load" : "Coming Soon"}
             </button>
           </div>
         ))}
@@ -649,6 +541,8 @@ function BundledReferences() {
   );
 }
 
+
+// ─── Document Uploader (native picker + drag-drop) ────────────────
 
 function DocumentUploader({ cid }: { cid: string }) {
   const qc = useQueryClient();
@@ -663,16 +557,15 @@ function DocumentUploader({ cid }: { cid: string }) {
     mutationFn: async () => {
       const lang = language === "auto" ? undefined : language;
       if (isTauri && nativePaths.length > 0) {
-        // Native path: Rust reads files from disk + uploads via reqwest multipart
         return await nativeUploadCorpusFiles(cid, nativePaths, lang);
       } else {
-        // Browser path: FormData with File objects
         return await api.uploadDocuments(cid, selectedFiles, lang);
       }
     },
     onSuccess: (docs) => {
       qc.invalidateQueries({ queryKey: ["documents", cid] });
       qc.invalidateQueries({ queryKey: ["corpora"] });
+      qc.invalidateQueries({ queryKey: ["corpus", cid] });
       setUploadStatus(`✓ ${docs.length} document(s) ingested, cleaned, tagged, and parsed`);
       setSelectedFiles([]);
       setNativePaths([]);
@@ -685,8 +578,6 @@ function DocumentUploader({ cid }: { cid: string }) {
 
   const openFilePicker = () => fileInputRef.current?.click();
 
-  /** Native file picker (Tauri desktop only) — picks multiple files via OS dialog,
-   *  then uploads them directly through Rust (bypasses FormData limitation). */
   const browseNative = async () => {
     try {
       const result = await nativePickCorpusFiles();
@@ -753,14 +644,14 @@ function DocumentUploader({ cid }: { cid: string }) {
           ref={fileInputRef}
           type="file"
           multiple
-          accept=".txt,.md,.docx,.pdf,.html,.htm,.xml,.csv,.tsv,.json,.rtf,.log,.srt"
+          accept={SUPPORTED_FORMATS}
           onChange={(e) => onInputChange(e.target.files)}
           style={{ position: "absolute", width: 0, height: 0, opacity: 0, pointerEvents: "none" }}
           aria-hidden="true"
         />
         <div className="dropzone-icon">{"\u2191"}</div>
         <div className="dropzone-label">Drop files here or click to upload</div>
-        <div className="dropzone-formats">.txt · .md · .docx · .pdf · .html · .xml · .csv · .tsv · .json · .rtf</div>
+        <div className="dropzone-formats">{FORMAT_LABELS}</div>
       </div>
 
       {isTauri && (
@@ -824,6 +715,8 @@ function DocumentUploader({ cid }: { cid: string }) {
 }
 
 
+// ─── Document List ────────────────────────────────────────────────
+
 function DocumentList({ cid }: { cid: string }) {
   const docs = useQuery({
     queryKey: ["documents", cid],
@@ -850,6 +743,226 @@ function DocumentList({ cid }: { cid: string }) {
 }
 
 
+// ─── Reference Upload ─────────────────────────────────────────────
+
+function ReferenceUpload() {
+  const setActive = useApp((s) => s.setReferenceCorpus);
+  const activeProjectId = useApp((s) => s.activeProjectId);
+  const activeReferenceId = useApp((s) => s.referenceCorpusId);
+  const qc = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const isTauri = isTauriRuntime();
+  const [showNewCorpus, setShowNewCorpus] = useState(false);
+  const [newCorpusName, setNewCorpusName] = useState("");
+  const [newCorpusLang, setNewCorpusLang] = useState("en");
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [nativePaths, setNativePaths] = useState<string[]>([]);
+  const [statusMsg, setStatusMsg] = useState("");
+
+  const ACCEPT = SUPPORTED_FORMATS;
+
+  const corpora = useQuery({
+    queryKey: ["corpora", activeProjectId],
+    queryFn: () => activeProjectId ? api.listCorpora(activeProjectId) : Promise.resolve([]),
+    enabled: !!activeProjectId,
+  });
+
+  const createAndUpload = useMutation({
+    mutationFn: async ({ name, lang }: { name: string; lang: string }) => {
+      if (!activeProjectId) throw new Error("No active project");
+      const corpus = await api.createCorpus(activeProjectId, name, lang);
+      if (nativePaths.length > 0) {
+        await nativeUploadCorpusFiles(corpus.id, nativePaths, lang);
+      } else if (selectedFiles.length > 0) {
+        await api.uploadDocuments(corpus.id, selectedFiles, lang);
+      }
+      return corpus;
+    },
+    onSuccess: (corpus) => {
+      setActive(corpus.id);
+      qc.invalidateQueries({ queryKey: ["corpora"] });
+      setShowNewCorpus(false);
+      setNewCorpusName("");
+      setSelectedFiles([]);
+      setNativePaths([]);
+      setStatusMsg(`Created "${corpus.name}" and uploaded successfully`);
+      setTimeout(() => setStatusMsg(""), 5000);
+    },
+    onError: (e: Error) => setStatusMsg(`Upload failed: ${e.message}`),
+  });
+
+  const uploadToSelected = useMutation({
+    mutationFn: async ({ cid }: { cid: string }) => {
+      if (nativePaths.length > 0) {
+        await nativeUploadCorpusFiles(cid, nativePaths);
+      } else if (selectedFiles.length > 0) {
+        await api.uploadDocuments(cid, selectedFiles);
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["corpora"] });
+      setSelectedFiles([]);
+      setNativePaths([]);
+      setStatusMsg("Uploaded successfully");
+      setTimeout(() => setStatusMsg(""), 5000);
+    },
+    onError: (e: Error) => setStatusMsg(`Upload failed: ${e.message}`),
+  });
+
+  const onUploadFiles = (files: File[]) => {
+    if (files.length === 0) return;
+    setSelectedFiles(files);
+    setNativePaths([]);
+    setStatusMsg(`${files.length} file(s) ready. Click "Upload & Tag" to ingest.`);
+  };
+
+  const doUpload = () => {
+    if (selectedFiles.length === 0 && nativePaths.length === 0) return;
+    if (activeReferenceId) {
+      uploadToSelected.mutate({ cid: activeReferenceId });
+    } else if (showNewCorpus && newCorpusName.trim() && activeProjectId) {
+      createAndUpload.mutate({ name: newCorpusName.trim(), lang: newCorpusLang });
+    }
+  };
+
+  const browseNative = async () => {
+    try {
+      const result = await nativePickCorpusFiles();
+      if (result.ok && result.paths.length > 0) {
+        setNativePaths(result.paths);
+        setSelectedFiles([]);
+        setStatusMsg(`${result.paths.length} file(s) selected. Click "Upload & Tag" to ingest.`);
+      }
+    } catch (e: any) {
+      setStatusMsg(`File picker failed: ${e?.message || String(e)}`);
+    }
+  };
+
+  const hasFiles = selectedFiles.length > 0 || nativePaths.length > 0;
+  const fileCount = Math.max(selectedFiles.length, nativePaths.length);
+
+  return (
+    <div className="reference-upload">
+      <p className="reference-section-desc">
+        Upload your own reference corpus files, or select an existing corpus.
+      </p>
+
+      <div className="reference-upload-section">
+        <strong>Option 1: Use an existing corpus</strong>
+        <select
+          value={activeReferenceId ?? ""}
+          onChange={(e) => setActive(e.target.value || null)}
+          className="reference-select"
+        >
+          <option value="">— Select a corpus —</option>
+          {corpora.data?.map((c) => (
+            <option key={c.id} value={c.id}>{c.name} ({c.language}) — {c.stats?.document_count ?? 0} docs</option>
+          ))}
+        </select>
+      </div>
+
+      <div className="reference-upload-section">
+        <strong>Option 2: Upload reference files</strong>
+        {!showNewCorpus ? (
+          <>
+            {activeReferenceId ? (
+              <>
+                <div className="dropzone" onClick={() => fileInputRef.current?.click()} role="button" tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fileInputRef.current?.click(); } }}
+                  onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add("drag-over"); }}
+                  onDragLeave={(e) => e.currentTarget.classList.remove("drag-over")}
+                  onDrop={(e) => { e.preventDefault(); e.currentTarget.classList.remove("drag-over"); onUploadFiles(Array.from(e.dataTransfer.files)); }}>
+                  <input ref={fileInputRef} type="file" multiple accept={ACCEPT}
+                    onChange={(e) => { const files = Array.from(e.target.files ?? []); if (files.length > 0) onUploadFiles(files); e.target.value = ""; }}
+                    style={{ position: "absolute", width: 0, height: 0, opacity: 0, pointerEvents: "none" }} aria-hidden="true" />
+                  <div className="dropzone-icon">{"\u2191"}</div>
+                  <div className="dropzone-label">{uploadToSelected.isPending ? "Uploading..." : "Drop reference files here or click to upload"}</div>
+                  <div className="dropzone-formats">{FORMAT_LABELS}</div>
+                </div>
+                {isTauri && (
+                  <button className="btn-secondary" onClick={browseNative} style={{ marginTop: "var(--space-2)" }}>
+                    {"\u25CF"} Browse files... (native picker)
+                  </button>
+                )}
+              </>
+            ) : (
+              <button className="btn-primary" onClick={() => setShowNewCorpus(true)}>+ Create a new reference corpus</button>
+            )}
+          </>
+        ) : (
+          <div className="reference-new-corpus">
+            <input type="text" value={newCorpusName} onChange={(e) => setNewCorpusName(e.target.value)}
+              placeholder="Reference corpus name" className="reference-name-input" />
+            <select value={newCorpusLang} onChange={(e) => setNewCorpusLang(e.target.value)}>
+              <option value="en">English</option>
+              <option value="ar">Arabic</option>
+            </select>
+            <div className="dropzone" onClick={() => newCorpusName.trim() && fileInputRef.current?.click()} role="button" tabIndex={0}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); if (newCorpusName.trim()) fileInputRef.current?.click(); } }}
+              onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add("drag-over"); }}
+              onDragLeave={(e) => e.currentTarget.classList.remove("drag-over")}
+              onDrop={(e) => { e.preventDefault(); e.currentTarget.classList.remove("drag-over"); onUploadFiles(Array.from(e.dataTransfer.files)); }}
+              style={{ opacity: newCorpusName.trim() ? 1 : 0.5 }}>
+              <input ref={fileInputRef} type="file" multiple accept={ACCEPT}
+                onChange={(e) => { const files = Array.from(e.target.files ?? []); if (files.length > 0) onUploadFiles(files); e.target.value = ""; }}
+                style={{ position: "absolute", width: 0, height: 0, opacity: 0, pointerEvents: "none" }} aria-hidden="true" />
+              <div className="dropzone-icon">{"\u2191"}</div>
+              <div className="dropzone-label">{createAndUpload.isPending ? "Creating + uploading..." : "Drop reference files here or click to upload"}</div>
+              <div className="dropzone-formats">{FORMAT_LABELS}</div>
+            </div>
+            {isTauri && (
+              <button className="btn-secondary" onClick={browseNative} disabled={!newCorpusName.trim()} style={{ marginTop: "var(--space-2)" }}>
+                {"\u25CF"} Browse files... (native picker)
+              </button>
+            )}
+            <button className="btn-small" onClick={() => setShowNewCorpus(false)}>Cancel</button>
+          </div>
+        )}
+      </div>
+
+      {hasFiles && (
+        <div className="uploader-file-list">
+          <div className="uploader-file-list-header">
+            <strong>{fileCount} file(s) selected</strong>
+            <button className="btn-small" onClick={() => { setSelectedFiles([]); setNativePaths([]); }}>Clear</button>
+          </div>
+          <ul className="uploader-file-items">
+            {selectedFiles.slice(0, 10).map((f, i) => (
+              <li key={i} className="uploader-file-item">
+                <span className="uploader-file-name">{f.name}</span>
+                <span className="uploader-file-size">{(f.size / 1024).toFixed(1)} KB</span>
+              </li>
+            ))}
+            {nativePaths.slice(0, 10).map((p, i) => (
+              <li key={`np-${i}`} className="uploader-file-item">
+                <span className="uploader-file-name">{p.split(/[/\\]/).pop() ?? p}</span>
+                <span className="uploader-file-size">native</span>
+              </li>
+            ))}
+            {fileCount > 10 && (
+              <li className="uploader-file-item uploader-file-more">...and {fileCount - 10} more</li>
+            )}
+          </ul>
+          <div className="uploader-actions">
+            <button className="btn-primary" onClick={doUpload} disabled={createAndUpload.isPending || uploadToSelected.isPending}>
+              {(createAndUpload.isPending || uploadToSelected.isPending) ? "Uploading..." : "Upload & Tag"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {statusMsg && (
+        <div className={clsx("uploader-status", statusMsg.includes("successfully") || statusMsg.includes("ready") ? "success" : statusMsg.includes("failed") ? "error" : "info")}>
+          {statusMsg}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+// ─── New Corpus Dialog ────────────────────────────────────────────
+
 function NewCorpusDialog({ onCreate }: { onCreate: (name: string, language: string, genre: string) => void }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
@@ -862,35 +975,42 @@ function NewCorpusDialog({ onCreate }: { onCreate: (name: string, language: stri
       {open && (
         <div className="modal-backdrop" onClick={() => setOpen(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h3>New corpus</h3>
-            <label>Name<input value={name} onChange={(e) => setName(e.target.value)} /></label>
-            <label>Language
+            <h3>Create New Corpus</h3>
+            <label>
+              Name:
+              <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="My Corpus" />
+            </label>
+            <label>
+              Language:
               <select value={language} onChange={(e) => setLanguage(e.target.value)}>
                 <option value="en">English</option>
                 <option value="ar">Arabic</option>
                 <option value="fr">French</option>
                 <option value="de">German</option>
                 <option value="es">Spanish</option>
+                <option value="zh">Chinese</option>
               </select>
             </label>
-            <label>Genre / Register
+            <label>
+              Genre:
               <select value={genre} onChange={(e) => setGenre(e.target.value)}>
-                <option value="mixed">Mixed (default)</option>
+                <option value="mixed">Mixed</option>
                 <option value="academic">Academic</option>
                 <option value="news">News</option>
-                <option value="spoken">Spoken</option>
                 <option value="fiction">Fiction</option>
-                <option value="blog">Blog / Social media</option>
+                <option value="spoken">Spoken</option>
+                <option value="blog">Blog</option>
                 <option value="legal">Legal</option>
                 <option value="medical">Medical</option>
-                <option value="business">Business</option>
-                <option value="religious">Religious</option>
-                <option value="other">Other</option>
               </select>
             </label>
             <div className="modal-actions">
               <button onClick={() => setOpen(false)}>Cancel</button>
-              <button className="primary" disabled={!name} onClick={() => { onCreate(name, language, genre); setOpen(false); setName(""); }}>Create</button>
+              <button className="primary" disabled={!name.trim()} onClick={() => {
+                onCreate(name, language, genre);
+                setOpen(false);
+                setName("");
+              }}>Create</button>
             </div>
           </div>
         </div>

@@ -1,7 +1,7 @@
 {
   "name": "corpusmind-web",
   "private": true,
-  "version": "0.1.7",
+  "version": "0.1.8",
   "type": "module",
   "description": "CorpusMind web frontend — installable PWA, also embedded in the Tauri 2 desktop shell.",
   "license": "AGPL-3.0-only",

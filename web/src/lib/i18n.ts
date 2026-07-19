@@ -110,7 +110,7 @@ export const translations = {
     onboarding_skip: "Skip",
 
     // About view
-    about_version: "Version 0.1.7 | AGPL-3.0-only",
+    about_version: "Version 0.1.8 | AGPL-3.0-only",
     about_tagline: "Local-first, AI-native research environment for corpus linguistics and multimodal discourse analysis.",
     about_authors: "Authors",
     about_author1: "Dr. Waleed Mandour",
@@ -129,7 +129,7 @@ export const translations = {
     about_links: "Links",
 
     // Status bar
-    status_version: "CorpusMind v0.1.7",
+    status_version: "CorpusMind v0.1.8",
     status_license: "AGPL-3.0",
     status_commands: "Press Ctrl/Cmd+K for commands",
     status_live_pwa: "Local Desktop App",
@@ -244,7 +244,7 @@ export const translations = {
     onboarding_skip: "تخطي",
 
     // About view
-    about_version: "الإصدار 0.1.7 | AGPL-3.0-only",
+    about_version: "الإصدار 0.1.8 | AGPL-3.0-only",
     about_tagline: "بيئة بحثية محلية أولاً، مدعومة بالذكاء الاصطناعي، لتحليل اللغة والخطاب متعدد الوسائط.",
     about_authors: "المؤلفون",
     about_author1: "د. وليد مندور",
@@ -263,7 +263,7 @@ export const translations = {
     about_links: "روابط",
 
     // Status bar
-    status_version: "CorpusMind v0.1.7",
+    status_version: "CorpusMind v0.1.8",
     status_license: "AGPL-3.0",
     status_commands: "اضغط Ctrl/Cmd+K للأوامر",
     status_live_pwa: "PWA المباشر",

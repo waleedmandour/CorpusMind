@@ -177,7 +177,12 @@ exe = EXE(
     bootloader_ignore_signals=False,
     strip=False,
     upx=False,
-    console=True,
+    # console=False: hide the console window on Windows. The engine's stdout/
+    # stderr are still captured by the Tauri shell (via Stdio::from() in the
+    # Rust spawn() call), so "Run Diagnostics" in Settings still shows the logs.
+    # With console=True, a visible terminal window appears alongside the app,
+    # which is confusing for end users and must be kept open or the engine dies.
+    console=False,
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
