@@ -1196,6 +1196,56 @@ async fn upload_corpus_files(cid: String, paths: Vec<String>, language: Option<S
     }
 }
 
+/// Open a native file-save dialog and write the given data to the chosen path.
+/// Used by the export functions to save analysis results (xlsx, csv, svg, etc.)
+/// directly to the user's disk. This bypasses the webview's download mechanism,
+/// which can be unreliable inside Tauri.
+#[tauri::command]
+async fn save_file_to_disk(
+    app: tauri::AppHandle,
+    filename: String,
+    data: Vec<u8>,
+) -> String {
+    use tauri_plugin_dialog::DialogExt;
+
+    let result = app.dialog()
+        .file()
+        .add_filter("All files", &["*"])
+        .set_file_name(&filename)
+        .blocking_save_file();
+
+    match result {
+        Some(file_path) => {
+            let path_str = file_path.to_string();
+            match std::fs::write(&path_str, &data) {
+                Ok(_) => {
+                    info!(target: "dialog", "file saved: {} ({} bytes)", path_str, data.len());
+                    serde_json::json!({
+                        "ok": true,
+                        "path": path_str,
+                        "message": format!("File saved to {}", path_str)
+                    }).to_string()
+                }
+                Err(e) => {
+                    error!(target: "dialog", "failed to write file: {}", e);
+                    serde_json::json!({
+                        "ok": false,
+                        "path": path_str,
+                        "message": format!("Failed to write file: {}", e)
+                    }).to_string()
+                }
+            }
+        }
+        None => {
+            serde_json::json!({
+                "ok": false,
+                "path": null,
+                "message": "Save cancelled by user"
+            }).to_string()
+        }
+    }
+}
+
 /// Read the engine's stdout and stderr log files so the UI can display
 /// WHY the engine failed to start. This is the #1 diagnostic tool for
 /// "engine offline" issues — the logs contain Python tracebacks, import
@@ -1585,6 +1635,7 @@ pub fn run() {
             pick_model_file,
             pick_corpus_files,
             upload_corpus_files,
+            save_file_to_disk,
             test_sidecar,
             engine_logs,
             verify_sidecar

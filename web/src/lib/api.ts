@@ -1492,15 +1492,46 @@ export interface HubSearchResponse {
 }
 
 /** Helper: trigger a browser download for a Blob. */
-export function downloadBlob(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+/**
+ * Download a blob to disk. Inside Tauri, uses the native OS save-file dialog
+ * (via the save_file_to_disk Rust command) for a proper file-save experience.
+ * In browser mode, falls back to the standard <a download> approach.
+ */
+export async function downloadBlob(blob: Blob, filename: string) {
+  if (isTauriRuntime()) {
+    // Inside Tauri: use native save dialog
+    try {
+      const invoke = await getInvoke();
+      const arrayBuffer = await blob.arrayBuffer();
+      const data = Array.from(new Uint8Array(arrayBuffer));
+      const result = await invoke("save_file_to_disk", { filename, data });
+      const parsed = JSON.parse(result as string) as { ok: boolean; path: string | null; message: string };
+      if (!parsed.ok && parsed.path !== null) {
+        console.error("Save failed:", parsed.message);
+      }
+    } catch (e) {
+      console.error("Native save failed, falling back to browser download:", e);
+      // Fallback to browser download
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+  } else {
+    // Browser mode: standard download
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
 }
 
 // ----------------------------------------------------------------------- //
