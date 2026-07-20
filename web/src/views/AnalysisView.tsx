@@ -276,6 +276,12 @@ function Collocation3DNetwork({
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rotationRef = useRef(0);
+  const [paused, setPaused] = useState(false);
+  const pausedRef = useRef(false);
+
+  useEffect(() => {
+    pausedRef.current = paused;
+  }, [paused]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -380,7 +386,9 @@ function Collocation3DNetwork({
         }
       });
 
-      rotationRef.current += 0.005;
+      if (!pausedRef.current) {
+        rotationRef.current += 0.005;
+      }
       animId = requestAnimationFrame(draw);
     };
 
@@ -390,11 +398,23 @@ function Collocation3DNetwork({
 
   return (
     <div className="collocation-3d-network">
-      <h4 className="network-title">Collocation Network (3D Animated)</h4>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", maxWidth: "600px" }}>
+        <h4 className="network-title">Collocation Network (3D Animated)</h4>
+        <button
+          className="btn-small"
+          onClick={() => setPaused(!paused)}
+          title={paused ? "Resume rotation" : "Pause rotation"}
+          aria-label={paused ? "Resume rotation" : "Pause rotation"}
+        >
+          {paused ? "\u25B6" : "\u23F8"}
+        </button>
+      </div>
       <canvas
         ref={canvasRef}
         width={600}
         height={400}
+        role="img"
+        aria-label={`3D collocation network for '${node}' - see the table above for the same data in text form`}
         style={{
           width: "100%",
           maxWidth: "600px",
@@ -920,7 +940,7 @@ function VocabPanel({ cid }: { cid: string }) {
           )}
           {result.data.rare_words.length > 0 && (
             <>
-              <h3>Rare words (frequency ≤ 1)</h3>
+              <h3>Rare words (frequency {"\u2264"} 1) {result.data.rare_words.length > 50 && <span style={{ fontSize: "11px", fontWeight: "normal", color: "var(--text-subtle)" }}>(showing top 50 of {result.data.rare_words.length})</span>}</h3>
               <DataTable
                 headers={["Word", "Frequency"]}
                 rows={result.data.rare_words.slice(0, 50).map((w) => [w.word, w.freq])}
@@ -972,7 +992,7 @@ function SentimentPanel({ cid }: { cid: string }) {
               <span className="bar-value">{result.data.negative}</span>
             </div>
           </div>
-          <h3>Sentiment timeline (per sentence)</h3>
+          <h3>Sentiment timeline (per sentence) {result.data.timeline.length > 100 && <span style={{ fontSize: "11px", fontWeight: "normal", color: "var(--text-subtle)" }}>(showing first 100 of {result.data.timeline.length})</span>}</h3>
           <div className="sentiment-timeline">
             {result.data.timeline.slice(0, 100).map((t, i) => (
               <div key={i} className="timeline-bar"
@@ -998,7 +1018,7 @@ function MetaphorPanel({ cid }: { cid: string }) {
   return (
     <div className="panel-content">
       <div className="grounding-notice">
-        <strong>8.17 (load-bearing):</strong> These are <em>candidates only</em>.
+        <strong>Note:</strong> These are <em>candidates only</em>.
         The LLM triages them via MIPVU decision steps (contextual vs. basic meaning,
         contrast-but-comprehensible-via-comparison test), and a <strong>human must
         verify</strong> before any candidate counts as a confirmed metaphor in export
