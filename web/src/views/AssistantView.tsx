@@ -8,7 +8,7 @@
  * Citations are clickable: clicking a `concordance_line` evidence reference
  * scrolls to / opens the concordancer view filtered to that line.
  */
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
 
@@ -55,6 +55,13 @@ export function AssistantView() {
     enabled: provider === "ollama",
     refetchInterval: 10_000,
   });
+
+  // Auto-select the first available model when none is selected
+  useEffect(() => {
+    if (provider === "ollama" && !selectedModel && ollamaModels.data && ollamaModels.data.models.length > 0) {
+      setSelectedModel(ollamaModels.data.models[0]);
+    }
+  }, [provider, selectedModel, ollamaModels.data]);
 
   const chat = useMutation({
     mutationFn: (text: string) =>

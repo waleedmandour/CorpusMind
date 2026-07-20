@@ -54,6 +54,18 @@ async def chat(req: ChatRequest, request: Request, session: AsyncSession = Depen
                    f"Make sure Ollama or LM Studio is running, or configure a cloud provider in Settings."
         )
 
+    # If no model is specified, auto-detect the first available model from the provider.
+    # This handles the case where the user downloaded a model but didn't select it
+    # in the AI Assistant's model dropdown.
+    if not req.model:
+        try:
+            available_models = await provider.list_models()
+            if available_models:
+                req.model = available_models[0]
+                log.info("auto_selected_model", model=req.model, provider=req.provider)
+        except Exception as e:
+            log.warning("auto_select_model_failed", error=str(e))
+
     # Check if the provider is healthy before attempting the chat
     try:
         is_healthy = await provider.health()
