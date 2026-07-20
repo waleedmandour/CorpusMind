@@ -19,6 +19,7 @@
  */
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import clsx from "clsx";
 import {
   api,
   isTauriRuntime,
@@ -316,6 +317,9 @@ export function SettingsView() {
               description="Opt-in cloud provider (Anthropic / OpenAI). Off by default for privacy."
             />
           </div>
+
+          {/* Cloud provider configuration */}
+          <CloudProviderConfig />
 
           {/* Ollama recheck button */}
           {!ollamaOk && (
@@ -1010,7 +1014,7 @@ function OllamaModelManager({ ollamaHealthy }: { ollamaHealthy: boolean }) {
                   <button
                     className="btn-small"
                     onClick={() => {
-                      localStorage.setItem("corpusmind-ai-model", m.name);
+                      useApp.getState().setSelectedOllamaModel(m.name);
                       setLoadModelMsg(`Model "${m.name}" loaded. It will be used for AI Assistant queries.`);
                       setTimeout(() => setLoadModelMsg(""), 5000);
                     }}
@@ -1029,6 +1033,98 @@ function OllamaModelManager({ ollamaHealthy }: { ollamaHealthy: boolean }) {
           {loadModelMsg}
         </div>
       )}
+    </div>
+  );
+}
+
+
+// ─── Cloud Provider Config (opt-in, consent-gated) ───────────────
+
+function CloudProviderConfig() {
+  const qc = useQueryClient();
+  const [provider, setProvider] = useState<"openai" | "anthropic">("openai");
+  const [apiKey, setApiKey] = useState("");
+  const [showKey, setShowKey] = useState(false);
+  const [model, setModel] = useState("");
+  const [baseUrl, setBaseUrl] = useState("");
+  const [consent, setConsent] = useState(false);
+  const [status, setStatus] = useState("");
+
+  const config = useQuery({ queryKey: ["cloud-config"], queryFn: api.getCloudConfig });
+
+  const save = useMutation({
+    mutationFn: () => api.setCloudConfig({
+      provider,
+      api_key: apiKey,
+      model: model || undefined,
+      base_url: baseUrl || undefined,
+      acknowledge_data_leaves_device: consent,
+    }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["cloud-config"] });
+      qc.invalidateQueries({ queryKey: ["providers"] });
+      setStatus("Cloud provider configured. The cloud indicator will show whenever it is active.");
+      setApiKey("");
+      setTimeout(() => setStatus(""), 6000);
+    },
+    onError: (e: Error) => setStatus(`Failed: ${e.message}`),
+  });
+
+  const clear = useMutation({
+    mutationFn: () => api.clearCloudConfig(),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["cloud-config"] });
+      qc.invalidateQueries({ queryKey: ["providers"] });
+      setStatus("Cloud provider disabled.");
+      setTimeout(() => setStatus(""), 5000);
+    },
+  });
+
+  const isConfigured = config.data?.configured ?? false;
+
+  return (
+    <div className="cloud-config-section" style={{ marginTop: "var(--space-3)", padding: "var(--space-3)", background: "var(--bg-subtle)", borderRadius: "var(--radius-md)", border: "1px solid var(--border)" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-2)" }}>
+        <strong>Cloud AI Provider</strong>
+        {isConfigured && (
+          <span style={{ background: "var(--warning, #c77b0e)", color: "white", padding: "2px 8px", borderRadius: "4px", fontSize: "11px", fontWeight: 600 }}>
+            {"\u2601"} Cloud active - data leaves device
+          </span>
+        )}
+      </div>
+      {isConfigured ? (
+        <div>
+          <p className="settings-text-muted" style={{ marginBottom: "var(--space-2)" }}>
+            Configured: {config.data?.provider} ({config.data?.model || "default model"})
+          </p>
+          <button className="btn-small" onClick={() => clear.mutate()} disabled={clear.isPending}>
+            {clear.isPending ? "Disabling..." : "Disable Cloud Provider"}
+          </button>
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+          <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
+            <select value={provider} onChange={(e) => setProvider(e.target.value as "openai" | "anthropic")} className="uploader-lang-dropdown">
+              <option value="openai">OpenAI</option>
+              <option value="anthropic">Anthropic</option>
+            </select>
+            <div style={{ position: "relative", flex: 1 }}>
+              <input type={showKey ? "text" : "password"} value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder="API key" style={{ width: "100%", padding: "4px 8px", fontSize: "12px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }} />
+              <button onClick={() => setShowKey(!showKey)} style={{ position: "absolute", right: "4px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", fontSize: "11px" }}>{showKey ? "Hide" : "Show"}</button>
+            </div>
+          </div>
+          <input type="text" value={model} onChange={(e) => setModel(e.target.value)} placeholder="Model (optional, e.g. gpt-4o)" style={{ padding: "4px 8px", fontSize: "12px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }} />
+          <input type="text" value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder="Base URL override (optional)" style={{ padding: "4px 8px", fontSize: "12px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }} />
+          <label style={{ display: "flex", alignItems: "center", gap: "var(--space-1)", fontSize: "12px", color: "var(--warning, #c77b0e)" }}>
+            <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
+            I understand that enabling this sends data to a third-party cloud API.
+          </label>
+          <button className="btn-primary" disabled={!apiKey.trim() || !consent || save.isPending} onClick={() => save.mutate()}>
+            {save.isPending ? "Saving..." : "Enable Cloud Provider"}
+          </button>
+        </div>
+      )}
+      {status && <div className={clsx("uploader-status", status.includes("Failed") ? "error" : "success")} style={{ marginTop: "var(--space-2)" }}>{status}</div>}
     </div>
   );
 }

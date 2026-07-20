@@ -35,14 +35,18 @@ interface Message {
 
 export function AssistantView() {
   const cid = useApp((s) => s.activeCorpusId);
+  const storeModel = useApp((s) => s.selectedOllamaModel);
   const setActiveNav = useUI((s) => s.setActiveNav);
   const studentMode = useUI((s) => s.studentMode);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [provider, setProvider] = useState<"ollama" | "lmstudio" | "cloud">("ollama");
-  const [selectedModel, setSelectedModel] = useState<string>("");
+  const [localModel, setLocalModel] = useState<string>("");
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [showStudentInput, setShowStudentInput] = useState<number | null>(null);
+
+  // The effective model: store-loaded takes priority, then local selection, then auto
+  const selectedModel = storeModel || localModel;
   const [studentText, setStudentText] = useState("");
 
   const tools = useQuery({ queryKey: ["tools"], queryFn: api.listTools });
@@ -58,10 +62,10 @@ export function AssistantView() {
 
   // Auto-select the first available model when none is selected
   useEffect(() => {
-    if (provider === "ollama" && !selectedModel && ollamaModels.data && ollamaModels.data.models.length > 0) {
-      setSelectedModel(ollamaModels.data.models[0]);
+    if (provider === "ollama" && !storeModel && !localModel && ollamaModels.data && ollamaModels.data.models.length > 0) {
+      setLocalModel(ollamaModels.data.models[0]);
     }
-  }, [provider, selectedModel, ollamaModels.data]);
+  }, [provider, storeModel, localModel, ollamaModels.data]);
 
   const chat = useMutation({
     mutationFn: (text: string) =>
@@ -126,11 +130,28 @@ export function AssistantView() {
         i === msgIndex ? { ...m, verified } : m
       ));
     } catch (e) {
-      // Non-fatal - the verification is local-only if the API call fails
       setMessages((prev) => prev.map((m, i) =>
         i === msgIndex ? { ...m, verified } : m
       ));
     }
+  };
+
+  const [editIndex, setEditIndex] = useState<number | null>(null);
+  const [editText, setEditText] = useState("");
+
+  const startEdit = (idx: number) => {
+    setEditIndex(idx);
+    setEditText(messages[idx]?.content || "");
+  };
+
+  const submitEdit = async () => {
+    if (editIndex === null) return;
+    await verifyInterpretation(editIndex, "edited");
+    setMessages((prev) => prev.map((m, i) =>
+      i === editIndex ? { ...m, content: editText } : m
+    ));
+    setEditIndex(null);
+    setEditText("");
   };
 
   const prompts = [
@@ -145,7 +166,7 @@ export function AssistantView() {
     <div className="assistant">
       <aside className="assistant-sidebar">
         <h3>Model Provider</h3>
-        <select value={provider} onChange={(e) => { setProvider(e.target.value as typeof provider); setSelectedModel(""); }}>
+        <select value={provider} onChange={(e) => { setProvider(e.target.value as typeof provider); setLocalModel(""); }}>
           <option value="ollama">Ollama (local)</option>
           <option value="lmstudio">LM Studio (local)</option>
           <option value="cloud">Cloud (opt-in)</option>
@@ -159,7 +180,7 @@ export function AssistantView() {
             <h3>Loaded Model</h3>
             <select
               value={selectedModel}
-              onChange={(e) => setSelectedModel(e.target.value)}
+              onChange={(e) => setLocalModel(e.target.value)}
               className="model-select"
             >
               <option value="">Auto (default)</option>
@@ -336,16 +357,33 @@ export function AssistantView() {
 
                   {/* Verify This Interpretation buttons (human-in-the-loop) */}
                   {!m.verified && m.turn_id && (
+                    <>
                     <div className="verify-buttons">
                       <span className="verify-label">Verify this interpretation:</span>
                       <button className="btn-small verify-accept" onClick={() => verifyInterpretation(i, "accepted")}>{"\u2713"} Accept</button>
                       <button className="btn-small verify-reject" onClick={() => verifyInterpretation(i, "rejected")}>{"\u2717"} Reject</button>
-                      <button className="btn-small verify-edit" onClick={() => verifyInterpretation(i, "edited")}>{"\u270E"} Edit</button>
+                      <button className="btn-small verify-edit" onClick={() => startEdit(i)}>{"\u270E"} Edit</button>
                     </div>
-                  )}
+                    {editIndex === i && (
+                      <div style={{ marginTop: "var(--space-2)" }}>
+                        <textarea
+                          value={editText}
+                          onChange={(e) => setEditText(e.target.value)}
+                          rows={4}
+                          style={{ width: "100%", fontSize: "13px", padding: "var(--space-2)", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)" }}
+                        />
+                        <div style={{ display: "flex", gap: "var(--space-2)", marginTop: "var(--space-1)" }}>
+                          <button className="btn-primary btn-small" onClick={submitEdit}>Save Edit</button>
+                          <button className="btn-small" onClick={() => { setEditIndex(null); setEditText(""); }}>Cancel</button>
+                        </div>
+                      </div>
+                    )}
                     </>
                   )}
                 </>
+              )}
+              </>
+
               )}
 
               {m.role === "user" && (

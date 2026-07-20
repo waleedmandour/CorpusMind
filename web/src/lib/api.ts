@@ -1267,6 +1267,19 @@ export const api = {
       method: "DELETE",
     }),
 
+  // --- Cloud AI provider config (opt-in) ---
+  getCloudConfig: () =>
+    jsonFetch<{ configured: boolean; provider: string; model: string; source: string; hard_disabled: boolean }>("/api/v1/ai/cloud-config"),
+  setCloudConfig: (req: { provider: "anthropic" | "openai"; api_key: string; model?: string; base_url?: string; acknowledge_data_leaves_device: boolean }) =>
+    jsonFetch<{ configured: boolean; provider: string; model: string }>("/api/v1/ai/cloud-config", {
+      method: "POST",
+      body: JSON.stringify(req),
+    }),
+  clearCloudConfig: () =>
+    jsonFetch<{ configured: boolean }>("/api/v1/ai/cloud-config", {
+      method: "DELETE",
+    }),
+
   // --- Ollama model catalogue + pull ---
   ollamaCatalogue: () =>
     jsonFetch<{ models: OllamaModel[] }>("/api/v1/ollama/catalogue"),

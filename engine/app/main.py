@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from ai import ProviderRegistry
 from api import ai as ai_routes
 from api import (
+    ai_provider_config,
     analysis,
     arabic,
     cleaning,
@@ -106,6 +107,7 @@ def create_app() -> FastAPI:
     app.include_router(health.router, prefix="/api/v1", tags=["health"])
     app.include_router(system.router, prefix="/api/v1", tags=["system"])
     app.include_router(ai_routes.router, prefix="/api/v1/ai", tags=["ai"])
+    app.include_router(ai_provider_config.router, prefix="/api/v1", tags=["ai-config"])
     app.include_router(corpora.router, prefix="/api/v1", tags=["corpora"])
     app.include_router(analysis.router, prefix="/api/v1", tags=["analysis"])
     app.include_router(phase2.router, prefix="/api/v1", tags=["phase2"])

@@ -738,3 +738,8 @@ class ProviderRegistry:
             if close:
                 await close()
         self._instances.clear()
+
+    def invalidate(self, name: str) -> None:
+        """Drop a cached provider instance so the next .get() rebuilds it
+        from current settings - needed after a runtime credential change."""
+        self._instances.pop(name, None)

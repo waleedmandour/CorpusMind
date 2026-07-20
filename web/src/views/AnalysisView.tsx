@@ -517,6 +517,7 @@ function DispersionPanel({ cid }: { cid: string }) {
           placeholder="Term (e.g. 'the')"
         />
         <button onClick={() => setSubmitted(term.trim())} disabled={!term.trim()}>Compute</button>
+        <ExportButton onExport={(fmt) => { if (result.data) { const blob = new Blob([JSON.stringify(result.data, null, 2)], {type:"application/json"}); downloadBlob(blob, `dispersion.${fmt}`); } } } disabled={!result.data} />
       </div>
 
       {result.data && (
@@ -548,17 +549,74 @@ function DispersionPanel({ cid }: { cid: string }) {
 
 
 function DataTable({ headers, rows }: { headers: string[]; rows: (string | number)[][] }) {
+  const [sortCol, setSortCol] = useState<number | null>(null);
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [filter, setFilter] = useState("");
+
+  // Detect if a column is numeric (all non-empty values are numbers)
+  const isNumeric = (col: number) => rows.length > 0 && rows.every((r) => r[col] === "" || r[col] === null || typeof r[col] === "number");
+
+  const sorted = [...rows];
+  if (sortCol !== null) {
+    const numeric = isNumeric(sortCol);
+    sorted.sort((a, b) => {
+      const av = a[sortCol];
+      const bv = b[sortCol];
+      if (av === "" || av === null) return 1;
+      if (bv === "" || bv === null) return -1;
+      let cmp: number;
+      if (numeric) {
+        cmp = Number(av) - Number(bv);
+      } else {
+        cmp = String(av).localeCompare(String(bv));
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+  }
+
+  const filtered = filter.trim()
+    ? sorted.filter((r) => r.some((c) => String(c).toLowerCase().includes(filter.toLowerCase())))
+    : sorted;
+
+  const cycleSort = (col: number) => {
+    if (sortCol === col && sortDir === "asc") {
+      setSortDir("desc");
+    } else if (sortCol === col && sortDir === "desc") {
+      setSortCol(null);
+      setSortDir("asc");
+    } else {
+      setSortCol(col);
+      setSortDir("asc");
+    }
+  };
+
   return (
-    <table className="data-table">
-      <thead>
-        <tr>{headers.map((h) => <th key={h}>{h}</th>)}</tr>
-      </thead>
-      <tbody>
-        {rows.map((r, i) => (
-          <tr key={i}>{r.map((c, j) => <td key={j}>{c}</td>)}</tr>
-        ))}
-      </tbody>
-    </table>
+    <div>
+      <input
+        type="text"
+        value={filter}
+        onChange={(e) => setFilter(e.target.value)}
+        placeholder="Filter results..."
+        style={{ marginBottom: "var(--space-2)", padding: "4px 8px", fontSize: "12px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", inlineSize: "100%", maxWidth: "300px" }}
+      />
+      <table className="data-table">
+        <thead>
+          <tr>
+            {headers.map((h, i) => (
+              <th key={h} onClick={() => cycleSort(i)} style={{ cursor: "pointer", userSelect: "none" }}>
+                {h} {sortCol === i ? (sortDir === "asc" ? "\u25B2" : "\u25BC") : ""}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {filtered.map((r, i) => (
+            <tr key={i}>{r.map((c, j) => <td key={j}>{c}</td>)}</tr>
+          ))}
+        </tbody>
+      </table>
+      {filter.trim() && <p style={{ fontSize: "11px", color: "var(--text-subtle)", marginTop: "var(--space-1)" }}>Showing {filtered.length} of {rows.length} rows</p>}
+    </div>
   );
 }
 
@@ -604,7 +662,8 @@ function NGramsPanel({ cid }: { cid: string }) {
         <strong>Note:</strong> Lexical bundles require BOTH a minimum frequency per million words
         AND a minimum number of distinct texts - raw frequency alone is not enough to
         distinguish genuine bundles from single-text artifacts (Biber et al.).
-      </div>
+      
+        <ExportButton onExport={(fmt) => { if (result.data) { const blob = new Blob([JSON.stringify(result.data, null, 2)], {type:"application/json"}); downloadBlob(blob, `ngrams.${fmt}`); } } } disabled={!result.data} /></div>
 
       {result.data && (
         <>
@@ -642,7 +701,8 @@ function POSPanel({ cid }: { cid: string }) {
             <option value={5}>5</option>
           </select>
         </label>
-      </div>
+      
+        <ExportButton onExport={(fmt) => { if (result.data) { const blob = new Blob([JSON.stringify(result.data, null, 2)], {type:"application/json"}); downloadBlob(blob, `pos.${fmt}`); } } } disabled={!result.data} /></div>
 
       {result.data && n === 1 && (
         <>
@@ -698,7 +758,8 @@ function GrammarPanel({ cid }: { cid: string }) {
       <div className="grounding-notice">
         <strong>Note:</strong> Grammar pattern detectors are <em>dependency-parse-driven</em>,
         not regex over surface text - so they generalize across genres.
-      </div>
+      
+        <ExportButton onExport={(fmt) => { if (result.data) { const blob = new Blob([JSON.stringify(result.data, null, 2)], {type:"application/json"}); downloadBlob(blob, `grammar.${fmt}`); } } } disabled={!result.data} /></div>
 
       {result.data && (
         <>
@@ -764,7 +825,8 @@ function DependencyPanel({ cid }: { cid: string }) {
       <div className="grounding-notice">
         <strong>Note:</strong> Built as thin queries over the same dependency parses already
         produced in 8.1 - not a separate pipeline.
-      </div>
+      
+        <ExportButton onExport={(fmt) => { if (result.data) { const blob = new Blob([JSON.stringify(result.data, null, 2)], {type:"application/json"}); downloadBlob(blob, `dependency.${fmt}`); } } } disabled={!result.data} /></div>
 
       {result.data && (
         <>
@@ -791,7 +853,8 @@ function DiscoursePanel({ cid }: { cid: string }) {
       <div className="grounding-notice">
         <strong>Note:</strong> Metadiscourse categories follow Hyland's interactive/interactional
         taxonomy (Hyland 2005) - this makes results citable and comparable across studies.
-      </div>
+      
+        <ExportButton onExport={(fmt) => { if (result.data) { const blob = new Blob([JSON.stringify(result.data, null, 2)], {type:"application/json"}); downloadBlob(blob, `discourse.${fmt}`); } } } disabled={!result.data} /></div>
 
       {result.data && (
         <>
@@ -832,7 +895,8 @@ function VocabPanel({ cid }: { cid: string }) {
         <strong>Note:</strong> Vocabulary profiling uses an open frequency-band approximation
         (CC-0 wordlist). EVP-style CEFR wordlists carry redistribution restrictions and are
         not bundled without confirmed rights.
-      </div>
+      
+        <ExportButton onExport={(fmt) => { if (result.data) { const blob = new Blob([JSON.stringify(result.data, null, 2)], {type:"application/json"}); downloadBlob(blob, `vocab.${fmt}`); } } } disabled={!result.data} /></div>
 
       {result.data && (
         <>
@@ -882,7 +946,8 @@ function SentimentPanel({ cid }: { cid: string }) {
         <strong>Note:</strong> Phase 2 uses a lexicon-based sentiment scorer. Phase 3 will swap
         in VADER or a transformers-based model behind the same interface - results stay comparable
         because the model + version is pinned per project (4 Principle 8).
-      </div>
+      
+        <ExportButton onExport={(fmt) => { if (result.data) { const blob = new Blob([JSON.stringify(result.data, null, 2)], {type:"application/json"}); downloadBlob(blob, `sentiment.${fmt}`); } } } disabled={!result.data} /></div>
 
       {result.data && (
         <>
@@ -940,7 +1005,8 @@ function MetaphorPanel({ cid }: { cid: string }) {
         or statistics. Current evidence shows LLMs alone under-perform supervised
         detectors and especially struggle to filter literal false positives - the
         verification gate is not optional UI polish, it is load-bearing for validity.
-      </div>
+      
+        <ExportButton onExport={(fmt) => { if (result.data) { const blob = new Blob([JSON.stringify(result.data, null, 2)], {type:"application/json"}); downloadBlob(blob, `metaphor.${fmt}`); } } } disabled={!result.data} /></div>
 
       {result.data && (
         <>
@@ -957,7 +1023,7 @@ function MetaphorPanel({ cid }: { cid: string }) {
                   <strong className="metaphor-word">{c.word}</strong>
                   <span className="metaphor-pos">({c.pos})</span>
                   <span className="metaphor-subject">subject: <em>{c.subject}</em></span>
-                  <button className="verify-btn" title="Mark as verified (Phase 3)">Needs verification</button>
+                  <button className="verify-btn" title="Coming soon - manual verification flow (Phase 3)" disabled>Needs verification</button>
                 </header>
                 <p className="metaphor-sentence">"{c.sentence}"</p>
                 <p className="metaphor-reason">{c.reason}</p>
