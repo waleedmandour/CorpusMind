@@ -7,7 +7,7 @@
  * view receives "frequency" as the active tab and renders that panel.
  * The internal tab bar also allows switching between analyses.
  */
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
 
@@ -228,16 +228,186 @@ function CollocationPanel({ cid }: { cid: string }) {
           {result.data.rows.length === 0 ? (
             <div className="empty-state">No collocates met the min-frequency threshold.</div>
           ) : (
-            <DataTable
-              headers={["Collocate", "O", "f(node)", "f(y)", "N", ...measureKeys]}
-              rows={result.data.rows.map((r) => [
-                r.collocate, r.O, r.fx, r.fy, r.N,
-                ...measureKeys.map((k) => (r as any)[k] ?? "—"),
-              ])}
-            />
+            <>
+              <DataTable
+                headers={["Collocate", "O", "f(node)", "f(y)", "N", ...measureKeys]}
+                rows={result.data.rows.map((r) => [
+                  r.collocate, r.O, r.fx, r.fy, r.N,
+                  ...measureKeys.map((k) => (r as any)[k] ?? "—"),
+                ])}
+              />
+              <Collocation3DNetwork
+                node={result.data.node}
+                rows={result.data.rows}
+                measureKeys={measureKeys}
+              />
+            </>
           )}
         </>
       )}
+    </div>
+  );
+}
+
+
+// ─── 3D Collocation Network Visualization ─────────────────────────
+// An animated canvas-based 3D network graph that rotates and pulses.
+// The node word sits at the center; collocates orbit around it.
+// Edge thickness = co-occurrence frequency; node size = MI score.
+// Colors: warm (strong association) → cool (weak).
+
+interface CollocRow {
+  collocate: string;
+  O: number;
+  fx: number;
+  fy: number;
+  N: number;
+  [key: string]: any;
+}
+
+function Collocation3DNetwork({
+  node,
+  rows,
+  measureKeys,
+}: {
+  node: string;
+  rows: CollocRow[];
+  measureKeys: string[];
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const rotationRef = useRef(0);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const W = canvas.width;
+    const H = canvas.height;
+    const cx = W / 2;
+    const cy = H / 2;
+
+    // Find MI scores for sizing/coloring
+    const miKey = measureKeys.find((k) => k.toLowerCase().includes("mi")) || measureKeys[0];
+    const maxMI = Math.max(...rows.map((r) => Math.abs(Number(r[miKey]) || 0)), 1);
+
+    // Assign positions on a sphere for each collocate
+    const nodes = rows.slice(0, 30).map((r, i) => {
+      const phi = Math.acos(1 - (2 * (i + 1)) / (rows.length + 1));
+      const theta = Math.PI * (1 + Math.sqrt(5)) * i;
+      const radius = 120 + (1 - Math.abs(Number(r[miKey]) || 0) / maxMI) * 60;
+      return {
+        label: r.collocate,
+        x: radius * Math.cos(theta) * Math.sin(phi),
+        y: radius * Math.sin(theta) * Math.sin(phi),
+        z: radius * Math.cos(phi),
+        freq: r.O,
+        mi: Math.abs(Number(r[miKey]) || 0),
+      };
+    });
+
+    let animId = 0;
+
+    const draw = () => {
+      ctx.clearRect(0, 0, W, H);
+      const rot = rotationRef.current;
+
+      // Sort nodes by z for proper depth ordering
+      const projected = nodes.map((n) => {
+        const cosR = Math.cos(rot);
+        const sinR = Math.sin(rot);
+        const x2 = n.x * cosR - n.z * sinR;
+        const z2 = n.x * sinR + n.z * cosR;
+        const scale = (z2 + 300) / 600; // depth scale (0=near, 1=far)
+        return {
+          ...n,
+          px: cx + x2 * (1 + scale * 0.3),
+          py: cy + n.y * (1 + scale * 0.3),
+          pz: scale,
+          x2,
+          z2,
+        };
+      });
+      projected.sort((a, b) => a.pz - b.pz);
+
+      // Draw edges (center → each node)
+      projected.forEach((n) => {
+        const alpha = 0.15 + (1 - n.pz) * 0.5;
+        const thickness = Math.max(0.5, n.freq / Math.max(...nodes.map((x) => x.freq)) * 4);
+        ctx.strokeStyle = `rgba(11, 110, 79, ${alpha})`;
+        ctx.lineWidth = thickness;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(n.px, n.py);
+        ctx.stroke();
+      });
+
+      // Draw center node
+      const centerGlow = ctx.createRadialGradient(cx, cy, 0, cx, cy, 40);
+      centerGlow.addColorStop(0, "rgba(11, 110, 79, 0.4)");
+      centerGlow.addColorStop(1, "rgba(11, 110, 79, 0)");
+      ctx.fillStyle = centerGlow;
+      ctx.fillRect(cx - 40, cy - 40, 80, 80);
+      ctx.fillStyle = "#0b6e4f";
+      ctx.beginPath();
+      ctx.arc(cx, cy, 18, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#fff";
+      ctx.font = "bold 12px Inter, sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(node, cx, cy);
+
+      // Draw collocate nodes
+      projected.forEach((n) => {
+        const size = 6 + (n.mi / maxMI) * 12;
+        const alpha = 0.4 + (1 - n.pz) * 0.6;
+        // Color: warm for strong MI, cool for weak
+        const heat = n.mi / maxMI;
+        const r = Math.round(11 + heat * 200);
+        const g = Math.round(110 - heat * 50);
+        const b = Math.round(79 - heat * 60);
+        ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        ctx.beginPath();
+        ctx.arc(n.px, n.py, size * (1 + n.pz * 0.3), 0, Math.PI * 2);
+        ctx.fill();
+        // Label
+        if (size > 8) {
+          ctx.fillStyle = `rgba(0, 0, 0, ${alpha})`;
+          ctx.font = `${10 + size * 0.3}px Inter, sans-serif`;
+          ctx.fillText(n.label, n.px, n.py);
+        }
+      });
+
+      rotationRef.current += 0.005;
+      animId = requestAnimationFrame(draw);
+    };
+
+    draw();
+    return () => cancelAnimationFrame(animId);
+  }, [node, rows, measureKeys]);
+
+  return (
+    <div className="collocation-3d-network">
+      <h4 className="network-title">Collocation Network (3D Animated)</h4>
+      <canvas
+        ref={canvasRef}
+        width={600}
+        height={400}
+        style={{
+          width: "100%",
+          maxWidth: "600px",
+          height: "auto",
+          background: "var(--bg-subtle, #f5f5f5)",
+          borderRadius: "var(--radius-md, 8px)",
+          border: "1px solid var(--border, #ddd)",
+        }}
+      />
+      <p className="network-hint">
+        Node size = association strength (MI). Edge thickness = co-occurrence frequency.
+        Warm colors = stronger association. The network rotates automatically.
+      </p>
     </div>
   );
 }

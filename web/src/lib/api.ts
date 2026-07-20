@@ -1184,28 +1184,28 @@ export const api = {
   // endpoints are kept for backwards compatibility but the frontend now
   // uses these format-parameterized versions.
   exportConcordance: (cid: string, query: string, fmt: ExportFormat = "xlsx", level = "word", window = 5, limit = 1000) =>
-    fetch(`${ENGINE_BASE}/api/v1/corpora/${cid}/export/concordance?fmt=${fmt}`, {
+    smartFetch(`/api/v1/corpora/${cid}/export/concordance?fmt=${fmt}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ query, level, window, limit }),
     }).then((r) => r.blob()),
 
   exportFrequency: (cid: string, unit = "word", fmt: ExportFormat = "xlsx", limit = 1000) =>
-    fetch(`${ENGINE_BASE}/api/v1/corpora/${cid}/export/frequency?fmt=${fmt}`, {
+    smartFetch(`/api/v1/corpora/${cid}/export/frequency?fmt=${fmt}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ unit, limit }),
     }).then((r) => r.blob()),
 
   exportCollocations: (cid: string, node: string, fmt: ExportFormat = "xlsx", level = "word", window = 5, min_freq = 3) =>
-    fetch(`${ENGINE_BASE}/api/v1/corpora/${cid}/export/collocations?fmt=${fmt}`, {
+    smartFetch(`/api/v1/corpora/${cid}/export/collocations?fmt=${fmt}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ node, level, window, min_freq }),
     }).then((r) => r.blob()),
 
   exportKeyness: (cid: string, reference_corpus_id: string, fmt: ExportFormat = "xlsx") =>
-    fetch(`${ENGINE_BASE}/api/v1/corpora/${cid}/export/keyness?fmt=${fmt}`, {
+    smartFetch(`/api/v1/corpora/${cid}/export/keyness?fmt=${fmt}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ reference_corpus_id }),
@@ -1213,14 +1213,14 @@ export const api = {
 
   // Collocation network diagram export (SVG vector + PNG raster)
   exportCollocationNetworkSvg: (cid: string, node: string, level = "word", window = 5, min_freq = 3) =>
-    fetch(`${ENGINE_BASE}/api/v1/corpora/${cid}/export/collocations.network.svg`, {
+    smartFetch(`/api/v1/corpora/${cid}/export/collocations.network.svg`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ node, level, window, min_freq }),
     }).then((r) => r.blob()),
 
   exportCollocationNetworkPng: (cid: string, node: string, level = "word", window = 5, min_freq = 3) =>
-    fetch(`${ENGINE_BASE}/api/v1/corpora/${cid}/export/collocations.network.png`, {
+    smartFetch(`/api/v1/corpora/${cid}/export/collocations.network.png`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ node, level, window, min_freq }),

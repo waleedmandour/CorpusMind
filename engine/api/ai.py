@@ -47,6 +47,41 @@ async def chat(req: ChatRequest, request: Request, session: AsyncSession = Depen
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Provider error: {e}") from e
 
+    if provider is None:
+        raise HTTPException(
+            status_code=400,
+            detail=f"AI provider '{req.provider}' is not available. "
+                   f"Make sure Ollama or LM Studio is running, or configure a cloud provider in Settings."
+        )
+
+    # Check if the provider is healthy before attempting the chat
+    try:
+        is_healthy = await provider.health()
+    except Exception:
+        is_healthy = False
+    if not is_healthy:
+        provider_name = getattr(provider, "name", req.provider)
+        if provider_name == "ollama":
+            raise HTTPException(
+                status_code=503,
+                detail="Ollama is not running or no model is loaded. "
+                       "Please start Ollama and pull a model (e.g. llama3.2:3b) "
+                       "via Settings → Model Providers → Download models."
+            )
+        elif provider_name == "lmstudio":
+            raise HTTPException(
+                status_code=503,
+                detail="LM Studio is not running or no model is loaded. "
+                       "Please start LM Studio and enable the local server "
+                       "(Developer → Start Local Server)."
+            )
+        else:
+            raise HTTPException(
+                status_code=503,
+                detail=f"The {provider_name} provider is not available. "
+                       f"Please check Settings → Model Providers."
+            )
+
     # Load or create conversation
     convo = None
     if req.conversation_id:
@@ -60,8 +95,24 @@ async def chat(req: ChatRequest, request: Request, session: AsyncSession = Depen
     try:
         turn = await assistant.answer(session, convo, req.message)
     except Exception as e:
-        log.error("chat_failed", error=str(e))
-        raise HTTPException(status_code=502, detail=f"Model call failed: {e}") from e
+        error_msg = str(e)
+        log.error("chat_failed", error=error_msg)
+        # Provide a user-friendly error message for common failures
+        if "greenlet" in error_msg.lower():
+            raise HTTPException(
+                status_code=502,
+                detail="The AI model encountered a database synchronization issue. "
+                       "This is a known issue with async SQLAlchemy + sync LLM calls. "
+                       "Please try again — if it persists, restart the engine."
+            ) from e
+        elif "connection refused" in error_msg.lower() or "connect" in error_msg.lower():
+            raise HTTPException(
+                status_code=502,
+                detail="Could not connect to the AI model. Please make sure "
+                       "Ollama or LM Studio is running and a model is loaded."
+            ) from e
+        else:
+            raise HTTPException(status_code=502, detail=f"Model call failed: {error_msg}") from e
 
     return ChatResponse(
         conversation_id=convo.id,

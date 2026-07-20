@@ -793,6 +793,7 @@ function MuteToggle() {
 function OllamaModelManager({ ollamaHealthy }: { ollamaHealthy: boolean }) {
   const qc = useQueryClient();
   const isTauri = isTauriRuntime();
+  const [loadModelMsg, setLoadModelMsg] = useState("");
   const catalogue = useQuery({ queryKey: ["ollama-catalogue"], queryFn: api.ollamaCatalogue });
   const installedModels = useQuery({
     queryKey: ["ollama-models"],
@@ -1004,12 +1005,30 @@ function OllamaModelManager({ ollamaHealthy }: { ollamaHealthy: boolean }) {
                 </button>
               )}
               {isInstalled && !isPulling && (
-                <span className="ollama-ready-text">Ready to use</span>
+                <div style={{ display: "flex", gap: "var(--space-1)", alignItems: "center" }}>
+                  <span className="ollama-ready-text">{"\u2713"} Installed</span>
+                  <button
+                    className="btn-small"
+                    onClick={() => {
+                      localStorage.setItem("corpusmind-ai-model", m.name);
+                      setLoadModelMsg(`Model "${m.name}" loaded. It will be used for AI Assistant queries.`);
+                      setTimeout(() => setLoadModelMsg(""), 5000);
+                    }}
+                    title={`Load ${m.name} as the active AI model`}
+                  >
+                    Load
+                  </button>
+                </div>
               )}
             </div>
           );
         })}
       </div>
+      {loadModelMsg && (
+        <div className="uploader-status success" style={{ marginTop: "var(--space-2)" }}>
+          {loadModelMsg}
+        </div>
+      )}
     </div>
   );
 }

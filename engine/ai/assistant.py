@@ -92,6 +92,16 @@ class Assistant:
             grounded=False,
         )
         session.add(user_turn)
+        # CRITICAL: Flush + commit before calling the LLM provider.
+        # The LLM provider does a sync HTTP call (httpx) which blocks the
+        # event loop. If the SQLAlchemy AsyncSession has pending greenlets
+        # at this point, the sync call triggers "greenlet_spawn has not been
+        # called; can't call await_only() here" — because the sync IO
+        # happens in a different greenlet context.
+        # By flushing + committing first, we ensure all pending DB operations
+        # are complete before the blocking LLM call.
+        await session.flush()
+        await session.commit()
 
         # Build the LLM message list
         # If corpus_id is set, prepend a system hint about which corpus is active
