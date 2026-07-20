@@ -6,6 +6,7 @@
  * corpus indicator, theme toggle, RTL toggle, and command palette button.
  */
 import { useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { Sidebar } from "@/components/Sidebar";
 import { CommandPalette } from "@/components/CommandPalette";
@@ -56,8 +57,8 @@ export default function App() {
           <span className="app-name">CorpusMind</span>
         </div>
         {activeCorpusId && (
-          <div className="app-active-corpus" title={activeCorpusId}>
-            <span className="dot" /> Corpus: {activeCorpusId.slice(0, 8)}
+          <div className="app-active-corpus" title="Corpus is loaded and ready">
+            <span className="dot" /> Corpus ready
           </div>
         )}
         <div className="app-topbar-actions">
@@ -112,6 +113,8 @@ export default function App() {
 
       {/* Status bar */}
       <footer className="app-statusbar" role="contentinfo">
+        <QueryStatusIndicator />
+        <span className="status-sep">|</span>
         <span>CorpusMind v0.1.3</span>
         <span className="status-sep">|</span>
         <span>AGPL-3.0</span>
@@ -127,4 +130,28 @@ export default function App() {
       <OnboardingModal />
     </div>
   );
+}
+
+/** Shows the current React Query status (loading / idle / error) in the status bar. */
+function QueryStatusIndicator() {
+  const qc = useQueryClient();
+  const queries = qc.getQueryCache().getAll();
+  const fetching = queries.filter((q) => q.state.status === "pending");
+  const errors = queries.filter((q) => q.state.status === "error");
+
+  if (errors.length > 0) {
+    return (
+      <span className="status-error" title={`${errors.length} error(s)`}>
+        {"\u26A0"} {errors.length} error{errors.length === 1 ? "" : "s"}
+      </span>
+    );
+  }
+  if (fetching.length > 0) {
+    return (
+      <span className="status-loading" title={`${fetching.length} active request(s)`}>
+        <span className="status-spinner" /> {fetching.length} processing...
+      </span>
+    );
+  }
+  return <span className="status-idle">Ready</span>;
 }

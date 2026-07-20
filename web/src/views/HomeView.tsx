@@ -100,7 +100,7 @@ export function HomeView() {
         {activeCorpusId && (
           <div className="status-chip ok">
             <span className="status-dot" />
-            Active Corpus: {activeCorpusId.slice(0, 8)}
+            Corpus loaded
           </div>
         )}
         <div className="status-chip info">

@@ -1,5 +1,5 @@
 /**
- * AssistantView — grounded chat (11).
+ * AssistantView - grounded chat (11).
  *
  * The most important UI contract in the whole product: every answer is either
  *   - grounded (has tool_calls / evidence) → rendered with green checkmark + citations
@@ -40,6 +40,7 @@ export function AssistantView() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [provider, setProvider] = useState<"ollama" | "lmstudio" | "cloud">("ollama");
+  const [selectedModel, setSelectedModel] = useState<string>("");
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [showStudentInput, setShowStudentInput] = useState<number | null>(null);
   const [studentText, setStudentText] = useState("");
@@ -47,9 +48,23 @@ export function AssistantView() {
   const tools = useQuery({ queryKey: ["tools"], queryFn: api.listTools });
   const providers = useQuery({ queryKey: ["providers"], queryFn: api.providers });
 
+  // List installed Ollama models for the model selector
+  const ollamaModels = useQuery({
+    queryKey: ["ollama-models"],
+    queryFn: () => api.listModels("ollama"),
+    enabled: provider === "ollama",
+    refetchInterval: 10_000,
+  });
+
   const chat = useMutation({
     mutationFn: (text: string) =>
-      api.chat({ message: text, provider, conversation_id: conversationId, corpus_id: cid }),
+      api.chat({
+        message: text,
+        provider,
+        model: selectedModel || null,
+        conversation_id: conversationId,
+        corpus_id: cid,
+      }),
     onSuccess: (turn: ChatTurnResponse) => {
       setConversationId(turn.conversation_id);
       setMessages((prev) => [
@@ -93,7 +108,7 @@ export function AssistantView() {
   };
 
   const providerHealthy = providers.data?.providers.find((p) => p.name === provider)?.healthy ?? false;
-  const corpusHint = cid ? `Active corpus: ${cid.slice(0, 8)}…` : "No active corpus — set one in Text → Manage.";
+  const corpusHint = cid ? "Active corpus loaded" : "No active corpus. Set one in Your Corpus.";
 
   const verifyInterpretation = async (msgIndex: number, verified: "accepted" | "rejected" | "edited") => {
     const msg = messages[msgIndex];
@@ -104,7 +119,7 @@ export function AssistantView() {
         i === msgIndex ? { ...m, verified } : m
       ));
     } catch (e) {
-      // Non-fatal — the verification is local-only if the API call fails
+      // Non-fatal - the verification is local-only if the API call fails
       setMessages((prev) => prev.map((m, i) =>
         i === msgIndex ? { ...m, verified } : m
       ));
@@ -115,22 +130,46 @@ export function AssistantView() {
     "What are the top 10 most frequent words in this corpus?",
     "Find all occurrences of 'fox' and show me their contexts.",
     "What are the strongest collocates of 'dog' within ±5 tokens?",
-    "Compare this corpus against the reference — what are the top keywords?",
+    "Compare this corpus against the reference - what are the top keywords?",
     "How evenly is 'the' distributed across the documents?",
   ];
 
   return (
     <div className="assistant">
       <aside className="assistant-sidebar">
-        <h3>Model</h3>
-        <select value={provider} onChange={(e) => setProvider(e.target.value as typeof provider)}>
+        <h3>Model Provider</h3>
+        <select value={provider} onChange={(e) => { setProvider(e.target.value as typeof provider); setSelectedModel(""); }}>
           <option value="ollama">Ollama (local)</option>
           <option value="lmstudio">LM Studio (local)</option>
           <option value="cloud">Cloud (opt-in)</option>
         </select>
         <div className={clsx("provider-status", { ok: providerHealthy, bad: !providerHealthy })}>
-          {providerHealthy ? "● connected" : "○ offline — start Ollama or LM Studio"}
+          {providerHealthy ? "Connected" : "Offline"}
         </div>
+
+        {provider === "ollama" && ollamaModels.data && ollamaModels.data.models.length > 0 && (
+          <>
+            <h3>Loaded Model</h3>
+            <select
+              value={selectedModel}
+              onChange={(e) => setSelectedModel(e.target.value)}
+              className="model-select"
+            >
+              <option value="">Auto (default)</option>
+              {ollamaModels.data.models.map((m) => (
+                <option key={m} value={m}>{m}</option>
+              ))}
+            </select>
+            {selectedModel && (
+              <div className="model-loaded-badge">
+                {"\u2713"} {selectedModel}
+              </div>
+            )}
+          </>
+        )}
+        {provider === "ollama" && ollamaModels.data?.models.length === 0 && (
+          <p className="hint">No models installed. Go to Settings to download one.</p>
+        )}
 
         <div className="corpus-hint">{corpusHint}</div>
 
@@ -240,7 +279,7 @@ export function AssistantView() {
                         Confidence: {(m.confidence * 100).toFixed(0)}%
                       </span>
                       {m.confidence_reasoning && (
-                        <span className="confidence-reasoning">— {m.confidence_reasoning}</span>
+                        <span className="confidence-reasoning">- {m.confidence_reasoning}</span>
                       )}
                     </div>
                   )}
@@ -390,7 +429,7 @@ function MCQValidation({ mcqs, onComplete }: { mcqs: MCQ[]; onComplete: () => vo
       )}
       {submitted && (
         <button className="mcq-reveal-btn" onClick={handleReveal}>
-          {allCorrect ? "✓ All correct — reveal AI answer" : "Reveal AI answer anyway"}
+          {allCorrect ? "✓ All correct - reveal AI answer" : "Reveal AI answer anyway"}
         </button>
       )}
     </div>

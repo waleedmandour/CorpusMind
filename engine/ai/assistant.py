@@ -124,7 +124,13 @@ class Assistant:
         evidence: list[Evidence] = []
         content = ""
 
-        # Pass 1: ask the model — it may emit a tool call or a direct answer.
+        # Pass 1: ask the model. The provider.chat() is async and uses
+        # httpx.AsyncClient, so it shouldn't block the event loop. But the
+        # tools (execute_tool) open their OWN session_scope() which creates
+        # a greenlet conflict with the request session. Fix: we already
+        # committed above, so the request session has no pending operations.
+        # The tools use their own independent session, which is fine as long
+        # as the request session is idle (no uncommitted transactions).
         first = await self.provider.chat(
             messages,
             model=self.model,

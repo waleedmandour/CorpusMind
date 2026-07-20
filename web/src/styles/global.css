@@ -3016,6 +3016,54 @@ html[dir="rtl"] .app-name {
   flex: 1;
 }
 
+/* Query status indicator */
+.status-idle { color: var(--text-subtle); font-size: 11px; }
+.status-loading {
+  color: var(--brand-500, #0b6e4f);
+  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.status-error {
+  color: var(--danger, #dc2626);
+  font-size: 11px;
+  font-weight: 600;
+}
+.status-spinner {
+  display: inline-block;
+  inline-size: 10px;
+  block-size: 10px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Model loaded badge in AssistantView */
+.model-loaded-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  background: var(--brand-500, #0b6e4f);
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 4px;
+  margin-block-start: 4px;
+}
+.model-select {
+  inline-size: 100%;
+  padding: 4px;
+  font-size: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  color: var(--text);
+}
+
 .trouble-bar-container {
   position: relative;
   display: inline-flex;

@@ -448,7 +448,7 @@ function KeynessPanel({ cid }: { cid: string }) {
       <div className="toolbar">
         <label>Reference corpus
           <select value={referenceCorpusId ?? ""} onChange={(e) => setReferenceCorpus(e.target.value || null)}>
-            <option value="">— Select —</option>
+            <option value="">- Select -</option>
             {corpora.data?.filter((c) => c.id !== cid).map((c) => (
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
@@ -464,7 +464,7 @@ function KeynessPanel({ cid }: { cid: string }) {
       <div className="grounding-notice">
         <strong>4 Principle 3:</strong> a "key" word is never reported as important on
         frequency-of-occurrence-in-a-huge-corpus grounds alone. Log Ratio, %DIFF,
-        Simple Maths, and Odds Ratio ride alongside log-likelihood — never report
+        Simple Maths, and Odds Ratio ride alongside log-likelihood - never report
         one without the other.
       </div>
 
@@ -601,8 +601,8 @@ function NGramsPanel({ cid }: { cid: string }) {
       </div>
 
       <div className="grounding-notice">
-        <strong>8.8:</strong> Lexical bundles require BOTH a minimum frequency per million words
-        AND a minimum number of distinct texts — raw frequency alone is not enough to
+        <strong>Note:</strong> Lexical bundles require BOTH a minimum frequency per million words
+        AND a minimum number of distinct texts - raw frequency alone is not enough to
         distinguish genuine bundles from single-text artifacts (Biber et al.).
       </div>
 
@@ -697,7 +697,7 @@ function GrammarPanel({ cid }: { cid: string }) {
 
       <div className="grounding-notice">
         <strong>8.12:</strong> Grammar pattern detectors are <em>dependency-parse-driven</em>,
-        not regex over surface text — so they generalize across genres.
+        not regex over surface text - so they generalize across genres.
       </div>
 
       {result.data && (
@@ -710,7 +710,7 @@ function GrammarPanel({ cid }: { cid: string }) {
           {Object.entries(result.data.patterns).map(([pat, examples]) => (
             examples.length > 0 && (
               <div key={pat}>
-                <h3>{pat} — examples</h3>
+                <h3>{pat} - examples</h3>
                 <ul className="grammar-examples">
                   {examples.map((ex, i) => {
                     const verb = String(ex.verb ?? "");
@@ -763,7 +763,7 @@ function DependencyPanel({ cid }: { cid: string }) {
 
       <div className="grounding-notice">
         <strong>8.13:</strong> Built as thin queries over the same dependency parses already
-        produced in 8.1 — not a separate pipeline.
+        produced in 8.1 - not a separate pipeline.
       </div>
 
       {result.data && (
@@ -790,7 +790,7 @@ function DiscoursePanel({ cid }: { cid: string }) {
     <div className="panel-content">
       <div className="grounding-notice">
         <strong>8.15:</strong> Metadiscourse categories follow Hyland's interactive/interactional
-        taxonomy (Hyland 2005) — this makes results citable and comparable across studies.
+        taxonomy (Hyland 2005) - this makes results citable and comparable across studies.
       </div>
 
       {result.data && (
@@ -829,7 +829,7 @@ function VocabPanel({ cid }: { cid: string }) {
   return (
     <div className="panel-content">
       <div className="grounding-notice">
-        <strong>8.10:</strong> Vocabulary profiling uses an open frequency-band approximation
+        <strong>Note:</strong> Vocabulary profiling uses an open frequency-band approximation
         (CC-0 wordlist). EVP-style CEFR wordlists carry redistribution restrictions and are
         not bundled without confirmed rights.
       </div>
@@ -880,7 +880,7 @@ function SentimentPanel({ cid }: { cid: string }) {
     <div className="panel-content">
       <div className="grounding-notice">
         <strong>8.18:</strong> Phase 2 uses a lexicon-based sentiment scorer. Phase 3 will swap
-        in VADER or a transformers-based model behind the same interface — results stay comparable
+        in VADER or a transformers-based model behind the same interface - results stay comparable
         because the model + version is pinned per project (4 Principle 8).
       </div>
 
@@ -938,7 +938,7 @@ function MetaphorPanel({ cid }: { cid: string }) {
         contrast-but-comprehensible-via-comparison test), and a <strong>human must
         verify</strong> before any candidate counts as a confirmed metaphor in export
         or statistics. Current evidence shows LLMs alone under-perform supervised
-        detectors and especially struggle to filter literal false positives — the
+        detectors and especially struggle to filter literal false positives - the
         verification gate is not optional UI polish, it is load-bearing for validity.
       </div>
 
