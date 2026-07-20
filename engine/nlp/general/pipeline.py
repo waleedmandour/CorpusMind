@@ -92,37 +92,64 @@ class SpaCyPipeline:
         log.info("spacy_loading", model=self._model_name)
 
         # PyInstaller FIX: spacy.load("en_core_web_sm") uses spaCy's
-        # data resolution which looks for the model in spaCy's data path.
-        # In a PyInstaller frozen environment, this path resolution can fail
-        # with "[E050] Can't find model 'en_core_web_sm'". The fix is to
-        # import the model package directly and pass the loaded module to
-        # spacy.load() — this bypasses the data-path resolution entirely.
+        # data-path resolution which can fail in frozen environments.
+        # Try multiple strategies in order:
+        #   1. spacy.load(model_name) — standard, works in dev
+        #   2. import the model package + spacy.load(package_path)
+        #   3. Search sys.path for the model package dir
+        #   4. spacy.blank(lang) with tokenizer only — degraded fallback
+
+        nlp = None
+
+        # Strategy 1: standard spaCy load
         try:
-            self._nlp = spacy.load(self._model_name)
+            nlp = spacy.load(self._model_name)
         except OSError:
-            # Fallback: import the model package directly and use its path.
-            # This works in PyInstaller bundles where the model is collected
-            # as a package but spaCy's data-path resolution doesn't find it.
-            log.info("spacy_fallback_import", model=self._model_name)
+            log.info("spacy_strategy1_failed", model=self._model_name)
+
+        # Strategy 2: import the package + load from its directory
+        if nlp is None:
             try:
-                model_module = __import__(self._model_name)
-                model_path = model_module.__file__
-                if model_path:
-                    import os
-                    model_dir = os.path.dirname(model_path)
-                    self._nlp = spacy.load(model_dir)
-                else:
-                    raise
-            except (ImportError, OSError) as e2:
-                log.error("spacy_load_failed", model=self._model_name,
-                          error=str(e2),
-                          hint="The spaCy model is not installed. In development, run: "
-                               "python -m spacy download en_core_web_sm")
-                raise ValueError(
-                    f"spaCy model '{self._model_name}' could not be loaded. "
-                    f"In development, install it with: "
-                    f"python -m spacy download {self._model_name}"
-                ) from e2
+                import importlib
+                mod = importlib.import_module(self._model_name)
+                if hasattr(mod, "__path__"):
+                    model_path = list(mod.__path__)[0]
+                    log.info("spacy_strategy2_import", model_path=model_path)
+                    nlp = spacy.load(model_path)
+            except (ImportError, OSError, Exception) as e:
+                log.info("spacy_strategy2_failed", error=str(e))
+
+        # Strategy 3: search for the model in common paths (PyInstaller _internal)
+        if nlp is None:
+            try:
+                import os
+                import sys
+                # In PyInstaller, the _internal dir is where packages live
+                for search_dir in sys.path + [os.path.join(os.path.dirname(sys.executable), "_internal")]:
+                    model_dir = os.path.join(search_dir, self._model_name)
+                    if os.path.isdir(model_dir):
+                        meta_path = os.path.join(model_dir, "meta.json")
+                        if os.path.exists(meta_path):
+                            log.info("spacy_strategy3_found", model_dir=model_dir)
+                            nlp = spacy.load(model_dir)
+                            break
+            except Exception as e:
+                log.info("spacy_strategy3_failed", error=str(e))
+
+        # Strategy 4: degraded fallback — blank model with tokenizer only
+        if nlp is None:
+            log.warning(
+                "spacy_model_not_found_fallback_blank",
+                model=self._model_name,
+                hint="Using spacy.blank() — tokenization only, no POS/lemma/parse. "
+                     "The full model was not bundled correctly in PyInstaller.",
+            )
+            nlp = spacy.blank(self._language)
+            # Add a sentencizer so we at least get sentence boundaries
+            if "sentencizer" not in nlp.pipe_names:
+                nlp.add_pipe("sentencizer")
+
+        self._nlp = nlp
 
         # Sentencizer is built into most models, but add it defensively for
         # blank/minimal models. Also check for "parser" since the parser

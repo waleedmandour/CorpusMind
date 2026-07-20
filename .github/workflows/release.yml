@@ -150,6 +150,32 @@ jobs:
           }
           Write-Host "OK: all required VC++ runtime DLLs are bundled" -ForegroundColor Green
 
+      - name: Verify spaCy model is bundled
+        shell: pwsh
+        run: |
+          # Verify that the en_core_web_sm spaCy model was bundled correctly.
+          # Without it, corpus upload fails with [E050] Can't find model.
+          $internalDir = "desktop\src-tauri\binaries\corpusmind-engine\_internal"
+          $modelDir = Join-Path $internalDir "en_core_web_sm"
+          $metaFile = Join-Path $modelDir "meta.json"
+          if (-not (Test-Path $metaFile)) {
+            Write-Host "ERROR: spaCy model en_core_web_sm not bundled!" -ForegroundColor Red
+            Write-Host "Expected: $metaFile" -ForegroundColor Red
+            Write-Host "Contents of _internal/:" -ForegroundColor Yellow
+            Get-ChildItem $internalDir -Directory | Select-Object Name | Format-Table
+            exit 1
+          }
+          $size = (Get-ChildItem $modelDir -Recurse | Measure-Object -Property Length -Sum).Sum
+          $sizeMB = [math]::Round($size / 1MB, 1)
+          Write-Host "OK: spaCy model en_core_web_sm bundled ($sizeMB MB)" -ForegroundColor Green
+          # Also verify the versioned subdirectory exists
+          $versionedDir = Get-ChildItem $modelDir -Directory | Where-Object { $_.Name -like "en_core_web_sm-*" } | Select-Object -First 1
+          if (-not $versionedDir) {
+            Write-Host "WARNING: No versioned subdirectory found in en_core_web_sm" -ForegroundColor Yellow
+          } else {
+            Write-Host "OK: Versioned model dir: $($versionedDir.Name)" -ForegroundColor Green
+          }
+
       - name: Build web PWA
         working-directory: web
         env:
