@@ -47,11 +47,10 @@ jobs:
         run: ruff check .
 
       - name: Test (pytest)
-        run: pytest tests/ -v --tb=short
-        # Note: Some tests require CAMeL Tools data (Arabic tests in
-        # test_phase3_arabic.py) that is not available in CI. We run what
-        # we can — the `|| true` keeps the job green while those tests
-        # remain optional.
+        run: pytest tests/ -v --tb=short --ignore=tests/test_phase3_arabic.py
+        # Note: test_phase3_arabic.py requires CAMeL Tools data that is not
+        # available in CI. We exclude it explicitly so real regressions are
+        # caught, instead of using || true which masked everything.
 
   # -----------------------------------------------------------------------
   # Web: TypeScript typecheck + build
