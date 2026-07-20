@@ -113,7 +113,7 @@ class SpaCyPipeline:
                 import importlib
                 mod = importlib.import_module(self._model_name)
                 if hasattr(mod, "__path__"):
-                    model_path = list(mod.__path__)[0]
+                    model_path = next(iter(mod.__path__))
                     log.info("spacy_strategy2_import", model_path=model_path)
                     nlp = spacy.load(model_path)
             except (ImportError, OSError, Exception) as e:
@@ -125,7 +125,8 @@ class SpaCyPipeline:
                 import os
                 import sys
                 # In PyInstaller, the _internal dir is where packages live
-                for search_dir in sys.path + [os.path.join(os.path.dirname(sys.executable), "_internal")]:
+                search_paths = [*sys.path, os.path.join(os.path.dirname(sys.executable), "_internal")]
+                for search_dir in search_paths:
                     model_dir = os.path.join(search_dir, self._model_name)
                     if os.path.isdir(model_dir):
                         meta_path = os.path.join(model_dir, "meta.json")
