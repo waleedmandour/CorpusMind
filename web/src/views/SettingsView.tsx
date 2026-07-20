@@ -845,7 +845,7 @@ function OllamaModelManager({ ollamaHealthy }: { ollamaHealthy: boolean }) {
 
   const pullModel = async (modelName: string) => {
     if (!ollamaHealthy) {
-      alert("Ollama is not running. Start it with `ollama serve` first.");
+      setLoadModelMsg("Ollama is not running. Start it via the Recheck button above.");
       return;
     }
     setPullingModel(modelName);
@@ -866,7 +866,7 @@ function OllamaModelManager({ ollamaHealthy }: { ollamaHealthy: boolean }) {
             setPullingModel(null);
             qc.invalidateQueries({ queryKey: ["ollama-models"] });
             if (status.status === "error") {
-              alert(`Pull failed: ${status.error}`);
+              setLoadModelMsg(`Pull failed: ${status.error}`);
             }
           }
         } catch {
@@ -876,7 +876,7 @@ function OllamaModelManager({ ollamaHealthy }: { ollamaHealthy: boolean }) {
       }, 2000);
     } catch (e) {
       setPullingModel(null);
-      alert(`Pull failed: ${e instanceof Error ? e.message : String(e)}`);
+      setLoadModelMsg(`Pull failed: ${e instanceof Error ? e.message : String(e)}`);
     }
   };
 

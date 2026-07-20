@@ -17,6 +17,7 @@ jobs:
   engine:
     name: Engine (Python 3.12)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: engine
@@ -46,7 +47,7 @@ jobs:
         run: ruff check .
 
       - name: Test (pytest)
-        run: pytest tests/ -v --tb=short || true
+        run: pytest tests/ -v --tb=short
         # Note: Some tests require CAMeL Tools data (Arabic tests in
         # test_phase3_arabic.py) that is not available in CI. We run what
         # we can — the `|| true` keeps the job green while those tests
@@ -58,6 +59,7 @@ jobs:
   web:
     name: Web (Node 20)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: web
@@ -104,6 +106,7 @@ jobs:
   desktop:
     name: Desktop (Rust)
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: desktop/src-tauri
@@ -171,6 +174,7 @@ jobs:
   license-gate:
     name: License gate
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
       - name: Verify required files exist

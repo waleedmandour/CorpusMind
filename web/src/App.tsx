@@ -25,6 +25,7 @@ import { SettingsView } from "@/views/SettingsView";
 import { UserGuideView } from "@/views/UserGuideView";
 import { applyHtmlAttrs, useUI } from "@/store/ui";
 import { useApp } from "@/store/app";
+import { useEngineVersionDisplay } from "@/hooks/useEngineVersion";
 
 export default function App() {
   const activeNav = useUI((s) => s.activeNav);
@@ -36,6 +37,7 @@ export default function App() {
   const onboardingComplete = useUI((s) => s.onboardingComplete);
   const setOnboardingOpen = useUI((s) => s.setOnboardingOpen);
   const activeCorpusId = useApp((s) => s.activeCorpusId);
+  const versionDisplay = useEngineVersionDisplay();
 
   useEffect(() => {
     applyHtmlAttrs();
@@ -115,7 +117,7 @@ export default function App() {
       <footer className="app-statusbar" role="contentinfo">
         <QueryStatusIndicator />
         <span className="status-sep">|</span>
-        <span>CorpusMind v0.1.3</span>
+        <span>CorpusMind {versionDisplay}</span>
         <span className="status-sep">|</span>
         <span>AGPL-3.0</span>
         <span className="status-sep">|</span>

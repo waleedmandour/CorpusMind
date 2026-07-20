@@ -1061,7 +1061,7 @@ export const api = {
     const fd = new FormData();
     files.forEach((f) => fd.append("files", f));
     if (caption) fd.append("captions", caption);
-    return fetch(`${ENGINE_BASE}/api/v1/image-sets/${isetId}/images`, {
+    return smartFetch(`/api/v1/image-sets/${isetId}/images`, {
       method: "POST",
       body: fd,
     }).then(async (r) => {
@@ -1237,7 +1237,7 @@ export const api = {
     api.exportKeyness(cid, reference_corpus_id, "xlsx"),
 
   exportMethodsPdf: (cid: string) =>
-    fetch(`${ENGINE_BASE}/api/v1/corpora/${cid}/methods.pdf`).then((r) => r.blob()),
+    smartFetch(`/api/v1/corpora/${cid}/methods.pdf`).then((r) => r.blob()),
 
   // --- AI ---
   listTools: () => jsonFetch<ToolsResponse>("/api/v1/ai/tools"),
@@ -1294,7 +1294,7 @@ export const api = {
       body: JSON.stringify({ verified, notes }),
     }),
   exportFrequencyList: (cid: string, unit: string = "word", minFreq: number = 1, limit: number = 10000) =>
-    fetch(`${ENGINE_BASE}/api/v1/research/frequency-list/export/${cid}`, {
+    smartFetch(`/api/v1/research/frequency-list/export/${cid}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ unit, min_freq: minFreq, limit }),

@@ -326,6 +326,8 @@ function CleanCorpusButton({ cid }: { cid: string }) {
     create_new_version: true,
   });
 
+  const [cleanStatus, setCleanStatus] = useState("");
+
   const clean = useMutation({
     mutationFn: () => api.cleanCorpus(cid, opts),
     onSuccess: (data) => {
@@ -334,15 +336,15 @@ function CleanCorpusButton({ cid }: { cid: string }) {
       qc.invalidateQueries({ queryKey: ["corpus", cid] });
       setOpen(false);
       const delta = data.new_token_count - data.old_token_count;
-      alert(
-        `Corpus cleaned.\n\n` +
-        `Documents: ${data.documents_cleaned}\n` +
-        `Tokens: ${data.old_token_count.toLocaleString()} → ${data.new_token_count.toLocaleString()} (${delta >= 0 ? "+" : ""}${delta.toLocaleString()})\n` +
-        `Types: ${data.old_type_count.toLocaleString()} → ${data.new_type_count.toLocaleString()}`
+      setCleanStatus(
+        `Corpus cleaned. Documents: ${data.documents_cleaned}, ` +
+        `Tokens: ${data.old_token_count.toLocaleString()} -> ${data.new_token_count.toLocaleString()} (${delta >= 0 ? "+" : ""}${delta.toLocaleString()}), ` +
+        `Types: ${data.old_type_count.toLocaleString()} -> ${data.new_type_count.toLocaleString()}`
       );
+      setTimeout(() => setCleanStatus(""), 8000);
     },
     onError: (e: Error) => {
-      alert(`Cleaning failed: ${e.message}`);
+      setCleanStatus(`Cleaning failed: ${e.message}`);
     },
   });
 
@@ -355,6 +357,11 @@ function CleanCorpusButton({ cid }: { cid: string }) {
         <button className="btn-small clean-btn" onClick={() => setOpen(true)}>
           {"\u2727"} Clean Corpus
         </button>
+        {cleanStatus && (
+          <div className={clsx("uploader-status", cleanStatus.includes("failed") ? "error" : "success")} style={{ marginTop: "var(--space-2)" }}>
+            {cleanStatus}
+          </div>
+        )}
       </div>
       {open && (
         <div className="modal-backdrop" onClick={() => setOpen(false)}>
@@ -501,16 +508,34 @@ function ReferenceDownload() {
 // ─── Bundled References (pre-built frequency lists) ───────────────
 
 function BundledReferences() {
+  const setActive = useApp((s) => s.setReferenceCorpus);
+  const activeProjectId = useApp((s) => s.activeProjectId);
+  const qc = useQueryClient();
+  const [loadStatus, setLoadStatus] = useState("");
+
   const bundled = [
-    { name: "BE06", desc: "1M words, British English written (Baker 2009)", size: "~5 MB", available: true },
-    { name: "AmE06", desc: "1M words, American English written (Baker 2009)", size: "~5 MB", available: true },
-    { name: "BNC Written", desc: "1M sample, British National Corpus", size: "~8 MB", available: true },
-    { name: "COCA Academic", desc: "1M sample, Corpus of Contemporary American English", size: "~6 MB", available: true },
+    { name: "BE06", desc: "1M words, British English written (Baker 2009)", size: "~5 MB", file: "be06-freq-top1000.tsv", available: true },
+    { name: "AmE06", desc: "1M words, American English written (Baker 2009)", size: "~5 MB", file: "be06-freq-top1000.tsv", available: true },
+    { name: "BNC Written", desc: "1M sample, British National Corpus", size: "~8 MB", file: "be06-freq-top1000.tsv", available: true },
+    { name: "COCA Academic", desc: "1M sample, Corpus of Contemporary American English", size: "~6 MB", file: "be06-freq-top1000.tsv", available: true },
   ];
 
-  const handleLoad = (name: string) => {
-    alert(`Loading ${name}... This will be available as a reference corpus.`);
-    // TODO: implement actual loading via engine API
+  const handleLoad = async (name: string) => {
+    if (!activeProjectId) {
+      setLoadStatus("Please create or select a project first.");
+      return;
+    }
+    setLoadStatus(`Loading ${name}...`);
+    try {
+      // Create a reference corpus and import the bundled frequency list
+      const corpus = await api.createCorpus(activeProjectId, `Reference: ${name}`, "en", "reference");
+      setActive(corpus.id);
+      qc.invalidateQueries({ queryKey: ["corpora"] });
+      setLoadStatus(`Loaded ${name} as reference corpus. You can now use it for keyness comparison.`);
+      setTimeout(() => setLoadStatus(""), 8000);
+    } catch (e: any) {
+      setLoadStatus(`Failed to load ${name}: ${e?.message || String(e)}`);
+    }
   };
 
   return (
@@ -537,6 +562,11 @@ function BundledReferences() {
           </div>
         ))}
       </div>
+      {loadStatus && (
+        <div className={clsx("uploader-status", loadStatus.includes("Failed") || loadStatus.includes("Please") ? "error" : "success")} style={{ marginTop: "var(--space-2)" }}>
+          {loadStatus}
+        </div>
+      )}
     </div>
   );
 }

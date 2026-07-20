@@ -10,6 +10,7 @@
  */
 import { useState } from "react";
 import { useTroubleshoot, type TroubleshootIssue } from "@/store/troubleshooting";
+import { useEngineVersion } from "@/hooks/useEngineVersion";
 
 const DEVELOPER_EMAIL = "w.abumandour@squ.edu.om";
 
@@ -26,7 +27,7 @@ function severityClass(sev: string): string {
 }
 
 /** Build a mailto: link with the issue details + Gemini interpretation. */
-function buildMailto(issue: TroubleshootIssue): string {
+function buildMailto(issue: TroubleshootIssue, version: string): string {
   const subject = `[CorpusMind Bug Report] ${issue.message.slice(0, 80)}`;
   const lines: string[] = [
     "Dear Dr. Mandour,",
@@ -60,7 +61,7 @@ function buildMailto(issue: TroubleshootIssue): string {
 
   lines.push(
     "=== ENVIRONMENT ===",
-    `CorpusMind version: 0.1.3`,
+    `CorpusMind version: ${version}`,
     `Browser: ${navigator.userAgent}`,
     `URL: ${window.location.href}`,
     "",
@@ -78,7 +79,7 @@ function buildMailto(issue: TroubleshootIssue): string {
   return `mailto:${DEVELOPER_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }
 
-function IssueCard({ issue }: { issue: TroubleshootIssue }) {
+function IssueCard({ issue, version }: { issue: TroubleshootIssue; version: string }) {
   const resolveIssue = useTroubleshoot((s) => s.resolveIssue);
   const fetchInterpretation = useTroubleshoot((s) => s.fetchInterpretation);
   const [showFull, setShowFull] = useState(false);
@@ -163,7 +164,7 @@ function IssueCard({ issue }: { issue: TroubleshootIssue }) {
         ) : null}
         <a
           className="trouble-action-btn report"
-          href={buildMailto(issue)}
+          href={buildMailto(issue, version)}
           title={`Report this issue to ${DEVELOPER_EMAIL}`}
         >
           {"\u2709"} Report to developer
@@ -182,6 +183,7 @@ export function TroubleshootingBar() {
   const backendReachable = useTroubleshoot((s) => s.backendReachable);
   const muted = useTroubleshoot((s) => s.muted);
   const setMuted = useTroubleshoot((s) => s.setMuted);
+  const version = useEngineVersion();
 
   const unresolved = issues.filter((i) => !i.resolved);
 
@@ -266,7 +268,7 @@ export function TroubleshootingBar() {
                 {!backendReachable && " is running on port 8765."}
               </div>
             ) : (
-              issues.map((issue) => <IssueCard key={issue.id} issue={issue} />)
+              issues.map((issue) => <IssueCard key={issue.id} issue={issue} version={version} />)
             )}
           </div>
         </div>

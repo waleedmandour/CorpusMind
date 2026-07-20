@@ -696,7 +696,7 @@ function GrammarPanel({ cid }: { cid: string }) {
       </div>
 
       <div className="grounding-notice">
-        <strong>8.12:</strong> Grammar pattern detectors are <em>dependency-parse-driven</em>,
+        <strong>Note:</strong> Grammar pattern detectors are <em>dependency-parse-driven</em>,
         not regex over surface text - so they generalize across genres.
       </div>
 
@@ -762,7 +762,7 @@ function DependencyPanel({ cid }: { cid: string }) {
       </div>
 
       <div className="grounding-notice">
-        <strong>8.13:</strong> Built as thin queries over the same dependency parses already
+        <strong>Note:</strong> Built as thin queries over the same dependency parses already
         produced in 8.1 - not a separate pipeline.
       </div>
 
@@ -789,7 +789,7 @@ function DiscoursePanel({ cid }: { cid: string }) {
   return (
     <div className="panel-content">
       <div className="grounding-notice">
-        <strong>8.15:</strong> Metadiscourse categories follow Hyland's interactive/interactional
+        <strong>Note:</strong> Metadiscourse categories follow Hyland's interactive/interactional
         taxonomy (Hyland 2005) - this makes results citable and comparable across studies.
       </div>
 
@@ -879,7 +879,7 @@ function SentimentPanel({ cid }: { cid: string }) {
   return (
     <div className="panel-content">
       <div className="grounding-notice">
-        <strong>8.18:</strong> Phase 2 uses a lexicon-based sentiment scorer. Phase 3 will swap
+        <strong>Note:</strong> Phase 2 uses a lexicon-based sentiment scorer. Phase 3 will swap
         in VADER or a transformers-based model behind the same interface - results stay comparable
         because the model + version is pinned per project (4 Principle 8).
       </div>

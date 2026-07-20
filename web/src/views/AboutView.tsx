@@ -67,7 +67,7 @@ export function AboutView() {
         <div className="about-tech-grid">
           <div className="about-tech-card">
             <h3>Engine</h3>
-            <p>Python 3.12, FastAPI, SQLAlchemy 2.0 (async), spaCy, CAMeL Tools, OpenCV, Pillow, scipy, statsmodels, openpyxl, reportlab</p>
+            <p>Python 3.12, FastAPI, SQLAlchemy 2.0 (async), spaCy, CAMeL Tools, OpenCV, Pillow, scipy, openpyxl, reportlab</p>
           </div>
           <div className="about-tech-card">
             <h3>Web Frontend</h3>
