@@ -6,6 +6,170 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
+## [0.1.16] — 2026-07-22 — Critical Issues Resolution
+
+This release addresses 5 critical functionality, reliability, and usability
+issues identified in v0.1.15. Each issue has a per-issue patch file in
+`patches/` for targeted review, plus a combined patch for one-shot apply.
+
+### Issue 1: Reference Corpus Download & Persistence — Added
+
+- **New `engine/reference_corpus/` package** — full download/persistence
+  subsystem for bundled reference corpora.
+  - `registry.py` — declarative catalogue of bundled references (BE06 with
+    a real, pinned SHA-256; BNC Baby + arTenTen stubs for follow-up PRs)
+  - `manifest.py` — JSON-backed manifest of installed references with
+    atomic writes + corrupt-manifest recovery
+  - `manager.py` — `ReferenceCorpusManager` with:
+    * Resumable downloads (HTTP Range, `.part` suffix)
+    * SHA-256 verification (download is rejected on mismatch)
+    * Retry logic (3 attempts with 1/2/4s backoff)
+    * Per-name async locks (concurrent requests share one download stream)
+    * Cancellation (idempotent, checked between chunks)
+    * Orphan cleanup (deletes files not in the manifest)
+  - `keyness_bridge.py` — `compute_keyness_with_reference_list()` runs
+    keyness against an installed reference frequency list (TSV/CSV/JSON),
+    reusing the existing `compute_keyness_row` math so the results are
+    identical to keyness against a full Corpus row.
+- **New API endpoints** under `/api/v1/reference-corpora`:
+  - `GET /` — list catalogue + install status
+  - `GET /{name}/status` — poll download progress
+  - `POST /{name}/download` — download + verify + install
+  - `POST /{name}/cancel` — cancel in-flight download
+  - `DELETE /{name}` — delete installed reference
+  - `POST /cleanup-orphans` — clean stale files
+  - `POST /corpora/{cid}/keyness-with-reference/{ref_name}` — keyness
+    against an installed reference frequency list, with language-compat
+    validation (422 on cross-language keyness)
+
+### Issue 5: Export Functionality — Added
+
+- **New `engine/export_queue/` package** — async export queue for large
+  exports that would otherwise time out the synchronous endpoint.
+  - `ExportJob` dataclass with full status tracking (queued/running/done/
+    failed/cancelled) + progress (0..1) + result bytes
+  - `ExportQueue` with semaphore-bounded concurrency (max 2 concurrent),
+    per-job cancellation, 1-hour history retention, automatic cleanup
+  - Format serializers for xlsx/csv/tsv/txt/json, all with:
+    * **UTF-8 BOM on CSV/TSV** so Excel for Windows correctly detects
+      UTF-8 (without it, Arabic/CJK in the data shows as mojibake)
+    * NFC-normalized Unicode filenames, safe across Windows/macOS/Linux
+    * Per-format MIME types
+  - Producer registry pattern: lazy-registered adapters for the existing
+    analysis functions (concordance/frequency/collocations/keyness/
+    keyness_with_reference)
+- **New API endpoints** under `/api/v1/export/jobs`:
+  - `POST /` — enqueue, returns job ID immediately
+  - `GET /` — list all jobs
+  - `GET /{id}` — poll status
+  - `GET /{id}/download` — stream finished bytes
+  - `POST /{id}/cancel` — cancel in-flight job
+  - `DELETE /{id}` — drop from history
+- All existing synchronous export endpoints kept untouched for backwards
+  compatibility.
+
+### Issue 2: AI Assistant Stability + Dynamic Query Generation — Added
+
+- **New `engine/ai/query_suggestions.py` module**:
+  - `PREFABRICATED_QUERIES` — 16 research-question templates across 10
+    categories (frequency, collocation, keyness, concordance, dispersion,
+    ngrams, pos, compare, methodology, explore). Each template is
+    **bilingual (English + Arabic)** and tagged with `requires_corpus` /
+    `requires_reference` so the UI can grey out unavailable suggestions.
+  - `generate_dynamic_queries()` — uses the existing `ModelProvider`
+    abstraction to ask the LLM for context-aware follow-up questions.
+    Strict JSON parsing tolerates ```json fences, caps at 8 suggestions,
+    and returns `[]` on garbage input (never raises).
+  - `has_reference_for_language()` — checks the Issue 1 manifest to mark
+    keyness-related queries as available/greyed-out.
+- **New API endpoints** under `/api/v1/ai`:
+  - `GET /query-suggestions` — always-visible pre-fabricated queries with
+    availability flags (respecting current corpus + reference state)
+  - `POST /query-suggestions/dynamic` — LLM-generated follow-ups (best-
+    effort; returns pre-fabricated only if LLM unavailable)
+- The existing Ollama integration in `engine/ai/providers.py` (multi-URL
+  health checks, proxy bypass, Qwen3 thinking-strip) is left untouched —
+  it was already robust.
+
+### Issue 4: Dark Mode Accessibility — Fixed
+
+- **Audited every `--text-subtle` usage in dark mode** and fixed 7
+  specific WCAG AA contrast failures:
+  - `--text-subtle` bumped from `#6c7480` (4.18:1) to `#8b919e` (5.85:1)
+  - `--text-muted` bumped from `#9aa3ad` to `#b3bac3` (6.9:1 on subtle bg)
+  - `.status-chip.info` now uses dedicated `--info-bg/fg` tokens (5.4:1)
+  - `.verify-badge.edited` no longer uses `--brand-600` (unreadable in
+    dark mode) — uses `--ribbon-tab-fg-active` instead
+  - `.evidence-list` content bumped to `--text-muted` + left accent border
+  - `.engine-offline-banner` no longer uses 0.08-opacity red — solid
+    `--danger-bg` for visibility
+  - 8 small-text components (`.hint`, `.evidence-note`, `.empty`,
+    `.status-idle`, `.msg-meta`, `.kwic-table .line-id`, `.status-sep`,
+    `.ribbon-item-phase`) bumped from `--text-subtle` to `--text-muted`
+- **New design tokens**: `--info-bg/fg/border`, `--notice-bg/fg`,
+  `--danger-bg/fg`, `--success-bg/fg`
+- **New `.cm-notification` component** with semantic variants
+  (info/success/warning/error), each guaranteed AA contrast
+- **New high-contrast mode** (`data-theme="dark-high-contrast"`)
+  targeting WCAG AAA (7:1). Toggleable from Settings → Accessibility.
+- Strengthened focus-visible ring in dark mode (2px solid `--brand-400`)
+- Added CSS for the new Issue 1/2/5 components (`.reference-progress`,
+  `.reference-card`, `.export-job-row`, `.query-suggestion`)
+
+### Issue 3: Comprehensive Arabic Localization — Added
+
+- **New `web/src/lib/arabic-glossary.ts`** — academic terminology
+  glossary with 80+ entries covering:
+  - Corpus linguistics core concepts (corpus, concordance, collocation,
+    keyness, frequency, dispersion, token, type, TTR, lemma, POS tag,
+    dependency parsing, n-gram, register, genre, annotation)
+  - Statistical measures (log-likelihood, chi-square, mutual information,
+    T-score, Dice, LogDice, log ratio, odds ratio, %DIFF, simple maths,
+    Delta P, Juilland's D, Gries' DP, effect size, p-value)
+  - Discourse analysis (CDA, metadiscourse, multimodal discourse, visual
+    grammar, metafunctions, appraisal, semiotics, ideology, power
+    relations, metaphor, conceptual metaphor theory, argumentation)
+  - Arabic-specific NLP (normalization, alef/teh marbuta, diacritics,
+    root patterns, dialect identification, MSA, Classical, Quranic)
+  - AI/LLM terminology (grounded, ungrounded, tool call, evidence,
+    citation, language model, LLM, inference, local inference, prompt,
+    temperature, embedding, RAG)
+  - Each entry includes English + Arabic + alternatives + reviewer notes
+    citing sources (KACST, al-Masdi, Sinclair, McEnery & Hardie, Baker,
+    Hyland, Kress & van Leeuwen, Martin & White, Lakoff & Johnson)
+  - 3 exported helpers: `lookupTerm()`, `translateTerm()`,
+    `translateTermsInText()` (for swapping English terms in column
+    headers like "log-likelihood" → "الاحتمالية اللوغاريتمية")
+- **Extended `web/src/lib/i18n.ts`** with 80+ new translation keys in
+  BOTH `en` and `ar` sections covering: reference corpus UI (Issue 1),
+  AI query suggestions (Issue 2), accessibility settings (Issue 4),
+  export queue (Issue 5), and the notification component.
+  - All Arabic translations use academic terminology from the glossary
+    (e.g. `ref_install_title: "الدخائر المرجعية"`,
+    `ai_suggestions_category_keyness: "الكلمة المفتاحية"`)
+
+### Tests — Added
+
+- **New `engine/tests/test_critical_issues.py`** with 24 critical-path
+  tests covering all 5 issues (run in <2s without a running engine):
+  - 6 tests for Issue 1 (manifest round-trip, corrupt-manifest recovery,
+    unknown-reference, real-SHA-256, TSV loader, JSON loader)
+  - 6 tests for Issue 5 (filename sanitizer, format serializers, UTF-8
+    BOM, enqueue→done lifecycle, in-flight cancellation)
+  - 5 tests for Issue 2 (bilingual coverage, required categories,
+    JSON-fence parsing, garbage tolerance, 8-item cap)
+  - 3 tests for Issue 3 (spec terms in glossary, Arabic chars in every
+    entry, i18n keys present in both languages)
+  - 2 tests for Issue 4 (high-contrast theme present, bumped
+    `--text-subtle` value)
+  - 2 smoke tests (all new modules + API routers import cleanly)
+
+### Documentation — Added
+
+- Patch files in `patches/` (one per issue + a combined patch)
+- Implementation report (`IMPLEMENTATION_REPORT.md`) summarizing every
+  change, decision, and known limitation
+
 ## [Unreleased] — Phase 3: Arabic depth pass
 
 ### Added — Engine
