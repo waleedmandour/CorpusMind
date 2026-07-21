@@ -14,6 +14,23 @@ Also provides:
     as a PNG raster
 
 The Methods PDF endpoint (GET /corpora/{cid}/methods.pdf) is unchanged.
+
+== Issue 5 additions (export queue) ==
+
+The original endpoints above are *synchronous* — the request blocks until
+the file is ready. That's fine for small exports but breaks for large
+ones (>10K rows of xlsx), where the HTTP timeout fires before the file is
+ready. The new ``/export/jobs`` family of endpoints fixes this:
+
+  - POST /export/jobs                      — enqueue, returns job ID
+  - GET  /export/jobs                      — list all jobs
+  - GET  /export/jobs/{id}                 — poll status
+  - GET  /export/jobs/{id}/download        — stream the finished bytes
+  - POST /export/jobs/{id}/cancel          — cancel an in-flight job
+  - DELETE /export/jobs/{id}               — drop a finished job from history
+
+The original synchronous endpoints are kept untouched for backwards
+compatibility and for callers that prefer a single-request workflow.
 """
 from __future__ import annotations
 
@@ -571,3 +588,133 @@ async def export_methods_pdf(cid: str, session: AsyncSession = Depends(get_sessi
     data = buf.getvalue()
     fname = f"methods_{cid}_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}.pdf"
     return _make_response(data, "application/pdf", fname)
+
+
+# --------------------------------------------------------------------------- #
+# Issue 5: Asynchronous export queue
+# --------------------------------------------------------------------------- #
+# The endpoints below wrap the export_queue subsystem. They coexist with
+# the synchronous endpoints above; the frontend can switch to them for
+# large exports without breaking any existing callers.
+
+
+import uuid as _uuid  # noqa: E402
+
+from export_queue import (  # noqa: E402
+    INLINE_MAX_BYTES,
+    ExportQueue,
+    get_queue,
+    sanitize_filename,
+)
+from pydantic import Field as _Field  # noqa: E402
+
+
+class EnqueueExportRequest(BaseModel):
+    """Request body for ``POST /export/jobs``.
+
+    ``producer`` selects which analysis to run; the rest of the fields are
+    passed as keyword args to that producer. The shape mirrors the existing
+    synchronous endpoints so the frontend can swap with minimal changes.
+    """
+    producer: str = _Field(..., description="One of: concordance, frequency, collocations, keyness, keyness_with_reference")
+    fmt: ExportFormat = _Field("xlsx", pattern="^(xlsx|csv|tsv|txt|json)$")
+    sheet_name: str = _Field("Sheet1", max_length=31)
+    excel_compatible: bool = True
+    # Producer-specific args — validated by the producer, not by Pydantic,
+    # because each producer has a different signature.
+    args: dict = _Field(default_factory=dict)
+    name: str = _Field("export", max_length=120, description="Filename stem")
+
+
+@router.post("/export/jobs")
+async def enqueue_export(body: EnqueueExportRequest) -> dict:
+    """Enqueue an export job. Returns immediately with the job ID.
+
+    The client should poll ``GET /export/jobs/{id}`` until ``status`` is
+    ``done``, ``failed``, or ``cancelled``, then either:
+      - fetch the result inline (if ``inline_download`` is true), or
+      - stream it via ``GET /export/jobs/{id}/download``.
+    """
+    queue = get_queue()
+    job_id = f"exp_{_uuid.uuid4().hex[:12]}"
+    job = await queue.enqueue(
+        job_id=job_id,
+        name=body.name,
+        fmt=body.fmt,
+        sheet_name=body.sheet_name,
+        producer_id=body.producer,
+        producer_args=body.args,
+        excel_compatible=body.excel_compatible,
+    )
+    return job.to_dict()
+
+
+@router.get("/export/jobs")
+async def list_export_jobs() -> dict:
+    """List all export jobs (running + recent history)."""
+    return {"jobs": get_queue().list_jobs()}
+
+
+@router.get("/export/jobs/{job_id}")
+async def get_export_job(job_id: str) -> dict:
+    """Poll the status of a single export job."""
+    job = get_queue().get_job(job_id)
+    if job is None:
+        raise HTTPException(404, f"Export job '{job_id}' not found")
+    return job.to_dict()
+
+
+@router.get("/export/jobs/{job_id}/download")
+async def download_export_job(job_id: str) -> StreamingResponse:
+    """Stream the finished bytes of a completed export job.
+
+    Returns 409 if the job is not yet done, 404 if the job ID is unknown.
+    """
+    job = get_queue().get_job(job_id)
+    if job is None:
+        raise HTTPException(404, f"Export job '{job_id}' not found")
+    if job.status.value != "done":
+        raise HTTPException(
+            409,
+            f"Job '{job_id}' is not done (status: {job.status.value}). "
+            f"Wait for status=done before downloading.",
+        )
+    if job.result_bytes is None:
+        raise HTTPException(500, "Job marked done but result_bytes is None")
+    return _make_response(job.result_bytes, _media_for_fmt(job.fmt), job.filename)
+
+
+@router.post("/export/jobs/{job_id}/cancel")
+async def cancel_export_job(job_id: str) -> dict:
+    """Cancel an in-flight export job. Idempotent."""
+    ok = get_queue().cancel(job_id)
+    if not ok:
+        raise HTTPException(404, f"Export job '{job_id}' not found or already finished")
+    return {"job_id": job_id, "cancelled": True}
+
+
+@router.delete("/export/jobs/{job_id}")
+async def delete_export_job(job_id: str) -> dict:
+    """Drop a finished job from history (frees memory)."""
+    queue = get_queue()
+    job = queue.get_job(job_id)
+    if job is None:
+        raise HTTPException(404, f"Export job '{job_id}' not found")
+    if job.status.value not in ("done", "failed", "cancelled"):
+        raise HTTPException(409, "Cannot delete an in-flight job — cancel it first")
+    # Manually drop it from the queue's internal map.
+    queue._jobs.pop(job_id, None)
+    if job_id in queue._order:
+        queue._order.remove(job_id)
+    return {"job_id": job_id, "deleted": True}
+
+
+def _media_for_fmt(fmt: str) -> str:
+    """Map a format extension to its MIME media type."""
+    return {
+        "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "csv": "text/csv; charset=utf-8",
+        "tsv": "text/tab-separated-values; charset=utf-8",
+        "txt": "text/plain; charset=utf-8",
+        "json": "application/json; charset=utf-8",
+    }.get(fmt, "application/octet-stream")
