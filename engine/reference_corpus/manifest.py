@@ -20,7 +20,7 @@ Schema (v1):
           "source_url": "https://...",
           "license": "CC-BY-4.0",
           "citation": "Baker, P. (2009)...",
-          "catalogue_version": "0.1.15",
+          "catalogue_version": "0.1.16",
           "file_path": "be06-top1000.tsv"
         },
         ...
