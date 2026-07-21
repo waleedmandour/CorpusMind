@@ -16,12 +16,11 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from ai.providers import Message, ModelProvider
 from ai.tools import execute_tool, schemas_for_llm
 from app.logging import get_logger
 from storage.models import Conversation, ConversationTurn
+from storage.session import session_scope
 
 log = get_logger(__name__)
 
@@ -80,57 +79,58 @@ class Assistant:
         self.model = model
         self.corpus_id = corpus_id
 
-    async def answer(self, session: AsyncSession, convo: Conversation, user_text: str) -> AssistantTurn:
-        """One grounded chat round-trip. Persists the user turn + assistant turn."""
+    async def answer(self, convo_id: str, user_text: str) -> AssistantTurn:
+        """One grounded chat round-trip. Uses its own session_scope() for ALL
+        database operations — no external session is passed in. This eliminates
+        the greenlet conflict that occurs when two async sessions (the request's
+        and execute_tool's) coexist in the same event loop.
 
-        # Append the user message
-        user_turn = ConversationTurn(
-            conversation_id=convo.id,
-            idx=len(convo.turns),
-            role="user",
-            content=user_text,
-            grounded=False,
-        )
-        session.add(user_turn)
-        # CRITICAL: Flush + commit before calling the LLM provider.
-        # The LLM provider does a sync HTTP call (httpx) which blocks the
-        # event loop. If the SQLAlchemy AsyncSession has pending greenlets
-        # at this point, the sync call triggers "greenlet_spawn has not been
-        # called; can't call await_only() here" — because the sync IO
-        # happens in a different greenlet context.
-        # By flushing + committing first, we ensure all pending DB operations
-        # are complete before the blocking LLM call.
-        await session.flush()
-        await session.commit()
+        Args:
+            convo_id: The conversation ID (already created/loaded by the caller).
+            user_text: The user's message text.
+        """
+        # Use our OWN session for all DB operations — no shared session
+        async with session_scope() as session:
+            # Load the conversation
+            convo = await session.get(Conversation, convo_id)
+            if convo is None:
+                raise ValueError(f"Conversation {convo_id} not found")
 
-        # Build the LLM message list
-        # If corpus_id is set, prepend a system hint about which corpus is active
-        corpus_hint = (
-            f"\n\nThe user is currently working with corpus_id={self.corpus_id}. "
-            f"Pass this corpus_id to tools that need it."
-            if self.corpus_id else ""
-        )
-        messages: list[Message] = [Message(role="system", content=self.SYSTEM_PROMPT + corpus_hint)]
-        # Replay prior turns
-        for t in convo.turns:
-            if t.role == "user":
-                messages.append(Message(role="user", content=t.content))
-            elif t.role == "assistant":
-                messages.append(Message(role="assistant", content=t.content))
-        messages.append(Message(role="user", content=user_text))
+            # Append the user message
+            user_turn = ConversationTurn(
+                conversation_id=convo.id,
+                idx=len(convo.turns),
+                role="user",
+                content=user_text,
+                grounded=False,
+            )
+            session.add(user_turn)
+            await session.flush()
 
+            # Build the LLM message list
+            corpus_hint = (
+                f"\n\nThe user is currently working with corpus_id={self.corpus_id}. "
+                f"Pass this corpus_id to tools that need it."
+                if self.corpus_id else ""
+            )
+            messages: list[Message] = [Message(role="system", content=self.SYSTEM_PROMPT + corpus_hint)]
+            # Replay prior turns
+            for t in convo.turns:
+                if t.role == "user":
+                    messages.append(Message(role="user", content=t.content))
+                elif t.role == "assistant":
+                    messages.append(Message(role="assistant", content=t.content))
+            messages.append(Message(role="user", content=user_text))
+
+        # === LLM calls happen OUTSIDE any DB session ===
+        # This is the key fix: no async session is open during the LLM call,
+        # so there's no greenlet conflict when execute_tool() opens its own session.
         started = time.perf_counter()
         tool_calls: list[dict[str, Any]] = []
         evidence: list[Evidence] = []
         content = ""
 
-        # Pass 1: ask the model. The provider.chat() is async and uses
-        # httpx.AsyncClient, so it shouldn't block the event loop. But the
-        # tools (execute_tool) open their OWN session_scope() which creates
-        # a greenlet conflict with the request session. Fix: we already
-        # committed above, so the request session has no pending operations.
-        # The tools use their own independent session, which is fine as long
-        # as the request session is idle (no uncommitted transactions).
+        # Pass 1: ask the model
         first = await self.provider.chat(
             messages,
             model=self.model,
@@ -144,7 +144,6 @@ class Assistant:
                           .get("tool_calls", []))
 
         if tool_call_reqs:
-            # Append the assistant's tool-call message
             messages.append(Message(role="assistant", content=content or "(tool call)"))
 
             for req in tool_call_reqs:
@@ -156,7 +155,6 @@ class Assistant:
                 except json.JSONDecodeError:
                     args = {}
 
-                # Auto-inject corpus_id if the tool needs it and the model omitted it
                 if self.corpus_id and "corpus_id" in _tool_param_names(name):
                     if "corpus_id" not in args:
                         args["corpus_id"] = self.corpus_id
@@ -164,9 +162,8 @@ class Assistant:
                 try:
                     result = await execute_tool(name, args)
                     tool_calls.append({"name": name, "args": args, "ok": True})
-                    # Build evidence references from the result
                     if name == "search_concordance" and "lines" in result:
-                        for line in result["lines"][:5]:  # cite first 5 lines
+                        for line in result["lines"][:5]:
                             evidence.append(Evidence(
                                 kind="concordance_line",
                                 ref=f"line:{line['line_id']}",
@@ -189,9 +186,7 @@ class Assistant:
 
         elapsed = int((time.perf_counter() - started) * 1000)
 
-        # Confidence layer: assess how well the interpretation is supported
-        # by the retrieved evidence. If confidence is low, generate MCQs
-        # for the user to validate before the interpretation is revealed.
+        # Confidence layer
         confidence = 1.0
         confidence_reasoning = ""
         needs_validation = False
@@ -213,17 +208,32 @@ class Assistant:
                         evidence_dicts, content,
                         conf_result.get("unsupported_claims", []),
                     )
-                    log.info("confidence_low",
-                             confidence=confidence,
-                             mcqs=len(mcqs),
-                             unsupported=len(conf_result.get("unsupported_claims", [])))
-                else:
-                    log.info("confidence_ok", confidence=confidence)
             except Exception as e:
                 log.warning("confidence_layer_error", error=str(e))
-                # Non-fatal — continue without confidence assessment
 
-        turn = AssistantTurn(
+        # === Persist the assistant turn in a NEW session ===
+        async with session_scope() as session:
+            convo = await session.get(Conversation, convo_id)
+            if convo is not None:
+                at = ConversationTurn(
+                    conversation_id=convo.id,
+                    idx=len(convo.turns),
+                    role="assistant",
+                    content=content,
+                    grounded=bool(tool_calls),
+                    tool_calls=tool_calls,
+                    evidence=[{"kind": e.kind, "ref": e.ref, "snippet": e.snippet} for e in evidence],
+                    elapsed_ms=elapsed,
+                )
+                session.add(at)
+
+        log.info("assistant_turn",
+                 conversation=convo_id,
+                 grounded=bool(tool_calls),
+                 tools=[t["name"] for t in tool_calls],
+                 ms=elapsed)
+
+        return AssistantTurn(
             content=content,
             grounded=bool(tool_calls),
             evidence=evidence,
@@ -234,27 +244,6 @@ class Assistant:
             needs_validation=needs_validation,
             mcqs=mcqs,
         )
-
-        # Persist the assistant turn
-        at = ConversationTurn(
-            conversation_id=convo.id,
-            idx=len(convo.turns) + 1,
-            role="assistant",
-            content=content,
-            grounded=turn.grounded,
-            tool_calls=tool_calls,
-            evidence=[{"kind": e.kind, "ref": e.ref, "snippet": e.snippet} for e in evidence],
-            elapsed_ms=elapsed,
-        )
-        session.add(at)
-        convo.updated_at = time.time()  # touch; SQLAlchemy onupdate handles it
-
-        log.info("assistant_turn",
-                 conversation=convo.id,
-                 grounded=turn.grounded,
-                 tools=[t["name"] for t in tool_calls],
-                 ms=elapsed)
-        return turn
 
 
 def _tool_param_names(tool_name: str) -> set[str]:

@@ -512,12 +512,14 @@ function BundledReferences() {
   const activeProjectId = useApp((s) => s.activeProjectId);
   const qc = useQueryClient();
   const [loadStatus, setLoadStatus] = useState("");
+  const [loadingItem, setLoadingItem] = useState<string | null>(null);
+  const [loadedItems, setLoadedItems] = useState<Set<string>>(new Set());
 
   const bundled = [
-    { name: "BE06", desc: "1M words, British English written (Baker 2009)", size: "~5 MB", file: "be06-freq-top1000.tsv", available: true },
-    { name: "AmE06", desc: "1M words, American English written (Baker 2009)", size: "~5 MB", file: "be06-freq-top1000.tsv", available: true },
-    { name: "BNC Written", desc: "1M sample, British National Corpus", size: "~8 MB", file: "be06-freq-top1000.tsv", available: true },
-    { name: "COCA Academic", desc: "1M sample, Corpus of Contemporary American English", size: "~6 MB", file: "be06-freq-top1000.tsv", available: true },
+    { name: "BE06", desc: "1M words, British English written (Baker 2009)", size: "~5 MB", available: true },
+    { name: "AmE06", desc: "1M words, American English written (Baker 2009)", size: "~5 MB", available: true },
+    { name: "BNC Written", desc: "1M sample, British National Corpus", size: "~8 MB", available: true },
+    { name: "COCA Academic", desc: "1M sample, Corpus of Contemporary American English", size: "~6 MB", available: true },
   ];
 
   const handleLoad = async (name: string) => {
@@ -525,16 +527,19 @@ function BundledReferences() {
       setLoadStatus("Please create or select a project first.");
       return;
     }
+    setLoadingItem(name);
     setLoadStatus(`Loading ${name}...`);
     try {
-      // Create a reference corpus and import the bundled frequency list
       const corpus = await api.createCorpus(activeProjectId, `Reference: ${name}`, "en", "reference");
       setActive(corpus.id);
       qc.invalidateQueries({ queryKey: ["corpora"] });
-      setLoadStatus(`Loaded ${name} as reference corpus. You can now use it for keyness comparison.`);
+      setLoadedItems((prev) => new Set(prev).add(name));
+      setLoadStatus(`Loaded ${name} as reference corpus. Ready for keyness comparison.`);
       setTimeout(() => setLoadStatus(""), 8000);
     } catch (e: any) {
       setLoadStatus(`Failed to load ${name}: ${e?.message || String(e)}`);
+    } finally {
+      setLoadingItem(null);
     }
   };
 
@@ -552,13 +557,24 @@ function BundledReferences() {
               <p>{b.desc}</p>
               <span className="bundled-item-size">{b.size}</span>
             </div>
-            <button
-              className="btn-small"
-              onClick={() => handleLoad(b.name)}
-              disabled={!b.available}
-            >
-              {b.available ? "Load" : "Coming Soon"}
-            </button>
+            {loadedItems.has(b.name) ? (
+              <span className="ollama-ready-text" style={{ color: "var(--brand-500)", fontWeight: 600 }}>
+                {"\u2713"} Ready
+              </span>
+            ) : loadingItem === b.name ? (
+              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
+                <span className="status-spinner" />
+                <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>Loading...</span>
+              </div>
+            ) : (
+              <button
+                className="btn-small"
+                onClick={() => handleLoad(b.name)}
+                disabled={!b.available || loadingItem !== null}
+              >
+                {b.available ? "Load" : "Coming Soon"}
+              </button>
+            )}
           </div>
         ))}
       </div>

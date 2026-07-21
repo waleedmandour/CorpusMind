@@ -64,7 +64,7 @@ def create_app() -> FastAPI:
             "polish — saved searches, bookmarks, favorites, project sharing, "
             "at-rest encryption, accessibility hardening."
         ),
-        version="0.1.14",
+        version="0.1.15",
         license_info={"name": "AGPL-3.0-only", "url": "https://www.gnu.org/licenses/agpl-3.0.html"},
         lifespan=lifespan,
     )

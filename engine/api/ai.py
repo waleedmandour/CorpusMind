@@ -55,8 +55,6 @@ async def chat(req: ChatRequest, request: Request, session: AsyncSession = Depen
         )
 
     # If no model is specified, auto-detect the first available model from the provider.
-    # This handles the case where the user downloaded a model but didn't select it
-    # in the AI Assistant's model dropdown.
     if not req.model:
         try:
             available_models = await provider.list_models()
@@ -78,23 +76,30 @@ async def chat(req: ChatRequest, request: Request, session: AsyncSession = Depen
                 status_code=503,
                 detail="Ollama is not running or no model is loaded. "
                        "Please start Ollama and pull a model (e.g. llama3.2:3b) "
-                       "via Settings → Model Providers → Download models."
+                       "via Settings > Model Providers > Download models."
             )
         elif provider_name == "lmstudio":
             raise HTTPException(
                 status_code=503,
                 detail="LM Studio is not running or no model is loaded. "
                        "Please start LM Studio and enable the local server "
-                       "(Developer → Start Local Server)."
+                       "(Developer > Start Local Server)."
             )
         else:
             raise HTTPException(
                 status_code=503,
                 detail=f"The {provider_name} provider is not available. "
-                       f"Please check Settings → Model Providers."
+                       f"Please check Settings > Model Providers."
             )
 
-    # Load or create conversation
+    # CRITICAL GREENLET FIX: Don't pass the request's session to answer().
+    # The answer() method calls execute_tool() which opens its own session_scope()
+    # — a second session on the same async engine. When two async sessions
+    # coexist in the same event loop, SQLAlchemy's greenlet machinery throws
+    # "greenlet_spawn has not been called; can't call await_only() here".
+    # Fix: answer() uses its OWN session_scope() for ALL database operations.
+    # The request session is only used to create the conversation row, then
+    # committed and closed before answer() is called.
     convo = None
     if req.conversation_id:
         convo = await session.get(Conversation, req.conversation_id)
@@ -102,22 +107,17 @@ async def chat(req: ChatRequest, request: Request, session: AsyncSession = Depen
         convo = Conversation(provider=req.provider, model=req.model or "")
         session.add(convo)
         await session.flush()
+    convo_id = convo.id
+    # Commit the request session so it's fully done before answer() opens its own.
+    await session.commit()
 
     assistant = Assistant(provider, model=req.model, corpus_id=req.corpus_id)
     try:
-        turn = await assistant.answer(session, convo, req.message)
+        turn = await assistant.answer(convo_id, req.message)
     except Exception as e:
         error_msg = str(e)
         log.error("chat_failed", error=error_msg)
-        # Provide a user-friendly error message for common failures
-        if "greenlet" in error_msg.lower():
-            raise HTTPException(
-                status_code=502,
-                detail="The AI model encountered a database synchronization issue. "
-                       "This is a known issue with async SQLAlchemy + sync LLM calls. "
-                       "Please try again — if it persists, restart the engine."
-            ) from e
-        elif "connection refused" in error_msg.lower() or "connect" in error_msg.lower():
+        if "connection refused" in error_msg.lower() or "connect" in error_msg.lower():
             raise HTTPException(
                 status_code=502,
                 detail="Could not connect to the AI model. Please make sure "
@@ -127,7 +127,7 @@ async def chat(req: ChatRequest, request: Request, session: AsyncSession = Depen
             raise HTTPException(status_code=502, detail=f"Model call failed: {error_msg}") from e
 
     return ChatResponse(
-        conversation_id=convo.id,
+        conversation_id=convo_id,
         content=turn.content,
         grounded=turn.grounded,
         tool_calls=turn.tool_calls,
