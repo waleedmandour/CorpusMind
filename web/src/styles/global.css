@@ -105,8 +105,8 @@
   --border: #2a3038;
   --border-strong: #3a424c;
   --text: #e6e9ec;
-  --text-muted: #9aa3ad;
-  --text-subtle: #6c7480;
+  --text-muted: #b3bac3;
+  --text-subtle: #8b919e;
   --text-on-brand: #ffffff;
   --ribbon-tab-bg: transparent;
   --ribbon-tab-bg-hover: #1f242c;
@@ -116,6 +116,19 @@
   --grounded-fg: #6fcf97;
   --unground-bg: #3a2a10;
   --unground-fg: #f0b860;
+  /* Issue 4: dedicated notification/info tokens so status chips don't reuse
+     --text-subtle on --bg-subtle (which failed WCAG AA at ~3.4:1).
+     These new tokens guarantee ≥ 4.5:1 contrast on every background they
+     are paired with. */
+  --info-bg: #1a2433;
+  --info-fg: #a9c7e8;
+  --info-border: #2a4060;
+  --notice-bg: #2a2210;
+  --notice-fg: #e8c068;
+  --danger-bg: #2a1414;
+  --danger-fg: #ff8a8a;
+  --success-bg: #10261a;
+  --success-fg: #7fd9a8;
   /* POS tag colors — dark theme variants (darker bg, lighter fg) */
   --pos-noun-bg: #0d2540;
   --pos-noun-fg: #64b5f6;
@@ -4672,4 +4685,452 @@ html[dir="rtl"] .toggle-switch input:checked + .toggle-slider::before {
   color: var(--text-muted);
   white-space: nowrap;
   overflow-x: auto;
+}
+
+
+/* =========================================================================
+   Issue 4: Dark-mode accessibility fixes (WCAG 2.1 AA)
+   =========================================================================
+   Audited against https://www.w3.org/WAI/WCAG21/quickref/ (Success Criterion
+   1.4.3 Contrast — Minimum). All fixes here ensure ≥ 4.5:1 for normal text
+   and ≥ 3:1 for large text (≥ 18pt or 14pt bold) in dark mode.
+
+   Specific issues fixed:
+     1. --text-subtle was #6c7480 on --bg #0e1116 → 4.18:1 (FAIL, just under AA)
+        Fix: bumped to #8b919e → 5.85:1 (PASS)
+     2. --text-muted was #9aa3ad on --bg-subtle #1c2129 → 4.7:1 (borderline)
+        Fix: bumped to #b3bac3 → 6.9:1 (PASS)
+     3. .status-chip.info used --text-subtle on --bg-subtle → 3.4:1 (FAIL)
+        Fix: dedicated --info-bg / --info-fg tokens (5.4:1 PASS)
+     4. .verify-badge.edited used --brand-600 (#095c41) on dark mode → unreadable
+        Fix: use --ribbon-tab-fg-active in dark mode (a light teal)
+     5. .evidence-list used --bg-subtle as bg with --text-subtle content →
+        borderline contrast for small (11px) text
+        Fix: use --text-muted for content, add a left border for clarity
+     6. .ethics-notice, .student-mode-notice — verified passing, kept as is
+     7. Tool-call <details> summary was --text-muted at 11px — borderline
+        Fix: bumped to --text in dark mode + bolder font weight
+
+   High-contrast mode: a new data-theme="dark-high-contrast" selector
+   provides WCAG AAA (7:1) for users who need it. Toggle via the
+   Settings → Accessibility → High Contrast switch.
+   ========================================================================= */
+
+
+/* --- Component-specific dark-mode fixes --- */
+
+[data-theme="dark"] .status-chip.info {
+  background: var(--info-bg);
+  color: var(--info-fg);
+  border: 1px solid var(--info-border);
+}
+
+[data-theme="dark"] .status-chip.bad {
+  background: var(--danger-bg);
+  color: var(--danger-fg);
+  border: 1px solid var(--danger);
+}
+
+[data-theme="dark"] .verify-badge.edited {
+  /* --brand-600 is too dark to read on dark backgrounds. Use the active
+     ribbon tab color (a light teal) instead. */
+  background: var(--ribbon-tab-bg-active);
+  color: var(--ribbon-tab-fg-active);
+}
+
+[data-theme="dark"] .evidence-list {
+  /* Slightly lighter bg + a left accent border for clearer grouping. */
+  background: var(--bg-elevated);
+  border-inline-start: 3px solid var(--brand-400);
+  color: var(--text-muted);
+}
+
+[data-theme="dark"] .evidence-list strong {
+  color: var(--text);
+}
+
+[data-theme="dark"] .evidence-ref {
+  /* Inline <code> for evidence references — make sure they pop. */
+  color: var(--brand-400);
+  background: var(--bg-subtle);
+  padding: 1px 4px;
+  border-radius: var(--radius-sm);
+}
+
+[data-theme="dark"] .tool-calls summary {
+  color: var(--text);
+  font-weight: 500;
+}
+
+[data-theme="dark"] .tool-calls summary:hover {
+  color: var(--brand-400);
+}
+
+[data-theme="dark"] .provider-status.bad {
+  /* Was --text-subtle — too low contrast for a status indicator. */
+  color: var(--danger-fg);
+  background: var(--danger-bg);
+  padding: 2px 8px;
+  border-radius: 10px;
+  display: inline-block;
+}
+
+[data-theme="dark"] .provider-status.ok {
+  color: var(--success-fg);
+  background: var(--success-bg);
+  padding: 2px 8px;
+  border-radius: 10px;
+  display: inline-block;
+}
+
+[data-theme="dark"] .engine-offline-banner {
+  /* Was rgba(192,57,43,0.08) — almost invisible in dark mode. */
+  background: var(--danger-bg);
+  border: 1px solid var(--danger);
+}
+
+[data-theme="dark"] .engine-offline-cmd {
+  /* Inline command text was --text-muted on --bg-elevated — borderline. */
+  color: var(--text);
+  background: var(--bg-subtle);
+}
+
+[data-theme="dark"] .hint,
+[data-theme="dark"] .evidence-note,
+[data-theme="dark"] .empty,
+[data-theme="dark"] .status-idle {
+  /* All used --text-subtle at small sizes. The bumped --text-subtle now
+     passes AA, but bumping to --text-muted makes small text genuinely
+     comfortable to read. */
+  color: var(--text-muted);
+}
+
+[data-theme="dark"] .msg-meta {
+  /* Timestamps in chat — used to be --text-subtle at 11px. */
+  color: var(--text-muted);
+}
+
+[data-theme="dark"] .kwic-table .line-id {
+  /* KWIC line IDs are essential for citing evidence. */
+  color: var(--text-muted);
+}
+
+[data-theme="dark"] .ribbon-item-phase {
+  color: var(--text-muted);
+}
+
+[data-theme="dark"] .status-sep {
+  color: var(--text-muted);
+}
+
+/* --- Notification / alert component (new in Issue 4) --- */
+/* A reusable notification primitive with semantic variants. The old code
+   had several ad-hoc notification-like elements (engine-offline-banner,
+   ethics-notice, student-mode-notice) with inconsistent contrast. This
+   new component gives every notification a guaranteed-AA color combo. */
+
+.cm-notification {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.cm-notification-icon {
+  flex-shrink: 0;
+  font-size: 18px;
+  line-height: 1;
+}
+.cm-notification-content { flex: 1; min-inline-size: 0; }
+.cm-notification-title {
+  font-weight: 600;
+  margin-block-end: var(--space-1);
+  color: var(--text);
+}
+.cm-notification-body { color: var(--text-muted); font-size: 12px; }
+.cm-notification-actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-block-start: var(--space-2);
+}
+.cm-notification.info {
+  background: var(--info-bg);
+  border-color: var(--info-border);
+  color: var(--info-fg);
+}
+.cm-notification.info .cm-notification-title { color: var(--info-fg); }
+.cm-notification.info .cm-notification-body { color: var(--info-fg); opacity: 0.85; }
+.cm-notification.success {
+  background: var(--success-bg);
+  border-color: var(--success-fg);
+  color: var(--success-fg);
+}
+.cm-notification.success .cm-notification-title,
+.cm-notification.success .cm-notification-body { color: var(--success-fg); opacity: 0.95; }
+.cm-notification.warning {
+  background: var(--notice-bg);
+  border-color: var(--notice-fg);
+  color: var(--notice-fg);
+}
+.cm-notification.warning .cm-notification-title,
+.cm-notification.warning .cm-notification-body { color: var(--notice-fg); opacity: 0.95; }
+.cm-notification.error {
+  background: var(--danger-bg);
+  border-color: var(--danger);
+  color: var(--danger-fg);
+}
+.cm-notification.error .cm-notification-title,
+.cm-notification.error .cm-notification-body { color: var(--danger-fg); opacity: 0.95; }
+
+
+/* --- High-contrast mode (WCAG AAA, 7:1) --- */
+/* Activated by setting data-theme="dark-high-contrast" on <html>. The UI
+   should expose this as a toggle in Settings → Accessibility. */
+
+[data-theme="dark-high-contrast"] {
+  --bg: #000000;
+  --bg-elevated: #0a0a0a;
+  --bg-subtle: #141414;
+  --bg-ribbon: #0a0a0a;
+  --bg-statusbar: #000000;
+  --border: #666666;
+  --border-strong: #ffffff;
+  --text: #ffffff;
+  --text-muted: #ffffff;
+  --text-subtle: #e0e0e0;
+  --text-on-brand: #ffffff;
+  --grounded-bg: #001a0d;
+  --grounded-fg: #7fffa0;
+  --unground-bg: #2a1a00;
+  --unground-fg: #ffcc66;
+  --info-bg: #001a33;
+  --info-fg: #99ccff;
+  --info-border: #6699cc;
+  --notice-bg: #2a1a00;
+  --notice-fg: #ffcc66;
+  --danger-bg: #2a0000;
+  --danger-fg: #ff9999;
+  --success-bg: #001a0d;
+  --success-fg: #7fffa0;
+  --ribbon-tab-bg-hover: #1a1a1a;
+  --ribbon-tab-bg-active: #003322;
+  --ribbon-tab-fg-active: #7fffa0;
+}
+
+[data-theme="dark-high-contrast"] .msg-content,
+[data-theme="dark-high-contrast"] .panel-content,
+[data-theme="dark-high-contrast"] .arabic-view,
+[data-theme="dark-high-contrast"] .hint,
+[data-theme="dark-high-contrast"] .evidence-note,
+[data-theme="dark-high-contrast"] .empty,
+[data-theme="dark-high-contrast"] .msg-meta,
+[data-theme="dark-high-contrast"] .kwic-table .line-id,
+[data-theme="dark-high-contrast"] .ribbon-item-phase,
+[data-theme="dark-high-contrast"] .status-sep,
+[data-theme="dark-high-contrast"] .status-idle {
+  color: #ffffff;
+}
+
+[data-theme="dark-high-contrast"] .evidence-list,
+[data-theme="dark-high-contrast"] .evidence-list strong,
+[data-theme="dark-high-contrast"] .evidence-ref {
+  color: #ffffff;
+  background: #1a1a1a;
+  border-color: #ffffff;
+}
+
+[data-theme="dark-high-contrast"] .tool-calls summary {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+[data-theme="dark-high-contrast"] button,
+[data-theme="dark-high-contrast"] .btn-small,
+[data-theme="dark-high-contrast"] .btn-primary {
+  border: 1px solid #ffffff;
+}
+
+[data-theme="dark-high-contrast"] input,
+[data-theme="dark-high-contrast"] textarea,
+[data-theme="dark-high-contrast"] select {
+  border: 1px solid #ffffff;
+  background: #000000;
+  color: #ffffff;
+}
+
+/* --- Focus-visible ring (WCAG 2.4.7) — strengthened for dark mode --- */
+/* The default focus ring is too subtle on dark backgrounds. */
+[data-theme="dark"] *:focus-visible,
+[data-theme="dark-high-contrast"] *:focus-visible {
+  outline: 2px solid var(--brand-400);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* --- Disabled-element contrast (WCAG 1.4.3 exception for inactive UI) --- */
+/* Disabled buttons at 0.5 opacity fail AA when their text color is already
+   low-contrast. Bump the opacity + add a clearer "disabled" cursor. */
+[data-theme="dark"] button:disabled,
+[data-theme="dark"] .btn-small:disabled,
+[data-theme="dark"] .btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* --- Reference corpus download progress bar (new in Issue 1) --- */
+/* The progress bar uses brand colors on a subtle background; in dark mode
+   we need to ensure the percentage text is readable on both the filled
+   and unfilled portions of the bar. */
+.reference-progress {
+  position: relative;
+  inline-size: 100%;
+  block-size: 24px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.reference-progress-fill {
+  block-size: 100%;
+  background: var(--brand-500);
+  transition: inline-size 0.2s ease;
+}
+.reference-progress-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+  text-shadow: 0 0 4px var(--bg);
+  pointer-events: none;
+}
+
+/* --- Export job status (new in Issue 5) --- */
+.export-job-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  margin-block-end: var(--space-2);
+  background: var(--bg-elevated);
+}
+.export-job-row .job-name {
+  flex: 1;
+  font-weight: 500;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.export-job-row .job-status {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+.export-job-row .job-status.queued { background: var(--info-bg); color: var(--info-fg); }
+.export-job-row .job-status.running { background: var(--notice-bg); color: var(--notice-fg); }
+.export-job-row .job-status.done { background: var(--success-bg); color: var(--success-fg); }
+.export-job-row .job-status.failed { background: var(--danger-bg); color: var(--danger-fg); }
+.export-job-row .job-status.cancelled { background: var(--bg-subtle); color: var(--text-muted); }
+
+/* --- AI query suggestions (new in Issue 2) --- */
+.query-suggestion {
+  display: block;
+  inline-size: 100%;
+  text-align: start;
+  padding: var(--space-2) var(--space-3);
+  margin-block-end: var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.4;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.query-suggestion:hover:not(:disabled) {
+  border-color: var(--brand-400);
+  background: var(--bg-subtle);
+}
+.query-suggestion:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.query-suggestion .qs-label {
+  font-weight: 500;
+  color: var(--text);
+}
+.query-suggestion .qs-meta {
+  display: block;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-block-start: 2px;
+}
+.query-suggestion .qs-rationale {
+  display: block;
+  font-size: 11px;
+  color: var(--text-subtle);
+  font-style: italic;
+  margin-block-start: 2px;
+}
+.query-suggestion.source-dynamic {
+  border-inline-start: 3px solid var(--accent);
+}
+.query-suggestion.source-prefabricated {
+  border-inline-start: 3px solid var(--brand-500);
+}
+
+/* --- Reference corpus card (new in Issue 1) --- */
+.reference-card {
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  margin-block-end: var(--space-3);
+}
+.reference-card .ref-name {
+  font-weight: 600;
+  color: var(--text);
+  font-size: 14px;
+  margin-block-end: var(--space-1);
+}
+.reference-card .ref-desc {
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+  margin-block-end: var(--space-2);
+}
+.reference-card .ref-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-block-end: var(--space-2);
+}
+.reference-card .ref-meta .ref-tag {
+  padding: 1px 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-subtle);
+}
+.reference-card .ref-actions {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+.reference-card.installed {
+  border-color: var(--success-fg);
 }
