@@ -123,9 +123,10 @@ a = Analysis(
         "pytest-cov",
         "mypy",
         "ruff",
-        "pip",
-        "setuptools",
-        "wheel",
+        # NOTE: pip, setuptools, and wheel must NOT be excluded —
+        # `pip install -e .` imports them during installation, and
+        # PyInstaller crashes with "Target module 'wheel' already
+        # imported as ExcludedModule('wheel',)" if they're in excludes.
         "IPython",
         "jupyter",
         "matplotlib",
