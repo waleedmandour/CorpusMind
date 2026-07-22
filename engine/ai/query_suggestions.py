@@ -369,7 +369,8 @@ async def generate_dynamic_queries(
     ]
 
     try:
-        resp = await provider.chat(messages, model=model, temperature=0.4)
+        # Issue 2b: use chat_json() so the provider sets the JSON-format flag.
+        resp = await provider.chat_json(messages, model=model, temperature=0.4)
     except Exception as e:
         log.warning("dynamic_suggestions_llm_failed", error=str(e))
         return []

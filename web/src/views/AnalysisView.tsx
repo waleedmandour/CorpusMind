@@ -11,10 +11,42 @@ import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
 
-import { api, downloadBlob, type ExportFormat } from "@/lib/api";
+import { api, exportWithFeedback, type ExportFormat } from "@/lib/api";
 import { useApp } from "@/store/app";
 import { useUI } from "@/store/ui";
 import { ExportButton } from "@/components/ExportButton";
+
+// Issue 5: shared export-status hook so every analysis panel gets the same
+// user-visible success/error feedback without duplicating the boilerplate.
+function useExportStatus() {
+  const [status, setStatus] = useState<{ kind: "success" | "error" | "info"; msg: string } | null>(null);
+  const set = (msg: string, kind: "success" | "error" | "info" = "info") => {
+    setStatus({ kind, msg });
+    if (msg) setTimeout(() => setStatus(null), 8000);
+  };
+  const el = status && status.msg ? (
+    <div className={clsx("uploader-status", status.kind)} style={{ marginTop: "var(--space-2)" }}>
+      {status.msg}
+    </div>
+  ) : null;
+  return { set, el };
+}
+
+// Issue 5: helper for panels that export client-side JSON result data (no
+// backend round-trip — the data is already in `result.data`). Wraps the
+// blob creation + downloadBlob + user feedback in one call.
+async function downloadJsonResult(
+  data: unknown,
+  filename: string,
+  setStatus: (msg: string, kind: "success" | "error" | "info") => void,
+) {
+  const { exportWithFeedback } = await import("@/lib/api");
+  await exportWithFeedback(
+    async () => new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }),
+    filename,
+    setStatus,
+  );
+}
 
 type Tab =
   | "frequency" | "collocation" | "keyness" | "dispersion"
@@ -103,9 +135,14 @@ function FrequencyPanel({ cid }: { cid: string }) {
     queryFn: () => api.frequency(cid, unit, minFreq, 200),
   });
 
+  const exportStatus = useExportStatus();
+
   const onExport = async (fmt: ExportFormat | "svg" | "png") => {
-    const blob = await api.exportFrequency(cid, unit, fmt as ExportFormat, 1000);
-    downloadBlob(blob, `frequency_${unit}.${fmt}`);
+    await exportWithFeedback(
+      () => api.exportFrequency(cid, unit, fmt as ExportFormat, 1000),
+      `frequency_${unit}.${fmt}`,
+      exportStatus.set,
+    );
   };
 
   return (
@@ -123,6 +160,7 @@ function FrequencyPanel({ cid }: { cid: string }) {
         </label>
         <ExportButton onExport={onExport} disabled={!result.data} />
       </div>
+      {exportStatus.el}
 
       {result.data && (
         <>
@@ -160,17 +198,28 @@ function CollocationPanel({ cid }: { cid: string }) {
     setSubmitted({ n: node.trim(), l: level, w: window, mf: minFreq });
   };
 
+  const exportStatus = useExportStatus();
+
   const onExport = async (fmt: ExportFormat | "svg" | "png") => {
     if (!submitted) return;
     if (fmt === "svg") {
-      const blob = await api.exportCollocationNetworkSvg(cid, submitted.n, submitted.l as any, submitted.w, submitted.mf);
-      downloadBlob(blob, `collocation_network_${submitted.n}.svg`);
+      await exportWithFeedback(
+        () => api.exportCollocationNetworkSvg(cid, submitted.n, submitted.l as any, submitted.w, submitted.mf),
+        `collocation_network_${submitted.n}.svg`,
+        exportStatus.set,
+      );
     } else if (fmt === "png") {
-      const blob = await api.exportCollocationNetworkPng(cid, submitted.n, submitted.l as any, submitted.w, submitted.mf);
-      downloadBlob(blob, `collocation_network_${submitted.n}.png`);
+      await exportWithFeedback(
+        () => api.exportCollocationNetworkPng(cid, submitted.n, submitted.l as any, submitted.w, submitted.mf),
+        `collocation_network_${submitted.n}.png`,
+        exportStatus.set,
+      );
     } else {
-      const blob = await api.exportCollocations(cid, submitted.n, fmt, submitted.l as any, submitted.w, submitted.mf);
-      downloadBlob(blob, `collocations_${submitted.n}.${fmt}`);
+      await exportWithFeedback(
+        () => api.exportCollocations(cid, submitted.n, fmt, submitted.l as any, submitted.w, submitted.mf),
+        `collocations_${submitted.n}.${fmt}`,
+        exportStatus.set,
+      );
     }
   };
 
@@ -452,15 +501,23 @@ function KeynessPanel({ cid }: { cid: string }) {
     enabled: !!referenceCorpusId,
   });
 
+  const exportStatus = useExportStatus();
+
   const onExport = async (fmt: ExportFormat | "svg" | "png") => {
     if (!referenceCorpusId) return;
-    const blob = await api.exportKeyness(cid, referenceCorpusId, fmt as ExportFormat);
-    downloadBlob(blob, `keyness.${fmt}`);
+    await exportWithFeedback(
+      () => api.exportKeyness(cid, referenceCorpusId, fmt as ExportFormat),
+      `keyness.${fmt}`,
+      exportStatus.set,
+    );
   };
 
   const onMethodsPdf = async () => {
-    const blob = await api.exportMethodsPdf(cid);
-    downloadBlob(blob, `methods_section.pdf`);
+    await exportWithFeedback(
+      () => api.exportMethodsPdf(cid),
+      `methods_section.pdf`,
+      exportStatus.set,
+    );
   };
 
   return (
@@ -480,6 +537,7 @@ function KeynessPanel({ cid }: { cid: string }) {
         <ExportButton onExport={onExport} disabled={!result.data} />
         <button onClick={onMethodsPdf}>Methods PDF</button>
       </div>
+      {exportStatus.el}
 
       <div className="grounding-notice">
         <strong>4 Principle 3:</strong> a "key" word is never reported as important on
@@ -525,6 +583,7 @@ function DispersionPanel({ cid }: { cid: string }) {
     queryFn: () => api.dispersion(cid, submitted!, "word"),
     enabled: !!submitted,
   });
+  const exportStatus = useExportStatus();
 
   return (
     <div className="panel-content">
@@ -537,8 +596,9 @@ function DispersionPanel({ cid }: { cid: string }) {
           placeholder="Term (e.g. 'the')"
         />
         <button onClick={() => setSubmitted(term.trim())} disabled={!term.trim()}>Compute</button>
-        <ExportButton onExport={(fmt) => { if (result.data) { const blob = new Blob([JSON.stringify(result.data, null, 2)], {type:"application/json"}); downloadBlob(blob, `dispersion.${fmt}`); } } } disabled={!result.data} />
+        <ExportButton onExport={(fmt) => { if (result.data) { downloadJsonResult(result.data, `dispersion.${fmt}`, exportStatus.set); } } } disabled={!result.data} />
       </div>
+      {exportStatus.el}
 
       {result.data && (
         <>
@@ -661,6 +721,7 @@ function NGramsPanel({ cid }: { cid: string }) {
     queryKey: ["ngrams", cid, n, minFreq, minRange],
     queryFn: () => api.ngrams(cid, n, minFreq, minRange, 200),
   });
+  const exportStatus = useExportStatus();
 
   return (
     <div className="panel-content">
@@ -677,13 +738,14 @@ function NGramsPanel({ cid }: { cid: string }) {
           <input type="number" min={1} value={minRange} onChange={(e) => setMinRange(Number(e.target.value))} />
         </label>
       </div>
+      {exportStatus.el}
 
       <div className="grounding-notice">
         <strong>Note:</strong> Lexical bundles require BOTH a minimum frequency per million words
         AND a minimum number of distinct texts - raw frequency alone is not enough to
         distinguish genuine bundles from single-text artifacts (Biber et al.).
-      
-        <ExportButton onExport={(fmt) => { if (result.data) { const blob = new Blob([JSON.stringify(result.data, null, 2)], {type:"application/json"}); downloadBlob(blob, `ngrams.${fmt}`); } } } disabled={!result.data} /></div>
+
+        <ExportButton onExport={(fmt) => { if (result.data) { downloadJsonResult(result.data, `ngrams.${fmt}`, exportStatus.set); } } } disabled={!result.data} /></div>
 
       {result.data && (
         <>
@@ -708,6 +770,7 @@ function POSPanel({ cid }: { cid: string }) {
     queryKey: ["pos", cid, n],
     queryFn: () => api.posAnalysis(cid, n, 2, 100),
   });
+  const exportStatus = useExportStatus();
 
   return (
     <div className="panel-content">
@@ -721,8 +784,9 @@ function POSPanel({ cid }: { cid: string }) {
             <option value={5}>5</option>
           </select>
         </label>
-      
-        <ExportButton onExport={(fmt) => { if (result.data) { const blob = new Blob([JSON.stringify(result.data, null, 2)], {type:"application/json"}); downloadBlob(blob, `pos.${fmt}`); } } } disabled={!result.data} /></div>
+
+        <ExportButton onExport={(fmt) => { if (result.data) { downloadJsonResult(result.data, `pos.${fmt}`, exportStatus.set); } } } disabled={!result.data} /></div>
+      {exportStatus.el}
 
       {result.data && n === 1 && (
         <>
@@ -758,6 +822,7 @@ function GrammarPanel({ cid }: { cid: string }) {
     queryKey: ["grammar", cid, selected],
     queryFn: () => api.grammar(cid, selected, 20),
   });
+  const exportStatus = useExportStatus();
 
   const toggle = (p: string) => {
     setSelected((prev) => prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]);
@@ -774,12 +839,13 @@ function GrammarPanel({ cid }: { cid: string }) {
           </label>
         ))}
       </div>
+      {exportStatus.el}
 
       <div className="grounding-notice">
         <strong>Note:</strong> Grammar pattern detectors are <em>dependency-parse-driven</em>,
         not regex over surface text - so they generalize across genres.
-      
-        <ExportButton onExport={(fmt) => { if (result.data) { const blob = new Blob([JSON.stringify(result.data, null, 2)], {type:"application/json"}); downloadBlob(blob, `grammar.${fmt}`); } } } disabled={!result.data} /></div>
+
+        <ExportButton onExport={(fmt) => { if (result.data) { downloadJsonResult(result.data, `grammar.${fmt}`, exportStatus.set); } } } disabled={!result.data} /></div>
 
       {result.data && (
         <>
@@ -826,6 +892,7 @@ function DependencyPanel({ cid }: { cid: string }) {
     queryKey: ["dep", cid, relation],
     queryFn: () => api.dependencies(cid, relation, 100),
   });
+  const exportStatus = useExportStatus();
 
   return (
     <div className="panel-content">
@@ -841,12 +908,13 @@ function DependencyPanel({ cid }: { cid: string }) {
           </select>
         </label>
       </div>
+      {exportStatus.el}
 
       <div className="grounding-notice">
         <strong>Note:</strong> Built as thin queries over the same dependency parses already
         produced in 8.1 - not a separate pipeline.
-      
-        <ExportButton onExport={(fmt) => { if (result.data) { const blob = new Blob([JSON.stringify(result.data, null, 2)], {type:"application/json"}); downloadBlob(blob, `dependency.${fmt}`); } } } disabled={!result.data} /></div>
+
+        <ExportButton onExport={(fmt) => { if (result.data) { downloadJsonResult(result.data, `dependency.${fmt}`, exportStatus.set); } } } disabled={!result.data} /></div>
 
       {result.data && (
         <>
@@ -867,14 +935,16 @@ function DiscoursePanel({ cid }: { cid: string }) {
     queryKey: ["discourse", cid],
     queryFn: () => api.discourse(cid),
   });
+  const exportStatus = useExportStatus();
 
   return (
     <div className="panel-content">
+      {exportStatus.el}
       <div className="grounding-notice">
         <strong>Note:</strong> Metadiscourse categories follow Hyland's interactive/interactional
         taxonomy (Hyland 2005) - this makes results citable and comparable across studies.
-      
-        <ExportButton onExport={(fmt) => { if (result.data) { const blob = new Blob([JSON.stringify(result.data, null, 2)], {type:"application/json"}); downloadBlob(blob, `discourse.${fmt}`); } } } disabled={!result.data} /></div>
+
+        <ExportButton onExport={(fmt) => { if (result.data) { downloadJsonResult(result.data, `discourse.${fmt}`, exportStatus.set); } } } disabled={!result.data} /></div>
 
       {result.data && (
         <>
@@ -908,15 +978,17 @@ function VocabPanel({ cid }: { cid: string }) {
     queryKey: ["vocab", cid],
     queryFn: () => api.vocabProfile(cid, 1, 100),
   });
+  const exportStatus = useExportStatus();
 
   return (
     <div className="panel-content">
+      {exportStatus.el}
       <div className="grounding-notice">
         <strong>Note:</strong> Vocabulary profiling uses an open frequency-band approximation
         (CC-0 wordlist). EVP-style CEFR wordlists carry redistribution restrictions and are
         not bundled without confirmed rights.
-      
-        <ExportButton onExport={(fmt) => { if (result.data) { const blob = new Blob([JSON.stringify(result.data, null, 2)], {type:"application/json"}); downloadBlob(blob, `vocab.${fmt}`); } } } disabled={!result.data} /></div>
+
+        <ExportButton onExport={(fmt) => { if (result.data) { downloadJsonResult(result.data, `vocab.${fmt}`, exportStatus.set); } } } disabled={!result.data} /></div>
 
       {result.data && (
         <>
@@ -959,15 +1031,17 @@ function SentimentPanel({ cid }: { cid: string }) {
     queryKey: ["sentiment", cid],
     queryFn: () => api.sentiment(cid),
   });
+  const exportStatus = useExportStatus();
 
   return (
     <div className="panel-content">
+      {exportStatus.el}
       <div className="grounding-notice">
         <strong>Note:</strong> Phase 2 uses a lexicon-based sentiment scorer. Phase 3 will swap
         in VADER or a transformers-based model behind the same interface - results stay comparable
         because the model + version is pinned per project (4 Principle 8).
-      
-        <ExportButton onExport={(fmt) => { if (result.data) { const blob = new Blob([JSON.stringify(result.data, null, 2)], {type:"application/json"}); downloadBlob(blob, `sentiment.${fmt}`); } } } disabled={!result.data} /></div>
+
+        <ExportButton onExport={(fmt) => { if (result.data) { downloadJsonResult(result.data, `sentiment.${fmt}`, exportStatus.set); } } } disabled={!result.data} /></div>
 
       {result.data && (
         <>
@@ -1014,9 +1088,11 @@ function MetaphorPanel({ cid }: { cid: string }) {
     queryKey: ["metaphor", cid],
     queryFn: () => api.metaphorCandidates(cid, 50),
   });
+  const exportStatus = useExportStatus();
 
   return (
     <div className="panel-content">
+      {exportStatus.el}
       <div className="grounding-notice">
         <strong>Note:</strong> These are <em>candidates only</em>.
         The LLM triages them via MIPVU decision steps (contextual vs. basic meaning,
@@ -1025,8 +1101,8 @@ function MetaphorPanel({ cid }: { cid: string }) {
         or statistics. Current evidence shows LLMs alone under-perform supervised
         detectors and especially struggle to filter literal false positives - the
         verification gate is not optional UI polish, it is load-bearing for validity.
-      
-        <ExportButton onExport={(fmt) => { if (result.data) { const blob = new Blob([JSON.stringify(result.data, null, 2)], {type:"application/json"}); downloadBlob(blob, `metaphor.${fmt}`); } } } disabled={!result.data} /></div>
+
+        <ExportButton onExport={(fmt) => { if (result.data) { downloadJsonResult(result.data, `metaphor.${fmt}`, exportStatus.set); } } } disabled={!result.data} /></div>
 
       {result.data && (
         <>

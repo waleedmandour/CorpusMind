@@ -126,7 +126,11 @@ Assess your confidence in this interpretation."""
     ]
 
     try:
-        response = await provider.chat(
+        # Issue 2b: use chat_json() instead of chat() so the provider sets
+        # the JSON-format flag (Ollama: "format":"json"; OpenAI-compat:
+        # response_format=json_object). This forces the model to return
+        # valid JSON instead of wrapping it in prose/code fences.
+        response = await provider.chat_json(
             messages,
             model=model,
             temperature=0.1,  # Low temperature for deterministic assessment
@@ -195,7 +199,8 @@ Generate validation questions."""
     ]
 
     try:
-        response = await provider.chat(
+        # Issue 2b: use chat_json() for the same reason as assess_confidence()
+        response = await provider.chat_json(
             messages,
             model=model,
             temperature=0.1,

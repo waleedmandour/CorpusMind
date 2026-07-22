@@ -276,7 +276,11 @@ async def _export_collocations(cid: str, body: ExportCollocationRequest, fmt: Ex
 async def _export_keyness(cid: str, body: ExportKeynessRequest, fmt: ExportFormat, session: AsyncSession) -> StreamingResponse:
     if not await session.get(Corpus, cid):
         raise HTTPException(404, "Target corpus not found")
-    r = await compute_keyness(session, cid, body.reference_corpus_id, min_freq=body.min_freq, limit=body.limit)
+    try:
+        r = await compute_keyness(session, cid, body.reference_corpus_id, min_freq=body.min_freq, limit=body.limit)
+    except ValueError as e:
+        # Issue 1: surface "no ingested version" as 422 — same as the analysis endpoint.
+        raise HTTPException(status_code=422, detail=str(e)) from e
     headers = ["Term", "f1 (target)", "f2 (ref)", "LL", "Chi-Square", "Log Ratio", "%DIFF", "Simple Maths", "Odds Ratio", "Direction"]
     rows = []
     for row in r.positive_keywords[:body.limit]:

@@ -442,14 +442,35 @@ async def compute_keyness(
     limit: int = 100,
 ) -> KeynessResult:
     """Compare target vs reference corpus. Returns both significance and
-    effect-size measures (§4 Principle 3) — never present one without the other."""
+    effect-size measures (§4 Principle 3) — never present one without the other.
+
+    Raises ``ValueError`` if either corpus has no ingested annotation version.
+    Previously the function silently returned an empty KeynessResult
+    (N1=0, N2=0, no keywords), which made "fake-loaded" reference corpora
+    (a corpus row with no documents/tokens) look like "keyness found no
+    keywords" — a misleading non-failure. The API layer now surfaces this
+    as a 422 so the UI can tell the user *why* keyness is empty instead
+    of pretending it succeeded.
+    """
     if measures is None:
         measures = ["log_likelihood", "chi_square", "log_ratio", "pct_diff", "simple_maths", "odds_ratio"]
 
     target_vid = await _latest_version_id(session, target_corpus_id)
     ref_vid = await _latest_version_id(session, reference_corpus_id)
-    if not target_vid or not ref_vid:
-        return KeynessResult(target_corpus_id, reference_corpus_id, measures, [], [], 0, 0)
+    if not target_vid:
+        raise ValueError(
+            f"Target corpus '{target_corpus_id}' has no ingested annotation version. "
+            f"Upload documents to it first (Your Corpus → Upload)."
+        )
+    if not ref_vid:
+        raise ValueError(
+            f"Reference corpus '{reference_corpus_id}' has no ingested annotation version. "
+            f"The reference corpus must contain real tokens for keyness to be meaningful. "
+            f"If you used 'Bundled → Load' to create this reference, that flow only "
+            f"created an empty corpus row — use the new /api/v1/reference-corpora/ "
+            f"endpoints to install a real bundled reference, or upload a reference "
+            f"corpus file via the Upload tab."
+        )
 
     # Word freqs in each corpus
     async def _freqs(vid: str) -> Counter:

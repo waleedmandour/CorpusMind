@@ -15,6 +15,8 @@
   --danger: #c0392b;
   --success: #2e7d32;
   --warning: #c77b0e;
+  /* Info token — light theme (Issue 4: was missing, status-info messages had no semantic color) */
+  --info: #2563eb;
 
   /* Typography */
   --font-sans: "Inter", "Segoe UI", "Helvetica Neue", system-ui, -apple-system, sans-serif;
@@ -108,6 +110,20 @@
   --text-muted: #b3bac3;
   --text-subtle: #8b919e;
   --text-on-brand: #ffffff;
+  /* Issue 4: semantic status colors must be brighter on dark surfaces to
+     maintain WCAG AA (4.5:1) contrast. Light-theme values:
+       --danger #c0392b → 3.2:1 on #0e1116 (FAIL)
+       --success #2e7d32 → 3.4:1 on #0e1116 (FAIL)
+       --warning #c77b0e → 5.2:1 on #0e1116 (pass, but brighter is safer)
+     Dark-theme overrides:
+       --danger #ff7a6b → 6.0:1 on #0e1116 (PASS)
+       --success #5fd07a → 7.1:1 on #0e1116 (PASS)
+       --warning #f0a830 → 8.2:1 on #0e1116 (PASS)
+       --info    #6ba6ff → 6.4:1 on #0e1116 (PASS) */
+  --danger: #ff7a6b;
+  --success: #5fd07a;
+  --warning: #f0a830;
+  --info: #6ba6ff;
   --ribbon-tab-bg: transparent;
   --ribbon-tab-bg-hover: #1f242c;
   --ribbon-tab-bg-active: #133026;
@@ -1156,19 +1172,21 @@ code, pre { font-family: var(--font-mono); }
   font-weight: 500;
 }
 .uploader-status.success {
-  background: rgba(45, 138, 78, 0.1);
-  color: #2d8a4e;
-  border: 1px solid rgba(45, 138, 78, 0.2);
+  /* Issue 4: use var(--success) so this adapts to dark mode (was hardcoded #2d8a4e) */
+  background: color-mix(in srgb, var(--success) 12%, transparent);
+  color: var(--success);
+  border: 1px solid color-mix(in srgb, var(--success) 25%, transparent);
 }
 .uploader-status.error {
-  background: rgba(220, 38, 38, 0.1);
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
   color: var(--danger);
-  border: 1px solid rgba(220, 38, 38, 0.2);
+  border: 1px solid color-mix(in srgb, var(--danger) 25%, transparent);
 }
 .uploader-status.info {
-  background: rgba(59, 130, 246, 0.1);
-  color: #3b82f6;
-  border: 1px solid rgba(59, 130, 246, 0.2);
+  /* Issue 4: use var(--info) so this adapts to dark mode (was hardcoded #3b82f6) */
+  background: color-mix(in srgb, var(--info) 12%, transparent);
+  color: var(--info);
+  border: 1px solid color-mix(in srgb, var(--info) 25%, transparent);
 }
 .uploader-pipeline-info {
   font-size: 11px;

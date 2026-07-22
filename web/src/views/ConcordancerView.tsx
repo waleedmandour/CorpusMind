@@ -10,7 +10,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
 
-import { api, downloadBlob, type ExportFormat } from "@/lib/api";
+import { api, exportWithFeedback, type ExportFormat } from "@/lib/api";
 import { useApp } from "@/store/app";
 import { ExportButton } from "@/components/ExportButton";
 
@@ -31,6 +31,8 @@ export function ConcordancerView() {
   const [randomSample, setRandomSample] = useState(false);
   const [offset, setOffset] = useState(0);
   const [submitted, setSubmitted] = useState<{ q: string; l: string; w: number; cs: boolean; rs: boolean } | null>(null);
+  // Issue 5: visible export status so the user knows what happened
+  const [exportStatus, setExportStatus] = useState<{ kind: "success" | "error" | "info"; msg: string } | null>(null);
 
   const result = useQuery({
     queryKey: ["concordance", cid, submitted, offset],
@@ -44,10 +46,17 @@ export function ConcordancerView() {
     setSubmitted({ q: query.trim(), l: level, w: window, cs: caseSensitive, rs: randomSample });
   };
 
+  // Issue 5: wrap in exportWithFeedback so both backend errors (engine
+  // offline, 422, 500) and save-dialog errors (cancel, disk full, perms)
+  // are surfaced to the user instead of failing silently.
   const onExport = async (fmt: ExportFormat | "svg" | "png") => {
     if (!submitted || !cid) return;
-    const blob = await api.exportConcordance(cid, submitted.q, fmt as ExportFormat, submitted.l as any, submitted.w, 1000);
-    downloadBlob(blob, `concordance_${submitted.q}.${fmt}`);
+    setExportStatus(null);
+    await exportWithFeedback(
+      () => api.exportConcordance(cid, submitted.q, fmt as ExportFormat, submitted.l as any, submitted.w, 1000),
+      `concordance_${submitted.q}.${fmt}`,
+      (msg, kind) => setExportStatus({ kind, msg }),
+    );
   };
 
   const total = result.data?.total ?? 0;
@@ -85,6 +94,12 @@ export function ConcordancerView() {
         <button onClick={onSearch} disabled={!query.trim()}>Search</button>
         <ExportButton onExport={onExport} disabled={!submitted || !result.data} />
       </div>
+
+      {exportStatus && exportStatus.msg && (
+        <div className={clsx("uploader-status", exportStatus.kind)} style={{ marginTop: "var(--space-2)" }}>
+          {exportStatus.msg}
+        </div>
+      )}
 
       {result.isLoading && <div className="empty-state">Searching...</div>}
       {result.isError && <div className="error">Error: {String(result.error)}</div>}

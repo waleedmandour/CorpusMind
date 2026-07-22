@@ -287,8 +287,14 @@ export const translations = {
     commandPalette: "لوحة الأوامر (Ctrl/Cmd+K)",
     switchToRTL: "تحويل إلى RTL",
     switchToLTR: "تحويل إلى LTR",
-    switchToArabic: "English",
-    switchToEnglish: "العربية",
+    // Issue 3 fix: these were swapped (ar.switchToArabic was "English" and
+    // ar.switchToEnglish was "العربية" — backwards). Fixed to match the
+    // English block's convention: switchToArabic = the label on the button
+    // that switches TO Arabic, shown when the UI is currently in English.
+    // In the Arabic block, the button that switches TO Arabic is shown
+    // when you're in English mode, so it should be labeled "العربية".
+    switchToArabic: "العربية",
+    switchToEnglish: "English",
 
     // Sidebar groups
     nav_overview: "نظرة عامة",

@@ -15,9 +15,11 @@ import { useUI } from "@/store/ui";
 import { useApp } from "@/store/app";
 import { api, isTauriRuntime, nativeProvidersHealth } from "@/lib/api";
 import { useEngineVersionDisplay } from "@/hooks/useEngineVersion";
+import { t } from "@/lib/i18n";
 
 export function HomeView() {
   const setActiveNav = useUI((s) => s.setActiveNav);
+  const lang = useUI((s) => s.lang);
   const versionDisplay = useEngineVersionDisplay();
   const activeProjectId = useApp((s) => s.activeProjectId);
   const activeCorpusId = useApp((s) => s.activeCorpusId);
@@ -60,8 +62,8 @@ export function HomeView() {
   return (
     <div className="home-view">
       <div className="home-header">
-        <h1>Welcome to CorpusMind</h1>
-        <p className="home-subtitle">Local-first, AI-native research environment for corpus linguistics and multimodal discourse analysis</p>
+        <h1>{t(lang, "home_welcome")}</h1>
+        <p className="home-subtitle">{t(lang, "home_subtitle")}</p>
       </div>
 
       {/* Engine offline banner — prominent, actionable.
@@ -71,9 +73,12 @@ export function HomeView() {
         <div className="engine-offline-banner">
           <div className="engine-offline-icon">{"\u26A0"}</div>
           <div className="engine-offline-content">
-            <strong>Engine is offline.</strong> The Python backend is not running.
-            {!isTauri && <span> In the desktop app, the engine starts automatically. In browser mode, start it manually:</span>}
-            {isTauri && <span> The engine should have started automatically. Go to <strong>Settings</strong> and click <strong>Recheck Engine</strong> to diagnose.</span>}
+            <strong>{lang === "ar" ? "المحرك متوقف." : "Engine is offline."}</strong>{" "}
+            {lang === "ar"
+              ? "الواجهة الخلفية بلغة Python لا تعمل."
+              : "The Python backend is not running."}
+            {!isTauri && <span> {lang === "ar" ? "في تطبيق سطح المكتب، يبدأ المحرك تلقائياً. في وضع المتصفح، ابدأه يدوياً:" : "In the desktop app, the engine starts automatically. In browser mode, start it manually:"}</span>}
+            {isTauri && <span> {lang === "ar" ? "كان من المفترض أن يبدأ المحرك تلقائياً. اذهب إلى " : "The engine should have started automatically. Go to "}<strong>{lang === "ar" ? "الإعدادات" : "Settings"}</strong>{lang === "ar" ? " وانقر " : " and click "}<strong>{lang === "ar" ? "إعادة فحص المحرك" : "Recheck Engine"}</strong>{lang === "ar" ? " للتشخيص." : " to diagnose."}</span>}
           </div>
           {!isTauri && (
             <div className="engine-offline-cmd">
@@ -82,7 +87,7 @@ export function HomeView() {
           )}
           {isTauri && (
             <button className="btn-primary" onClick={() => setActiveNav("settings")}>
-              Go to Settings
+              {lang === "ar" ? "اذهب إلى الإعدادات" : "Go to Settings"}
             </button>
           )}
         </div>
@@ -91,16 +96,16 @@ export function HomeView() {
       <div className="home-status-bar">
         <div className={`status-chip ${engineOk ? "ok" : "bad"}`}>
           <span className="status-dot" />
-          Engine: {engineOk ? "Running" : "Offline"}
+          {t(lang, "home_engine")}: {engineOk ? t(lang, "home_running") : t(lang, "home_offline")}
         </div>
         <div className={`status-chip ${ollamaOk ? "ok" : "bad"}`}>
           <span className="status-dot" />
-          Ollama: {ollamaOk ? "Connected" : "Not detected"}
+          {t(lang, "home_ollama")}: {ollamaOk ? t(lang, "home_connected") : t(lang, "home_not_running")}
         </div>
         {activeCorpusId && (
           <div className="status-chip ok">
             <span className="status-dot" />
-            Corpus loaded
+            {t(lang, "home_active_corpus")}
           </div>
         )}
         <div className="status-chip info">
@@ -108,7 +113,7 @@ export function HomeView() {
         </div>
       </div>
 
-      <h2 className="home-section-title">Quick Actions</h2>
+      <h2 className="home-section-title">{t(lang, "home_quick_actions")}</h2>
       <div className="home-quick-grid">
         {quickActions.map((action) => (
           <button
@@ -127,9 +132,9 @@ export function HomeView() {
 
       {!activeProjectId && (
         <div className="home-callout">
-          <h3>Get Started</h3>
-          <p>You have not selected a project yet. Click <strong>Projects</strong> in the sidebar to create one and upload your text files.</p>
-          <button className="btn-primary" onClick={() => setActiveNav("corpus-target")}>Create a Project</button>
+          <h3>{t(lang, "home_get_started")}</h3>
+          <p>{t(lang, "home_no_project")}</p>
+          <button className="btn-primary" onClick={() => setActiveNav("corpus-target")}>{t(lang, "home_create_project")}</button>
         </div>
       )}
 

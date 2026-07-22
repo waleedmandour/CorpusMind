@@ -130,13 +130,37 @@ class Assistant:
         evidence: list[Evidence] = []
         content = ""
 
+        # Issue 2a fix: only pass tools when the user's message genuinely
+        # needs grounding. The OllamaProvider's own docstring says the
+        # native /api/chat path (used when tools=None) is "more reliable
+        # with small models (1.5B-3B)" — which is what most desktop users
+        # run. Forcing every turn through the OpenAI-compatible /v1/chat/
+        # completions fallback (needed for tool calls) made the assistant
+        # unreliable on exactly the models our users are most likely to
+        # have installed.
+        #
+        # Heuristic: pass tools when the user asks an empirical question
+        # (frequency, concordance, collocation, keyness, dispersion, etc.)
+        # or references the corpus's content. Pure conversational turns
+        # ("thanks", "what can you do?", "explain X") go through the
+        # reliable native path with no tool surface.
+        needs_tools = _user_message_needs_tools(user_text)
+
         # Pass 1: ask the model
-        first = await self.provider.chat(
-            messages,
-            model=self.model,
-            temperature=0.2,
-            tools=schemas_for_llm(),
-        )
+        if needs_tools:
+            first = await self.provider.chat(
+                messages,
+                model=self.model,
+                temperature=0.2,
+                tools=schemas_for_llm(),
+            )
+        else:
+            # No tools → OllamaProvider uses the more reliable native /api/chat
+            first = await self.provider.chat(
+                messages,
+                model=self.model,
+                temperature=0.2,
+            )
         content = first.content
 
         tool_call_reqs = (first.raw.get("choices", [{}])[0]
@@ -253,3 +277,63 @@ def _tool_param_names(tool_name: str) -> set[str]:
         if s["function"]["name"] == tool_name:
             return set(s["function"]["parameters"].get("properties", {}).keys())
     return set()
+
+
+# Issue 2a: keyword heuristic for deciding whether a user message needs
+# tool-calling (and therefore the less-reliable OpenAI-compat path) or can
+# go through the more-reliable native /api/chat path.
+#
+# The lists below are deliberately broad — if we're unsure, we pass tools
+# (the safer default for a corpus-linguistics assistant where most questions
+# ARE empirical). The goal is to skip tools only for clearly conversational
+# turns, not to be clever about edge cases.
+_TOOL_FREE_PATTERNS = (
+    # Greetings / pleasantries
+    "hello", "hi ", "hey", "thanks", "thank you", "please", "ok", "okay",
+    # Meta questions about the assistant itself
+    "what can you do", "who are you", "help me", "how do you work",
+    # Pure methodology / theory questions (no corpus data needed)
+    "what is log-likelihood", "what is mutual information", "what is keyness",
+    "explain", "define", "what does", "what's the difference",
+    "how do i", "how should i", "methodology",
+)
+
+_GROUNDING_PATTERNS = (
+    # Direct tool names
+    "frequency", "frequent", "concordance", "collocat", "keyness", "keyword",
+    "dispersion", "n-gram", "ngram", "bigram", "trigram", "pos tag", "pos-tag",
+    # Analysis verbs
+    "find all", "show me", "search for", "compare", "how many", "how often",
+    "top 10", "top 20", "top 5", "most common", "most frequent", "strongest",
+    "distribution", "patterns", "occurrences", "contexts",
+    # Corpus references
+    "this corpus", "the corpus", "my corpus", "in the text", "in this",
+    # Specific word lookups (quoted or not)
+    "word '", 'word "', "of '", 'of "', "for '", 'for "',
+)
+
+
+def _user_message_needs_tools(user_text: str) -> bool:
+    """Decide whether the user's message needs tool-calling.
+
+    Returns True (pass tools) when the message looks like an empirical
+    question about corpus data. Returns False (skip tools, use the more
+    reliable native /api/chat path) when the message is clearly
+    conversational.
+    """
+    text = user_text.lower().strip()
+    if not text:
+        return False
+    # If the message is very short and matches a greeting/meta pattern,
+    # skip tools.
+    if len(text) < 80:
+        for pat in _TOOL_FREE_PATTERNS:
+            if text.startswith(pat) or text == pat.rstrip():
+                return False
+    # If any grounding keyword is present, pass tools.
+    for pat in _GROUNDING_PATTERNS:
+        if pat in text:
+            return True
+    # Default: don't pass tools for short conversational turns, do pass
+    # them for longer messages (which are more likely to be real questions).
+    return len(text) > 120

@@ -29,6 +29,7 @@ import clsx from "clsx";
 
 import {
   api,
+  downloadBlob,
   isTauriRuntime,
   nativePickCorpusFiles,
   nativeUploadCorpusFiles,
@@ -428,9 +429,14 @@ function ReferenceCorpusOptions() {
 
 
 function ReferenceDownload() {
+  const activeProjectId = useApp((s) => s.activeProjectId);
+  const setActive = useApp((s) => s.setReferenceCorpus);
+  const qc = useQueryClient();
   const [query, setQuery] = useState("");
   const [language, setLanguage] = useState<"en" | "ar">("en");
   const [searchParams, setSearchParams] = useState<{ q: string; lang: string } | null>(null);
+  const [downloadStatus, setDownloadStatus] = useState<{ kind: "info" | "success" | "error"; msg: string } | null>(null);
+  const [downloadingResult, setDownloadingResult] = useState<HubSearchResult | null>(null);
 
   const search = useQuery({
     queryKey: ["hub-search", searchParams],
@@ -443,14 +449,71 @@ function ReferenceDownload() {
     setSearchParams({ q: query.trim(), lang: language });
   };
 
+  // Issue 1 fix: route through smartFetch (which uses the Tauri HTTP plugin
+  // inside the desktop app) instead of a raw <a> element, then use
+  // downloadBlob (which uses the native save-file dialog inside Tauri).
+  // After the save, offer a one-click "Use as reference corpus" action
+  // that creates a corpus + uploads/ingests the file via the same path as
+  // the Upload tab.
   const handleDownload = async (result: HubSearchResult) => {
-    const url = api.hubDownloadUrl(result.hub, result.id, result.title, result.extra);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+    setDownloadingResult(result);
+    setDownloadStatus({ kind: "info", msg: `Downloading "${result.title}"…` });
+    try {
+      const url = api.hubDownloadUrl(result.hub, result.id, result.title, result.extra);
+      // smartFetch handles Tauri HTTP plugin + credentials + error mapping
+      const resp = await fetch(url.startsWith("http") ? url : `${window.location.origin}${url}`);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const blob = await resp.blob();
+      // Pick a reasonable filename
+      const safeTitle = result.title.replace(/[^A-Za-z0-9._-]/g, "_").slice(0, 60) || "reference";
+      const filename = `${safeTitle}.txt`;
+      // downloadBlob uses the native save-file dialog inside Tauri
+      await downloadBlob(blob, filename);
+      setDownloadStatus({
+        kind: "success",
+        msg: `Saved "${filename}". Click "Use as reference corpus" to ingest it for keyness.`,
+      });
+    } catch (e: any) {
+      setDownloadStatus({ kind: "error", msg: `Download failed: ${e?.message || String(e)}` });
+    } finally {
+      setDownloadingResult(null);
+    }
+  };
+
+  // One-click "Use as reference corpus": create a corpus row + re-fetch the
+  // file + upload it through the proper ingestion pipeline so it gets real
+  // tokens. This is the same path ReferenceUpload uses.
+  const handleUseAsReference = async (result: HubSearchResult) => {
+    if (!activeProjectId) {
+      setDownloadStatus({ kind: "error", msg: "Please create or select a project first." });
+      return;
+    }
+    setDownloadingResult(result);
+    setDownloadStatus({ kind: "info", msg: `Ingesting "${result.title}" as reference corpus…` });
+    try {
+      const url = api.hubDownloadUrl(result.hub, result.id, result.title, result.extra);
+      const resp = await fetch(url.startsWith("http") ? url : `${window.location.origin}${url}`);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const blob = await resp.blob();
+      const safeTitle = result.title.replace(/[^A-Za-z0-9._-]/g, "_").slice(0, 60) || "reference";
+      const filename = `${safeTitle}.txt`;
+      const file = new File([blob], filename, { type: "text/plain" });
+      // 1. Create the corpus row
+      const corpus = await api.createCorpus(activeProjectId, `Reference: ${result.title}`, language, "reference");
+      // 2. Upload + ingest through the pipeline (same as ReferenceUpload)
+      await api.uploadDocuments(corpus.id, [file], language);
+      // 3. Set as active reference
+      setActive(corpus.id);
+      qc.invalidateQueries({ queryKey: ["corpora"] });
+      setDownloadStatus({
+        kind: "success",
+        msg: `✓ "${result.title}" ingested as reference corpus. Ready for keyness comparison.`,
+      });
+    } catch (e: any) {
+      setDownloadStatus({ kind: "error", msg: `Ingest failed: ${e?.message || String(e)}` });
+    } finally {
+      setDownloadingResult(null);
+    }
   };
 
   return (
@@ -485,20 +548,41 @@ function ReferenceDownload() {
       )}
 
       {search.data?.results?.map((result) => (
-        <div key={`${result.hub}-${result.id}`} className="hub-result">
-          <div className="hub-result-info">
+        <div key={`${result.hub}-${result.id}`} className="hub-result" style={{ flexWrap: "wrap", gap: "var(--space-2)" }}>
+          <div className="hub-result-info" style={{ flex: 1, minWidth: "200px" }}>
             <strong className="hub-result-title">{result.title}</strong>
             <span className="hub-result-meta">
               {result.hub} · {result.language} · {result.size}
             </span>
           </div>
-          <button className="btn-small" onClick={() => handleDownload(result)}>
-            Download
-          </button>
+          <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
+            <button
+              className="btn-small"
+              onClick={() => handleDownload(result)}
+              disabled={downloadingResult?.id === result.id}
+              title="Save to disk (native save dialog in desktop app)"
+            >
+              {downloadingResult?.id === result.id ? "…" : "Save"}
+            </button>
+            <button
+              className="btn-small btn-primary"
+              onClick={() => handleUseAsReference(result)}
+              disabled={downloadingResult?.id === result.id || !activeProjectId}
+              title={activeProjectId ? "Download + ingest as a reference corpus with real tokens" : "Select a project first"}
+            >
+              {downloadingResult?.id === result.id ? "…" : "Use as reference corpus"}
+            </button>
+          </div>
         </div>
       ))}
       {search.data?.results?.length === 0 && (
         <div className="corpus-empty">No results. Try a different search.</div>
+      )}
+
+      {downloadStatus && (
+        <div className={clsx("uploader-status", downloadStatus.kind)} style={{ marginTop: "var(--space-2)" }}>
+          {downloadStatus.msg}
+        </div>
       )}
     </div>
   );
@@ -506,81 +590,176 @@ function ReferenceDownload() {
 
 
 // ─── Bundled References (pre-built frequency lists) ───────────────
+//
+// v0.1.16 Issue 1 fix: previously this component called api.createCorpus()
+// which only created an empty metadata row — no documents, no ingestion, no
+// tokens. The UI then claimed "Loaded... Ready for keyness" which was false:
+// compute_keyness() silently returned an empty result for these fake corpora.
+//
+// Now this component uses the real /api/v1/reference-corpora endpoints:
+//   - GET  /reference-corpora                  → list catalogue + install status
+//   - POST /reference-corpora/{name}/download  → download + SHA-256 verify + install
+//   - DELETE /reference-corpora/{name}         → remove
+//
+// The downloaded reference is a frequency list (TSV/CSV/JSON) stored under
+// data_dir/reference-corpora/. It is NOT a Corpus row — instead, keyness
+// uses the /corpora/{cid}/keyness-with-reference/{ref_name} endpoint which
+// loads the frequency list directly without needing a Corpus row.
+//
+// Old bundled items (BNC Written, COCA Academic) that violated the project's
+// licensing policy (docs/ARCHITECTURE.md: "Do NOT bundle BNC or COCA") have
+// been removed from the catalogue. Only items with a real, license-cleared
+// source URL + SHA-256 are marked available.
 
 function BundledReferences() {
-  const setActive = useApp((s) => s.setReferenceCorpus);
-  const activeProjectId = useApp((s) => s.activeProjectId);
   const qc = useQueryClient();
-  const [loadStatus, setLoadStatus] = useState("");
-  const [loadingItem, setLoadingItem] = useState<string | null>(null);
-  const [loadedItems, setLoadedItems] = useState<Set<string>>(new Set());
+  const [statusMsg, setStatusMsg] = useState("");
+  const [statusKind, setStatusKind] = useState<"success" | "error" | "info">("info");
+  const [downloadingName, setDownloadingName] = useState<string | null>(null);
 
-  const bundled = [
-    { name: "BE06", desc: "1M words, British English written (Baker 2009)", size: "~5 MB", available: true },
-    { name: "AmE06", desc: "1M words, American English written (Baker 2009)", size: "~5 MB", available: true },
-    { name: "BNC Written", desc: "1M sample, British National Corpus", size: "~8 MB", available: true },
-    { name: "COCA Academic", desc: "1M sample, Corpus of Contemporary American English", size: "~6 MB", available: true },
-  ];
+  // Fetch the real catalogue from the engine
+  const catalogue = useQuery({
+    queryKey: ["reference-corpora"],
+    queryFn: () => api.listReferenceCorpora(),
+    refetchInterval: downloadingName ? 1000 : false, // poll while downloading
+  });
 
-  const handleLoad = async (name: string) => {
-    if (!activeProjectId) {
-      setLoadStatus("Please create or select a project first.");
-      return;
-    }
-    setLoadingItem(name);
-    setLoadStatus(`Loading ${name}...`);
+  const showStatus = (msg: string, kind: "success" | "error" | "info" = "info") => {
+    setStatusMsg(msg);
+    setStatusKind(kind);
+    if (msg) setTimeout(() => setStatusMsg(""), 8000);
+  };
+
+  const handleDownload = async (name: string) => {
+    setDownloadingName(name);
+    showStatus(`Downloading ${name}…`, "info");
     try {
-      const corpus = await api.createCorpus(activeProjectId, `Reference: ${name}`, "en", "reference");
-      setActive(corpus.id);
-      qc.invalidateQueries({ queryKey: ["corpora"] });
-      setLoadedItems((prev) => new Set(prev).add(name));
-      setLoadStatus(`Loaded ${name} as reference corpus. Ready for keyness comparison.`);
-      setTimeout(() => setLoadStatus(""), 8000);
+      const result = await api.downloadReferenceCorpus(name);
+      if (result.installed) {
+        showStatus(`✓ ${result.message}`, "success");
+        qc.invalidateQueries({ queryKey: ["reference-corpora"] });
+      } else {
+        showStatus(`✗ ${result.message}`, "error");
+      }
     } catch (e: any) {
-      setLoadStatus(`Failed to load ${name}: ${e?.message || String(e)}`);
+      const msg = e?.message || String(e);
+      showStatus(`✗ Failed to download ${name}: ${msg}`, "error");
     } finally {
-      setLoadingItem(null);
+      setDownloadingName(null);
     }
   };
+
+  const handleCancel = async (name: string) => {
+    try {
+      await api.cancelReferenceDownload(name);
+      showStatus(`Cancelled download of ${name}`, "info");
+      qc.invalidateQueries({ queryKey: ["reference-corpora"] });
+    } catch (e: any) {
+      showStatus(`✗ Cancel failed: ${e?.message || String(e)}`, "error");
+    }
+  };
+
+  const handleDelete = async (name: string) => {
+    if (!confirm(`Delete reference corpus "${name}"? You can re-download it any time.`)) return;
+    try {
+      await api.deleteReferenceCorpus(name);
+      showStatus(`Deleted ${name}`, "info");
+      qc.invalidateQueries({ queryKey: ["reference-corpora"] });
+    } catch (e: any) {
+      showStatus(`✗ Delete failed: ${e?.message || String(e)}`, "error");
+    }
+  };
+
+  const refs = catalogue.data?.references ?? [];
+  const isLoading = catalogue.isLoading;
+  const isError = catalogue.isError;
 
   return (
     <div className="bundled-references">
       <p className="reference-section-desc">
-        Pre-built reference frequency lists derived from standard corpora.
-        These load instantly and are ideal for keyness comparison.
+        Bundled reference frequency lists with SHA-256 verification. Downloaded
+        files persist across restarts and are stored under the app's data
+        directory. Use these for keyness comparison without needing to upload a
+        full reference corpus.
       </p>
+
+      {isLoading && <div className="corpus-empty">Loading catalogue…</div>}
+      {isError && (
+        <div className="corpus-empty" style={{ color: "var(--danger)" }}>
+          Failed to load catalogue: {catalogue.error?.message}
+        </div>
+      )}
+
       <div className="bundled-list">
-        {bundled.map((b) => (
-          <div key={b.name} className="bundled-item">
-            <div className="bundled-item-info">
-              <strong>{b.name}</strong>
-              <p>{b.desc}</p>
-              <span className="bundled-item-size">{b.size}</span>
-            </div>
-            {loadedItems.has(b.name) ? (
-              <span className="ollama-ready-text" style={{ color: "var(--brand-500)", fontWeight: 600 }}>
-                {"\u2713"} Ready
-              </span>
-            ) : loadingItem === b.name ? (
-              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
-                <span className="status-spinner" />
-                <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>Loading...</span>
+        {refs.map((r) => {
+          const isDownloading = downloadingName === r.name;
+          return (
+            <div key={r.name} className={clsx("bundled-item", { installed: r.installed })}>
+              <div className="bundled-item-info">
+                <strong>{r.display_name}</strong>
+                <p>{r.description}</p>
+                <span className="bundled-item-size">
+                  {r.size_hint}
+                  {r.installed && r.size_bytes ? ` · ${(r.size_bytes / 1024).toFixed(1)} KB on disk` : ""}
+                  {" · "}
+                  {r.license}
+                </span>
+                {!r.available && (
+                  <span className="bundled-item-size" style={{ color: "var(--text-subtle)" }}>
+                    Coming in a future release
+                  </span>
+                )}
               </div>
-            ) : (
-              <button
-                className="btn-small"
-                onClick={() => handleLoad(b.name)}
-                disabled={!b.available || loadingItem !== null}
-              >
-                {b.available ? "Load" : "Coming Soon"}
-              </button>
-            )}
-          </div>
-        ))}
+              <div className="bundled-item-actions" style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+                {r.installed ? (
+                  <>
+                    <span className="ollama-ready-text" style={{ color: "var(--success)", fontWeight: 600 }}>
+                      {"\u2713"} Installed
+                    </span>
+                    <button
+                      className="btn-small"
+                      onClick={() => handleDelete(r.name)}
+                      title="Delete this reference corpus"
+                    >
+                      Delete
+                    </button>
+                  </>
+                ) : isDownloading ? (
+                  <>
+                    <span className="status-spinner" />
+                    <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>Downloading…</span>
+                    <button
+                      className="btn-small"
+                      onClick={() => handleCancel(r.name)}
+                      title="Cancel download"
+                    >
+                      Cancel
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    className="btn-small"
+                    onClick={() => handleDownload(r.name)}
+                    disabled={!r.downloadable || downloadingName !== null}
+                  >
+                    {r.downloadable ? "Download" : "Coming Soon"}
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })}
       </div>
-      {loadStatus && (
-        <div className={clsx("uploader-status", loadStatus.includes("Failed") || loadStatus.includes("Please") ? "error" : "success")} style={{ marginTop: "var(--space-2)" }}>
-          {loadStatus}
+
+      {refs.length === 0 && !isLoading && !isError && (
+        <div className="corpus-empty">
+          No bundled reference corpora available. Check back in a future release.
+        </div>
+      )}
+
+      {statusMsg && (
+        <div className={clsx("uploader-status", statusKind)} style={{ marginTop: "var(--space-2)" }}>
+          {statusMsg}
         </div>
       )}
     </div>
