@@ -1,7 +1,7 @@
 """AI Assistant endpoints — grounded chat (§11)."""
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -201,3 +201,140 @@ async def delete_conversation(cid: str, session: AsyncSession = Depends(get_sess
         raise HTTPException(404, "Conversation not found")
     await session.delete(convo)
     return {"deleted": cid}
+
+
+# --------------------------------------------------------------------------- #
+# Issue 2: Query suggestions (pre-fabricated + dynamic)
+# --------------------------------------------------------------------------- #
+
+
+class DynamicSuggestionsRequest(BaseModel):
+    provider: str = Field("ollama")
+    model: str | None = Field(None)
+    corpus_id: str | None = Field(None)
+    language: str = Field("en", pattern="^(en|ar)$")
+    recent_analysis: dict | None = Field(None, description="Optional: the user's most recent analysis result, for context-aware suggestions")
+
+
+@router.get("/query-suggestions")
+async def get_query_suggestions(
+    language: str = Query("en", pattern="^(en|ar)$"),
+    corpus_id: str | None = Query(None),
+) -> dict:
+    """Return the pre-fabricated query catalogue, always visible in the UI.
+
+    Each suggestion has ``available`` set based on whether the user's
+    current state (corpus loaded, reference installed) satisfies the
+    suggestion's requirements. The UI uses this to grey out unavailable
+    suggestions instead of hiding them — so the user always sees the
+    full range of what CorpusMind can do.
+    """
+    from ai.query_suggestions import list_prefabricated, has_reference_for_language
+
+    suggestions = list_prefabricated(language=language)
+
+    # Determine availability flags.
+    has_corpus = bool(corpus_id)
+    # We need to know the corpus's language to check reference availability.
+    # If no corpus is loaded, treat reference availability as False so the
+    # UI greys out keyness suggestions.
+    ref_available = False
+    if corpus_id:
+        try:
+            from storage.models import Corpus
+            c = await session_get_corpus(corpus_id)  # type: ignore[name-defined]
+            if c is not None:
+                ref_available = has_reference_for_language(c.language or "en")
+        except Exception:
+            pass
+    else:
+        # No corpus loaded — but the user might still want to see what
+        # references are available. Check English (the default).
+        ref_available = has_reference_for_language("en")
+
+    for s in suggestions:
+        s["available"] = True
+        if s["requires_corpus"] and not has_corpus:
+            s["available"] = False
+            s["unavailable_reason"] = "Requires an active corpus"
+        elif s["requires_reference"] and not ref_available:
+            s["available"] = False
+            s["unavailable_reason"] = "Requires an installed reference corpus for this language"
+
+    return {"suggestions": suggestions, "has_corpus": has_corpus, "ref_available": ref_available}
+
+
+@router.post("/query-suggestions/dynamic")
+async def get_dynamic_suggestions(
+    req: DynamicSuggestionsRequest,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    """Generate LLM-powered follow-up research questions.
+
+    Returns a merged list: pre-fabricated first (always), then dynamic.
+    The dynamic part is empty when no corpus is loaded, no LLM is
+    available, or the LLM returns unparseable output. The UI should
+    treat this as "no dynamic suggestions available" rather than an error.
+    """
+    from ai.query_suggestions import (
+        generate_dynamic_queries,
+        list_prefabricated,
+    )
+
+    # Pre-fabricated (always present)
+    out = list_prefabricated(language=req.language)
+
+    # Dynamic (best-effort)
+    dynamic: list[dict] = []
+    try:
+        provider = request.app.state.providers.get(req.provider)
+        if provider is not None:
+            # Auto-select first model if none specified.
+            model = req.model
+            if not model:
+                try:
+                    models = await provider.list_models()
+                    if models:
+                        model = models[0]
+                except Exception:
+                    pass
+            if model:
+                suggestions = await generate_dynamic_queries(
+                    session,
+                    corpus_id=req.corpus_id,
+                    provider=provider,
+                    model=model,
+                    recent_analysis=req.recent_analysis,
+                    language=req.language,
+                )
+                for s in suggestions:
+                    dynamic.append({
+                        "id": f"dyn_{abs(hash(s.query)) % 100000}",
+                        "category": s.category,
+                        "label": s.query[:80] + ("…" if len(s.query) > 80 else ""),
+                        "query": s.query,
+                        "rationale": s.rationale,
+                        "requires_corpus": True,
+                        "requires_reference": False,
+                        "available": True,
+                        "source": "dynamic",
+                    })
+    except Exception as e:
+        log.warning("dynamic_suggestions_endpoint_failed", error=str(e))
+
+    return {
+        "suggestions": out + dynamic,
+        "dynamic_count": len(dynamic),
+        "provider_requested": req.provider,
+        "model_used": req.model,
+    }
+
+
+# Helper for the query-suggestions endpoint — avoids a circular import
+# by getting a fresh session only when needed.
+async def session_get_corpus(corpus_id: str):
+    from storage.models import Corpus
+    from storage.session import session_scope
+    async with session_scope() as s:
+        return await s.get(Corpus, corpus_id)

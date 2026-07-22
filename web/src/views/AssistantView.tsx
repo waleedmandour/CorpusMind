@@ -12,7 +12,7 @@ import { useState, useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
 
-import { api, type ChatTurnResponse, type EvidenceItem, type MCQ } from "@/lib/api";
+import { api, type ChatTurnResponse, type EvidenceItem, type MCQ, type QuerySuggestion } from "@/lib/api";
 import { useApp } from "@/store/app";
 import { useUI } from "@/store/ui";
 
@@ -154,13 +154,40 @@ export function AssistantView() {
     setEditText("");
   };
 
-  const prompts = [
-    "What are the top 10 most frequent words in this corpus?",
-    "Find all occurrences of 'fox' and show me their contexts.",
-    "What are the strongest collocates of 'dog' within ±5 tokens?",
-    "Compare this corpus against the reference - what are the top keywords?",
-    "How evenly is 'the' distributed across the documents?",
-  ];
+  // Issue 2c: replace the hardcoded `prompts` array with a live query to
+  // the /api/v1/ai/query-suggestions endpoint. The suggestions are now
+  // corpus-aware (the endpoint marks keyness suggestions as unavailable
+  // when no reference corpus is installed) and include both pre-fabricated
+  // templates and LLM-generated dynamic suggestions.
+  //
+  // The suggestions are also PERSISTENT — they remain visible throughout
+  // the conversation, not just at first load. The user can toggle the
+  // panel with the "Suggestions" button in the sidebar.
+  const [showSuggestions, setShowSuggestions] = useState(true);
+  const suggestions = useQuery({
+    queryKey: ["query-suggestions", cid, provider, selectedModel],
+    queryFn: () => api.getQuerySuggestions("en", cid),
+    enabled: true,
+    staleTime: 60_000, // don't refetch on every render
+  });
+
+  // Regenerate dynamic suggestions (calls the /dynamic endpoint which
+  // uses the LLM to produce corpus-aware follow-ups).
+  const regenerateDynamic = useMutation({
+    mutationFn: () => api.getDynamicSuggestions({
+      provider,
+      model: selectedModel || null,
+      corpus_id: cid,
+      language: "en",
+    }),
+    onSuccess: () => {
+      suggestions.refetch();
+    },
+  });
+
+  const allSuggestions: QuerySuggestion[] = suggestions.data?.suggestions ?? [];
+  const prefabricated = allSuggestions.filter(s => s.source === "prefabricated");
+  const dynamic = allSuggestions.filter(s => s.source === "dynamic");
 
   return (
     <div className="assistant">
@@ -216,6 +243,78 @@ export function AssistantView() {
           makes must come from a tool call. Answers with no tool calls are
           rendered with a visible <em>UNGROUND</em> badge.
         </div>
+
+        {/* Issue 2c: persistent suggestions panel in the sidebar.
+            Previously the prompts only appeared in the empty-state block
+            and vanished after the first message. Now they're always
+            available here, plus a collapsible strip above the composer. */}
+        <h3>
+          Suggested questions
+          <button
+            className="btn-small"
+            style={{ marginLeft: "var(--space-2)", fontSize: "10px", padding: "1px 6px" }}
+            onClick={() => setShowSuggestions(!showSuggestions)}
+          >
+            {showSuggestions ? "Hide" : "Show"}
+          </button>
+        </h3>
+        {showSuggestions && (
+          <>
+            {prefabricated.length > 0 && (
+              <ul className="prompt-list" style={{ listStyle: "none", padding: 0 }}>
+                {prefabricated.slice(0, 6).map((s) => (
+                  <li key={s.id}>
+                    <button
+                      className="prompt-suggest"
+                      onClick={() => setInput(s.query)}
+                      disabled={!s.available}
+                      title={s.unavailable_reason || s.description || ""}
+                    >
+                      {s.label}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {dynamic.length > 0 && (
+              <>
+                <h4 style={{ fontSize: "11px", marginTop: "var(--space-2)", color: "var(--text-muted)" }}>
+                  Dynamic ({dynamic.length})
+                  <button
+                    className="btn-small"
+                    style={{ marginLeft: "var(--space-1)", fontSize: "10px", padding: "1px 4px" }}
+                    onClick={() => regenerateDynamic.mutate()}
+                    disabled={regenerateDynamic.isPending || !providerHealthy || !cid}
+                    title="Regenerate LLM-powered suggestions based on your corpus"
+                  >
+                    {regenerateDynamic.isPending ? "…" : "↻"}
+                  </button>
+                </h4>
+                <ul className="prompt-list" style={{ listStyle: "none", padding: 0 }}>
+                  {dynamic.map((s) => (
+                    <li key={s.id}>
+                      <button
+                        className="prompt-suggest"
+                        onClick={() => setInput(s.query)}
+                        title={s.rationale || ""}
+                      >
+                        {s.label}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+            {dynamic.length === 0 && cid && providerHealthy && (
+              <p className="hint" style={{ fontSize: "11px" }}>
+                No dynamic suggestions yet. Click ↻ to generate LLM-powered
+                follow-ups based on your corpus.
+              </p>
+            )}
+            {!cid && <p className="hint" style={{ fontSize: "11px" }}>Set an active corpus to enable dynamic suggestions.</p>}
+            {!providerHealthy && <p className="hint" style={{ fontSize: "11px" }}>Start Ollama or LM Studio for dynamic suggestions.</p>}
+          </>
+        )}
       </aside>
 
       <section className="assistant-main">
@@ -223,17 +322,8 @@ export function AssistantView() {
           {messages.length === 0 && (
             <div className="empty-state">
               <h2>CorpusMind AI Assistant</h2>
-              <p>Try one of these grounded questions:</p>
-              <ul className="prompt-list">
-                {prompts.map((p) => (
-                  <li key={p}>
-                    <button className="prompt-suggest" onClick={() => setInput(p)} disabled={!cid}>
-                      {p}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-              {!cid && <p className="hint">Set an active corpus first (Text → Manage).</p>}
+              <p>Try one of the suggested questions in the sidebar, or ask your own below.</p>
+              {!cid && <p className="hint">Set an active corpus first (Your Corpus).</p>}
               {!providerHealthy && <p className="hint">Start Ollama or LM Studio to enable grounded answers.</p>}
             </div>
           )}

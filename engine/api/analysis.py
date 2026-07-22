@@ -118,10 +118,16 @@ async def keyness(cid: str, body: KeynessRequest, session: AsyncSession = Depend
         raise HTTPException(404, "Target corpus not found")
     if not await session.get(Corpus, body.reference_corpus_id):
         raise HTTPException(404, "Reference corpus not found")
-    r = await compute_keyness(
-        session, cid, body.reference_corpus_id,
-        min_freq=body.min_freq, measures=body.measures, limit=body.limit,
-    )
+    try:
+        r = await compute_keyness(
+            session, cid, body.reference_corpus_id,
+            min_freq=body.min_freq, measures=body.measures, limit=body.limit,
+        )
+    except ValueError as e:
+        # Issue 1: surface "no ingested version" as a 422, not a silent empty
+        # result and not a 500. The UI uses the message to tell the user
+        # exactly what to fix.
+        raise HTTPException(status_code=422, detail=str(e)) from e
     return asdict(r)
 
 

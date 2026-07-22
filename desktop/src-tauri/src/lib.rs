@@ -1200,6 +1200,12 @@ async fn upload_corpus_files(cid: String, paths: Vec<String>, language: Option<S
 /// Used by the export functions to save analysis results (xlsx, csv, svg, etc.)
 /// directly to the user's disk. This bypasses the webview's download mechanism,
 /// which can be unreliable inside Tauri.
+///
+/// Issue 5 fix: the previous implementation called `blocking_save_file()`
+/// directly inside this async command, which risks stalling the IPC/async
+/// runtime thread. Now we move the blocking dialog + file write onto a
+/// dedicated blocking thread via `tauri::async_runtime::spawn_blocking`,
+/// then await the result via a oneshot channel.
 #[tauri::command]
 async fn save_file_to_disk(
     app: tauri::AppHandle,
@@ -1207,40 +1213,62 @@ async fn save_file_to_disk(
     data: Vec<u8>,
 ) -> String {
     use tauri_plugin_dialog::DialogExt;
+    use tokio::sync::oneshot;
 
-    let result = app.dialog()
-        .file()
-        .add_filter("All files", &["*"])
-        .set_file_name(&filename)
-        .blocking_save_file();
+    let (tx, rx) = oneshot::channel::<String>();
+    let app_handle = app.clone();
 
-    match result {
-        Some(file_path) => {
-            let path_str = file_path.to_string();
-            match std::fs::write(&path_str, &data) {
-                Ok(_) => {
-                    info!(target: "dialog", "file saved: {} ({} bytes)", path_str, data.len());
-                    serde_json::json!({
-                        "ok": true,
-                        "path": path_str,
-                        "message": format!("File saved to {}", path_str)
-                    }).to_string()
-                }
-                Err(e) => {
-                    error!(target: "dialog", "failed to write file: {}", e);
-                    serde_json::json!({
-                        "ok": false,
-                        "path": path_str,
-                        "message": format!("Failed to write file: {}", e)
-                    }).to_string()
+    // Spawn the blocking dialog + file write on a dedicated blocking thread
+    // so the async runtime's worker thread is not stalled.
+    tauri::async_runtime::spawn_blocking(move || {
+        let result = app_handle.dialog()
+            .file()
+            .add_filter("All files", &["*"])
+            .set_file_name(&filename)
+            .blocking_save_file();
+
+        let response = match result {
+            Some(file_path) => {
+                let path_str = file_path.to_string();
+                match std::fs::write(&path_str, &data) {
+                    Ok(_) => {
+                        info!(target: "dialog", "file saved: {} ({} bytes)", path_str, data.len());
+                        serde_json::json!({
+                            "ok": true,
+                            "path": path_str,
+                            "message": format!("File saved to {}", path_str)
+                        }).to_string()
+                    }
+                    Err(e) => {
+                        error!(target: "dialog", "failed to write file: {}", e);
+                        serde_json::json!({
+                            "ok": false,
+                            "path": path_str,
+                            "message": format!("Failed to write file: {}", e)
+                        }).to_string()
+                    }
                 }
             }
-        }
-        None => {
+            None => {
+                serde_json::json!({
+                    "ok": false,
+                    "path": null,
+                    "message": "Save cancelled by user"
+                }).to_string()
+            }
+        };
+        let _ = tx.send(response);
+    });
+
+    // Await the result from the blocking thread.
+    match rx.await {
+        Ok(response) => response,
+        Err(e) => {
+            error!(target: "dialog", "blocking thread panicked: {}", e);
             serde_json::json!({
                 "ok": false,
                 "path": null,
-                "message": "Save cancelled by user"
+                "message": format!("Internal error: {}", e)
             }).to_string()
         }
     }

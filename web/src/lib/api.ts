@@ -1248,6 +1248,14 @@ export const api = {
     }),
   listConversations: () => jsonFetch<Array<Record<string, unknown>>>("/api/v1/ai/conversations"),
   getConversation: (cid: string) => jsonFetch<Record<string, unknown>>(`/api/v1/ai/conversations/${cid}`),
+  // v0.1.16 Issue 2: pre-fabricated + dynamic query suggestions
+  getQuerySuggestions: (language: string = "en", corpusId: string | null = null) =>
+    jsonFetch<QuerySuggestionsResponse>(`/api/v1/ai/query-suggestions?language=${encodeURIComponent(language)}${corpusId ? `&corpus_id=${encodeURIComponent(corpusId)}` : ""}`),
+  getDynamicSuggestions: (req: { provider: string; model: string | null; corpus_id: string | null; language: string; recent_analysis?: Record<string, unknown> }) =>
+    jsonFetch<QuerySuggestionsResponse>("/api/v1/ai/query-suggestions/dynamic", {
+      method: "POST",
+      body: JSON.stringify(req),
+    }),
 
   // --- Smart Troubleshooting ---
   troubleshootStatus: () =>
@@ -1330,6 +1338,31 @@ export const api = {
     jsonFetch<{ references: Array<{ name: string; desc: string; size: string; available: boolean }> }>("/api/v1/research/bundled-references"),
   getBundledReference: (name: string) =>
     jsonFetch<{ name: string; items: Array<{ word: string; freq: number }>; total_tokens: number; total_types: number }>(`/api/v1/research/bundled-references/${name}`),
+
+  // --- v0.1.16 reference-corpus subsystem (Issue 1) ---
+  // Real download + verify + install + keyness-with-reference endpoints.
+  // Replaces the fake "Bundled → Load" flow that only created an empty corpus row.
+  listReferenceCorpora: () =>
+    jsonFetch<{ references: Array<ReferenceCorpusEntry> }>("/api/v1/reference-corpora"),
+  getReferenceStatus: (name: string) =>
+    jsonFetch<ReferenceCorpusStatus>(`/api/v1/reference-corpora/${name}/status`),
+  downloadReferenceCorpus: (name: string) =>
+    jsonFetch<{ name: string; status: string; installed: boolean; message: string }>(`/api/v1/reference-corpora/${name}/download`, {
+      method: "POST",
+    }),
+  cancelReferenceDownload: (name: string) =>
+    jsonFetch<{ name: string; cancel_requested: boolean }>(`/api/v1/reference-corpora/${name}/cancel`, {
+      method: "POST",
+    }),
+  deleteReferenceCorpus: (name: string) =>
+    jsonFetch<{ name: string; deleted: boolean }>(`/api/v1/reference-corpora/${name}`, {
+      method: "DELETE",
+    }),
+  keynessWithReference: (cid: string, refName: string, minFreq: number = 5, limit: number = 500) =>
+    jsonFetch<KeynessWithReferenceResponse>(`/api/v1/corpora/${cid}/keyness-with-reference/${refName}`, {
+      method: "POST",
+      body: JSON.stringify({ reference_name: refName, min_freq: minFreq, limit }),
+    }),
 
   // --- Open-access academic corpus download (API-key-based) ---
   oaSources: () =>
@@ -1509,22 +1542,41 @@ export interface HubSearchResponse {
  * Download a blob to disk. Inside Tauri, uses the native OS save-file dialog
  * (via the save_file_to_disk Rust command) for a proper file-save experience.
  * In browser mode, falls back to the standard <a download> approach.
+ *
+ * Issue 5 fix:
+ *   1. Replaced the JSON-array-of-numbers transfer (which inflated payload
+ *      size several-fold and was slow for large exports) with a direct
+ *      Uint8Array — Tauri 2 supports raw byte arrays over IPC without
+ *      the Array.from() conversion.
+ *   2. Returns a structured result so callers can surface user-visible
+ *      success/error feedback instead of just console.error.
  */
-export async function downloadBlob(blob: Blob, filename: string) {
+export type DownloadResult =
+  | { ok: true; path: string; message: string }
+  | { ok: false; path: string | null; message: string; cancelled: boolean };
+
+export async function downloadBlob(blob: Blob, filename: string): Promise<DownloadResult> {
   if (isTauriRuntime()) {
     // Inside Tauri: use native save dialog
     try {
       const invoke = await getInvoke();
       const arrayBuffer = await blob.arrayBuffer();
-      const data = Array.from(new Uint8Array(arrayBuffer));
-      const result = await invoke("save_file_to_disk", { filename, data });
-      const parsed = JSON.parse(result as string) as { ok: boolean; path: string | null; message: string };
-      if (!parsed.ok && parsed.path !== null) {
-        console.error("Save failed:", parsed.message);
+      // Issue 5 fix: pass the Uint8Array directly. Tauri 2's IPC supports
+      // raw byte arrays — the previous Array.from(new Uint8Array(...))
+      // converted every byte to a JS number, inflating the payload ~4x and
+      // making large exports (≥10k concordance rows) appear to hang.
+      const data = new Uint8Array(arrayBuffer);
+      const result = await invoke<string>("save_file_to_disk", { filename, data });
+      const parsed = JSON.parse(result) as { ok: boolean; path: string | null; message: string };
+      if (parsed.ok) {
+        return { ok: true, path: parsed.path!, message: parsed.message };
       }
-    } catch (e) {
+      // Distinguish "user cancelled" (path is null) from real write failures
+      const cancelled = parsed.path === null;
+      return { ok: false, path: parsed.path, message: parsed.message, cancelled };
+    } catch (e: any) {
+      // Native save threw — fall back to browser download but report the error
       console.error("Native save failed, falling back to browser download:", e);
-      // Fallback to browser download
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -1533,6 +1585,7 @@ export async function downloadBlob(blob: Blob, filename: string) {
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
+      return { ok: false, path: null, message: `Native save failed (fell back to browser): ${e?.message || String(e)}`, cancelled: false };
     }
   } else {
     // Browser mode: standard download
@@ -1544,7 +1597,60 @@ export async function downloadBlob(blob: Blob, filename: string) {
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
+    return { ok: true, path: filename, message: `Downloaded ${filename}` };
   }
+}
+
+/**
+ * Issue 5 helper: wraps the common export pattern (fetch blob from API →
+ * save to disk → show user-visible feedback) with proper error handling.
+ *
+ * Usage:
+ *   const result = await exportWithFeedback(
+ *     () => api.exportConcordance(cid, query, fmt, level, window, 1000),
+ *     `concordance_${query}.${fmt}`,
+ *     setExportStatus,  // (msg: string, kind: "success"|"error"|"info") => void
+ *   );
+ *
+ * - Catches both backend errors (engine offline, 500, 422) and save-dialog
+ *   errors (user cancelled, disk full, permissions) and routes them into
+ *   the same visible-feedback path.
+ * - Returns the structured DownloadResult so the caller can do additional
+ *   handling if needed.
+ */
+export async function exportWithFeedback(
+  fetchBlob: () => Promise<Blob>,
+  filename: string,
+  setStatus: (msg: string, kind: "success" | "error" | "info") => void,
+): Promise<DownloadResult> {
+  setStatus(`Exporting ${filename}…`, "info");
+  let blob: Blob;
+  try {
+    blob = await fetchBlob();
+  } catch (e: any) {
+    // Backend error: engine offline, 500, 422 (e.g. Issue 1's "no ingested
+    // version"), or network failure. Surface the specific message.
+    const msg = e?.message || String(e);
+    setStatus(`✗ Export failed: ${msg}`, "error");
+    return { ok: false, path: null, message: msg, cancelled: false };
+  }
+  let result: DownloadResult;
+  try {
+    result = await downloadBlob(blob, filename);
+  } catch (e: any) {
+    const msg = e?.message || String(e);
+    setStatus(`✗ Save failed: ${msg}`, "error");
+    return { ok: false, path: null, message: msg, cancelled: false };
+  }
+  if (result.ok) {
+    setStatus(`✓ Saved to ${result.path}`, "success");
+  } else if (result.cancelled) {
+    // User cancelled the save dialog — not an error, just clear the status.
+    setStatus("", "info");
+  } else {
+    setStatus(`✗ ${result.message}`, "error");
+  }
+  return result;
 }
 
 // ----------------------------------------------------------------------- //
@@ -1642,4 +1748,81 @@ export interface OADownloadResponse {
   url?: string;
   size?: number;
   title?: string;
+}
+
+// ─── v0.1.16 reference-corpus subsystem (Issue 1) ────────────────────
+export interface ReferenceCorpusEntry {
+  name: string;
+  display_name: string;
+  language: "en" | "ar";
+  description: string;
+  format: "tsv_freq" | "csv_freq" | "json_freq";
+  size_hint: string;
+  license: string;
+  citation: string;
+  genre: string;
+  min_corpus_tokens: number;
+  tags: string[];
+  available: boolean;
+  installed: boolean;
+  downloadable: boolean;
+  // present when installed:
+  installed_at?: string;
+  size_bytes?: number;
+  sha256?: string;
+  catalogue_version?: string;
+}
+
+export interface ReferenceDownloadProgress {
+  name: string;
+  status: "pending" | "downloading" | "verifying" | "installed" | "failed" | "cancelled";
+  downloaded_bytes: number;
+  total_bytes: number;
+  percent: number;
+  error: string;
+  retries: number;
+}
+
+export interface ReferenceCorpusStatus {
+  name: string;
+  display_name: string;
+  installed: boolean;
+  progress: ReferenceDownloadProgress | null;
+  installed_at?: string;
+  size_bytes?: number;
+}
+
+export interface KeynessWithReferenceResponse {
+  target_corpus_id: string;
+  reference_name: string;
+  reference_corpus_id: string;
+  measures: string[];
+  positive_keywords: Array<Record<string, unknown>>;
+  negative_keywords: Array<Record<string, unknown>>;
+  N1: number;
+  N2: number;
+}
+
+// ─── v0.1.16 AI query suggestions (Issue 2) ──────────────────────────
+export interface QuerySuggestion {
+  id: string;
+  category: string;
+  label: string;
+  query: string;
+  requires_corpus: boolean;
+  requires_reference: boolean;
+  available: boolean;
+  unavailable_reason?: string;
+  description?: string;
+  source: "prefabricated" | "dynamic";
+  rationale?: string;
+}
+
+export interface QuerySuggestionsResponse {
+  suggestions: QuerySuggestion[];
+  has_corpus: boolean;
+  ref_available: boolean;
+  dynamic_count?: number;
+  provider_requested?: string;
+  model_used?: string;
 }

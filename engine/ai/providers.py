@@ -91,7 +91,29 @@ class ModelProvider(abc.ABC):
         temperature: float = 0.2,
         tools: list[dict[str, Any]] | None = None,
         timeout: float | None = 60.0,
+        json_mode: bool = False,
     ) -> ChatResponse: ...
+
+    async def chat_json(
+        self,
+        messages: list[Message],
+        *,
+        model: str | None = None,
+        temperature: float = 0.1,
+        timeout: float | None = 60.0,
+    ) -> ChatResponse:
+        """Convenience wrapper that requests JSON-mode output.
+
+        Issue 2b: small local models routinely wrap JSON in prose or code
+        fences without a hard format constraint, causing json.loads() to
+        fail in confidence.py and query_suggestions.py. This wrapper sets
+        the provider-specific JSON-format flag so the model is forced to
+        return valid JSON.
+
+        Subclasses override chat() to honor the json_mode flag. The default
+        implementation just calls chat() with json_mode=True.
+        """
+        return await self.chat(messages, model=model, temperature=temperature, timeout=timeout, json_mode=True)
 
     @abc.abstractmethod
     async def stream(
@@ -249,6 +271,7 @@ class _OpenAICompatibleProvider(ModelProvider):
         temperature: float = 0.2,
         tools: list[dict[str, Any]] | None = None,
         timeout: float | None = 60.0,
+        json_mode: bool = False,
     ) -> ChatResponse:
         payload: dict[str, Any] = {
             "model": model or self.default_model,
@@ -258,6 +281,10 @@ class _OpenAICompatibleProvider(ModelProvider):
         }
         if tools:
             payload["tools"] = tools
+        # Issue 2b: OpenAI-compatible JSON mode (supported by LM Studio and
+        # most cloud providers). Sets response_format to json_object.
+        if json_mode:
+            payload["response_format"] = {"type": "json_object"}
 
         try:
             r = await self._client.post("/v1/chat/completions", json=payload, timeout=timeout)
@@ -410,6 +437,7 @@ class OllamaProvider(ModelProvider):
         temperature: float = 0.2,
         tools: list[dict[str, Any]] | None = None,
         timeout: float | None = 120.0,
+        json_mode: bool = False,
     ) -> ChatResponse:
         model_name = model or self.default_model
         is_qwen3 = self._is_qwen3(model_name)
@@ -429,6 +457,17 @@ class OllamaProvider(ModelProvider):
             },
         }
 
+        # Issue 2b: Ollama's native /api/chat supports a "format": "json"
+        # field that forces the model to return valid JSON. This is critical
+        # for confidence.py and query_suggestions.py, which ask the model
+        # for structured JSON output. Without it, small local models
+        # routinely wrap JSON in prose or ```json fences, causing
+        # json.loads() to fail silently and fall back to a hardcoded 0.5
+        # confidence — making the "low confidence → answer MCQ first"
+        # gating effectively random.
+        if json_mode:
+            payload["format"] = "json"
+
         # Ollama native API doesn't support OpenAI-style tools in /api/chat
         # the same way. If tools are needed, fall back to /v1/chat/completions.
         if tools:
@@ -436,7 +475,7 @@ class OllamaProvider(ModelProvider):
             return await self._chat_openai_compat(messages, model=model_name,
                                                    temperature=temperature, tools=tools, timeout=timeout)
 
-        log.info("ollama_chat_request", model=model_name, messages=len(messages), qwen3=is_qwen3)
+        log.info("ollama_chat_request", model=model_name, messages=len(messages), qwen3=is_qwen3, json_mode=json_mode)
 
         try:
             r = await self._client.post("/api/chat", json=payload, timeout=timeout)
