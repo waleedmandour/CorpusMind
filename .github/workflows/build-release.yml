@@ -38,8 +38,10 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Install Tauri CLI
-        run: cargo install tauri-cli --version "^2.0" || npm install -g @tauri-apps/cli
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
       - name: Install Linux system dependencies
         run: |
@@ -66,7 +68,7 @@ jobs:
       - name: Build Tauri app (deb + AppImage)
         run: |
           cd desktop/src-tauri
-          tauri build --bundles deb,appimage
+          npx @tauri-apps/cli@latest build --bundles deb,appimage
         env:
           # The Linux release build needs these for the linker to find systemd symbols
           RUSTFLAGS: "-C link-arg=-lsystemd"
@@ -90,8 +92,10 @@ jobs:
         with:
           targets: aarch64-apple-darwin,x86_64-apple-darwin
 
-      - name: Install Tauri CLI
-        run: cargo install tauri-cli --version "^2.0" || npm install -g @tauri-apps/cli
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
       - name: Build web frontend
         run: |
@@ -107,7 +111,7 @@ jobs:
       - name: Build Tauri app (Universal DMG)
         run: |
           cd desktop/src-tauri
-          tauri build --bundles dmg --target universal-apple-darwin
+          npx @tauri-apps/cli@latest build --bundles dmg --target universal-apple-darwin
         # Note: universal-apple-darwin produces a fat binary that runs on
         # both Intel and Apple Silicon Macs. If you want separate builds,
         # use --target aarch64-apple-darwin and --target x86_64-apple-darwin.
@@ -130,9 +134,10 @@ jobs:
         with:
           targets: x86_64-pc-windows-msvc
 
-      - name: Install Tauri CLI
-        run: cargo install tauri-cli --version "^2.0"
-        shell: bash
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
       - name: Build web frontend
         run: |
@@ -150,7 +155,7 @@ jobs:
       - name: Build Tauri app (NSIS + MSI)
         run: |
           cd desktop/src-tauri
-          tauri build --bundles nsis,msi
+          npx @tauri-apps/cli@latest build --bundles nsis,msi
         shell: bash
 
       - name: Upload artifacts to release
