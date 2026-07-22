@@ -46,12 +46,12 @@ license: AGPL-3.0-only
 repository-code: "https://github.com/waleedmandour/CorpusMind"
 repository-artifact: "https://github.com/waleedmandour/CorpusMind/releases"
 url: "https://doi.org/10.5281/zenodo.21226650"
-version: 0.1.15
-date-released: 2026-07-07
+version: 0.1.16
+date-released: 2026-07-23
 identifiers:
   - type: doi
     value: "10.5281/zenodo.21226650"
-    description: "Zenodo DOI for CorpusMind v0.1.15 (concept DOI — points to the latest version)"
+    description: "Zenodo DOI for CorpusMind v0.1.16 (concept DOI — points to the latest version)"
 preferred-citation:
   type: software
   authors:
@@ -62,11 +62,11 @@ preferred-citation:
       given-names: Wesam
   title: "CorpusMind: Local-first, AI-native research environment for corpus linguistics and multimodal discourse analysis"
   year: 2026
-  version: 0.1.15
+  version: 0.1.16
   doi: "10.5281/zenodo.21226650"
   publisher:
     name: "Zenodo"
-  date-released: 2026-07-07
+  date-released: 2026-07-23
   keywords:
     - corpus linguistics
     - discourse analysis

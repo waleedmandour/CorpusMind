@@ -21,6 +21,8 @@ from ai.tools import execute_tool, schemas_for_llm
 from app.logging import get_logger
 from storage.models import Conversation, ConversationTurn
 from storage.session import session_scope
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 log = get_logger(__name__)
 
@@ -91,8 +93,19 @@ class Assistant:
         """
         # Use our OWN session for all DB operations — no shared session
         async with session_scope() as session:
-            # Load the conversation
-            convo = await session.get(Conversation, convo_id)
+            # Load the conversation WITH turns eagerly loaded.
+            # CRITICAL: use selectinload() instead of session.get() because
+            # lazy-loading the turns relationship inside an async session
+            # triggers implicit synchronous IO, causing the greenlet_spawn
+            # error: "greenlet_spawn has not been called; can't call await_only()
+            # here".
+            stmt = (
+                select(Conversation)
+                .options(selectinload(Conversation.turns))
+                .where(Conversation.id == convo_id)
+            )
+            result = await session.execute(stmt)
+            convo = result.scalar_one_or_none()
             if convo is None:
                 raise ValueError(f"Conversation {convo_id} not found")
 
@@ -213,7 +226,14 @@ class Assistant:
 
         # === Persist the assistant turn in a NEW session ===
         async with session_scope() as session:
-            convo = await session.get(Conversation, convo_id)
+            # Use selectinload to eagerly load turns (avoid greenlet lazy-load error)
+            stmt = (
+                select(Conversation)
+                .options(selectinload(Conversation.turns))
+                .where(Conversation.id == convo_id)
+            )
+            result = await session.execute(stmt)
+            convo = result.scalar_one_or_none()
             if convo is not None:
                 at = ConversationTurn(
                     conversation_id=convo.id,

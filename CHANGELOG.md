@@ -8,6 +8,34 @@ once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
 ## [Unreleased] — Phase 3: Arabic depth pass
 
+## [0.1.16] — 2026-07-23
+
+### Fixed — Engine
+
+- **AI Assistant greenlet_spawn error (HTTP 502)** — The AI Assistant chat
+  endpoint returned HTTP 502 with `"greenlet_spawn has not been called;
+  can't call await_only() here"` when answering any message. Root cause:
+  `assistant.py` and `api/ai.py` accessed the `Conversation.turns`
+  relationship via lazy loading inside async SQLAlchemy sessions. In
+  SQLAlchemy async, lazy loading triggers implicit synchronous IO which
+  is not permitted inside a greenlet. Fix: replaced all `session.get()`
+  calls with `select(Conversation).options(selectinload(Conversation.turns))`
+  to eagerly load the turns relationship. Affected files:
+  `engine/ai/assistant.py` (2 locations) and `engine/api/ai.py` (2 locations).
+
+### Changed — Web
+
+- **Arabic subtitle** — Updated the Arabic home subtitle from
+  "بيئة بحثية محلية أولاً" to
+  "بيئة بحثية علي جهازك فقط في المقام الأول"
+  (local-first → runs on your device only, primarily).
+
+### Changed — Version
+
+- Version bumped to 0.1.16 across all components (engine, web, desktop, shared, CITATION.cff).
+
+## [0.1.15] — 2026-07-07
+
 ### Added — Engine
 
 - **§8.21 Arabic NLP backend abstraction** (`nlp/arabic/pipeline.py`) —

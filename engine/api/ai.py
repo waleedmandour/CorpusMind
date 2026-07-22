@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from ai import Assistant
 from ai.tools import list_tools
@@ -144,7 +145,12 @@ async def chat(req: ChatRequest, request: Request, session: AsyncSession = Depen
 
 @router.get("/conversations")
 async def list_conversations(session: AsyncSession = Depends(get_session)) -> list[dict]:
-    stmt = select(Conversation).order_by(Conversation.updated_at.desc()).limit(50)
+    stmt = (
+        select(Conversation)
+        .options(selectinload(Conversation.turns))
+        .order_by(Conversation.updated_at.desc())
+        .limit(50)
+    )
     convos = (await session.execute(stmt)).scalars().all()
     return [{"id": c.id, "provider": c.provider, "model": c.model,
              "created_at": c.created_at.isoformat(), "updated_at": c.updated_at.isoformat(),
@@ -153,7 +159,13 @@ async def list_conversations(session: AsyncSession = Depends(get_session)) -> li
 
 @router.get("/conversations/{cid}")
 async def get_conversation(cid: str, session: AsyncSession = Depends(get_session)) -> dict:
-    convo = await session.get(Conversation, cid)
+    stmt = (
+        select(Conversation)
+        .options(selectinload(Conversation.turns))
+        .where(Conversation.id == cid)
+    )
+    result = await session.execute(stmt)
+    convo = result.scalar_one_or_none()
     if not convo:
         raise HTTPException(404, "Conversation not found")
     return {

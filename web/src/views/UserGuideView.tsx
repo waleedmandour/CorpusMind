@@ -692,7 +692,7 @@ corpusmind-engine`}</pre>
         <p>If you use CorpusMind in your research, please cite it as:</p>
         <pre>{`Mandour, W., & Ibrahim, W. (2026). CorpusMind: A local-first,
 AI-native research environment for corpus linguistics and
-multimodal discourse analysis (Version 0.1.15) [Computer
+multimodal discourse analysis (Version 0.1.16) [Computer
 software]. Zenodo. https://doi.org/10.5281/zenodo.21226650`}</pre>
         <h4>License</h4>
         <p>

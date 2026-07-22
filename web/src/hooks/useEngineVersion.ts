@@ -17,7 +17,7 @@ import { api } from "@/lib/api";
 /** The fallback version shown while the engine version query is loading
  *  or when the engine is unreachable. Must match the version in
  *  desktop/src-tauri/tauri.conf.json + engine/pyproject.toml. */
-const FALLBACK_VERSION = "0.1.15";
+const FALLBACK_VERSION = "0.1.16";
 
 export function useEngineVersion(): string {
   const query = useQuery({
