@@ -4,12 +4,14 @@ name: Build & Release v0.1.16
 # platform-native GitHub Actions runners, then uploads all artifacts to
 # the GitHub release.
 #
-# Why this workflow exists:
-#   Cross-compiling Tauri apps from a single Linux machine is not possible:
-#     - macOS requires the Apple SDK (licensing restrictions prevent redistribution)
-#     - Windows requires the MSVC linker (doesn't run on Linux)
-#     - The Linux release build needs ≥8GB RAM for the final link step
-#   GitHub Actions runners have 7-16GB RAM and the native toolchain preinstalled.
+# Each platform job:
+#   1. Sets up Python 3.12 + Rust + Node.js
+#   2. Installs engine dependencies + spaCy model
+#   3. Builds the engine sidecar with PyInstaller (produces ~60 MB binary)
+#   4. Copies the sidecar into the Tauri binaries directory
+#   5. Builds the web frontend
+#   6. Runs `tauri build` to produce the platform installer
+#   7. Uploads the installer to the GitHub release
 #
 # Trigger: manually via "Run workflow" in the Actions tab, or automatically
 # when a v0.1.* tag is pushed.
@@ -32,6 +34,7 @@ jobs:
   # ─── Linux (deb + AppImage) ──────────────────────────────────────
   build-linux:
     runs-on: ubuntu-22.04
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
 
@@ -42,6 +45,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
 
       - name: Install Linux system dependencies
         run: |
@@ -55,23 +63,38 @@ jobs:
             patchelf \
             file
 
+      - name: Install engine dependencies + PyInstaller
+        run: |
+          cd engine
+          pip install -e ".[dev]"
+          pip install pyinstaller
+          python -m spacy download en_core_web_sm
+
+      - name: Build engine sidecar (PyInstaller)
+        run: |
+          cd engine
+          pyinstaller corpusmind-engine.spec --noconfirm
+          echo "=== Sidecar contents ==="
+          ls -la dist/corpusmind-engine/
+          du -sh dist/corpusmind-engine/
+
+      - name: Copy sidecar to Tauri binaries directory
+        run: |
+          rm -rf desktop/src-tauri/binaries/corpusmind-engine
+          cp -r engine/dist/corpusmind-engine desktop/src-tauri/binaries/corpusmind-engine
+          echo "=== Tauri binaries dir ==="
+          ls -la desktop/src-tauri/binaries/corpusmind-engine/
+
       - name: Build web frontend
         run: |
           cd web
           npm install --no-audit --no-fund
           npm run build
 
-      - name: Create placeholder binaries dir
-        run: |
-          mkdir -p desktop/src-tauri/binaries/corpusmind-engine
-          echo "# Placeholder — engine runs as separate process" > desktop/src-tauri/binaries/corpusmind-engine/README.txt
-
       - name: Build Tauri app (deb + AppImage)
         run: |
           cd desktop/src-tauri
           npx @tauri-apps/cli@latest build --bundles deb,appimage
-        # Note: no RUSTFLAGS needed — the ubuntu-22.04 runner has libsystemd-dev
-        # installed via apt, so the linker finds it automatically.
 
       - name: Upload artifacts to release
         uses: softprops/action-gh-release@v2
@@ -81,21 +104,49 @@ jobs:
             desktop/src-tauri/target/release/bundle/deb/*.deb
             desktop/src-tauri/target/release/bundle/appimage/*.AppImage
 
-  # ─── macOS (DMG) ─────────────────────────────────────────────────
+  # ─── macOS (DMG, arm64) ──────────────────────────────────────────
   build-macos:
-    runs-on: macos-14  # Apple Silicon (arm64)
+    runs-on: macos-14
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: aarch64-apple-darwin,x86_64-apple-darwin
+          targets: aarch64-apple-darwin
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install engine dependencies + PyInstaller
+        run: |
+          cd engine
+          pip install -e ".[dev]"
+          pip install pyinstaller
+          python -m spacy download en_core_web_sm
+
+      - name: Build engine sidecar (PyInstaller)
+        run: |
+          cd engine
+          pyinstaller corpusmind-engine.spec --noconfirm
+          echo "=== Sidecar contents ==="
+          ls -la dist/corpusmind-engine/
+          du -sh dist/corpusmind-engine/
+
+      - name: Copy sidecar to Tauri binaries directory
+        run: |
+          rm -rf desktop/src-tauri/binaries/corpusmind-engine
+          cp -r engine/dist/corpusmind-engine desktop/src-tauri/binaries/corpusmind-engine
+          echo "=== Tauri binaries dir ==="
+          ls -la desktop/src-tauri/binaries/corpusmind-engine/
 
       - name: Build web frontend
         run: |
@@ -103,29 +154,22 @@ jobs:
           npm install --no-audit --no-fund
           npm run build
 
-      - name: Create placeholder binaries dir
-        run: |
-          mkdir -p desktop/src-tauri/binaries/corpusmind-engine
-          echo "# Placeholder — engine runs as separate process" > desktop/src-tauri/binaries/corpusmind-engine/README.txt
-
-      - name: Build Tauri app (Universal DMG)
+      - name: Build Tauri app (DMG)
         run: |
           cd desktop/src-tauri
-          npx @tauri-apps/cli@latest build --bundles dmg --target universal-apple-darwin
-        # Note: universal-apple-darwin produces a fat binary that runs on
-        # both Intel and Apple Silicon Macs. If you want separate builds,
-        # use --target aarch64-apple-darwin and --target x86_64-apple-darwin.
+          npx @tauri-apps/cli@latest build --bundles dmg --target aarch64-apple-darwin
 
       - name: Upload artifacts to release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ inputs.tag || github.ref_name }}
           files: |
-            desktop/src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
+            desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
 
   # ─── Windows (NSIS + MSI) ────────────────────────────────────────
   build-windows:
     runs-on: windows-2022
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
 
@@ -139,17 +183,41 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install engine dependencies + PyInstaller
+        run: |
+          cd engine
+          pip install -e ".[dev]"
+          pip install pyinstaller
+          python -m spacy download en_core_web_sm
+        shell: bash
+
+      - name: Build engine sidecar (PyInstaller)
+        run: |
+          cd engine
+          pyinstaller corpusmind-engine.spec --noconfirm
+          echo "=== Sidecar contents ==="
+          ls -la dist/corpusmind-engine/
+          du -sh dist/corpusmind-engine/
+        shell: bash
+
+      - name: Copy sidecar to Tauri binaries directory
+        run: |
+          rm -rf desktop/src-tauri/binaries/corpusmind-engine
+          cp -r engine/dist/corpusmind-engine desktop/src-tauri/binaries/corpusmind-engine
+          echo "=== Tauri binaries dir ==="
+          ls -la desktop/src-tauri/binaries/corpusmind-engine/
+        shell: bash
+
       - name: Build web frontend
         run: |
           cd web
           npm install --no-audit --no-fund
           npm run build
-        shell: bash
-
-      - name: Create placeholder binaries dir
-        run: |
-          mkdir -p desktop/src-tauri/binaries/corpusmind-engine
-          echo "# Placeholder — engine runs as separate process" > desktop/src-tauri/binaries/corpusmind-engine/README.txt
         shell: bash
 
       - name: Build Tauri app (NSIS + MSI)
