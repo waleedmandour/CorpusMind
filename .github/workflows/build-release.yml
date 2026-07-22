@@ -51,6 +51,7 @@ jobs:
             libssl-dev \
             libayatana-appindicator3-dev \
             librsvg2-dev \
+            libsystemd-dev \
             patchelf \
             file
 
@@ -69,9 +70,8 @@ jobs:
         run: |
           cd desktop/src-tauri
           npx @tauri-apps/cli@latest build --bundles deb,appimage
-        env:
-          # The Linux release build needs these for the linker to find systemd symbols
-          RUSTFLAGS: "-C link-arg=-lsystemd"
+        # Note: no RUSTFLAGS needed — the ubuntu-22.04 runner has libsystemd-dev
+        # installed via apt, so the linker finds it automatically.
 
       - name: Upload artifacts to release
         uses: softprops/action-gh-release@v2
