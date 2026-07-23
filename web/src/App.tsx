@@ -8,6 +8,7 @@
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
+import { api } from "@/lib/api";
 import { Sidebar } from "@/components/Sidebar";
 import { CommandPalette } from "@/components/CommandPalette";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -48,6 +49,20 @@ export default function App() {
       setOnboardingOpen(true);
     }
   }, [onboardingComplete, setOnboardingOpen]);
+
+  // v0.1.17: Auto-validate the persisted active corpus on startup.
+  // The zustand/persist middleware saves activeCorpusId to localStorage,
+  // but the corpus might have been deleted in a different session. This
+  // hook validates the ID still exists before activating it.
+  const clearActiveCorpus = useApp((s) => s.setActiveCorpus);
+  useEffect(() => {
+    if (activeCorpusId) {
+      api.getCorpus(activeCorpusId).catch(() => {
+        // Corpus no longer exists — clear it
+        clearActiveCorpus(null);
+      });
+    }
+  }, []); // Run only once on mount
 
   return (
     <div className="app-shell">

@@ -613,6 +613,8 @@ function ReferenceDownload() {
 
 function BundledReferences() {
   const qc = useQueryClient();
+  const selectedReferenceName = useApp((s) => s.selectedReferenceName);
+  const setSelectedReferenceName = useApp((s) => s.setSelectedReferenceName);
   const [statusMsg, setStatusMsg] = useState("");
   const [statusKind, setStatusKind] = useState<"success" | "error" | "info">("info");
   const [downloadingName, setDownloadingName] = useState<string | null>(null);
@@ -718,8 +720,21 @@ function BundledReferences() {
                     </span>
                     <button
                       className="btn-small"
+                      onClick={() => {
+                        setSelectedReferenceName(r.name);
+                        showStatus(`✓ "${r.display_name}" selected for keyness analysis.`, "success");
+                      }}
+                      disabled={selectedReferenceName === r.name}
+                      title={selectedReferenceName === r.name ? "Currently selected" : "Use this reference for keyness analysis across the platform"}
+                      style={selectedReferenceName === r.name ? { background: "var(--success)" } : {}}
+                    >
+                      {selectedReferenceName === r.name ? "✓ Selected" : "Select"}
+                    </button>
+                    <button
+                      className="btn-small"
                       onClick={() => handleDelete(r.name)}
                       title="Delete this reference corpus"
+                      style={{ background: "var(--danger)" }}
                     >
                       Delete
                     </button>
@@ -943,26 +958,110 @@ function DocumentUploader({ cid }: { cid: string }) {
 // ─── Document List ────────────────────────────────────────────────
 
 function DocumentList({ cid }: { cid: string }) {
+  const qc = useQueryClient();
   const docs = useQuery({
     queryKey: ["documents", cid],
     queryFn: () => api.listDocuments(cid),
     refetchInterval: 3_000,
   });
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [recompiling, setRecompiling] = useState(false);
+  const [status, setStatus] = useState<{ kind: "success" | "error" | "info"; msg: string } | null>(null);
+
+  const showStatus = (msg: string, kind: "success" | "error" | "info" = "info") => {
+    setStatus({ kind, msg });
+    if (msg) setTimeout(() => setStatus(null), 6000);
+  };
+
+  const handleDelete = async (did: string, filename: string) => {
+    if (!confirm(`Delete "${filename}"? This removes it from the corpus and recomputes stats.`)) return;
+    setDeletingId(did);
+    try {
+      const result = await api.deleteDocument(cid, did);
+      showStatus(`✓ Deleted "${filename}". ${result.remaining_documents} document(s) remaining.`, "success");
+      qc.invalidateQueries({ queryKey: ["documents", cid] });
+      qc.invalidateQueries({ queryKey: ["corpora"] });
+      qc.invalidateQueries({ queryKey: ["corpus", cid] });
+    } catch (e: any) {
+      showStatus(`✗ Delete failed: ${e?.message || String(e)}`, "error");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const handleRecompile = async () => {
+    setRecompiling(true);
+    showStatus("Recompiling corpus (re-running NLP pipeline)...", "info");
+    try {
+      const result = await api.recompileCorpus(cid);
+      showStatus(`✓ Recompiled ${result.recompiled}/${result.total_documents} documents. ${result.token_count} tokens, ${result.type_count} types.`, "success");
+      qc.invalidateQueries({ queryKey: ["corpora"] });
+      qc.invalidateQueries({ queryKey: ["corpus", cid] });
+    } catch (e: any) {
+      showStatus(`✗ Recompile failed: ${e?.message || String(e)}`, "error");
+    } finally {
+      setRecompiling(false);
+    }
+  };
 
   return (
     <div className="document-list-section">
-      <h3 className="document-list-title">Documents</h3>
-      <ul className="corpus-list">
-        {docs.data?.map((d) => (
-          <li key={d.id} className="corpus-list-item">
-            <div className="corpus-item-name">{d.filename}</div>
-            <div className="corpus-item-meta">
-              {d.format} · {d.detected_language ?? "?"} · {(d.raw_size_bytes / 1024).toFixed(1)} KB
-            </div>
-          </li>
-        ))}
-        {docs.data?.length === 0 && <li className="corpus-empty">No documents yet.</li>}
-      </ul>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "var(--space-2)" }}>
+        <h3 className="document-list-title">Documents ({docs.data?.length ?? 0})</h3>
+        {docs.data && docs.data.length > 0 && (
+          <button
+            className="btn-small"
+            onClick={handleRecompile}
+            disabled={recompiling}
+            title="Re-run the full NLP pipeline (clean → tokenize → tag → parse) on all documents"
+          >
+            {recompiling ? "Compiling…" : "↻ Recompile"}
+          </button>
+        )}
+      </div>
+
+      {status && (
+        <div className={clsx("uploader-status", status.kind)} style={{ marginBottom: "var(--space-2)" }}>
+          {status.msg}
+        </div>
+      )}
+
+      {docs.data && docs.data.length > 0 ? (
+        <table className="document-table" style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>
+          <thead>
+            <tr style={{ textAlign: "left", borderBottom: "1px solid var(--border)" }}>
+              <th style={{ padding: "var(--space-2)", fontWeight: 600 }}>Filename</th>
+              <th style={{ padding: "var(--space-2)", fontWeight: 600 }}>Format</th>
+              <th style={{ padding: "var(--space-2)", fontWeight: 600 }}>Lang</th>
+              <th style={{ padding: "var(--space-2)", fontWeight: 600 }}>Size</th>
+              <th style={{ padding: "var(--space-2)", fontWeight: 600 }}>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {docs.data.map((d) => (
+              <tr key={d.id} style={{ borderBottom: "1px solid var(--border)" }}>
+                <td style={{ padding: "var(--space-2)", fontWeight: 500 }}>{d.filename}</td>
+                <td style={{ padding: "var(--space-2)", color: "var(--text-muted)" }}>{d.format}</td>
+                <td style={{ padding: "var(--space-2)", color: "var(--text-muted)" }}>{d.detected_language ?? "?"}</td>
+                <td style={{ padding: "var(--space-2)", color: "var(--text-muted)" }}>{(d.raw_size_bytes / 1024).toFixed(1)} KB</td>
+                <td style={{ padding: "var(--space-2)" }}>
+                  <button
+                    className="btn-small"
+                    onClick={() => handleDelete(d.id, d.filename)}
+                    disabled={deletingId === d.id}
+                    style={{ background: "var(--danger)", fontSize: "11px", padding: "2px 8px" }}
+                    title="Remove this file from the corpus"
+                  >
+                    {deletingId === d.id ? "…" : "✕ Delete"}
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : (
+        <div className="corpus-empty">No documents yet. Upload files to start the annotation pipeline.</div>
+      )}
     </div>
   );
 }

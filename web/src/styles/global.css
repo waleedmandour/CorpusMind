@@ -124,6 +124,11 @@
   --success: #5fd07a;
   --warning: #f0a830;
   --info: #6ba6ff;
+  /* v0.1.17: brand colors must be brighter in dark mode for button contrast.
+     Light-theme --brand-500 (#0b6e4f) has only 3.8:1 on #161a21 — fails
+     WCAG AA for white text on buttons. Override to brighter values. */
+  --brand-500: #2a9070;
+  --brand-600: #0b6e4f;
   --ribbon-tab-bg: transparent;
   --ribbon-tab-bg-hover: #1f242c;
   --ribbon-tab-bg-active: #133026;

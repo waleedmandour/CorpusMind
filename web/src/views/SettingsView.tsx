@@ -1087,7 +1087,7 @@ function CloudProviderConfig() {
       <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-2)" }}>
         <strong>Cloud AI Provider</strong>
         {isConfigured && (
-          <span style={{ background: "var(--warning, #c77b0e)", color: "white", padding: "2px 8px", borderRadius: "4px", fontSize: "11px", fontWeight: 600 }}>
+          <span style={{ background: "var(--warning)", color: "var(--text-on-brand)", padding: "2px 8px", borderRadius: "4px", fontSize: "11px", fontWeight: 600 }}>
             {"\u2601"} Cloud active - data leaves device
           </span>
         )}

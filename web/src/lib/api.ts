@@ -884,6 +884,16 @@ export const api = {
     jsonFetch<{ deleted: string }>(`/api/v1/corpora/${cid}`, { method: "DELETE" }),
 
   listDocuments: (cid: string) => jsonFetch<Document[]>(`/api/v1/corpora/${cid}/documents`),
+  // v0.1.17: delete a single document from a corpus
+  deleteDocument: (cid: string, did: string) =>
+    jsonFetch<{ deleted: string; filename: string; remaining_documents: number }>(
+      `/api/v1/corpora/${cid}/documents/${did}`, { method: "DELETE" }
+    ),
+  // v0.1.17: recompile (re-run NLP pipeline) on all documents in a corpus
+  recompileCorpus: (cid: string) =>
+    jsonFetch<{ recompiled: number; total_documents: number; token_count: number; type_count: number }>(
+      `/api/v1/corpora/${cid}/recompile`, { method: "POST" }
+    ),
   uploadDocuments: (cid: string, files: File[], language?: string) => {
     const fd = new FormData();
     files.forEach((f) => fd.append("files", f));

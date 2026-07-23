@@ -231,7 +231,7 @@ async def ai_disclosure(pid: str, session: AsyncSession = Depends(get_session)) 
         "unverified": total_turns - verified_turns - rejected_turns,
         "tools_called": sorted(tools_called),
         "disclosure_text": (
-            f"AI assistance was used in this analysis via CorpusMind v0.1.16. "
+            f"AI assistance was used in this analysis via CorpusMind v0.1.17. "
             f"Provider(s): {', '.join(sorted(providers)) or 'none'}. "
             f"Model(s): {', '.join(sorted(models)) or 'none'}. "
             f"Total AI turns: {total_turns} ({grounded_turns} grounded, {ungrounded} ungrounded). "

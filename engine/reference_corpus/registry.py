@@ -158,13 +158,97 @@ BUNDLED_REFERENCES: list[ReferenceCorpusSpec] = [
         min_corpus_tokens=10_000,
         tags=("english", "british", "balanced"),
     ),
+    # v0.1.17: New freely-licensed reference corpora
+    ReferenceCorpusSpec(
+        name="leipzig-english-news",
+        display_name="Leipzig English News — top 100",
+        language="en",
+        description=(
+            "Top-100 word-frequency list from the Leipzig Corpora Collection "
+            "(English news). Suitable as a general English reference for "
+            "keyness comparison. Based on the Leipzig Wortschatz project."
+        ),
+        source_url=(
+            "https://raw.githubusercontent.com/waleedmandour/CorpusMind/main/"
+            "reference-data/reference-corpora/en/leipzig-english-news-top100.tsv"
+        ),
+        sha256="607f814be77d159fa4a86bfd3cbd1d3fc12c395903d56dd8e116109257ccc70e",
+        format="tsv_freq",
+        size_hint="~2 KB",
+        license="CC-BY-4.0",
+        citation=(
+            "Goldhahn, D., Eckart, T., & Quasthoff, U. (2012). Building Large "
+            "Monolingual Corpora at the Leipzig Corpora Collection. LREC 2012."
+        ),
+        genre="news",
+        min_corpus_tokens=500,
+        tags=("english", "news", "leipzig"),
+    ),
+    ReferenceCorpusSpec(
+        name="quranic-arabic",
+        display_name="Quranic Arabic — word frequency",
+        language="ar",
+        description=(
+            "Word-frequency list derived from the Quranic Arabic Corpus "
+            "(corpus.quran.com). Suitable as a Classical/Quranic Arabic "
+            "reference for keyness analysis of Quranic or classical Arabic "
+            "target corpora. 85 most frequent word types."
+        ),
+        source_url=(
+            "https://raw.githubusercontent.com/waleedmandour/CorpusMind/main/"
+            "reference-data/reference-corpora/ar/quranic-arabic-freq.tsv"
+        ),
+        sha256="08419d575732e4181af3c0ab524f1912729bbf00cd5385f4c9ad6086d07a8129",
+        format="tsv_freq",
+        size_hint="~2 KB",
+        license="GPL-3.0",
+        citation=(
+            "Dukes, K., Atwell, E., & Sharaf, A. (2010). The Quranic Arabic "
+            "Dependency Treebank. LREC 2010."
+        ),
+        genre="classical",
+        min_corpus_tokens=100,
+        tags=("arabic", "quranic", "classical"),
+    ),
+    ReferenceCorpusSpec(
+        name="camel-arabic",
+        display_name="CAMeL Arabic Frequency List — top 1000",
+        language="ar",
+        description=(
+            "Top-1000 Arabic word-frequency list from CAMeL Lab, derived "
+            "from CAMeLBERT pretraining data (OSCAR + Wikipedia + Gumar + "
+            "OSIAN). Suitable as a Modern Standard Arabic reference for "
+            "keyness analysis."
+        ),
+        source_url=(
+            "https://raw.githubusercontent.com/waleedmandour/CorpusMind/main/"
+            "reference-data/reference-corpora/ar/camel-arabic-top1000.tsv"
+        ),
+        sha256="d5558cd419c8d46bdc958064cb97f963d1ea793866414c025906ec15033512ed",
+        format="tsv_freq",
+        size_hint="~15 KB",
+        license="CC-BY-SA-4.0",
+        citation=(
+            "Inoue, G., Alhafni, B., Baimukan, N., Bouamor, H., Habash, N., "
+            "& Bouzoubaa, K. (2021). CAMeL Tools: An Open Source Python "
+            "Toolkit for Arabic NLP. arXiv."
+        ),
+        genre="mixed",
+        min_corpus_tokens=500,
+        tags=("arabic", "msa", "camel"),
+    ),
+    # arTenTen and enTenTen are NOT included — they require a Sketch Engine
+    # subscription and cannot be redistributed. The entries below are kept
+    # as placeholders so users know they exist but need a Sketch Engine
+    # account to access.
     ReferenceCorpusSpec(
         name="ar-tenten-sample",
-        display_name="arTenTen — Arabic Web Corpus sample",
+        display_name="arTenTen — Arabic Web Corpus (requires Sketch Engine)",
         language="ar",
         description=(
             "Frequency list sampled from arTenTen12, a multi-billion-token "
-            "Arabic web corpus. Suitable as a Modern Standard Arabic reference "
+            "Arabic web corpus. NOT downloadable — requires a Sketch Engine "
+            "subscription. Suitable as a Modern Standard Arabic reference "
             "for keyness analysis of Arabic target corpora."
         ),
         source_url="",

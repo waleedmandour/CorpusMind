@@ -80,7 +80,7 @@ def test_manifest_round_trip():
             source_url="https://example.com/x.tsv",
             license="CC-BY-4.0",
             citation="Baker 2009",
-            catalogue_version="0.1.16",
+            catalogue_version="0.1.17",
             file_path="be06-top1000.tsv",
         )
         m.upsert(entry)

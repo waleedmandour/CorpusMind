@@ -11,7 +11,7 @@ import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
 
-import { api, exportWithFeedback, type ExportFormat } from "@/lib/api";
+import { api, exportWithFeedback, type ExportFormat, type ReferenceCorpusEntry } from "@/lib/api";
 import { useApp } from "@/store/app";
 import { useUI } from "@/store/ui";
 import { ExportButton } from "@/components/ExportButton";
@@ -485,6 +485,7 @@ function Collocation3DNetwork({
 function KeynessPanel({ cid }: { cid: string }) {
   const referenceCorpusId = useApp((s) => s.referenceCorpusId);
   const setReferenceCorpus = useApp((s) => s.setReferenceCorpus);
+  const selectedReferenceName = useApp((s) => s.selectedReferenceName);
   const [minFreq, setMinFreq] = useState(5);
 
   // Need to list corpora in the active project to populate the reference picker
@@ -495,21 +496,42 @@ function KeynessPanel({ cid }: { cid: string }) {
     enabled: !!activeProjectId,
   });
 
+  // v0.1.17: also fetch the list of installed bundled references
+  const refCorpora = useQuery({
+    queryKey: ["reference-corpora"],
+    queryFn: () => api.listReferenceCorpora(),
+  });
+
+  // Use the uploaded reference corpus if set, otherwise the selected bundled reference
   const result = useQuery({
-    queryKey: ["keyness", cid, referenceCorpusId, minFreq],
-    queryFn: () => api.keyness(cid, referenceCorpusId!, minFreq, 200),
-    enabled: !!referenceCorpusId,
+    queryKey: ["keyness", cid, referenceCorpusId, selectedReferenceName, minFreq],
+    queryFn: () => {
+      if (referenceCorpusId) {
+        return api.keyness(cid, referenceCorpusId, minFreq, 200);
+      } else if (selectedReferenceName) {
+        return api.keynessWithReference(cid, selectedReferenceName, minFreq, 200) as any;
+      }
+      throw new Error("No reference selected");
+    },
+    enabled: !!referenceCorpusId || !!selectedReferenceName,
   });
 
   const exportStatus = useExportStatus();
 
   const onExport = async (fmt: ExportFormat | "svg" | "png") => {
-    if (!referenceCorpusId) return;
-    await exportWithFeedback(
-      () => api.exportKeyness(cid, referenceCorpusId, fmt as ExportFormat),
-      `keyness.${fmt}`,
-      exportStatus.set,
-    );
+    if (referenceCorpusId) {
+      await exportWithFeedback(
+        () => api.exportKeyness(cid, referenceCorpusId, fmt as ExportFormat),
+        `keyness.${fmt}`,
+        exportStatus.set,
+      );
+    } else if (selectedReferenceName) {
+      // For bundled references, export the keyness result as JSON
+      const data = result.data;
+      if (data) {
+        await downloadJsonResult(data, `keyness_vs_${selectedReferenceName}.${fmt}`, exportStatus.set);
+      }
+    }
   };
 
   const onMethodsPdf = async () => {
@@ -525,12 +547,27 @@ function KeynessPanel({ cid }: { cid: string }) {
       <div className="toolbar">
         <label>Reference corpus
           <select value={referenceCorpusId ?? ""} onChange={(e) => setReferenceCorpus(e.target.value || null)}>
-            <option value="">- Select -</option>
+            <option value="">- Select uploaded corpus -</option>
             {corpora.data?.filter((c) => c.id !== cid).map((c) => (
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </select>
         </label>
+        {/* v0.1.17: also show installed bundled reference frequency lists */}
+        {refCorpora.data?.references.filter((r: ReferenceCorpusEntry) => r.installed).length ?? 0 > 0 ? (
+          <label>or bundled reference
+            <select
+              value={selectedReferenceName ?? ""}
+              onChange={(e) => useApp.getState().setSelectedReferenceName(e.target.value || null)}
+              disabled={!!referenceCorpusId}
+            >
+              <option value="">- None -</option>
+              {refCorpora.data?.references.filter((r: ReferenceCorpusEntry) => r.installed).map((r: ReferenceCorpusEntry) => (
+                <option key={r.name} value={r.name}>{r.display_name}</option>
+              ))}
+            </select>
+          </label>
+        ) : null}
         <label>Min freq
           <input type="number" min={1} value={minFreq} onChange={(e) => setMinFreq(Number(e.target.value))} />
         </label>
@@ -555,7 +592,7 @@ function KeynessPanel({ cid }: { cid: string }) {
           <h3>Positive keywords (over-represented in target)</h3>
           <DataTable
             headers={["Term", "f1", "f2", "LL", "χ²", "Log Ratio", "%DIFF", "Simple Maths", "Odds Ratio"]}
-            rows={result.data.positive_keywords.map((r) => [
+            rows={(result.data as any).positive_keywords.map((r: any) => [
               r.term, r.f1, r.f2, fmt(r.log_likelihood), fmt(r.chi_square),
               fmt(r.log_ratio), fmt(r.pct_diff), fmt(r.simple_maths), fmt(r.odds_ratio),
             ])}
@@ -563,7 +600,7 @@ function KeynessPanel({ cid }: { cid: string }) {
           <h3>Negative keywords (under-represented in target)</h3>
           <DataTable
             headers={["Term", "f1", "f2", "LL", "χ²", "Log Ratio", "%DIFF", "Simple Maths", "Odds Ratio"]}
-            rows={result.data.negative_keywords.map((r) => [
+            rows={(result.data as any).negative_keywords.map((r: any) => [
               r.term, r.f1, r.f2, fmt(r.log_likelihood), fmt(r.chi_square),
               fmt(r.log_ratio), fmt(r.pct_diff), fmt(r.simple_maths), fmt(r.odds_ratio),
             ])}

@@ -219,3 +219,168 @@ async def list_documents(cid: str, session: AsyncSession = Depends(get_session))
         encoding=d.encoding, detected_language=d.detected_language,
         raw_size_bytes=d.raw_size_bytes, meta=d.meta, created_at=d.created_at,
     ) for d in docs]
+
+
+@router.delete("/corpora/{cid}/documents/{did}")
+async def delete_document(cid: str, did: str, session: AsyncSession = Depends(get_session)) -> dict:
+    """Delete a document from a corpus and recompute corpus stats.
+
+    v0.1.17: This endpoint was missing — users couldn't remove individual
+    files from a corpus. Now they can.
+    """
+    doc = await session.get(Document, did)
+    if not doc or doc.corpus_id != cid:
+        raise HTTPException(404, "Document not found in this corpus")
+
+    # Get the corpus for stats recompute
+    corpus = await session.get(Corpus, cid)
+    if not corpus:
+        raise HTTPException(404, "Corpus not found")
+
+    # Delete the document (cascades to its tokens via the annotation version)
+    filename = doc.filename
+    await session.delete(doc)
+    await session.flush()
+
+    # Recompute corpus stats
+    from storage.models import AnnotationVersion, Token
+    latest_version = await session.scalar(
+        select(AnnotationVersion)
+        .where(AnnotationVersion.corpus_id == cid)
+        .order_by(AnnotationVersion.created_at.desc())
+        .limit(1)
+    )
+    token_count = 0
+    type_count = 0
+    if latest_version:
+        token_count = await session.scalar(
+            select(func.count(Token.id)).where(Token.version_id == latest_version.id)
+        ) or 0
+        type_count = await session.scalar(
+            select(func.count(Token.text.distinct())).where(Token.version_id == latest_version.id)
+        ) or 0
+
+    doc_count = await session.scalar(
+        select(func.count(Document.id)).where(Document.corpus_id == cid)
+    ) or 0
+
+    if corpus.stats is None:
+        corpus.stats = {}
+    corpus.stats.update({
+        "document_count": doc_count,
+        "token_count": token_count,
+        "type_count": type_count,
+    })
+
+    await session.commit()
+    log.info("document_deleted", cid=cid, did=did, filename=filename, remaining_docs=doc_count)
+    return {"deleted": did, "filename": filename, "remaining_documents": doc_count}
+
+
+@router.post("/corpora/{cid}/recompile")
+async def recompile_corpus(cid: str, session: AsyncSession = Depends(get_session)) -> dict:
+    """Re-run the full NLP pipeline on all documents in a corpus.
+
+    v0.1.17: This re-cleans and re-tags every document, creating a new
+    annotation version. Useful after changing cleaning options or after
+    adding/removing documents.
+    """
+    corpus = await session.get(Corpus, cid)
+    if not corpus:
+        raise HTTPException(404, "Corpus not found")
+
+    # Get all documents
+    stmt = select(Document).where(Document.corpus_id == cid).order_by(Document.created_at)
+    docs = (await session.execute(stmt)).scalars().all()
+    if not docs:
+        raise HTTPException(400, "No documents to recompile")
+
+    # Re-ingest each document (creates a new annotation version)
+    recompiled = 0
+    for doc in docs:
+        try:
+            # Re-parse from the stored cleaned text
+            from nlp.general.pipeline import get_pipeline
+            from storage.models import AnnotationVersion, Token
+
+            pipeline = get_pipeline(backend="spacy", language=corpus.language or "en")
+            info = pipeline.info()
+            parsed = pipeline.parse_document(doc.cleaned_text)
+
+            # Create a new annotation version
+            existing = await session.scalar(
+                select(AnnotationVersion)
+                .where(AnnotationVersion.corpus_id == cid)
+                .order_by(AnnotationVersion.created_at.desc())
+                .limit(1)
+            )
+            version_n = 1
+            if existing and existing.version_label.startswith("v"):
+                try:
+                    version_n = int(existing.version_label[1:]) + 1
+                except ValueError:
+                    pass
+
+            av = AnnotationVersion(
+                corpus_id=cid,
+                version_label=f"v{version_n}",
+                backend=info.backend,
+                model_name=info.model_name,
+                model_version=info.model_version,
+                spacy_version=info.spacy_version,
+                token_count=len(parsed.tokens),
+                type_count=len(set(t.text for t in parsed.tokens)),
+            )
+            session.add(av)
+            await session.flush()
+
+            # Insert tokens
+            for tok in parsed.tokens:
+                t = Token(
+                    version_id=av.id,
+                    document_id=doc.id,
+                    sentence_idx=tok.sentence_idx,
+                    token_idx=tok.token_idx,
+                    text=tok.text,
+                    lemma=tok.lemma,
+                    pos=tok.pos,
+                    is_punct=tok.is_punct,
+                )
+                session.add(t)
+
+            recompiled += 1
+        except Exception as e:
+            log.error("recompile_doc_failed", doc=doc.filename, error=str(e))
+
+    # Update corpus stats
+    from storage.models import AnnotationVersion as AV
+    latest = await session.scalar(
+        select(AV).where(AV.corpus_id == cid).order_by(AV.created_at.desc()).limit(1)
+    )
+    if latest and corpus.stats is None:
+        corpus.stats = {}
+    if latest:
+        corpus.stats.update({
+            "token_count": latest.token_count,
+            "type_count": latest.type_count,
+            "document_count": len(docs),
+        })
+
+    # Update pipeline recipe
+    if corpus.pipeline_recipe is None:
+        corpus.pipeline_recipe = {}
+    corpus.pipeline_recipe.update({
+        "backend": info.backend,
+        "model_name": info.model_name,
+        "model_version": info.model_version,
+        "spacy_version": info.spacy_version,
+    })
+
+    await session.commit()
+    log.info("corpus_recompiled", cid=cid, docs=recompiled, total=len(docs))
+    return {
+        "recompiled": recompiled,
+        "total_documents": len(docs),
+        "token_count": latest.token_count if latest else 0,
+        "type_count": latest.type_count if latest else 0,
+    }
