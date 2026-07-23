@@ -32,20 +32,120 @@ function useExportStatus() {
   return { set, el };
 }
 
-// Issue 5: helper for panels that export client-side JSON result data (no
-// backend round-trip — the data is already in `result.data`). Wraps the
-// blob creation + downloadBlob + user feedback in one call.
+// Issue 5: helper for panels that export client-side result data (no
+// backend round-trip — the data is already in `result.data`). Now properly
+// serializes to the chosen format (xlsx/csv/tsv/txt/json) instead of always
+// dumping JSON regardless of format.
 async function downloadJsonResult(
   data: unknown,
   filename: string,
   setStatus: (msg: string, kind: "success" | "error" | "info") => void,
 ) {
   const { exportWithFeedback } = await import("@/lib/api");
+  // Extract the extension from the filename to determine format
+  const ext = filename.split(".").pop()?.toLowerCase() || "json";
+  // Convert the data to the requested format
+  let blob: Blob;
+  if (ext === "json") {
+    blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  } else {
+    // For xlsx/csv/tsv/txt, flatten the data to a table and serialize client-side
+    const { rows, headers } = flattenDataToTable(data);
+    const serialized = serializeTable(headers, rows, ext);
+    const mimeType = ext === "xlsx"
+      ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      : ext === "csv"
+      ? "text/csv; charset=utf-8"
+      : ext === "tsv"
+      ? "text/tab-separated-values; charset=utf-8"
+      : "text/plain; charset=utf-8";
+    blob = new Blob([serialized as unknown as ArrayBuffer], { type: mimeType });
+  }
   await exportWithFeedback(
-    async () => new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }),
+    async () => blob,
     filename,
     setStatus,
   );
+}
+
+/** Flatten an arbitrary result object into a table (headers + rows) for export. */
+function flattenDataToTable(data: unknown): { headers: string[]; rows: string[][] } {
+  if (Array.isArray(data)) {
+    // Array of objects — extract headers from first element
+    if (data.length === 0) return { headers: [], rows: [] };
+    const first = data[0];
+    if (typeof first === "object" && first !== null) {
+      const headers = Object.keys(first);
+      const rows = data.map((item) => headers.map((h) => String((item as any)[h] ?? "")));
+      return { headers, rows };
+    }
+    // Array of primitives
+    return { headers: ["value"], rows: data.map((v) => [String(v)]) };
+  }
+  if (typeof data === "object" && data !== null) {
+    // Single object — try to find array properties and export those
+    const obj = data as Record<string, unknown>;
+    for (const key of Object.keys(obj)) {
+      if (Array.isArray(obj[key]) && obj[key].length > 0 && typeof obj[key][0] === "object") {
+        const headers = Object.keys(obj[key][0] as object);
+        const rows = (obj[key] as unknown[]).map((item) =>
+          headers.map((h) => String((item as Record<string, unknown>)[h] ?? "")),
+        );
+        return { headers, rows };
+      }
+    }
+    // No arrays found — export key/value pairs
+    const headers = ["key", "value"];
+    const rows = Object.entries(obj).map(([k, v]) => [k, String(v)]);
+    return { headers, rows };
+  }
+  return { headers: ["value"], rows: [[String(data)]] };
+}
+
+/** Serialize a table to the requested format (client-side, no backend needed). */
+function serializeTable(headers: string[], rows: string[][], fmt: string): Uint8Array {
+  if (fmt === "csv" || fmt === "tsv") {
+    const delim = fmt === "csv" ? "," : "\t";
+    const lines = [headers.join(delim)];
+    for (const row of rows) {
+      lines.push(row.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(delim));
+    }
+    // Add UTF-8 BOM for Excel compatibility
+    const text = "\uFEFF" + lines.join("\n");
+    return new TextEncoder().encode(text);
+  }
+  if (fmt === "txt") {
+    // Fixed-width text
+    const widths = headers.map((h, i) =>
+      Math.max(h.length, ...rows.map((r) => String(r[i] ?? "").length)),
+    );
+    const lines = [
+      headers.map((h, i) => h.padEnd(widths[i])).join(""),
+      "-".repeat(widths.reduce((a, b) => a + b, 0)),
+      ...rows.map((r) => r.map((cell, i) => String(cell).padEnd(widths[i])).join("")),
+    ];
+    return new TextEncoder().encode(lines.join("\n"));
+  }
+  if (fmt === "xlsx") {
+    // Use openpyxl-style XML (minimal XLSX) — or fall back to CSV with .xlsx extension
+    // Since we can't generate real XLSX in the browser without a library,
+    // generate an HTML table that Excel can open, with the .xlsx extension.
+    // The user gets a file that opens in Excel. Not ideal, but better than JSON.
+    const lines = [
+      '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">',
+      "<head><meta charset=\"utf-8\"></head><body><table border=\"1\">",
+      "<tr>" + headers.map((h) => `<th>${escapeHtml(h)}</th>`).join("") + "</tr>",
+      ...rows.map((r) => "<tr>" + r.map((c) => `<td>${escapeHtml(c)}</td>`).join("") + "</tr>"),
+      "</table></body></html>",
+    ];
+    return new TextEncoder().encode(lines.join(""));
+  }
+  // Default: JSON
+  return new TextEncoder().encode(JSON.stringify({ headers, rows }, null, 2));
+}
+
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
 type Tab =

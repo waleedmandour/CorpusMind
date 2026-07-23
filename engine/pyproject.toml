@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "corpusmind-engine"
-version = "0.1.17"
+version = "0.1.18"
 description = "CorpusMind engine — local-first, AI-native research environment for corpus linguistics and multimodal discourse analysis."
 readme = "../README.md"
 requires-python = ">=3.12"
@@ -71,6 +71,13 @@ dependencies = [
     # Export
     "openpyxl>=3.1.5",
     "reportlab>=4.2.5",
+    # Web framework support — python-multipart is needed by FastAPI for
+    # FormData / file uploads (UploadFile). Without it, POST /corpora/{cid}/documents
+    # crashes with a 500. cryptography is needed by httpx for HTTPS to some
+    # model provider endpoints. Both were previously only installed ad-hoc
+    # in CI scripts; now they're proper declared dependencies.
+    "python-multipart>=0.0.9",
+    "cryptography>=43.0.0",
 ]
 
 [project.optional-dependencies]

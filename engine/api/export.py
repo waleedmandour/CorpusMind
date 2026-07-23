@@ -604,13 +604,11 @@ async def export_methods_pdf(cid: str, session: AsyncSession = Depends(get_sessi
 
 import uuid as _uuid  # noqa: E402
 
-from export_queue import (  # noqa: E402
-    INLINE_MAX_BYTES,
-    ExportQueue,
-    get_queue,
-    sanitize_filename,
-)
 from pydantic import Field as _Field  # noqa: E402
+
+from export_queue import (  # noqa: E402
+    get_queue,
+)
 
 
 class EnqueueExportRequest(BaseModel):

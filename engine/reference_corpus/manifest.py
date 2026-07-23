@@ -73,7 +73,7 @@ class ManifestEntry:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> "ManifestEntry":
+    def from_dict(cls, d: dict[str, Any]) -> ManifestEntry:
         # Forward-compat: ignore unknown keys, require known ones.
         required = {
             "name", "display_name", "language", "format", "sha256",

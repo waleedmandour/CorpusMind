@@ -27,8 +27,9 @@ import re
 from dataclasses import dataclass
 from typing import Any, Literal
 
-from app.logging import get_logger
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.logging import get_logger
 
 log = get_logger(__name__)
 
@@ -260,8 +261,8 @@ class DynamicSuggestion:
 
 async def _build_corpus_summary(session: AsyncSession, corpus_id: str) -> dict[str, Any]:
     """Collect a compact statistical summary for the LLM prompt."""
+    from stats.service import _corpus_size, _latest_version_id, compute_frequency
     from storage.models import Corpus
-    from stats.service import compute_frequency, _latest_version_id, _corpus_size
 
     corpus = await session.get(Corpus, corpus_id)
     if corpus is None:

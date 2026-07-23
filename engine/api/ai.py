@@ -238,7 +238,7 @@ async def get_query_suggestions(
     suggestions instead of hiding them — so the user always sees the
     full range of what CorpusMind can do.
     """
-    from ai.query_suggestions import list_prefabricated, has_reference_for_language
+    from ai.query_suggestions import has_reference_for_language, list_prefabricated
 
     suggestions = list_prefabricated(language=language)
 
@@ -250,7 +250,6 @@ async def get_query_suggestions(
     ref_available = False
     if corpus_id:
         try:
-            from storage.models import Corpus
             c = await session_get_corpus(corpus_id)  # type: ignore[name-defined]
             if c is not None:
                 ref_available = has_reference_for_language(c.language or "en")

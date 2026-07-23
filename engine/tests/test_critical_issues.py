@@ -39,10 +39,7 @@ Covered:
 from __future__ import annotations
 
 import asyncio
-import csv
-import io
 import json
-import os
 import sys
 import tempfile
 from collections import Counter
@@ -110,12 +107,12 @@ def test_manifest_corrupt_recovers():
 
 
 def test_registry_unknown_reference_raises():
-    """Looking up an unknown reference name raises UnknownReference."""
-    from reference_corpus.manager import ReferenceCorpusManager, UnknownReference
+    """Looking up an unknown reference name raises UnknownReferenceError."""
+    from reference_corpus.manager import ReferenceCorpusManager, UnknownReferenceError
 
     with tempfile.TemporaryDirectory() as d:
         mgr = ReferenceCorpusManager(storage_dir=Path(d))
-        with pytest.raises(UnknownReference):
+        with pytest.raises(UnknownReferenceError):
             mgr.spec("does-not-exist")
 
 
@@ -242,7 +239,7 @@ def test_export_queue_enqueue_poll_done():
     """End-to-end queue lifecycle: enqueue → poll → done."""
     from export_queue import ExportQueue, register_producer
 
-    async def stub_producer(**kwargs):
+    async def stub_producer(session=None, **kwargs):
         return ["A", "B"], [["x", 1], ["y", 2]]
 
     register_producer("stub", stub_producer)
@@ -273,9 +270,9 @@ def test_export_queue_enqueue_poll_done():
 
 def test_export_queue_cancel_in_flight():
     """Cancelling a queued job marks it cancelled without running."""
-    from export_queue import ExportQueue, register_producer, JobStatus
+    from export_queue import ExportQueue, JobStatus, register_producer
 
-    async def slow_producer(**kwargs):
+    async def slow_producer(session=None, **kwargs):
         await asyncio.sleep(2)
         return ["A"], [["x"]]
 
@@ -284,7 +281,7 @@ def test_export_queue_cancel_in_flight():
     async def run():
         queue = ExportQueue(max_concurrent=1)  # serialize so the job is queued
         # Block the worker with a long job first.
-        blocker = await queue.enqueue(
+        await queue.enqueue(
             job_id="blocker",
             name="blocker",
             fmt="csv",
@@ -481,20 +478,20 @@ def test_dark_mode_text_subtle_is_higher_contrast():
 
 def test_all_new_engine_modules_import():
     """Every new engine module imports without raising."""
-    import reference_corpus  # noqa: F401
-    import reference_corpus.manifest  # noqa: F401
-    import reference_corpus.registry  # noqa: F401
-    import reference_corpus.manager  # noqa: F401
-    import reference_corpus.keyness_bridge  # noqa: F401
-    import export_queue  # noqa: F401
     import ai.query_suggestions  # noqa: F401
+    import export_queue  # noqa: F401
+    import reference_corpus
+    import reference_corpus.keyness_bridge
+    import reference_corpus.manager
+    import reference_corpus.manifest
+    import reference_corpus.registry  # noqa: F401
 
 
 def test_api_routers_import():
     """The new API routers import without raising."""
+    import api.ai
+    import api.export
     import api.reference_corpus  # noqa: F401
-    import api.export  # noqa: F401
-    import api.ai  # noqa: F401
 
 
 if __name__ == "__main__":

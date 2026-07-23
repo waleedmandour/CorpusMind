@@ -264,13 +264,15 @@ async def delete_document(cid: str, did: str, session: AsyncSession = Depends(ge
         select(func.count(Document.id)).where(Document.corpus_id == cid)
     ) or 0
 
-    if corpus.stats is None:
-        corpus.stats = {}
-    corpus.stats.update({
+    # Fix: SQLAlchemy JSON columns don't detect in-place mutations. Must
+    # reassign the dict to trigger the UPDATE.
+    new_stats = dict(corpus.stats or {})
+    new_stats.update({
         "document_count": doc_count,
         "token_count": token_count,
         "type_count": type_count,
     })
+    corpus.stats = new_stats  # reassign triggers SQLAlchemy change detection
 
     await session.commit()
     log.info("document_deleted", cid=cid, did=did, filename=filename, remaining_docs=doc_count)
@@ -352,29 +354,29 @@ async def recompile_corpus(cid: str, session: AsyncSession = Depends(get_session
         except Exception as e:
             log.error("recompile_doc_failed", doc=doc.filename, error=str(e))
 
-    # Update corpus stats
-    from storage.models import AnnotationVersion as AV
+    # Update corpus stats — reassign dict (not in-place mutation) for SQLAlchemy
+    from storage.models import AnnotationVersion
     latest = await session.scalar(
-        select(AV).where(AV.corpus_id == cid).order_by(AV.created_at.desc()).limit(1)
+        select(AnnotationVersion).where(AnnotationVersion.corpus_id == cid).order_by(AnnotationVersion.created_at.desc()).limit(1)
     )
-    if latest and corpus.stats is None:
-        corpus.stats = {}
     if latest:
-        corpus.stats.update({
+        new_stats = dict(corpus.stats or {})
+        new_stats.update({
             "token_count": latest.token_count,
             "type_count": latest.type_count,
             "document_count": len(docs),
         })
+        corpus.stats = new_stats  # reassign triggers SQLAlchemy change detection
 
-    # Update pipeline recipe
-    if corpus.pipeline_recipe is None:
-        corpus.pipeline_recipe = {}
-    corpus.pipeline_recipe.update({
+    # Update pipeline recipe — same pattern
+    new_recipe = dict(corpus.pipeline_recipe or {})
+    new_recipe.update({
         "backend": info.backend,
         "model_name": info.model_name,
         "model_version": info.model_version,
         "spacy_version": info.spacy_version,
     })
+    corpus.pipeline_recipe = new_recipe  # reassign triggers SQLAlchemy change detection
 
     await session.commit()
     log.info("corpus_recompiled", cid=cid, docs=recompiled, total=len(docs))

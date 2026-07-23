@@ -16,7 +16,7 @@ Key properties:
     optional — if the server doesn't support it, we restart from scratch.
   * **Verified.** After the final byte is written, the file is SHA-256
     hashed and compared to ``ReferenceCorpusSpec.sha256``. A mismatch
-    deletes the file and raises ``ChecksumMismatch``.
+    deletes the file and raises ``ChecksumMismatchError``.
   * **Atomic install.** Once verified, the ``.part`` suffix is removed and
     the manifest is updated. A crash between verify and manifest update is
     safe: on next start, the manager re-discovers the verified file (via
@@ -29,15 +29,17 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
-from dataclasses import dataclass, field
+from collections.abc import Callable
+from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 import httpx
 
 from app.logging import get_logger
 from app.settings import get_settings
+
 from .manifest import ManifestEntry, ReferenceManifest
 from .registry import BUNDLED_REFERENCES, ReferenceCorpusSpec
 
@@ -53,11 +55,11 @@ class ReferenceCorpusError(Exception):
     """Base class for all reference-corpus errors."""
 
 
-class UnknownReference(ReferenceCorpusError):
+class UnknownReferenceError(ReferenceCorpusError):
     """User asked for a reference name not in the catalogue."""
 
 
-class ChecksumMismatch(ReferenceCorpusError):
+class ChecksumMismatchError(ReferenceCorpusError):
     """Downloaded file's SHA-256 did not match the catalogue."""
 
     def __init__(self, name: str, expected: str, actual: str) -> None:
@@ -69,11 +71,11 @@ class ChecksumMismatch(ReferenceCorpusError):
         self.actual = actual
 
 
-class DownloadFailed(ReferenceCorpusError):
+class DownloadFailedError(ReferenceCorpusError):
     """Network or HTTP error after all retries."""
 
 
-class ReferenceNotInstalled(ReferenceCorpusError):
+class ReferenceNotInstalledError(ReferenceCorpusError):
     """User asked to use/delete a reference that isn't installed."""
 
 
@@ -82,7 +84,7 @@ class ReferenceNotInstalled(ReferenceCorpusError):
 # --------------------------------------------------------------------------- #
 
 
-class DownloadStatus(str, Enum):
+class DownloadStatus(str, Enum):  # noqa: UP042
     PENDING = "pending"
     DOWNLOADING = "downloading"
     VERIFYING = "verifying"
@@ -178,7 +180,7 @@ class ReferenceCorpusManager:
     def spec(self, name: str) -> ReferenceCorpusSpec:
         spec = self._catalogue.get(name)
         if spec is None:
-            raise UnknownReference(f"Unknown reference corpus: {name!r}")
+            raise UnknownReferenceError(f"Unknown reference corpus: {name!r}")
         return spec
 
     # ------------------------------------------------------------------ #
@@ -254,7 +256,7 @@ class ReferenceCorpusManager:
         """
         spec = self.spec(name)
         if not spec.source_url or not spec.sha256:
-            raise DownloadFailed(
+            raise DownloadFailedError(
                 f"Reference '{name}' has no source URL or checksum — not "
                 f"available for download. It will be added in a future release."
             )
@@ -294,13 +296,13 @@ class ReferenceCorpusManager:
             for attempt in range(self.MAX_RETRIES):
                 if spec.name in self._cancelled:
                     progress.status = DownloadStatus.CANCELLED
-                    raise DownloadFailed(f"Download of '{spec.name}' cancelled")
+                    raise DownloadFailedError(f"Download of '{spec.name}' cancelled")
 
                 progress.retries = attempt
                 try:
                     await self._stream_download(spec, part_path, progress, on_progress)
                     break
-                except DownloadFailed as e:
+                except DownloadFailedError as e:
                     last_error = str(e)
                     if attempt + 1 < self.MAX_RETRIES and spec.name not in self._cancelled:
                         backoff = self.RETRY_BACKOFF[min(attempt, len(self.RETRY_BACKOFF) - 1)]
@@ -313,7 +315,7 @@ class ReferenceCorpusManager:
                         continue
                     raise
             else:
-                raise DownloadFailed(
+                raise DownloadFailedError(
                     f"Download of '{spec.name}' failed after {self.MAX_RETRIES} attempts: {last_error}"
                 )
 
@@ -329,7 +331,7 @@ class ReferenceCorpusManager:
                 progress.error = "checksum mismatch"
                 # Don't keep a corrupt file around.
                 part_path.unlink(missing_ok=True)
-                raise ChecksumMismatch(spec.name, spec.sha256, actual)
+                raise ChecksumMismatchError(spec.name, spec.sha256, actual)
 
             # Atomic install: rename .part → .tsv
             part_path.replace(final_path)
@@ -410,7 +412,7 @@ class ReferenceCorpusManager:
                     # Fall through to verification.
                     return
                 if resp.status_code not in (200, 206):
-                    raise DownloadFailed(
+                    raise DownloadFailedError(
                         f"HTTP {resp.status_code} fetching {spec.source_url}"
                     )
 
@@ -441,7 +443,7 @@ class ReferenceCorpusManager:
                 with open(part_path, mode) as f:
                     async for chunk in resp.aiter_bytes(self.CHUNK_SIZE):
                         if spec.name in self._cancelled:
-                            raise DownloadFailed(f"Download of '{spec.name}' cancelled")
+                            raise DownloadFailedError(f"Download of '{spec.name}' cancelled")
                         f.write(chunk)
                         progress.downloaded_bytes += len(chunk)
                         wrote_any = True
@@ -449,7 +451,7 @@ class ReferenceCorpusManager:
                             on_progress(progress)
 
                 if not wrote_any and existing_bytes == 0:
-                    raise DownloadFailed("No bytes received from server")
+                    raise DownloadFailedError("No bytes received from server")
 
     # ------------------------------------------------------------------ #
     # Delete / cleanup
@@ -459,7 +461,7 @@ class ReferenceCorpusManager:
         """Remove an installed reference corpus from disk + manifest."""
         entry = self._manifest.get(name)
         if entry is None:
-            raise ReferenceNotInstalled(f"Reference '{name}' is not installed")
+            raise ReferenceNotInstalledError(f"Reference '{name}' is not installed")
         path = self._storage_dir / entry.file_path
         path.unlink(missing_ok=True)
         # Also clean up any stale .part file from a failed download.
@@ -498,14 +500,14 @@ class ReferenceCorpusManager:
         """Return the absolute path to an installed reference's file."""
         entry = self._manifest.get(name)
         if entry is None:
-            raise ReferenceNotInstalled(f"Reference '{name}' is not installed")
+            raise ReferenceNotInstalledError(f"Reference '{name}' is not installed")
         path = self._storage_dir / entry.file_path
         if not path.exists():
             # File was deleted out-of-band. Drop the manifest entry so the
             # UI shows it as not-installed instead of crashing.
             log.warning("reference_file_missing_dropping_manifest", name=name, path=str(path))
             self._manifest.remove(name)
-            raise ReferenceNotInstalled(
+            raise ReferenceNotInstalledError(
                 f"Reference '{name}' is in the manifest but the file is missing"
             )
         return path

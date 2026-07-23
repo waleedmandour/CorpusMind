@@ -14,22 +14,21 @@ All endpoints are prefixed with ``/api/v1/reference-corpora``.
 """
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.logging import get_logger
 from reference_corpus import (
-    DownloadStatus,
     get_manager,
 )
 from reference_corpus.keyness_bridge import compute_keyness_with_reference_list
 from reference_corpus.manager import (
-    ChecksumMismatch,
-    DownloadFailed,
+    ChecksumMismatchError,
+    DownloadFailedError,
     ReferenceCorpusError,
-    ReferenceNotInstalled,
-    UnknownReference,
+    ReferenceNotInstalledError,
+    UnknownReferenceError,
 )
 from storage.models import Corpus
 from storage.session import get_session
@@ -82,7 +81,7 @@ async def reference_status(name: str) -> dict:
     mgr = get_manager()
     try:
         spec = mgr.spec(name)
-    except UnknownReference as e:
+    except UnknownReferenceError as e:
         raise HTTPException(404, str(e)) from e
 
     entry = mgr.manifest.get(name)
@@ -117,9 +116,9 @@ async def download_reference(name: str) -> ReferenceDownloadResponse:
             name=name, status="installed", installed=True,
             message=f"Installed {entry.display_name} ({entry.size_bytes} bytes)",
         )
-    except ChecksumMismatch as e:
+    except ChecksumMismatchError as e:
         raise HTTPException(422, str(e)) from e
-    except DownloadFailed as e:
+    except DownloadFailedError as e:
         raise HTTPException(502, str(e)) from e
     except ReferenceCorpusError as e:
         raise HTTPException(400, str(e)) from e
@@ -140,7 +139,7 @@ async def delete_reference(name: str) -> dict:
     try:
         mgr.delete(name)
         return {"name": name, "deleted": True}
-    except ReferenceNotInstalled as e:
+    except ReferenceNotInstalledError as e:
         raise HTTPException(404, str(e)) from e
 
 

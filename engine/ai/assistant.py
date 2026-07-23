@@ -16,13 +16,14 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
+
 from ai.providers import Message, ModelProvider
 from ai.tools import execute_tool, schemas_for_llm
 from app.logging import get_logger
 from storage.models import Conversation, ConversationTurn
 from storage.session import session_scope
-from sqlalchemy import select
-from sqlalchemy.orm import selectinload
 
 log = get_logger(__name__)
 

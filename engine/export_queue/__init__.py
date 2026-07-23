@@ -57,7 +57,7 @@ MAX_CONCURRENT_EXPORTS = 2  # serialize CPU-heavy xlsx; let small ones overlap
 # --------------------------------------------------------------------------- #
 
 
-class JobStatus(str, Enum):
+class JobStatus(str, Enum):  # noqa: UP042
     QUEUED = "queued"
     RUNNING = "running"
     DONE = "done"
@@ -262,13 +262,16 @@ def register_producer(name: str, fn: Any) -> None:
     _PRODUCERS[name] = fn
 
 
-async def _run_producer(name: str, args: dict[str, Any]) -> tuple[list[str], list[list]]:
+async def _run_producer(name: str, args: dict[str, Any], session: Any = None) -> tuple[list[str], list[list]]:
     if name not in _PRODUCERS:
         # Lazy-register the built-in producers.
         _register_builtin_producers()
     fn = _PRODUCERS.get(name)
     if fn is None:
         raise ValueError(f"Unknown export producer: {name!r}")
+    # Pass session as the first positional arg (all producers take it)
+    if session is not None:
+        return await fn(session, **args)
     return await fn(**args)
 
 
@@ -392,6 +395,7 @@ class ExportQueue:
         self._jobs: dict[str, ExportJob] = {}
         self._order: list[str] = []  # FIFO for eviction
         self._lock = asyncio.Lock()
+        self._tasks: set[asyncio.Task] = set()  # track background tasks (RUF006)
 
     # ------------------------------------------------------------------ #
     # Public API
@@ -459,7 +463,7 @@ class ExportQueue:
             self.clear_history()
 
         # Start processing in the background.
-        asyncio.create_task(self._worker(job))
+        self._tasks.add(asyncio.create_task(self._worker(job)))
         return job
 
     # ------------------------------------------------------------------ #
@@ -478,7 +482,7 @@ class ExportQueue:
                 from storage.session import session_scope
                 async with session_scope() as session:
                     headers, rows = await _run_producer(
-                        job.rows_producer_id, job.rows_producer_args,
+                        job.rows_producer_id, job.rows_producer_args, session,
                     )
 
                 if job._cancel:

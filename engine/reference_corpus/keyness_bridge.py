@@ -35,6 +35,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.logging import get_logger
 from stats.measures import compute_keyness_row
 from stats.service import KeynessResult, _corpus_size, _latest_version_id
+
 from .manager import ReferenceCorpusManager, get_manager
 
 log = get_logger(__name__)
@@ -172,6 +173,7 @@ async def compute_keyness_with_reference_list(
     on-disk frequency list, not from a DB query against a reference Corpus.
     """
     from sqlalchemy import select
+
     from storage.models import Token
 
     if measures is None:
@@ -192,7 +194,7 @@ async def compute_keyness_with_reference_list(
 
     N1 = await _corpus_size(session, target_vid)
     stmt = (
-        select(Token.text, )  # noqa: E731
+        select(Token.text, )
         .where(
             Token.version_id == target_vid,
             Token.is_punct == False,  # noqa: E712

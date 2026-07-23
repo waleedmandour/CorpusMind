@@ -31,10 +31,16 @@ from .keyness_bridge import (
     invalidate_cache,
     load_frequency_list,
 )
+
+# Re-export exception classes with Error suffix (ruff N818 compliance)
 from .manager import (
+    ChecksumMismatchError,
+    DownloadFailedError,
     DownloadProgress,
     DownloadStatus,
     ReferenceCorpusManager,
+    ReferenceNotInstalledError,
+    UnknownReferenceError,
     get_manager,
 )
 from .manifest import ManifestEntry, ReferenceManifest
@@ -42,12 +48,16 @@ from .registry import BUNDLED_REFERENCES, ReferenceCorpusSpec
 
 __all__ = [
     "BUNDLED_REFERENCES",
+    "ChecksumMismatchError",
+    "DownloadFailedError",
     "DownloadProgress",
     "DownloadStatus",
     "ManifestEntry",
     "ReferenceCorpusManager",
     "ReferenceCorpusSpec",
     "ReferenceManifest",
+    "ReferenceNotInstalledError",
+    "UnknownReferenceError",
     "compute_keyness_with_reference_list",
     "get_manager",
     "invalidate_cache",

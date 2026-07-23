@@ -11,6 +11,7 @@
  *
  * For now, a "Coming Soon" placeholder is shown.
  */
+
 export function VisionView() {
   return (
     <div className="vision-coming-soon">
