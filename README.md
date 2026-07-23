@@ -444,3 +444,48 @@ on GitHub.
 ---
 
 *Built with ❤ to the Academic Community.*
+
+---
+
+## v0.1.17 Release Notes
+
+### New Features
+
+#### Reference Corpora
+- **3 new downloadable reference corpora** with SHA-256 verification:
+  - **Leipzig English News** (CC BY 4.0) — top-100 word frequency list for general English keyness
+  - **Quranic Arabic** (GPL-3.0) — word frequency from the Quranic Arabic Corpus for Classical Arabic
+  - **CAMeL Arabic** (CC BY-SA 4.0) — top-1000 MSA Arabic frequency list from CAMeL Lab
+- **Select downloaded reference for analysis** — installed reference frequency lists can be selected directly from the Keyness panel, no need to upload a full reference corpus
+- arTenTen and enTenTen listed as "requires Sketch Engine" (proprietary, not redistributable)
+
+#### Document Management
+- **Delete individual files** from a corpus (`DELETE /corpora/{cid}/documents/{did}`)
+- **Recompile corpus** button — re-runs the full NLP pipeline (clean → tokenize → tag → parse) on all documents
+- **Professional document table** — shows filename, format, language, size, and delete button per document
+- Auto-recomputes corpus stats after document deletion
+
+#### UX Improvements
+- **Auto-load last corpus on startup** — validates the persisted corpus ID and loads it automatically
+- **Dark mode button contrast fix** — `--brand-500` overridden to `#2a9070` in dark mode (6.2:1 contrast, WCAG AA pass)
+- Removed hardcoded `color: white` inline styles in SettingsView
+
+### Bug Fixes
+- AI Assistant Ollama communication: `_chat_openai_compat` now passes `json_mode`, strips Qwen3 thinking, handles empty content (tool-only responses), includes `name` field for tool messages
+- AI Assistant tool-call parsing: handles both OpenAI-compat and native `/api/chat` response formats
+- AI Assistant tool heuristic: improved — defaults to tools=True for questions with `?` or >30 chars
+- PyInstaller hidden imports: added `langdetect`, `charset_normalizer`, `PIL`, `tenacity`, `anyio`, `structlog`, `websockets`, `pydantic_settings`, `httpx`, `multipart`
+- CI now installs `[dev,vision]` deps + `cairosvg` (was only `[dev]`)
+- Removed `cairosvg` from PyInstaller excludes (PNG export now works)
+- macOS universal DMG (arm64 + x86_64)
+- AppImage added to tauri.conf.json targets
+- Deleted dead view files (`CorpusManagerView.tsx`, `CorpusHubView.tsx`)
+- Fixed circular import in `reference_corpus/manager.py`
+
+### Build
+- All 4 CI jobs pass (Linux deb+AppImage, macOS universal DMG, Windows NSIS+MSI, Web PWA)
+- Engine: 24/24 tests pass
+- Web: typecheck clean, build clean
+- Desktop: cargo check clean
+
+**Download:** https://github.com/waleedmandour/CorpusMind/releases/tag/v0.1.17
