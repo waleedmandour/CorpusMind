@@ -532,9 +532,15 @@ def _sha256_of_file(path: Path) -> str:
 
 def _catalogue_version() -> str:
     """Bumped whenever the catalogue's SHA-256 values change."""
-    # Mirror the engine version; future PRs can decouple this.
-    from app.main import app  # local import to avoid cycle
-    return app.version
+    # Issue 7: previously imported app.main which caused a circular import
+    # (app.main → api.* → reference_corpus → manager → app.main). Now we
+    # read the version directly from the package __init__ which has no
+    # side effects.
+    try:
+        from app import __version__
+        return __version__
+    except Exception:
+        return "0.0.0"
 
 
 # --------------------------------------------------------------------------- #

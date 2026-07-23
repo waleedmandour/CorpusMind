@@ -81,6 +81,22 @@ _hidden_imports = [
     "reportlab",
     # Reproducibility
     "yaml",
+    # Issue 8/1: missing hidden imports that caused features to be broken
+    # in the desktop app. These are all imported by the engine but PyInstaller's
+    # static analysis missed them (lazy imports, entry-point plugins).
+    "langdetect",             # ingestion/service.py — auto-detect corpus language
+    "charset_normalizer",     # ingestion/parsing.py — detect file encoding
+    "PIL",                    # multimodal/alignment.py, vision/facial.py — image processing
+    "PIL.Image",              # PIL sub-module used explicitly
+    "PIL.ImageFilter",        # PIL sub-module used explicitly
+    "tenacity",               # retry logic (transitive dep, not guaranteed)
+    "anyio",                  # FastAPI/uvicorn async runtime
+    "structlog",              # app/logging.py
+    "websockets",             # uvicorn WebSocket support
+    "pydantic_settings",      # app/settings.py
+    "httpx",                  # AI provider HTTP client
+    "multipart",              # FastAPI form data parsing (python-multipart)
+    "charset_normalizer.md",  # charset_normalizer sub-module
 ]
 
 # Data files to bundle (non-Python assets the engine reads at runtime).
@@ -148,10 +164,11 @@ a = Analysis(
         "torchvision",
         "tensorflow",
         "keras",
-        # Cairosvg (PNG export) — needs system libcairo which isn't available
-        # on Windows. SVG export works without it.
-        "cairosvg",
-        "cairocffi",
+        # Issue 3: cairosvg is NO LONGER excluded — it's needed for PNG export
+        # of collocation network diagrams. On Windows it may fail at runtime
+        # if libcairo isn't installed, but SVG export (which doesn't need
+        # cairosvg) still works. The engine handles this gracefully with a
+        # try/except in api/export.py:_svg_to_png().
     ],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,

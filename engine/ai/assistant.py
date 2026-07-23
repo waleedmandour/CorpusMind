@@ -176,9 +176,20 @@ class Assistant:
             )
         content = first.content
 
-        tool_call_reqs = (first.raw.get("choices", [{}])[0]
-                          .get("message", {})
-                          .get("tool_calls", []))
+        # Issue 8: parse tool calls from the response. The response format
+        # differs between the native /api/chat and OpenAI-compat endpoints:
+        #   - OpenAI-compat: raw["choices"][0]["message"]["tool_calls"]
+        #   - Native /api/chat: raw["message"]["tool_calls"] (Ollama 0.4+)
+        # We check both paths.
+        tool_call_reqs = (
+            first.raw.get("choices", [{}])[0]
+            .get("message", {})
+            .get("tool_calls", [])
+        )
+        if not tool_call_reqs:
+            # Try native /api/chat format
+            native_msg = first.raw.get("message", {})
+            tool_call_reqs = native_msg.get("tool_calls", [])
 
         if tool_call_reqs:
             messages.append(Message(role="assistant", content=content or "(tool call)"))
@@ -217,7 +228,11 @@ class Assistant:
                     tool_calls.append({"name": name, "args": args, "ok": False, "error": str(e)})
                     messages.append(Message(role="tool", content=f"ERROR: {e}", name=name))
 
-            # Pass 2: grounded final answer
+            # Pass 2: grounded final answer — NO tools (uses the more reliable
+            # native /api/chat path instead of the OpenAI-compat fallback).
+            # This is important: the second pass just needs the model to
+            # synthesize the tool results into a natural-language answer,
+            # not to call more tools.
             final = await self.provider.chat(messages, model=self.model, temperature=0.2)
             content = final.content
 
@@ -340,20 +355,33 @@ def _user_message_needs_tools(user_text: str) -> bool:
     question about corpus data. Returns False (skip tools, use the more
     reliable native /api/chat path) when the message is clearly
     conversational.
+
+    Issue 8: the previous heuristic was too conservative — it defaulted
+    to False for short messages (< 120 chars) that weren't greetings.
+    This meant simple questions like "top 10 words" (14 chars) went
+    through without tools and got an ungrounded answer. Now we default
+    to True for any message that contains a question mark or an
+    analysis-related word, regardless of length.
     """
     text = user_text.lower().strip()
     if not text:
         return False
-    # If the message is very short and matches a greeting/meta pattern,
-    # skip tools.
-    if len(text) < 80:
-        for pat in _TOOL_FREE_PATTERNS:
-            if text.startswith(pat) or text == pat.rstrip():
-                return False
-    # If any grounding keyword is present, pass tools.
+
+    # Check tool-free patterns first — these are definitely conversational
+    for pat in _TOOL_FREE_PATTERNS:
+        if text.startswith(pat) or text == pat.rstrip():
+            return False
+
+    # Check grounding patterns — these definitely need tools
     for pat in _GROUNDING_PATTERNS:
         if pat in text:
             return True
-    # Default: don't pass tools for short conversational turns, do pass
-    # them for longer messages (which are more likely to be real questions).
-    return len(text) > 120
+
+    # Issue 8: if the message contains a question mark, it's likely a
+    # question that should be grounded. Default to tools=True.
+    if "?" in text:
+        return True
+
+    # Default: pass tools for any message longer than 30 chars (likely
+    # a real question). Short non-question messages are conversational.
+    return len(text) > 30

@@ -472,8 +472,10 @@ class OllamaProvider(ModelProvider):
         # the same way. If tools are needed, fall back to /v1/chat/completions.
         if tools:
             # Use OpenAI-compatible endpoint for tool calls
+            # Issue 8: pass json_mode through so chat_json() works with tools
             return await self._chat_openai_compat(messages, model=model_name,
-                                                   temperature=temperature, tools=tools, timeout=timeout)
+                                                   temperature=temperature, tools=tools,
+                                                   timeout=timeout, json_mode=json_mode)
 
         log.info("ollama_chat_request", model=model_name, messages=len(messages), qwen3=is_qwen3, json_mode=json_mode)
 
@@ -537,16 +539,35 @@ class OllamaProvider(ModelProvider):
         temperature: float,
         tools: list[dict[str, Any]],
         timeout: float | None,
+        json_mode: bool = False,
     ) -> ChatResponse:
-        """Fallback to /v1/chat/completions for tool-calling (Ollama supports both)."""
+        """Fallback to /v1/chat/completions for tool-calling (Ollama supports both).
+
+        Issue 8 fix: this method previously:
+          1. Didn't pass json_mode through → chat_json() with tools lost JSON format
+          2. Didn't strip Qwen3 thinking text → leaked into tool-call responses
+          3. Didn't handle empty content (some models return null content
+             when they only want to make tool calls)
+          4. Didn't include the 'name' field for tool messages → Ollama
+             rejected tool-result messages with 400 Bad Request
+        """
         payload: dict[str, Any] = {
             "model": model,
-            "messages": [{"role": m.role, "content": m.content} for m in messages],
+            "messages": [
+                {"role": m.role, "content": m.content, **({"name": m.name} if m.name else {})}
+                for m in messages
+            ],
             "temperature": temperature,
             "stream": False,
         }
         if tools:
             payload["tools"] = tools
+        # Issue 8: pass json_mode through so chat_json() works with tool calls
+        if json_mode:
+            payload["response_format"] = {"type": "json_object"}
+
+        log.info("ollama_openai_compat_request", model=model, messages=len(messages),
+                 has_tools=bool(tools), json_mode=json_mode)
 
         try:
             r = await self._client.post("/v1/chat/completions", json=payload, timeout=timeout)
@@ -556,9 +577,23 @@ class OllamaProvider(ModelProvider):
 
         data = r.json()
         try:
-            content = data["choices"][0]["message"]["content"]
+            choice = data["choices"][0]
+            msg = choice["message"]
+            content = msg.get("content") or ""
         except (KeyError, IndexError) as e:
             raise ModelProviderError(f"[ollama] unexpected tool-call response: {data}") from e
+
+        # Issue 8: strip Qwen3 thinking text that leaks into content
+        if self._is_qwen3(model) and content:
+            content = _strip_thinking(content)
+
+        # Issue 8: some models return empty content when they only want to
+        # make tool calls — this is valid, not an error. Return the empty
+        # content and let the caller check raw["choices"][0]["message"]
+        # for tool_calls.
+        if not content and not msg.get("tool_calls"):
+            log.warning("ollama_openai_compat_empty_content", model=model, raw=str(data)[:300])
+
         return ChatResponse(content=content, model=data.get("model", model), provider=self.name, raw=data)
 
     # --- stream (native /api/chat with stream=true) ---

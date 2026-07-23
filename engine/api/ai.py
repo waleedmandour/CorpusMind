@@ -101,9 +101,18 @@ async def chat(req: ChatRequest, request: Request, session: AsyncSession = Depen
     # Fix: answer() uses its OWN session_scope() for ALL database operations.
     # The request session is only used to create the conversation row, then
     # committed and closed before answer() is called.
+    # Issue 8: use selectinload for the conversation lookup too — the
+    # api/ai.py chat endpoint still used session.get() which lazy-loads
+    # turns and triggers the greenlet error on the next line.
     convo = None
     if req.conversation_id:
-        convo = await session.get(Conversation, req.conversation_id)
+        stmt = (
+            select(Conversation)
+            .options(selectinload(Conversation.turns))
+            .where(Conversation.id == req.conversation_id)
+        )
+        result = await session.execute(stmt)
+        convo = result.scalar_one_or_none()
     if convo is None:
         convo = Conversation(provider=req.provider, model=req.model or "")
         session.add(convo)

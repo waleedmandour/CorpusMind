@@ -66,7 +66,8 @@ jobs:
       - name: Install engine dependencies + PyInstaller
         run: |
           cd engine
-          pip install -e ".[dev]"
+          pip install -e ".[dev,vision]"
+          pip install cairosvg python-multipart
           pip install pyinstaller
           python -m spacy download en_core_web_sm
 
@@ -113,7 +114,7 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: aarch64-apple-darwin
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -128,7 +129,8 @@ jobs:
       - name: Install engine dependencies + PyInstaller
         run: |
           cd engine
-          pip install -e ".[dev]"
+          pip install -e ".[dev,vision]"
+          pip install cairosvg python-multipart
           pip install pyinstaller
           python -m spacy download en_core_web_sm
 
@@ -152,17 +154,17 @@ jobs:
           npm install --no-audit --no-fund
           npm run build
 
-      - name: Build Tauri app (DMG)
+      - name: Build Tauri app (Universal DMG)
         run: |
           cd desktop/src-tauri
-          npx @tauri-apps/cli@latest build --bundles dmg --target aarch64-apple-darwin
+          npx @tauri-apps/cli@latest build --bundles dmg --target universal-apple-darwin
 
       - name: Upload artifacts to release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ inputs.tag || github.ref_name }}
           files: |
-            desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
+            desktop/src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
 
   # ─── Windows (NSIS + MSI) ────────────────────────────────────────
   build-windows:
@@ -189,7 +191,8 @@ jobs:
       - name: Install engine dependencies + PyInstaller
         run: |
           cd engine
-          pip install -e ".[dev]"
+          pip install -e ".[dev,vision]"
+          pip install cairosvg python-multipart
           pip install pyinstaller
           python -m spacy download en_core_web_sm
         shell: bash
