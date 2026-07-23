@@ -1,4 +1,4 @@
-name: Build & Release v0.1.16
+name: Build & Release v0.1.17
 
 # Builds the CorpusMind desktop app for Linux, macOS, and Windows on
 # platform-native GitHub Actions runners, then uploads all artifacts to
@@ -20,9 +20,9 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Release tag (e.g. v0.1.16)'
+        description: 'Release tag (e.g. v0.1.17)'
         required: true
-        default: 'v0.1.16'
+        default: 'v0.1.17'
   push:
     tags:
       - 'v0.1.*'
@@ -254,10 +254,10 @@ jobs:
       - name: Zip web dist
         run: |
           cd web
-          zip -r ../corpusmind-web-v0.1.16.zip dist/
+          zip -r ../corpusmind-web-v0.1.17.zip dist/
 
       - name: Upload artifact to release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ inputs.tag || github.ref_name }}
-          files: corpusmind-web-v0.1.16.zip
+          files: corpusmind-web-v0.1.17.zip
