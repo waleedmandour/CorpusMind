@@ -638,6 +638,24 @@ function BundledReferences() {
 
   const handleDownload = async (name: string) => {
     setDownloadingName(name);
+    // v0.1.20: check if this is a full_corpus reference
+    const ref = catalogue.data?.references.find(r => r.name === name);
+    if (ref?.format === "full_corpus") {
+      showStatus(`Downloading + ingesting ${name} (this may take a few minutes)…`, "info");
+      try {
+        const result = await api.downloadFullReferenceCorpus(name);
+        showStatus(`✓ ${result.message} (${result.document_count} documents)`, "success");
+        qc.invalidateQueries({ queryKey: ["reference-corpora"] });
+        qc.invalidateQueries({ queryKey: ["corpora"] });
+      } catch (e: any) {
+        const msg = e?.message || String(e);
+        showStatus(`✗ Failed to download ${name}: ${msg}`, "error");
+      } finally {
+        setDownloadingName(null);
+      }
+      return;
+    }
+    // Standard frequency-list download
     showStatus(`Downloading ${name}…`, "info");
     try {
       const result = await api.downloadReferenceCorpus(name);
@@ -716,6 +734,10 @@ function BundledReferences() {
                   {r.installed && r.size_bytes ? ` · ${(r.size_bytes / 1024).toFixed(1)} KB on disk` : ""}
                   {" · "}
                   {r.license}
+                  {" · "}
+                  {r.format === "full_corpus"
+                    ? <span style={{ color: "var(--brand-400)", fontWeight: 600 }}>Full Corpus</span>
+                    : <span style={{ color: "var(--text-subtle)" }}>Frequency List</span>}
                 </span>
                 {!r.available && (
                   <span className="bundled-item-size" style={{ color: "var(--text-subtle)" }}>

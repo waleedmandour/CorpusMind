@@ -23,7 +23,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Literal
 
-ReferenceFormat = Literal["tsv_freq", "csv_freq", "json_freq"]
+ReferenceFormat = Literal["tsv_freq", "csv_freq", "json_freq", "full_corpus"]
 ReferenceLanguage = Literal["en", "ar"]
 
 
@@ -263,5 +263,124 @@ BUNDLED_REFERENCES: list[ReferenceCorpusSpec] = [
         genre="web",
         min_corpus_tokens=5_000,
         tags=("arabic", "web", "msa"),
+    ),
+    # v0.1.20: Full reference corpora (downloaded as ZIP/TAR, ingested through
+    # the NLP pipeline, stored as proper Corpus rows with subcorpus support)
+    ReferenceCorpusSpec(
+        name="bnc-baby",
+        display_name="BNC Baby — British National Corpus sample (4M words)",
+        language="en",
+        description=(
+            "BNC Baby is a 4-million-word sample of the British National "
+            "Corpus, containing four 1-million-word subcorpora: academic "
+            "writing, fiction, newspapers, and spoken conversation. "
+            "Downloaded as a ZIP from the Oxford Text Archive (22 MB). "
+            "After download, it is ingested through the full NLP pipeline "
+            "(tokenize → tag → lemmatize → parse) and becomes a proper "
+            "Corpus row with subcorpus support for register-matched keyness."
+        ),
+        source_url=(
+            "https://ota.bodleian.ox.ac.uk/repository/xmlui/bitstream/"
+            "handle/20.500.12024/2553/2553.zip?sequence=3&isAllowed=y"
+        ),
+        # SHA-256 will be verified after first download — leave empty to
+        # skip checksum verification for full corpora (the file is a ZIP
+        # that will be extracted and parsed; if it's corrupt, parsing fails)
+        sha256="",
+        format="full_corpus",
+        size_hint="~22 MB",
+        license="BNC User Licence (non-commercial research)",
+        citation=(
+            "The British National Corpus, version 3 (BNC XML Edition). 2007. "
+            "Distributed by Oxford University Computing Services on behalf "
+            "of the BNC Consortium."
+        ),
+        genre="mixed",
+        min_corpus_tokens=10_000,
+        tags=("english", "british", "balanced", "academic", "fiction", "news", "spoken"),
+    ),
+    ReferenceCorpusSpec(
+        name="bawe",
+        display_name="BAWE — British Academic Written English (6.5M words)",
+        language="en",
+        description=(
+            "BAWE is a 6.5-million-word corpus of British academic written "
+            "English, containing 2,761 student assignments across four "
+            "disciplines (Arts/Humanities, Social Sciences, Physical "
+            "Sciences, Life Sciences) and four levels (1st year through "
+            "Masters). Downloaded as a ZIP from the Oxford Text Archive "
+            "(108 MB). Ingested through the full NLP pipeline with "
+            "discipline and level metadata for subcorpus filtering."
+        ),
+        source_url=(
+            "https://ota.bodleian.ox.ac.uk/repository/xmlui/bitstream/"
+            "handle/20.500.12024/2539/2539.zip?sequence=3&isAllowed=y"
+        ),
+        sha256="",
+        format="full_corpus",
+        size_hint="~108 MB",
+        license="CC-BY-NC-SA-3.0",
+        citation=(
+            "Nesi, H., Gardner, S., Thompson, P., & Wickens, P. (2004–2008). "
+            "British Academic Written English Corpus. Oxford Text Archive."
+        ),
+        genre="academic",
+        min_corpus_tokens=10_000,
+        tags=("english", "british", "academic", "written"),
+    ),
+    ReferenceCorpusSpec(
+        name="leipzig-english-news-10k",
+        display_name="Leipzig English News — 10K sentences (full corpus)",
+        language="en",
+        description=(
+            "10,000-sentence English news corpus from the Leipzig Corpora "
+            "Collection (CC BY 4.0). Downloaded as a tar.gz, extracted, "
+            "and ingested through the full NLP pipeline. Includes word "
+            "frequency list and sentence-level source URLs. Suitable as "
+            "a general English news reference for keyness analysis."
+        ),
+        source_url=(
+            "https://downloads.wortschatz-leipzig.de/corpora/"
+            "eng_news_2023_10K.tar.gz"
+        ),
+        sha256="",
+        format="full_corpus",
+        size_hint="~3 MB",
+        license="CC-BY-4.0",
+        citation=(
+            "Goldhahn, D., Eckart, T., & Quasthoff, U. (2012). Building "
+            "Large Monolingual Corpora at the Leipzig Corpora Collection. "
+            "LREC 2012."
+        ),
+        genre="news",
+        min_corpus_tokens=1_000,
+        tags=("english", "news", "leipzig"),
+    ),
+    ReferenceCorpusSpec(
+        name="leipzig-arabic-news-10k",
+        display_name="Leipzig Arabic News — 10K sentences (full corpus)",
+        language="ar",
+        description=(
+            "10,000-sentence Arabic news corpus from the Leipzig Corpora "
+            "Collection (CC BY 4.0). Downloaded as a tar.gz, extracted, "
+            "and ingested through the full NLP pipeline. Suitable as a "
+            "Modern Standard Arabic news reference for keyness analysis."
+        ),
+        source_url=(
+            "https://downloads.wortschatz-leipzig.de/corpora/"
+            "ara_news_2022_10K.tar.gz"
+        ),
+        sha256="",
+        format="full_corpus",
+        size_hint="~4 MB",
+        license="CC-BY-4.0",
+        citation=(
+            "Goldhahn, D., Eckart, T., & Quasthoff, U. (2012). Building "
+            "Large Monolingual Corpora at the Leipzig Corpora Collection. "
+            "LREC 2012."
+        ),
+        genre="news",
+        min_corpus_tokens=1_000,
+        tags=("arabic", "news", "leipzig"),
     ),
 ]

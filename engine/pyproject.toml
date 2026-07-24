@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "corpusmind-engine"
-version = "0.1.19"
+version = "0.1.20"
 description = "CorpusMind engine — local-first, AI-native research environment for corpus linguistics and multimodal discourse analysis."
 readme = "../README.md"
 requires-python = ">=3.12"

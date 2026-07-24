@@ -2,7 +2,7 @@
 
 [![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.21226650-blue)](https://doi.org/10.5281/zenodo.21226650)
 [![License: AGPL-3.0-only](https://img.shields.io/badge/License-AGPL--3.0--only-blue.svg)](https://www.gnu.org/licenses/agpl-3.0.html)
-[![GitHub release](https://img.shields.io/badge/release-v0.1.19-blue)](https://github.com/waleedmandour/CorpusMind/releases)
+[![GitHub release](https://img.shields.io/badge/release-v0.1.20-blue)](https://github.com/waleedmandour/CorpusMind/releases)
 [![Build Status](https://img.shields.io/badge/CI-passing-brightgreen)](https://github.com/waleedmandour/CorpusMind/actions)
 
 > A local-first, AI-native research environment for corpus linguistics and multimodal discourse analysis.
@@ -447,7 +447,7 @@ on GitHub.
 
 ---
 
-## v0.1.19 Release Notes
+## v0.1.20 Release Notes
 
 ### New Features
 
@@ -488,4 +488,4 @@ on GitHub.
 - Web: typecheck clean, build clean
 - Desktop: cargo check clean
 
-**Download:** https://github.com/waleedmandour/CorpusMind/releases/tag/v0.1.19
+**Download:** https://github.com/waleedmandour/CorpusMind/releases/tag/v0.1.20

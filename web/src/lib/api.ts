@@ -1375,6 +1375,11 @@ export const api = {
     jsonFetch<{ name: string; status: string; installed: boolean; message: string }>(`/api/v1/reference-corpora/${name}/download`, {
       method: "POST",
     }),
+  // v0.1.20: download + ingest full reference corpus (BNC Baby, BAWE, Leipzig)
+  downloadFullReferenceCorpus: (name: string) =>
+    jsonFetch<{ name: string; status: string; corpus_id: string; document_count: number; total_files: number; message: string }>(`/api/v1/reference-corpora/${name}/download-full`, {
+      method: "POST",
+    }),
   cancelReferenceDownload: (name: string) =>
     jsonFetch<{ name: string; cancel_requested: boolean }>(`/api/v1/reference-corpora/${name}/cancel`, {
       method: "POST",
@@ -1781,7 +1786,7 @@ export interface ReferenceCorpusEntry {
   display_name: string;
   language: "en" | "ar";
   description: string;
-  format: "tsv_freq" | "csv_freq" | "json_freq";
+  format: "tsv_freq" | "csv_freq" | "json_freq" | "full_corpus";
   size_hint: string;
   license: string;
   citation: string;
