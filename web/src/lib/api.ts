@@ -894,6 +894,21 @@ export const api = {
     jsonFetch<{ recompiled: number; total_documents: number; token_count: number; type_count: number }>(
       `/api/v1/corpora/${cid}/recompile`, { method: "POST" }
     ),
+  // v0.1.19: update document metadata (genre, register, year, etc.)
+  updateDocumentMeta: (cid: string, did: string, meta: Record<string, unknown>) =>
+    jsonFetch<{ ok: boolean; document_id: string; meta: Record<string, unknown> }>(
+      `/api/v1/corpora/${cid}/documents/${did}/meta`, { method: "PATCH", body: JSON.stringify({ meta }) }
+    ),
+  // v0.1.19: subcorpus management
+  listSubcorpora: (cid: string) =>
+    jsonFetch<Subcorpus[]>(`/api/v1/corpora/${cid}/subcorpora`),
+  createSubcorpus: (cid: string, name: string, filterCriteria: Record<string, unknown>, description: string = "") =>
+    jsonFetch<Subcorpus>(`/api/v1/corpora/${cid}/subcorpora`, {
+      method: "POST",
+      body: JSON.stringify({ name, description, filter_criteria: filterCriteria }),
+    }),
+  deleteSubcorpus: (cid: string, sid: string) =>
+    jsonFetch<{ deleted: string }>(`/api/v1/corpora/${cid}/subcorpora/${sid}`, { method: "DELETE" }),
   uploadDocuments: (cid: string, files: File[], language?: string) => {
     const fd = new FormData();
     files.forEach((f) => fd.append("files", f));
@@ -1811,6 +1826,16 @@ export interface KeynessWithReferenceResponse {
   negative_keywords: Array<Record<string, unknown>>;
   N1: number;
   N2: number;
+}
+
+// ─── v0.1.19 Subcorpus ──────────────────────────────────────────────
+export interface Subcorpus {
+  id: string;
+  corpus_id: string;
+  name: string;
+  description: string;
+  filter_criteria: Record<string, unknown>;
+  created_at: string;
 }
 
 // ─── v0.1.16 AI query suggestions (Issue 2) ──────────────────────────

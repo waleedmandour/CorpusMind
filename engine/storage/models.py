@@ -309,3 +309,30 @@ class SyncEvent(Base):
     event_type: Mapped[str] = mapped_column(String(32))  # push|pull|conflict|resolve
     summary: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
+class Subcorpus(Base):
+    """A named saved filter over a corpus's documents.
+
+    v0.1.19: Enables register-matched keyness and subcorpus comparison.
+    A subcorpus is NOT a separate set of documents — it's a saved filter
+    (e.g., "News only", "Pre-2020", "Academic writing") that restricts
+    which documents are included in an analysis.
+
+    The filter_criteria JSON stores key-value pairs that are matched
+    against Document.meta fields. For example:
+        {"genre": "news", "year_min": 2010, "year_max": 2020}
+
+    Analysis endpoints accept an optional subcorpus_id parameter that
+    applies the filter before computing results.
+    """
+    __tablename__ = "subcorpora"
+
+    id: Mapped[str] = mapped_column(String(16), primary_key=True, default=_uuid)
+    corpus_id: Mapped[str] = mapped_column(ForeignKey("corpora.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(128), nullable=False)
+    description: Mapped[str] = mapped_column(Text, default="")
+    # JSON filter criteria — matched against Document.meta
+    # e.g. {"genre": "news"} or {"register": "academic", "year_min": 2015}
+    filter_criteria: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)

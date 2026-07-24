@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.logging import get_logger
 from ingestion.service import ingest_document
-from storage.models import Corpus, Document, Project
+from storage.models import Corpus, Document, Project, Subcorpus
 from storage.session import get_session
 
 log = get_logger(__name__)
@@ -386,3 +386,131 @@ async def recompile_corpus(cid: str, session: AsyncSession = Depends(get_session
         "token_count": latest.token_count if latest else 0,
         "type_count": latest.type_count if latest else 0,
     }
+
+
+# --------------------------------------------------------------------------- #
+# v0.1.19: Document metadata + Subcorpus management
+# --------------------------------------------------------------------------- #
+
+
+class DocumentMetadataUpdate(BaseModel):
+    """Update a document's metadata (genre, register, year, etc.)."""
+    meta: dict = Field(default_factory=dict)
+
+
+@router.patch("/corpora/{cid}/documents/{did}/meta")
+async def update_document_metadata(
+    cid: str, did: str, body: DocumentMetadataUpdate, session: AsyncSession = Depends(get_session)
+) -> dict:
+    """Update a document's metadata (genre, register, year, author, etc.).
+
+    v0.1.19: This metadata is used for subcorpus filtering — e.g., creating
+    a subcorpus that only includes documents where genre="news".
+    """
+    doc = await session.get(Document, did)
+    if not doc or doc.corpus_id != cid:
+        raise HTTPException(404, "Document not found in this corpus")
+    # Reassign (not in-place mutation) for SQLAlchemy change detection
+    new_meta = dict(doc.meta or {})
+    new_meta.update(body.meta)
+    doc.meta = new_meta
+    await session.commit()
+    return {"ok": True, "document_id": did, "meta": new_meta}
+
+
+class SubcorpusCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=128)
+    description: str = ""
+    filter_criteria: dict = Field(default_factory=dict)
+
+
+class SubcorpusOut(BaseModel):
+    id: str
+    corpus_id: str
+    name: str
+    description: str
+    filter_criteria: dict
+    created_at: datetime
+
+
+@router.post("/corpora/{cid}/subcorpora", response_model=SubcorpusOut)
+async def create_subcorpus(
+    cid: str, body: SubcorpusCreate, session: AsyncSession = Depends(get_session)
+) -> SubcorpusOut:
+    """Create a named subcorpus (saved filter) for a corpus.
+
+    v0.1.19: A subcorpus is a saved filter over document metadata, e.g.:
+        filter_criteria = {"genre": "news", "year_min": 2010}
+
+    Analysis endpoints can optionally accept a subcorpus_id to restrict
+    results to only matching documents.
+    """
+    if not await session.get(Corpus, cid):
+        raise HTTPException(404, "Corpus not found")
+    sc = Subcorpus(
+        corpus_id=cid,
+        name=body.name,
+        description=body.description,
+        filter_criteria=body.filter_criteria,
+    )
+    session.add(sc)
+    await session.flush()
+    return SubcorpusOut(
+        id=sc.id, corpus_id=sc.corpus_id, name=sc.name,
+        description=sc.description, filter_criteria=sc.filter_criteria,
+        created_at=sc.created_at,
+    )
+
+
+@router.get("/corpora/{cid}/subcorpora", response_model=list[SubcorpusOut])
+async def list_subcorpora(cid: str, session: AsyncSession = Depends(get_session)) -> list[SubcorpusOut]:
+    """List all subcorpora (saved filters) for a corpus."""
+    stmt = select(Subcorpus).where(Subcorpus.corpus_id == cid).order_by(Subcorpus.created_at.desc())
+    subs = (await session.execute(stmt)).scalars().all()
+    return [SubcorpusOut(
+        id=s.id, corpus_id=s.corpus_id, name=s.name,
+        description=s.description, filter_criteria=s.filter_criteria,
+        created_at=s.created_at,
+    ) for s in subs]
+
+
+@router.delete("/corpora/{cid}/subcorpora/{sid}")
+async def delete_subcorpus(cid: str, sid: str, session: AsyncSession = Depends(get_session)) -> dict:
+    """Delete a subcorpus (saved filter). Does NOT delete documents."""
+    sc = await session.get(Subcorpus, sid)
+    if not sc or sc.corpus_id != cid:
+        raise HTTPException(404, "Subcorpus not found")
+    await session.delete(sc)
+    await session.commit()
+    return {"deleted": sid}
+
+
+def apply_subcorpus_filter(
+    session: AsyncSession, version_id: str, subcorpus_id: str | None
+) -> select:
+    """Return a SELECT statement for tokens, optionally filtered by subcorpus.
+
+    v0.1.19: If a subcorpus_id is provided, this function loads the
+    subcorpus's filter_criteria, finds matching document IDs, and
+    restricts the token query to only those documents.
+    """
+    from storage.models import Token
+    stmt = select(Token).where(Token.version_id == version_id)
+    if subcorpus_id:
+        sc = session.get_sync(Subcorpus, subcorpus_id)
+        if sc and sc.filter_criteria:
+            # Find documents whose meta matches the filter criteria
+            doc_stmt = select(Document.id).where(Document.corpus_id == sc.corpus_id)
+            # Apply each filter criterion as a JSON match
+            # For simple key-value pairs: meta->>'key' = 'value'
+            # For year_min/year_max: meta->>'year' >= year_min
+            for key, value in sc.filter_criteria.items():
+                if key == "year_min":
+                    doc_stmt = doc_stmt.where(Document.meta["year"].as_string() >= str(value))
+                elif key == "year_max":
+                    doc_stmt = doc_stmt.where(Document.meta["year"].as_string() <= str(value))
+                else:
+                    doc_stmt = doc_stmt.where(Document.meta[key].as_string() == str(value))
+            # Restrict tokens to matching documents
+            stmt = stmt.where(Token.document_id.in_(doc_stmt))
+    return stmt

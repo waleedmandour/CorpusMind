@@ -27,6 +27,7 @@ import { useState, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
 
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import {
   api,
   downloadBlob,
@@ -618,6 +619,9 @@ function BundledReferences() {
   const [statusMsg, setStatusMsg] = useState("");
   const [statusKind, setStatusKind] = useState<"success" | "error" | "info">("info");
   const [downloadingName, setDownloadingName] = useState<string | null>(null);
+  // v0.1.19: confirm dialog state (replaces window.confirm)
+  const [confirmMsg, setConfirmMsg] = useState<string | null>(null);
+  const pendingDeleteRef = useRef<string | null>(null);
 
   // Fetch the real catalogue from the engine
   const catalogue = useQuery({
@@ -662,7 +666,14 @@ function BundledReferences() {
   };
 
   const handleDelete = async (name: string) => {
-    if (!confirm(`Delete reference corpus "${name}"? You can re-download it any time.`)) return;
+    // v0.1.19: replaced window.confirm() with ConfirmDialog (fixes ACL error)
+    pendingDeleteRef.current = name;
+    setConfirmMsg(`Delete reference corpus "${name}"? You can re-download it any time.`);
+  };
+
+  const confirmDeleteRef = async () => {
+    const name = pendingDeleteRef.current;
+    if (!name) return;
     try {
       await api.deleteReferenceCorpus(name);
       showStatus(`Deleted ${name}`, "info");
@@ -777,6 +788,11 @@ function BundledReferences() {
           {statusMsg}
         </div>
       )}
+
+      <ConfirmDialog
+        state={confirmMsg ? { msg: confirmMsg, onConfirm: confirmDeleteRef } : null}
+        onClose={() => { setConfirmMsg(null); pendingDeleteRef.current = null; }}
+      />
     </div>
   );
 }
@@ -967,26 +983,48 @@ function DocumentList({ cid }: { cid: string }) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [recompiling, setRecompiling] = useState(false);
   const [status, setStatus] = useState<{ kind: "success" | "error" | "info"; msg: string } | null>(null);
+  // v0.1.19: confirm dialog state (replaces window.confirm)
+  const [confirmState, setConfirmState] = useState<{ msg: string; onConfirm: () => void } | null>(null);
+  const pendingDelete = useRef<{ did: string; filename: string } | null>(null);
+  // v0.1.19: metadata editing state
+  const [editingMetaId, setEditingMetaId] = useState<string | null>(null);
+  const [metaForm, setMetaForm] = useState<{ genre: string; register: string; year: string }>({ genre: "", register: "", year: "" });
+  // v0.1.19: subcorpus state
+  const [showSubcorpusForm, setShowSubcorpusForm] = useState(false);
+  const [subcorpusForm, setSubcorpusForm] = useState({ name: "", description: "", genre: "", register: "", yearMin: "", yearMax: "" });
+  const subcorpora = useQuery({
+    queryKey: ["subcorpora", cid],
+    queryFn: () => api.listSubcorpora(cid),
+  });
 
   const showStatus = (msg: string, kind: "success" | "error" | "info" = "info") => {
     setStatus({ kind, msg });
     if (msg) setTimeout(() => setStatus(null), 6000);
   };
 
-  const handleDelete = async (did: string, filename: string) => {
-    if (!confirm(`Delete "${filename}"? This removes it from the corpus and recomputes stats.`)) return;
-    setDeletingId(did);
-    try {
-      const result = await api.deleteDocument(cid, did);
-      showStatus(`✓ Deleted "${filename}". ${result.remaining_documents} document(s) remaining.`, "success");
-      qc.invalidateQueries({ queryKey: ["documents", cid] });
-      qc.invalidateQueries({ queryKey: ["corpora"] });
-      qc.invalidateQueries({ queryKey: ["corpus", cid] });
-    } catch (e: any) {
-      showStatus(`✗ Delete failed: ${e?.message || String(e)}`, "error");
-    } finally {
-      setDeletingId(null);
-    }
+  const handleDelete = (did: string, filename: string) => {
+    // v0.1.19: replaced window.confirm() with ConfirmDialog (fixes ACL error)
+    pendingDelete.current = { did, filename };
+    setConfirmState({
+      msg: `Delete "${filename}"? This removes it from the corpus and recomputes stats.`,
+      onConfirm: async () => {
+        const pending = pendingDelete.current;
+        if (!pending) return;
+        setDeletingId(pending.did);
+        try {
+          const result = await api.deleteDocument(cid, pending.did);
+          showStatus(`✓ Deleted "${pending.filename}". ${result.remaining_documents} document(s) remaining.`, "success");
+          qc.invalidateQueries({ queryKey: ["documents", cid] });
+          qc.invalidateQueries({ queryKey: ["corpora"] });
+          qc.invalidateQueries({ queryKey: ["corpus", cid] });
+        } catch (e: any) {
+          showStatus(`✗ Delete failed: ${e?.message || String(e)}`, "error");
+        } finally {
+          setDeletingId(null);
+          pendingDelete.current = null;
+        }
+      },
+    });
   };
 
   const handleRecompile = async () => {
@@ -1004,25 +1042,139 @@ function DocumentList({ cid }: { cid: string }) {
     }
   };
 
+  // v0.1.19: metadata editing
+  const handleEditMeta = (doc: any) => {
+    setEditingMetaId(doc.id);
+    setMetaForm({
+      genre: doc.meta?.genre || "",
+      register: doc.meta?.register || "",
+      year: doc.meta?.year || "",
+    });
+  };
+
+  const handleSaveMeta = async (did: string) => {
+    try {
+      const meta: Record<string, string> = {};
+      if (metaForm.genre) meta.genre = metaForm.genre;
+      if (metaForm.register) meta.register = metaForm.register;
+      if (metaForm.year) meta.year = metaForm.year;
+      await api.updateDocumentMeta(cid, did, meta);
+      showStatus("✓ Metadata updated.", "success");
+      qc.invalidateQueries({ queryKey: ["documents", cid] });
+      setEditingMetaId(null);
+    } catch (e: any) {
+      showStatus(`✗ Failed: ${e?.message || String(e)}`, "error");
+    }
+  };
+
+  // v0.1.19: subcorpus creation
+  const handleCreateSubcorpus = async () => {
+    const filter: Record<string, unknown> = {};
+    if (subcorpusForm.genre) filter.genre = subcorpusForm.genre;
+    if (subcorpusForm.register) filter.register = subcorpusForm.register;
+    if (subcorpusForm.yearMin) filter.year_min = parseInt(subcorpusForm.yearMin);
+    if (subcorpusForm.yearMax) filter.year_max = parseInt(subcorpusForm.yearMax);
+    try {
+      await api.createSubcorpus(cid, subcorpusForm.name, filter, subcorpusForm.description);
+      showStatus(`✓ Subcorpus "${subcorpusForm.name}" created.`, "success");
+      qc.invalidateQueries({ queryKey: ["subcorpora", cid] });
+      setShowSubcorpusForm(false);
+      setSubcorpusForm({ name: "", description: "", genre: "", register: "", yearMin: "", yearMax: "" });
+    } catch (e: any) {
+      showStatus(`✗ Failed: ${e?.message || String(e)}`, "error");
+    }
+  };
+
+  const handleDeleteSubcorpus = async (sid: string, name: string) => {
+    setConfirmState({
+      msg: `Delete subcorpus "${name}"? This does NOT delete the documents.`,
+      onConfirm: async () => {
+        try {
+          await api.deleteSubcorpus(cid, sid);
+          showStatus(`✓ Deleted subcorpus "${name}".`, "info");
+          qc.invalidateQueries({ queryKey: ["subcorpora", cid] });
+        } catch (e: any) {
+          showStatus(`✗ Failed: ${e?.message || String(e)}`, "error");
+        }
+      },
+    });
+  };
+
   return (
     <div className="document-list-section">
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "var(--space-2)" }}>
         <h3 className="document-list-title">Documents ({docs.data?.length ?? 0})</h3>
-        {docs.data && docs.data.length > 0 && (
-          <button
-            className="btn-small"
-            onClick={handleRecompile}
-            disabled={recompiling}
-            title="Re-run the full NLP pipeline (clean → tokenize → tag → parse) on all documents"
-          >
-            {recompiling ? "Compiling…" : "↻ Recompile"}
-          </button>
-        )}
+        <div style={{ display: "flex", gap: "var(--space-2)" }}>
+          {docs.data && docs.data.length > 0 && (
+            <button
+              className="btn-small"
+              onClick={() => setShowSubcorpusForm(!showSubcorpusForm)}
+              title="Create a subcorpus (saved filter) for register-matched analysis"
+            >
+              + Subcorpus
+            </button>
+          )}
+          {docs.data && docs.data.length > 0 && (
+            <button
+              className="btn-small"
+              onClick={handleRecompile}
+              disabled={recompiling}
+              title="Re-run the full NLP pipeline on all documents"
+            >
+              {recompiling ? "Compiling…" : "↻ Recompile"}
+            </button>
+          )}
+        </div>
       </div>
 
       {status && (
         <div className={clsx("uploader-status", status.kind)} style={{ marginBottom: "var(--space-2)" }}>
           {status.msg}
+        </div>
+      )}
+
+      {/* v0.1.19: Subcorpus list */}
+      {subcorpora.data && subcorpora.data.length > 0 && (
+        <div style={{ marginBottom: "var(--space-2)", display: "flex", gap: "var(--space-2)", flexWrap: "wrap" }}>
+          <span style={{ fontSize: "11px", color: "var(--text-muted)", alignSelf: "center" }}>Subcorpora:</span>
+          {subcorpora.data.map((sc) => (
+            <span key={sc.id} style={{
+              display: "inline-flex", alignItems: "center", gap: "4px",
+              background: "var(--bg-subtle)", border: "1px solid var(--border)",
+              borderRadius: "12px", padding: "2px 8px", fontSize: "11px",
+            }}>
+              {sc.name}
+              <button
+                onClick={() => handleDeleteSubcorpus(sc.id, sc.name)}
+                style={{ background: "none", border: "none", color: "var(--danger)", cursor: "pointer", fontSize: "11px", padding: "0" }}
+                title="Delete subcorpus"
+              >✕</button>
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* v0.1.19: Subcorpus creation form */}
+      {showSubcorpusForm && (
+        <div style={{
+          marginBottom: "var(--space-2)", padding: "var(--space-3)",
+          background: "var(--bg-subtle)", borderRadius: "var(--radius-sm)",
+          border: "1px solid var(--border)", fontSize: "12px",
+        }}>
+          <strong>Create Subcorpus</strong>
+          <p style={{ fontSize: "11px", color: "var(--text-muted)", margin: "4px 0 8px" }}>
+            A subcorpus is a saved filter over document metadata. Only documents matching the filter will be included in analyses that use this subcorpus.
+          </p>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "var(--space-2)", marginBottom: "var(--space-2)" }}>
+            <input placeholder="Name (e.g. News only)" value={subcorpusForm.name} onChange={(e) => setSubcorpusForm({...subcorpusForm, name: e.target.value})} style={{ fontSize: "12px" }} />
+            <input placeholder="Genre (e.g. news)" value={subcorpusForm.genre} onChange={(e) => setSubcorpusForm({...subcorpusForm, genre: e.target.value})} style={{ fontSize: "12px" }} />
+            <input placeholder="Register (e.g. academic)" value={subcorpusForm.register} onChange={(e) => setSubcorpusForm({...subcorpusForm, register: e.target.value})} style={{ fontSize: "12px" }} />
+            <input placeholder="Year range (e.g. 2010-2020)" value={subcorpusForm.yearMin} onChange={(e) => setSubcorpusForm({...subcorpusForm, yearMin: e.target.value})} style={{ fontSize: "12px" }} />
+          </div>
+          <div style={{ display: "flex", gap: "var(--space-2)" }}>
+            <button className="btn-small btn-primary" onClick={handleCreateSubcorpus} disabled={!subcorpusForm.name.trim()}>Create</button>
+            <button className="btn-small" onClick={() => setShowSubcorpusForm(false)}>Cancel</button>
+          </div>
         </div>
       )}
 
@@ -1032,7 +1184,8 @@ function DocumentList({ cid }: { cid: string }) {
             <tr style={{ textAlign: "left", borderBottom: "1px solid var(--border)" }}>
               <th style={{ padding: "var(--space-2)", fontWeight: 600 }}>Filename</th>
               <th style={{ padding: "var(--space-2)", fontWeight: 600 }}>Format</th>
-              <th style={{ padding: "var(--space-2)", fontWeight: 600 }}>Lang</th>
+              <th style={{ padding: "var(--space-2)", fontWeight: 600 }}>Genre</th>
+              <th style={{ padding: "var(--space-2)", fontWeight: 600 }}>Register</th>
               <th style={{ padding: "var(--space-2)", fontWeight: 600 }}>Size</th>
               <th style={{ padding: "var(--space-2)", fontWeight: 600 }}>Actions</th>
             </tr>
@@ -1042,18 +1195,44 @@ function DocumentList({ cid }: { cid: string }) {
               <tr key={d.id} style={{ borderBottom: "1px solid var(--border)" }}>
                 <td style={{ padding: "var(--space-2)", fontWeight: 500 }}>{d.filename}</td>
                 <td style={{ padding: "var(--space-2)", color: "var(--text-muted)" }}>{d.format}</td>
-                <td style={{ padding: "var(--space-2)", color: "var(--text-muted)" }}>{d.detected_language ?? "?"}</td>
+                {editingMetaId === d.id ? (
+                  <>
+                    <td style={{ padding: "var(--space-2)" }}>
+                      <input value={metaForm.genre} onChange={(e) => setMetaForm({...metaForm, genre: e.target.value})} placeholder="genre" style={{ fontSize: "11px", width: "80px", padding: "2px 4px" }} />
+                    </td>
+                    <td style={{ padding: "var(--space-2)" }}>
+                      <input value={metaForm.register} onChange={(e) => setMetaForm({...metaForm, register: e.target.value})} placeholder="register" style={{ fontSize: "11px", width: "80px", padding: "2px 4px" }} />
+                    </td>
+                  </>
+                ) : (
+                  <>
+                    <td style={{ padding: "var(--space-2)", color: "var(--text-muted)" }}>{(d.meta as any)?.genre || "—"}</td>
+                    <td style={{ padding: "var(--space-2)", color: "var(--text-muted)" }}>{(d.meta as any)?.register || "—"}</td>
+                  </>
+                )}
                 <td style={{ padding: "var(--space-2)", color: "var(--text-muted)" }}>{(d.raw_size_bytes / 1024).toFixed(1)} KB</td>
                 <td style={{ padding: "var(--space-2)" }}>
-                  <button
-                    className="btn-small"
-                    onClick={() => handleDelete(d.id, d.filename)}
-                    disabled={deletingId === d.id}
-                    style={{ background: "var(--danger)", fontSize: "11px", padding: "2px 8px" }}
-                    title="Remove this file from the corpus"
-                  >
-                    {deletingId === d.id ? "…" : "✕ Delete"}
-                  </button>
+                  <div style={{ display: "flex", gap: "4px" }}>
+                    {editingMetaId === d.id ? (
+                      <>
+                        <button className="btn-small" onClick={() => handleSaveMeta(d.id)} style={{ fontSize: "11px", padding: "2px 6px" }}>Save</button>
+                        <button className="btn-small" onClick={() => setEditingMetaId(null)} style={{ fontSize: "11px", padding: "2px 6px" }}>Cancel</button>
+                      </>
+                    ) : (
+                      <>
+                        <button className="btn-small" onClick={() => handleEditMeta(d)} style={{ fontSize: "11px", padding: "2px 6px" }} title="Edit metadata (genre, register, year)">✎ Tag</button>
+                        <button
+                          className="btn-small"
+                          onClick={() => handleDelete(d.id, d.filename)}
+                          disabled={deletingId === d.id}
+                          style={{ background: "var(--danger)", fontSize: "11px", padding: "2px 6px" }}
+                          title="Remove this file from the corpus"
+                        >
+                          {deletingId === d.id ? "…" : "✕"}
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}
@@ -1062,6 +1241,11 @@ function DocumentList({ cid }: { cid: string }) {
       ) : (
         <div className="corpus-empty">No documents yet. Upload files to start the annotation pipeline.</div>
       )}
+
+      <ConfirmDialog
+        state={confirmState}
+        onClose={() => { setConfirmState(null); pendingDelete.current = null; }}
+      />
     </div>
   );
 }
