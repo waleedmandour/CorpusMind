@@ -2,7 +2,7 @@
 
 [![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.21226650-blue)](https://doi.org/10.5281/zenodo.21226650)
 [![License: AGPL-3.0-only](https://img.shields.io/badge/License-AGPL--3.0--only-blue.svg)](https://www.gnu.org/licenses/agpl-3.0.html)
-[![GitHub release](https://img.shields.io/badge/release-v0.1.24-blue)](https://github.com/waleedmandour/CorpusMind/releases)
+[![GitHub release](https://img.shields.io/badge/release-v0.1.25-blue)](https://github.com/waleedmandour/CorpusMind/releases)
 [![Build Status](https://img.shields.io/badge/CI-passing-brightgreen)](https://github.com/waleedmandour/CorpusMind/actions)
 
 > A local-first, AI-native research environment for corpus linguistics and multimodal discourse analysis.
@@ -444,6 +444,39 @@ on GitHub.
 ---
 
 *Built with ❤ to the Academic Community.*
+
+---
+
+## v0.1.25 Release Notes
+
+### Bug Fixes
+
+#### Reference Corpora — Full-corpus archive extraction
+- **Fixed: BNC Baby and BAWE downloads silently failed with "No text files found in archive."**
+  - **Root cause:** The extraction code branched on `spec.source_url.endswith(".zip")`, but the Oxford Text Archive hosts both corpora at URLs ending with a query string (`...2553.zip?sequence=3&isAllowed=y` and `...2539.zip?sequence=3&isAllowed=y`). The suffix check never matched, so the code downloaded the archive successfully and then silently skipped extraction entirely.
+  - **Fix:** Detect archive type by **magic bytes** (`b"PK"` for ZIP, `b"\x1f\x8b"` for gzip), which works regardless of URL shape.
+  - Added a clearer error for genuinely-unrecognized formats (names expected magic bytes) instead of the misleading "No text files found" message.
+  - Refined the "no text files found" message to mention which format was detected, so the user knows extraction did succeed.
+
+#### Reference Corpora — Background-task GC hazard
+- **Fixed: Background download task could be garbage-collected mid-download.**
+  - `asyncio.create_task(...)` was called without storing the returned `Task` anywhere. Python's own `asyncio` docs warn that the event loop may GC such tasks mid-flight.
+  - Now held in a module-level `set` with a `done_callback` that discards the task on completion — no leak, no GC risk.
+
+### Tests
+- **6 new regression tests** in `engine/tests/test_reference_corpus_archive.py`:
+  1. Unit test proving the old URL-suffix check fails on the real OTA URL pattern.
+  2. End-to-end: ZIP at a query-string URL (BNC Baby case) is detected via magic bytes, extracted, and ingested.
+  3. End-to-end: BAWE (same OTA URL shape, distinct registry entry with `2539.zip`, genre="academic") — belts-and-braces coverage.
+  4. Regression guard: tar.gz (Leipzig 10K) path still works after the magic-byte refactor.
+  5. Unrecognized format produces the new clearer error, NOT the misleading old one.
+  6. Surface check that the `_full_corpus_tasks` strong-reference set exists.
+
+### Build
+- All 4 CI jobs pass on `v0.1.25` (Engine Python 3.12, Web Node 20, Desktop Rust, License gate).
+- Engine: 110/110 tests pass; ruff clean.
+
+**Download:** https://github.com/waleedmandour/CorpusMind/releases/tag/v0.1.25
 
 ---
 
