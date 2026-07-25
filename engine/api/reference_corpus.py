@@ -226,6 +226,12 @@ async def keyness_with_reference(
 # Fix #11: Track full-corpus download jobs so the UI can poll status
 _full_corpus_jobs: dict[str, dict] = {}
 
+# Fix #12: Keep strong references to background download tasks so asyncio
+# doesn't garbage-collect them mid-download. Python's own asyncio docs warn
+# about exactly this — create_task() returns a Task that may be GC'd if no
+# reference is held. See: https://docs.python.org/3/library/asyncio-task.html#asyncio.create_task
+_full_corpus_tasks: set = set()
+
 
 @router.post("/reference-corpora/{name}/download-full")
 async def download_full_reference(
@@ -306,10 +312,31 @@ async def download_full_reference(
             _full_corpus_jobs[job_id]["status"] = "extracting"
             log.info("download_full_reference_done", name=name, size=len(archive_bytes))
 
-            # Extract text files
+            # Extract text files.
+            #
+            # Fix #12: Detect archive type by magic bytes (content sniffing),
+            # NOT by URL suffix. The OTA (Oxford Text Archive) hosts BNC Baby
+            # and BAWE at URLs like:
+            #     https://ota.bodleian.ox.ac.uk/.../2553.zip?sequence=3&isAllowed=y
+            # — the URL ends in "isAllowed=y", not ".zip", so the old
+            # `spec.source_url.endswith(".zip")` check never matched and the
+            # code silently skipped extraction ("No text files found in
+            # archive."). Magic-byte detection works regardless of URL.
             text_files: list[tuple[str, bytes, dict]] = []
 
-            if spec.source_url.endswith(".tar.gz") or spec.source_url.endswith(".tgz"):
+            if len(archive_bytes) < 2:
+                _full_corpus_jobs[job_id]["status"] = "failed"
+                _full_corpus_jobs[job_id]["message"] = (
+                    f"Downloaded archive is only {len(archive_bytes)} bytes — "
+                    f"too small to be a valid ZIP or tar.gz."
+                )
+                return
+
+            # ZIP files start with b"PK", gzip files start with b"\x1f\x8b".
+            is_gzip = archive_bytes[:2] == b"\x1f\x8b"
+            is_zip = archive_bytes[:2] == b"PK"
+
+            if is_gzip:
                 with tempfile.TemporaryDirectory() as tmpdir:
                     with tarfile.open(fileobj=io.BytesIO(archive_bytes), mode="r:gz") as tar:
                         tar.extractall(tmpdir)
@@ -327,7 +354,7 @@ async def download_full_reference(
                                                 {"source": "leipzig", "genre": spec.genre},
                                             ))
                                 break
-            elif spec.source_url.endswith(".zip"):
+            elif is_zip:
                 with tempfile.TemporaryDirectory() as tmpdir:
                     with zipfile.ZipFile(io.BytesIO(archive_bytes)) as zf:
                         zf.extractall(tmpdir)
@@ -364,10 +391,25 @@ async def download_full_reference(
                                         text_files.append((fname, content.encode("utf-8"), {"source": name, "genre": genre or spec.genre}))
                                 except Exception as e:
                                     log.warning("extract_file_failed", file=fname, error=str(e))
+            else:
+                # Genuinely unrecognized format — give the user a useful
+                # error rather than the misleading "No text files found".
+                _full_corpus_jobs[job_id]["status"] = "failed"
+                _full_corpus_jobs[job_id]["message"] = (
+                    f"Downloaded archive from {spec.source_url} is neither a "
+                    f"valid ZIP (expected magic bytes b'PK') nor a valid "
+                    f"tar.gz (expected magic bytes b'\\x1f\\x8b'). Got "
+                    f"{archive_bytes[:2]!r} ({len(archive_bytes)} bytes)."
+                )
+                return
 
             if not text_files:
                 _full_corpus_jobs[job_id]["status"] = "failed"
-                _full_corpus_jobs[job_id]["message"] = "No text files found in archive."
+                _full_corpus_jobs[job_id]["message"] = (
+                    f"Archive extracted successfully but contained no .txt or "
+                    f".xml files. Inspected format: "
+                    f"{'tar.gz' if is_gzip else 'zip'}."
+                )
                 return
 
             _full_corpus_jobs[job_id]["status"] = "ingesting"
@@ -428,7 +470,11 @@ async def download_full_reference(
             log.error("download_full_reference_failed", name=name, error=str(e))
 
     import asyncio
-    asyncio.create_task(_process_full_reference())  # noqa: RUF006
+    # Fix #12: hold a strong reference so asyncio doesn't GC the task
+    # mid-download. Discard from the set once complete so we don't leak.
+    task = asyncio.create_task(_process_full_reference())
+    _full_corpus_tasks.add(task)
+    task.add_done_callback(_full_corpus_tasks.discard)
 
     return {
         "name": name,
