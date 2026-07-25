@@ -28,6 +28,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
 
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { useDownloadProgress } from "@/store/downloadProgress";
 import {
   api,
   downloadBlob,
@@ -621,6 +622,9 @@ function BundledReferences() {
     refetchInterval: downloadingName ? 1000 : false, // poll while downloading
   });
 
+  // v0.1.24: Global download progress for the status bar
+  const { setDownloadProgress, clearDownloadProgress } = useDownloadProgress();
+
   const showStatus = (msg: string, kind: "success" | "error" | "info" = "info") => {
     setStatusMsg(msg);
     setStatusKind(kind);
@@ -633,32 +637,91 @@ function BundledReferences() {
     const ref = catalogue.data?.references.find(r => r.name === name);
     if (ref?.format === "full_corpus") {
       showStatus(`Downloading + ingesting ${name} (this may take a few minutes)…`, "info");
+      setDownloadProgress({
+        name, displayName: ref.display_name, status: "downloading",
+        message: "Starting…", progress: 5,
+      });
       try {
-        const result = await api.downloadFullReferenceCorpus(name);
-        showStatus(`✓ ${result.message} (${result.document_count} documents)`, "success");
-        qc.invalidateQueries({ queryKey: ["reference-corpora"] });
-        qc.invalidateQueries({ queryKey: ["corpora"] });
+        // Start the async download job
+        await api.downloadFullReferenceCorpus(name);
+        // Poll for status until complete
+        let pollCount = 0;
+        const maxPolls = 120; // 10 minutes at 5s intervals
+        const poll = async () => {
+          pollCount++;
+          if (pollCount > maxPolls) {
+            setDownloadProgress({ name, displayName: ref.display_name, status: "failed", message: "Timed out", progress: 0 });
+            showStatus(`✗ Download timed out for ${name}`, "error");
+            setDownloadingName(null);
+            return;
+          }
+          try {
+            const status = await api.getFullReferenceStatus(name);
+            const progress = status.status === "downloading" ? 25
+              : status.status === "extracting" ? 50
+              : status.status === "ingesting" ? 75
+              : status.status === "installed" ? 100
+              : status.status === "failed" ? 0 : 50;
+            setDownloadProgress({
+              name, displayName: ref.display_name,
+              status: status.status as any,
+              message: status.message,
+              progress,
+            });
+            if (status.status === "installed") {
+              showStatus(`✓ ${status.message}`, "success");
+              qc.invalidateQueries({ queryKey: ["reference-corpora"] });
+              qc.invalidateQueries({ queryKey: ["corpora"] });
+              setDownloadingName(null);
+              // Auto-clear progress after 10 seconds
+              setTimeout(() => clearDownloadProgress(), 10000);
+              return;
+            }
+            if (status.status === "failed") {
+              showStatus(`✗ ${status.message}`, "error");
+              setDownloadingName(null);
+              return;
+            }
+            // Keep polling
+            setTimeout(poll, 5000);
+          } catch {
+            // If status poll fails, keep trying
+            setTimeout(poll, 5000);
+          }
+        };
+        setTimeout(poll, 2000); // Start polling after 2s
       } catch (e: any) {
         const msg = e?.message || String(e);
         showStatus(`✗ Failed to download ${name}: ${msg}`, "error");
-      } finally {
+        setDownloadProgress({ name, displayName: ref.display_name, status: "failed", message: msg, progress: 0 });
         setDownloadingName(null);
       }
       return;
     }
     // Standard frequency-list download
     showStatus(`Downloading ${name}…`, "info");
+    setDownloadProgress({
+      name, displayName: ref?.display_name || name, status: "downloading",
+      message: "Downloading frequency list…", progress: 50,
+    });
     try {
       const result = await api.downloadReferenceCorpus(name);
       if (result.installed) {
         showStatus(`✓ ${result.message}`, "success");
+        setDownloadProgress({
+          name, displayName: ref?.display_name || name, status: "installed",
+          message: result.message, progress: 100,
+        });
         qc.invalidateQueries({ queryKey: ["reference-corpora"] });
+        setTimeout(() => clearDownloadProgress(), 10000);
       } else {
         showStatus(`✗ ${result.message}`, "error");
+        setDownloadProgress({ name, displayName: ref?.display_name || name, status: "failed", message: result.message, progress: 0 });
       }
     } catch (e: any) {
       const msg = e?.message || String(e);
       showStatus(`✗ Failed to download ${name}: ${msg}`, "error");
+      setDownloadProgress({ name, displayName: ref?.display_name || name, status: "failed", message: msg, progress: 0 });
     } finally {
       setDownloadingName(null);
     }

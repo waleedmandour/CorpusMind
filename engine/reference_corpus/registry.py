@@ -217,33 +217,9 @@ BUNDLED_REFERENCES: list[ReferenceCorpusSpec] = [
         min_corpus_tokens=500,
         tags=("arabic", "msa", "camel"),
     ),
-    # arTenTen and enTenTen are NOT included — they require a Sketch Engine
-    # subscription and cannot be redistributed. The entries below are kept
-    # as placeholders so users know they exist but need a Sketch Engine
-    # account to access.
-    ReferenceCorpusSpec(
-        name="ar-tenten-sample",
-        display_name="arTenTen — Arabic Web Corpus (requires Sketch Engine)",
-        language="ar",
-        description=(
-            "Frequency list sampled from arTenTen12, a multi-billion-token "
-            "Arabic web corpus. NOT downloadable — requires a Sketch Engine "
-            "subscription. Suitable as a Modern Standard Arabic reference "
-            "for keyness analysis of Arabic target corpora."
-        ),
-        source_url="",
-        sha256="",
-        format="tsv_freq",
-        size_hint="~8 MB",
-        license="CC-BY-NC-4.0 (Sketch Engine)",
-        citation=(
-            "Arts, T., Belikov, A., Kilgarriff, A., et al. (2014). arTenTen: "
-            "Arabic Corpus. In: Proceedings of WAC7."
-        ),
-        genre="web",
-        min_corpus_tokens=5_000,
-        tags=("arabic", "web", "msa"),
-    ),
+    # arTenTen removed — it requires a Sketch Engine subscription and
+    # cannot be redistributed. Users who need it should use the Hub
+    # search feature to find alternative Arabic web corpora.
     # v0.1.20: Full reference corpora (downloaded as ZIP/TAR, ingested through
     # the NLP pipeline, stored as proper Corpus rows with subcorpus support)
     ReferenceCorpusSpec(

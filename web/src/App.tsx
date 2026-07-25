@@ -9,6 +9,7 @@ import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { api, waitForEngine } from "@/lib/api";
+import { useDownloadProgress } from "@/store/downloadProgress";
 import { Sidebar } from "@/components/Sidebar";
 import { CommandPalette } from "@/components/CommandPalette";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -137,6 +138,7 @@ export default function App() {
 
       {/* Status bar */}
       <footer className="app-statusbar" role="contentinfo">
+        <DownloadProgressBar />
         <QueryStatusIndicator />
         <span className="status-sep">|</span>
         <span>CorpusMind {versionDisplay}</span>
@@ -178,4 +180,44 @@ function QueryStatusIndicator() {
     );
   }
   return <span className="status-idle">Ready</span>;
+}
+
+/** Shows a download progress bar in the status bar when a reference corpus is being downloaded. */
+function DownloadProgressBar() {
+  const { activeDownload, clearDownloadProgress } = useDownloadProgress();
+  if (!activeDownload) return null;
+
+  const isDone = activeDownload.status === "installed" || activeDownload.status === "failed";
+  const color = activeDownload.status === "failed" ? "var(--danger)"
+    : activeDownload.status === "installed" ? "var(--success)"
+    : "var(--brand-500)";
+
+  return (
+    <div style={{
+      display: "flex", alignItems: "center", gap: "6px",
+      padding: "0 8px", fontSize: "11px", color: "var(--text-muted)",
+    }}>
+      <span style={{ fontWeight: 600, color }}>{activeDownload.status === "installed" ? "✓" : activeDownload.status === "failed" ? "✗" : "⏳"}</span>
+      <span>{activeDownload.displayName}</span>
+      {!isDone && (
+        <div style={{
+          width: "80px", height: "6px",
+          background: "var(--bg-subtle)", borderRadius: "3px", overflow: "hidden",
+        }}>
+          <div style={{
+            width: `${activeDownload.progress}%`, height: "100%",
+            background: color, transition: "width 0.3s ease",
+          }} />
+        </div>
+      )}
+      <span style={{ fontSize: "10px" }}>{activeDownload.message}</span>
+      {isDone && (
+        <button
+          onClick={clearDownloadProgress}
+          style={{ background: "none", border: "none", color: "var(--text-subtle)", cursor: "pointer", fontSize: "11px" }}
+          title="Dismiss"
+        >✕</button>
+      )}
+    </div>
+  );
 }
