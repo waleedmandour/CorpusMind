@@ -834,19 +834,67 @@ async function smartFetch(path: string, init?: RequestInit): Promise<Response> {
   return fetch(url, init);
 }
 
-async function jsonFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const r = await smartFetch(path, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...(init?.headers ?? {}),
-    },
-  });
-  if (!r.ok) {
-    const body = await r.text();
-    throw new Error(`HTTP ${r.status}: ${body}`);
+// Task 1: Track engine readiness so callers can wait for it.
+let _engineReady: boolean | null = null;
+
+/** Check if the engine is accepting connections. Cached after first success. */
+export async function isEngineReady(): Promise<boolean> {
+  if (_engineReady) return true;
+  try {
+    const r = await smartFetch("/api/v1/health");
+    if (r.ok) {
+      _engineReady = true;
+      return true;
+    }
+  } catch {
+    // Engine not ready yet
   }
-  return (await r.json()) as T;
+  return false;
+}
+
+/** Wait for the engine to be ready, polling every 500ms up to maxAttempts. */
+export async function waitForEngine(maxAttempts = 30): Promise<boolean> {
+  for (let i = 0; i < maxAttempts; i++) {
+    if (await isEngineReady()) return true;
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+  return false;
+}
+
+async function jsonFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  // Task 1: Retry on connection errors (engine still starting up).
+  // Only retry on /health and /version endpoints — other endpoints
+  // should fail fast so the user sees errors, not silent retries.
+  const isStartupEndpoint = path.includes("/health") || path.includes("/version");
+  const maxRetries = isStartupEndpoint ? 5 : 0;
+
+  let lastError: Error | null = null;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const r = await smartFetch(path, {
+        ...init,
+        headers: {
+          "Content-Type": "application/json",
+          ...(init?.headers ?? {}),
+        },
+      });
+      if (!r.ok) {
+        const body = await r.text();
+        throw new Error(`HTTP ${r.status}: ${body}`);
+      }
+      return (await r.json()) as T;
+    } catch (e: any) {
+      lastError = e;
+      // Only retry on connection errors (engine not ready), not on HTTP errors
+      const isConnError = !e.message?.includes("HTTP ");
+      if (isConnError && attempt < maxRetries) {
+        await new Promise((resolve) => setTimeout(resolve, 500 * (attempt + 1)));
+        continue;
+      }
+      throw e;
+    }
+  }
+  throw lastError ?? new Error("Unknown fetch error");
 }
 
 // ----------------------------------------------------------------------- //
@@ -1380,6 +1428,9 @@ export const api = {
     jsonFetch<{ name: string; status: string; corpus_id: string; document_count: number; total_files: number; message: string }>(`/api/v1/reference-corpora/${name}/download-full`, {
       method: "POST",
     }),
+  // Task 3: Poll full-corpus download status (BNC Baby, BAWE, Leipzig)
+  getFullReferenceStatus: (name: string) =>
+    jsonFetch<{ name: string; status: string; message: string; corpus_id: string | null; document_count: number }>(`/api/v1/reference-corpora/${name}/download-full/status`),
   cancelReferenceDownload: (name: string) =>
     jsonFetch<{ name: string; cancel_requested: boolean }>(`/api/v1/reference-corpora/${name}/cancel`, {
       method: "POST",
@@ -1433,6 +1484,13 @@ export const api = {
     ),
   hubDownloadUrl: (hub: string, corpusId: string, title: string, extra: Record<string, unknown>) =>
     `${ENGINE_BASE}/api/v1/hub/download?hub=${encodeURIComponent(hub)}&corpus_id=${encodeURIComponent(corpusId)}&title=${encodeURIComponent(title)}&extra=${encodeURIComponent(JSON.stringify(extra))}`,
+  // Task 5: Proper hub download via smartFetch (uses Tauri HTTP plugin in desktop)
+  hubDownload: async (hub: string, corpusId: string, title: string, extra: Record<string, unknown>): Promise<Blob> => {
+    const path = `/api/v1/hub/download?hub=${encodeURIComponent(hub)}&corpus_id=${encodeURIComponent(corpusId)}&title=${encodeURIComponent(title)}&extra=${encodeURIComponent(JSON.stringify(extra))}`;
+    const r = await smartFetch(path);
+    if (!r.ok) throw new Error(`HTTP ${r.status}: ${await r.text()}`);
+    return await r.blob();
+  },
 };
 
 // ----------------------------------------------------------------------- //

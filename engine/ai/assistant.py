@@ -57,23 +57,48 @@ class Assistant:
     render the ungrounded badge (§11.1, load-bearing)."""
 
     SYSTEM_PROMPT = (
-        "You are the CorpusMind AI Assistant. You are a tool-using agent, NOT a chatbot.\n"
-        "Rules:\n"
-        "1. Every empirical claim you make (about word frequencies, collocations, "
-        "keyness, image content, etc.) MUST come from a tool call. If you have not "
-        "called a tool for a claim, do not make the claim.\n"
-        "2. If a user asks something you cannot ground in a tool result, say so "
-        "explicitly: 'I cannot ground this in corpus evidence — answering from parametric "
-        "memory only.' The UI will mark your answer as ungrounded.\n"
-        "3. Interpretive claims (CDA, ideology, power, metaphor) MUST be phrased as "
-        "framework-lensed hypotheses — 'Under a [Framework] reading, X may indicate Y' — "
-        "never as bare assertions of fact (§4 Principle 5).\n"
-        "4. Never state ideology, bias, or power relations as settled fact.\n"
-        "5. Cite evidence IDs verbatim from tool results when you reference them "
-        "(e.g. 'line doc-abc:5:12' or 'frequency row for \"the\"').\n"
-        "6. For collocations, always state the window size and minimum frequency.\n"
-        "7. For keyness, always pair significance (log-likelihood) with effect size "
-        "(Log Ratio or %DIFF) — never report significance alone.\n"
+        "You are the CorpusMind AI Assistant — a corpus linguistics expert.\n"
+        "You are a tool-using agent, NOT a chatbot.\n\n"
+        "## How to Read CorpusMind Tool Results\n\n"
+        "### Frequency Results\n"
+        "Each row has: item (word/lemma/POS), freq (raw count), per_million "
+        "(normalized frequency), percent (proportion of all tokens). Higher "
+        "per_million means more frequent relative to corpus size.\n\n"
+        "### Collocation Results\n"
+        "Each row has: collocate, O (co-occurrence count), fx (node freq), "
+        "fy (collocate freq), N (corpus size), plus measures:\n"
+        "- MI (Mutual Information): >3 = strong association. Negative = repulsion.\n"
+        "- t_score: >2 = significant. Higher = stronger.\n"
+        "- log_likelihood: higher = more significant co-occurrence.\n"
+        "- Dice: 0-1, higher = stronger.\n"
+        "- LogDice: higher = stronger (range typically -15 to 0).\n"
+        "- chi_square: higher = more significant.\n"
+        "- Delta P: -1 to 1, positive = collocate depends on node.\n"
+        "Always report window size and minimum frequency with collocations.\n\n"
+        "### Keyness Results\n"
+        "positive_keywords = over-represented in target vs reference.\n"
+        "negative_keywords = under-represented in target.\n"
+        "Each row has: term, f1 (target freq), f2 (reference freq), plus:\n"
+        "- log_likelihood: significance test (>3.84 = p<0.05, >6.63 = p<0.01).\n"
+        "- chi_square: significance test.\n"
+        "- log_ratio: effect size. Positive = more in target. Negative = less.\n"
+        "- pct_diff: percentage difference. Positive = more in target.\n"
+        "ALWAYS pair significance (LL) with effect size (Log Ratio or %DIFF).\n\n"
+        "### Concordance (KWIC) Results\n"
+        "Each line has: line_id, left context, node (matched word), right "
+        "context, POS tag, lemma. The node is the word being studied.\n\n"
+        "## Rules\n"
+        "1. Every empirical claim MUST come from a tool call. Do not make "
+        "claims without tool evidence.\n"
+        "2. If you cannot ground a claim, say: 'I cannot ground this in corpus "
+        "evidence — answering from parametric memory only.'\n"
+        "3. Interpretive claims (CDA, ideology, metaphor) MUST be phrased as "
+        "framework-lensed hypotheses, never as settled fact.\n"
+        "4. Cite evidence IDs verbatim (e.g. 'line doc-abc:5:12').\n"
+        "5. When interpreting statistics, explain what the numbers mean in "
+        "plain language for a linguist who may not be a statistician.\n"
+        "6. If tool results are large (>50 rows), summarize the top findings "
+        "rather than listing every row.\n"
     )
 
     def __init__(self, provider: ModelProvider, *, model: str | None = None,
@@ -224,7 +249,10 @@ class Assistant:
                             ref=f"tool:{name}:{len(tool_calls)}",
                             snippet=json.dumps(result)[:500],
                         ))
-                    messages.append(Message(role="tool", content=json.dumps(result), name=name))
+                    # Task 4: Summarize large tool results before sending to LLM
+                    # to avoid token-limit truncation and hallucination.
+                    result_str = _summarize_tool_result(name, result)
+                    messages.append(Message(role="tool", content=result_str, name=name))
                 except Exception as e:
                     tool_calls.append({"name": name, "args": args, "ok": False, "error": str(e)})
                     messages.append(Message(role="tool", content=f"ERROR: {e}", name=name))
@@ -386,3 +414,87 @@ def _user_message_needs_tools(user_text: str) -> bool:
     # Default: pass tools for any message longer than 30 chars (likely
     # a real question). Short non-question messages are conversational.
     return len(text) > 30
+
+
+# Task 4: Summarize large tool results to fit within LLM token limits.
+# Without this, large frequency lists or concordance results get truncated
+# by the LLM's context window, causing hallucinated interpretations.
+def _summarize_tool_result(tool_name: str, result: dict) -> str:
+    """Format tool results as structured text for the LLM.
+
+    For large results (>50 rows), only the top 20 rows are included,
+    plus a summary of the rest.
+    """
+    MAX_ROWS = 20
+
+    if not isinstance(result, dict):
+        return json.dumps(result)[:2000]
+
+    # Concordance: show first 20 lines + total count
+    if "lines" in result and isinstance(result["lines"], list):
+        lines = result["lines"]
+        total = result.get("total", len(lines))
+        if len(lines) <= MAX_ROWS:
+            return json.dumps(result)
+        summary = {
+            "total": total,
+            "showing": f"Top {MAX_ROWS} of {len(lines)} lines",
+            "lines": lines[:MAX_ROWS],
+            "note": f"{len(lines) - MAX_ROWS} more lines omitted. Total matches: {total}.",
+        }
+        return json.dumps(summary, ensure_ascii=False)
+
+    # Frequency: show top 20 rows + stats
+    if "rows" in result and isinstance(result["rows"], list):
+        rows = result["rows"]
+        total_tokens = result.get("total_tokens", "?")
+        total_types = result.get("total_types", "?")
+        sttr = result.get("sttr", "?")
+        if len(rows) <= MAX_ROWS:
+            return json.dumps(result, ensure_ascii=False)
+        summary = {
+            "total_tokens": total_tokens,
+            "total_types": total_types,
+            "sttr": sttr,
+            "showing": f"Top {MAX_ROWS} of {len(rows)} types",
+            "rows": rows[:MAX_ROWS],
+            "note": f"{len(rows) - MAX_ROWS} more types omitted.",
+        }
+        return json.dumps(summary, ensure_ascii=False)
+
+    # Keyness: show top 20 positive + top 20 negative
+    if "positive_keywords" in result and "negative_keywords" in result:
+        pos = result["positive_keywords"]
+        neg = result["negative_keywords"]
+        N1 = result.get("N1", "?")
+        N2 = result.get("N2", "?")
+        measures = result.get("measures", [])
+        summary = {
+            "N1": N1,
+            "N2": N2,
+            "measures": measures,
+            "positive_keywords": pos[:MAX_ROWS],
+            "negative_keywords": neg[:MAX_ROWS],
+            "note": f"{len(pos)} positive + {len(neg)} negative keywords total. Showing top {MAX_ROWS} of each.",
+        }
+        return json.dumps(summary, ensure_ascii=False)
+
+    # Collocations: show top 20 rows
+    if "rows" in result and "node" in result:
+        rows = result["rows"]
+        summary = {
+            "node": result.get("node"),
+            "window": result.get("window"),
+            "min_freq": result.get("min_freq"),
+            "measures": result.get("measures"),
+            "showing": f"Top {MAX_ROWS} of {len(rows)} collocates",
+            "rows": rows[:MAX_ROWS],
+            "note": f"{len(rows) - MAX_ROWS} more collocates omitted." if len(rows) > MAX_ROWS else "",
+        }
+        return json.dumps(summary, ensure_ascii=False)
+
+    # Default: if result is very large, truncate
+    result_str = json.dumps(result, ensure_ascii=False)
+    if len(result_str) > 4000:
+        return result_str[:4000] + "\n... [truncated: result was too large]"
+    return result_str

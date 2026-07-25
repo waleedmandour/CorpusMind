@@ -24,10 +24,9 @@ export function useEngineVersion(): string {
     queryKey: ["version"],
     queryFn: api.version,
     staleTime: Infinity, // version doesn't change during a session
-    retry: false,
+    retry: 5,           // Task 1: retry on startup when engine isn't ready
+    retryDelay: (attempt) => 500 * (attempt + 1),  // 500ms, 1s, 1.5s, 2s, 2.5s
   });
-  // Return the engine's version if available, otherwise the fallback.
-  // The engine returns { version: "0.1.15", name: "corpusmind-engine" }
   return query.data?.version ?? FALLBACK_VERSION;
 }
 

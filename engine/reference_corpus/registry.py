@@ -135,29 +135,9 @@ BUNDLED_REFERENCES: list[ReferenceCorpusSpec] = [
         min_corpus_tokens=1_000,
         tags=("english", "british", "written"),
     ),
-    ReferenceCorpusSpec(
-        name="bnc-baby-sample",
-        display_name="BNC Baby — British National Corpus sample (4M words)",
-        language="en",
-        description=(
-            "A 4-million-token balanced sample of the British National Corpus "
-            "covering four registers: academic, news, fiction, and spoken. The "
-            "gold-standard reference for British English keyness analysis."
-        ),
-        source_url="",  # populated when the file is hosted on a stable mirror
-        sha256="",
-        format="tsv_freq",
-        size_hint="~12 MB",
-        license="BNC Licence (research-only)",
-        citation=(
-            "The British National Corpus, version 3 (BNC XML Edition). 2007. "
-            "Distributed by Oxford University Computing Services on behalf of "
-            "the BNC Consortium."
-        ),
-        genre="mixed",
-        min_corpus_tokens=10_000,
-        tags=("english", "british", "balanced"),
-    ),
+    # Task 2: Removed duplicate "bnc-baby-sample" entry — it was a placeholder
+    # with empty source_url. The real BNC Baby is the "bnc-baby" full_corpus
+    # entry added in v0.1.20 below.
     # v0.1.17: New freely-licensed reference corpora
     ReferenceCorpusSpec(
         name="leipzig-english-news",

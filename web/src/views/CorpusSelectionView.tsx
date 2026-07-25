@@ -460,15 +460,10 @@ function ReferenceDownload() {
     setDownloadingResult(result);
     setDownloadStatus({ kind: "info", msg: `Downloading "${result.title}"…` });
     try {
-      const url = api.hubDownloadUrl(result.hub, result.id, result.title, result.extra);
-      // smartFetch handles Tauri HTTP plugin + credentials + error mapping
-      const resp = await fetch(url.startsWith("http") ? url : `${window.location.origin}${url}`);
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const blob = await resp.blob();
-      // Pick a reasonable filename
+      // Task 5: Use api.hubDownload (goes through smartFetch/Tauri HTTP plugin)
+      const blob = await api.hubDownload(result.hub, result.id, result.title, result.extra);
       const safeTitle = result.title.replace(/[^A-Za-z0-9._-]/g, "_").slice(0, 60) || "reference";
       const filename = `${safeTitle}.txt`;
-      // downloadBlob uses the native save-file dialog inside Tauri
       await downloadBlob(blob, filename);
       setDownloadStatus({
         kind: "success",
@@ -481,9 +476,7 @@ function ReferenceDownload() {
     }
   };
 
-  // One-click "Use as reference corpus": create a corpus row + re-fetch the
-  // file + upload it through the proper ingestion pipeline so it gets real
-  // tokens. This is the same path ReferenceUpload uses.
+  // One-click "Use as reference corpus": download + create corpus + ingest
   const handleUseAsReference = async (result: HubSearchResult) => {
     if (!activeProjectId) {
       setDownloadStatus({ kind: "error", msg: "Please create or select a project first." });
@@ -492,16 +485,14 @@ function ReferenceDownload() {
     setDownloadingResult(result);
     setDownloadStatus({ kind: "info", msg: `Ingesting "${result.title}" as reference corpus…` });
     try {
-      const url = api.hubDownloadUrl(result.hub, result.id, result.title, result.extra);
-      const resp = await fetch(url.startsWith("http") ? url : `${window.location.origin}${url}`);
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const blob = await resp.blob();
+      // Task 5: Use api.hubDownload (goes through smartFetch/Tauri HTTP plugin)
+      const blob = await api.hubDownload(result.hub, result.id, result.title, result.extra);
       const safeTitle = result.title.replace(/[^A-Za-z0-9._-]/g, "_").slice(0, 60) || "reference";
       const filename = `${safeTitle}.txt`;
       const file = new File([blob], filename, { type: "text/plain" });
       // 1. Create the corpus row
       const corpus = await api.createCorpus(activeProjectId, `Reference: ${result.title}`, language, "reference");
-      // 2. Upload + ingest through the pipeline (same as ReferenceUpload)
+      // 2. Upload + ingest through the pipeline
       await api.uploadDocuments(corpus.id, [file], language);
       // 3. Set as active reference
       setActive(corpus.id);

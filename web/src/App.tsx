@@ -8,7 +8,7 @@
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
-import { api } from "@/lib/api";
+import { api, waitForEngine } from "@/lib/api";
 import { Sidebar } from "@/components/Sidebar";
 import { CommandPalette } from "@/components/CommandPalette";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -50,18 +50,25 @@ export default function App() {
     }
   }, [onboardingComplete, setOnboardingOpen]);
 
-  // v0.1.17: Auto-validate the persisted active corpus on startup.
-  // The zustand/persist middleware saves activeCorpusId to localStorage,
-  // but the corpus might have been deleted in a different session. This
-  // hook validates the ID still exists before activating it.
+  // Task 1: Wait for the engine to be ready BEFORE validating the persisted
+  // corpus ID. Previously, the frontend fired api.getCorpus() immediately on
+  // mount, before the engine was accepting connections — causing a "UNKNOWN"
+  // error and clearing the persisted corpus ID even though it still existed.
   const clearActiveCorpus = useApp((s) => s.setActiveCorpus);
   useEffect(() => {
-    if (activeCorpusId) {
-      api.getCorpus(activeCorpusId).catch(() => {
-        // Corpus no longer exists — clear it
-        clearActiveCorpus(null);
-      });
-    }
+    let cancelled = false;
+    (async () => {
+      // Wait for engine to be ready (up to 15 seconds)
+      const ready = await waitForEngine(30);
+      if (cancelled || !ready) return;
+      // Now safe to validate the persisted corpus ID
+      if (activeCorpusId) {
+        api.getCorpus(activeCorpusId).catch(() => {
+          if (!cancelled) clearActiveCorpus(null);
+        });
+      }
+    })();
+    return () => { cancelled = true; };
   }, []); // Run only once on mount
 
   return (
