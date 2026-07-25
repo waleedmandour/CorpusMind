@@ -1,6 +1,7 @@
 """Analysis API routes: concordance, frequency, collocation, keyness, dispersion."""
 from __future__ import annotations
 
+import asyncio
 from dataclasses import asdict
 from typing import Literal
 
@@ -17,6 +18,11 @@ from stats.service import (
 )
 from storage.models import Corpus
 from storage.session import get_session
+
+# Fix #8: Concurrency limiter for expensive analysis queries.
+# Prevents a single user from exhausting RAM by issuing many concurrent
+# collocation/keyness queries, each of which loads tokens into memory.
+_analysis_semaphore = asyncio.Semaphore(4)
 
 router = APIRouter()
 
@@ -90,14 +96,16 @@ class CollocationRequest(BaseModel):
 
 @router.post("/corpora/{cid}/collocations")
 async def collocations(cid: str, body: CollocationRequest, session: AsyncSession = Depends(get_session)) -> dict:
-    if not await session.get(Corpus, cid):
-        raise HTTPException(404, "Corpus not found")
-    r = await compute_collocations(
-        session, cid, body.node,
-        level=body.level, window=body.window, min_freq=body.min_freq,
-        measures=body.measures, limit=body.limit,
-    )
-    return asdict(r)
+    # Fix #8: Limit concurrent expensive queries to prevent RAM exhaustion
+    async with _analysis_semaphore:
+        if not await session.get(Corpus, cid):
+            raise HTTPException(404, "Corpus not found")
+        r = await compute_collocations(
+            session, cid, body.node,
+            level=body.level, window=body.window, min_freq=body.min_freq,
+            measures=body.measures, limit=body.limit,
+        )
+        return asdict(r)
 
 
 # --------------------------------------------------------------------------- #
@@ -114,21 +122,20 @@ class KeynessRequest(BaseModel):
 
 @router.post("/corpora/{cid}/keyness")
 async def keyness(cid: str, body: KeynessRequest, session: AsyncSession = Depends(get_session)) -> dict:
-    if not await session.get(Corpus, cid):
-        raise HTTPException(404, "Target corpus not found")
-    if not await session.get(Corpus, body.reference_corpus_id):
-        raise HTTPException(404, "Reference corpus not found")
-    try:
-        r = await compute_keyness(
-            session, cid, body.reference_corpus_id,
-            min_freq=body.min_freq, measures=body.measures, limit=body.limit,
-        )
-    except ValueError as e:
-        # Issue 1: surface "no ingested version" as a 422, not a silent empty
-        # result and not a 500. The UI uses the message to tell the user
-        # exactly what to fix.
-        raise HTTPException(status_code=422, detail=str(e)) from e
-    return asdict(r)
+    # Fix #8: Limit concurrent expensive queries
+    async with _analysis_semaphore:
+        if not await session.get(Corpus, cid):
+            raise HTTPException(404, "Target corpus not found")
+        if not await session.get(Corpus, body.reference_corpus_id):
+            raise HTTPException(404, "Reference corpus not found")
+        try:
+            r = await compute_keyness(
+                session, cid, body.reference_corpus_id,
+                min_freq=body.min_freq, measures=body.measures, limit=body.limit,
+            )
+        except ValueError as e:
+            raise HTTPException(status_code=422, detail=str(e)) from e
+        return asdict(r)
 
 
 # --------------------------------------------------------------------------- #

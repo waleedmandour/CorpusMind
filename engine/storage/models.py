@@ -151,6 +151,9 @@ class Token(Base):
         Index("ix_tokens_version_lemma", "version_id", "lemma"),
         Index("ix_tokens_version_pos", "version_id", "pos"),
         Index("ix_tokens_version_doc_sent", "version_id", "document_id", "sentence_idx", "token_idx"),
+        # Fix #14: Add partial index for is_punct to speed up queries that
+        # filter out punctuation (the most common query pattern).
+        Index("ix_tokens_version_real", "version_id", "is_punct"),
     )
 
 

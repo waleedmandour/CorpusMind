@@ -5,6 +5,7 @@ Used by the corpus-management API (§8.1, §8.2).
 """
 from __future__ import annotations
 
+import asyncio
 import time
 
 from sqlalchemy import select
@@ -55,9 +56,13 @@ async def ingest_document(
     await session.flush()  # get doc.id
 
     # Run the NLP pipeline
+    # Fix #2: spaCy's parse_document() is CPU-bound and synchronous.
+    # Calling it directly in an async function blocks the entire event loop,
+    # freezing all other API requests. Wrap in asyncio.to_thread() so it
+    # runs on a thread pool without blocking.
     pipeline = get_pipeline(backend="spacy", language=lang)
     info = pipeline.info()
-    parsed = pipeline.parse_document(cleaned_text)
+    parsed = await asyncio.to_thread(pipeline.parse_document, cleaned_text)
 
     # Reuse the latest annotation version for this corpus if the pipeline recipe
     # matches; otherwise create a new one (§4.8 reproducibility — versioning

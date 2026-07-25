@@ -223,10 +223,13 @@ async def keyness_with_reference(
 # --------------------------------------------------------------------------- #
 
 
+# Fix #11: Track full-corpus download jobs so the UI can poll status
+_full_corpus_jobs: dict[str, dict] = {}
+
+
 @router.post("/reference-corpora/{name}/download-full")
 async def download_full_reference(
     name: str,
-    session: AsyncSession = Depends(get_session),
 ) -> dict:
     """Download a full reference corpus (ZIP/tar.gz), extract text files,
     create a Corpus row, and ingest through the full NLP pipeline.
@@ -272,164 +275,174 @@ async def download_full_reference(
     if not spec.source_url:
         raise HTTPException(400, f"Reference '{name}' has no download URL.")
 
-    log.info("download_full_reference_start", name=name, url=spec.source_url)
+    # Fix #11: Return a job ID immediately and process in background
+    # to avoid HTTP timeouts on large downloads (BAWE is 108 MB + ingestion)
+    job_id = f"fullref_{name}"
+    _full_corpus_jobs[job_id] = {
+        "name": name,
+        "status": "downloading",
+        "progress": 0,
+        "message": "Starting download…",
+        "corpus_id": None,
+        "document_count": 0,
+    }
 
-    # 1. Download the archive
-    try:
-        async with httpx.AsyncClient(timeout=httpx.Timeout(300.0, connect=30.0)) as client:
-            resp = await client.get(spec.source_url, follow_redirects=True)
-            resp.raise_for_status()
-    except httpx.HTTPError as e:
-        raise HTTPException(502, f"Download failed: {e}") from e
+    async def _process_full_reference():
+        """Background task: download → extract → ingest."""
 
-    archive_bytes = resp.content
-    log.info("download_full_reference_done", name=name, size=len(archive_bytes))
+        from storage.session import session_scope
 
-    # 2. Extract text files from the archive
-    text_files: list[tuple[str, bytes, dict]] = []  # (filename, content, metadata)
-
-    if spec.source_url.endswith(".tar.gz") or spec.source_url.endswith(".tgz"):
-        # Leipzig corpus: tar.gz containing sentences.txt + words.txt
-        with tempfile.TemporaryDirectory() as tmpdir:
-            with tarfile.open(fileobj=io.BytesIO(archive_bytes), mode="r:gz") as tar:
-                tar.extractall(tmpdir)
-
-            # Find the sentences file
-            for root, _dirs, files in os.walk(tmpdir):
-                for fname in files:
-                    if fname.endswith("-sentences.txt"):
-                        filepath = os.path.join(root, fname)
-                        with open(filepath, encoding="utf-8") as f:
-                            for line_num, line in enumerate(f):
-                                parts = line.strip().split("\t")
-                                if len(parts) >= 2:
-                                    sentence = parts[1]
-                                    text_files.append((
-                                        f"{fname}_{line_num}.txt",
-                                        sentence.encode("utf-8"),
-                                        {"source": "leipzig", "genre": spec.genre},
-                                    ))
-                        break  # Only process the first sentences file
-
-    elif spec.source_url.endswith(".zip"):
-        # BNC Baby / BAWE: ZIP containing XML or text files
-        with tempfile.TemporaryDirectory() as tmpdir:
-            with zipfile.ZipFile(io.BytesIO(archive_bytes)) as zf:
-                zf.extractall(tmpdir)
-
-            # Walk and find text/XML files, organized by subdirectory (genre)
-            for root, _dirs, files in os.walk(tmpdir):
-                # Determine genre from directory name
-                dir_name = os.path.basename(root) if root != tmpdir else ""
-                genre = ""
-                if dir_name.lower() in ("aca", "academic"):
-                    genre = "academic"
-                elif dir_name.lower() in ("fic", "fiction"):
-                    genre = "fiction"
-                elif dir_name.lower() in ("news", "newspaper"):
-                    genre = "news"
-                elif dir_name.lower() in ("dem", "spoken", "conv"):
-                    genre = "spoken"
-
-                for fname in sorted(files):
-                    if fname.endswith((".txt", ".xml")):
-                        filepath = os.path.join(root, fname)
-                        try:
-                            with open(filepath, encoding="utf-8", errors="replace") as f:
-                                content = f.read()
-                            # For XML files, extract text content
-                            if fname.endswith(".xml"):
-                                from bs4 import BeautifulSoup
-                                soup = BeautifulSoup(content, "xml")
-                                # Try common XML text containers
-                                text_parts = []
-                                for tag in soup.find_all(["w", "c", "s", "p", "text", "body"]):
-                                    if tag.name in ("w", "c"):
-                                        text_parts.append(tag.get_text())
-                                    elif tag.name in ("s", "p"):
-                                        text_parts.append(tag.get_text() + " ")
-                                content = " ".join(text_parts).strip()
-                                if not content:
-                                    # Fallback: strip all tags
-                                    content = soup.get_text(separator=" ")
-                            if content.strip():
-                                meta = {"source": name, "genre": genre or spec.genre}
-                                text_files.append((fname, content.encode("utf-8"), meta))
-                        except Exception as e:
-                            log.warning("extract_file_failed", file=fname, error=str(e))
-
-    if not text_files:
-        raise HTTPException(500, f"No text files found in the downloaded archive for '{name}'.")
-
-    # 3. Find or create a project for reference corpora
-    from sqlalchemy import select as sa_select
-    stmt = sa_select(Project).where(Project.name == "Reference Corpora")
-    project = (await session.execute(stmt)).scalar_one_or_none()
-    if project is None:
-        project = Project(name="Reference Corpora")
-        session.add(project)
-        await session.flush()
-
-    # 4. Create a Corpus row
-    # Check if a corpus with this name already exists
-    stmt = sa_select(CorpusModel).where(
-        CorpusModel.project_id == project.id,
-        CorpusModel.name == spec.display_name,
-    )
-    existing_corpus = (await session.execute(stmt)).scalar_one_or_none()
-    if existing_corpus is not None:
-        # Already ingested — return the existing corpus
-        await session.commit()
-        return {
-            "name": name,
-            "status": "already_installed",
-            "corpus_id": existing_corpus.id,
-            "document_count": len(text_files),
-            "message": f"Reference corpus '{spec.display_name}' is already installed.",
-        }
-
-    corpus = CorpusModel(
-        project_id=project.id,
-        name=spec.display_name,
-        language=spec.language,
-        genre=spec.genre,
-    )
-    session.add(corpus)
-    await session.flush()
-
-    # 5. Ingest each text file through the NLP pipeline
-    ingested = 0
-    for filename, content, meta in text_files[:500]:  # Cap at 500 docs for performance
         try:
-            await ingest_document(
-                session, corpus, filename, content,
-                metadata=meta, language=spec.language,
-            )
-            ingested += 1
+            _full_corpus_jobs[job_id]["status"] = "downloading"
+            _full_corpus_jobs[job_id]["message"] = f"Downloading {name}…"
+            log.info("download_full_reference_start", name=name, url=spec.source_url)
+
+            async with httpx.AsyncClient(timeout=httpx.Timeout(300.0, connect=30.0)) as client:
+                resp = await client.get(spec.source_url, follow_redirects=True)
+                resp.raise_for_status()
+
+            archive_bytes = resp.content
+            _full_corpus_jobs[job_id]["message"] = f"Downloaded {len(archive_bytes) // 1024} KB. Extracting…"
+            _full_corpus_jobs[job_id]["status"] = "extracting"
+            log.info("download_full_reference_done", name=name, size=len(archive_bytes))
+
+            # Extract text files
+            text_files: list[tuple[str, bytes, dict]] = []
+
+            if spec.source_url.endswith(".tar.gz") or spec.source_url.endswith(".tgz"):
+                with tempfile.TemporaryDirectory() as tmpdir:
+                    with tarfile.open(fileobj=io.BytesIO(archive_bytes), mode="r:gz") as tar:
+                        tar.extractall(tmpdir)
+                    for root, _d, files in os.walk(tmpdir):
+                        for fname in files:
+                            if fname.endswith("-sentences.txt"):
+                                filepath = os.path.join(root, fname)
+                                with open(filepath, encoding="utf-8") as f:
+                                    for line_num, line in enumerate(f):
+                                        parts = line.strip().split("\t")
+                                        if len(parts) >= 2:
+                                            text_files.append((
+                                                f"{fname}_{line_num}.txt",
+                                                parts[1].encode("utf-8"),
+                                                {"source": "leipzig", "genre": spec.genre},
+                                            ))
+                                break
+            elif spec.source_url.endswith(".zip"):
+                with tempfile.TemporaryDirectory() as tmpdir:
+                    with zipfile.ZipFile(io.BytesIO(archive_bytes)) as zf:
+                        zf.extractall(tmpdir)
+                    for root, _d, files in os.walk(tmpdir):
+                        dir_name = os.path.basename(root) if root != tmpdir else ""
+                        genre = ""
+                        if dir_name.lower() in ("aca", "academic"):
+                                        genre = "academic"
+                        elif dir_name.lower() in ("fic", "fiction"):
+                                        genre = "fiction"
+                        elif dir_name.lower() in ("news", "newspaper"):
+                                        genre = "news"
+                        elif dir_name.lower() in ("dem", "spoken", "conv"):
+                                        genre = "spoken"
+                        for fname in sorted(files):
+                            if fname.endswith((".txt", ".xml")):
+                                filepath = os.path.join(root, fname)
+                                try:
+                                    with open(filepath, encoding="utf-8", errors="replace") as f:
+                                        content = f.read()
+                                    if fname.endswith(".xml"):
+                                        from bs4 import BeautifulSoup
+                                        soup = BeautifulSoup(content, "xml")
+                                        text_parts = []
+                                        for tag in soup.find_all(["w", "c", "s", "p", "text", "body"]):
+                                            if tag.name in ("w", "c"):
+                                                text_parts.append(tag.get_text())
+                                            elif tag.name in ("s", "p"):
+                                                text_parts.append(tag.get_text() + " ")
+                                        content = " ".join(text_parts).strip()
+                                        if not content:
+                                            content = soup.get_text(separator=" ")
+                                    if content.strip():
+                                        text_files.append((fname, content.encode("utf-8"), {"source": name, "genre": genre or spec.genre}))
+                                except Exception as e:
+                                    log.warning("extract_file_failed", file=fname, error=str(e))
+
+            if not text_files:
+                _full_corpus_jobs[job_id]["status"] = "failed"
+                _full_corpus_jobs[job_id]["message"] = "No text files found in archive."
+                return
+
+            _full_corpus_jobs[job_id]["status"] = "ingesting"
+            _full_corpus_jobs[job_id]["message"] = f"Ingesting {len(text_files)} documents…"
+
+            # Create corpus + ingest in its own session
+            async with session_scope() as session:
+                from sqlalchemy import select as sa_select
+                stmt = sa_select(Project).where(Project.name == "Reference Corpora")
+                project = (await session.execute(stmt)).scalar_one_or_none()
+                if project is None:
+                    project = Project(name="Reference Corpora")
+                    session.add(project)
+                    await session.flush()
+
+                stmt = sa_select(CorpusModel).where(
+                    CorpusModel.project_id == project.id,
+                    CorpusModel.name == spec.display_name,
+                )
+                existing = (await session.execute(stmt)).scalar_one_or_none()
+                if existing is not None:
+                    _full_corpus_jobs[job_id]["status"] = "installed"
+                    _full_corpus_jobs[job_id]["corpus_id"] = existing.id
+                    _full_corpus_jobs[job_id]["message"] = "Already installed."
+                    return
+
+                corpus = CorpusModel(
+                    project_id=project.id, name=spec.display_name,
+                    language=spec.language, genre=spec.genre,
+                )
+                session.add(corpus)
+                await session.flush()
+
+                ingested = 0
+                for filename, content, meta in text_files[:500]:
+                    try:
+                        await ingest_document(session, corpus, filename, content, metadata=meta, language=spec.language)
+                        ingested += 1
+                        if ingested % 10 == 0:
+                            _full_corpus_jobs[job_id]["message"] = f"Ingesting {ingested}/{len(text_files)}…"
+                    except Exception as e:
+                        log.warning("ingest_reference_doc_failed", file=filename, error=str(e))
+
+                new_stats = dict(corpus.stats or {})
+                new_stats.update({"document_count": ingested, "reference_name": name, "reference_license": spec.license})
+                corpus.stats = new_stats
+                await session.commit()
+
+                _full_corpus_jobs[job_id]["status"] = "installed"
+                _full_corpus_jobs[job_id]["corpus_id"] = corpus.id
+                _full_corpus_jobs[job_id]["document_count"] = ingested
+                _full_corpus_jobs[job_id]["message"] = f"Installed {ingested} documents."
+                log.info("download_full_reference_complete", name=name, corpus_id=corpus.id, ingested=ingested)
+
         except Exception as e:
-            log.warning("ingest_reference_doc_failed", file=filename, error=str(e))
+            _full_corpus_jobs[job_id]["status"] = "failed"
+            _full_corpus_jobs[job_id]["message"] = str(e)
+            log.error("download_full_reference_failed", name=name, error=str(e))
 
-    # 6. Update corpus stats (reassign dict for SQLAlchemy)
-    new_stats = dict(corpus.stats or {})
-    new_stats.update({
-        "document_count": ingested,
-        "reference_name": name,
-        "reference_license": spec.license,
-    })
-    corpus.stats = new_stats
-
-    await session.commit()
-
-    log.info(
-        "download_full_reference_complete",
-        name=name, corpus_id=corpus.id, ingested=ingested, total=len(text_files),
-    )
+    import asyncio
+    asyncio.create_task(_process_full_reference())  # noqa: RUF006
 
     return {
         "name": name,
-        "status": "installed",
-        "corpus_id": corpus.id,
-        "document_count": ingested,
-        "total_files": len(text_files),
-        "message": f"Downloaded and ingested {ingested} documents from '{spec.display_name}'.",
+        "status": "started",
+        "job_id": job_id,
+        "message": f"Download started for '{spec.display_name}'. Poll GET /reference-corpora/{name}/download-full/status for progress.",
     }
+
+
+@router.get("/reference-corpora/{name}/download-full/status")
+async def download_full_status(name: str) -> dict:
+    """Poll the status of a full-corpus download job."""
+    job_id = f"fullref_{name}"
+    job = _full_corpus_jobs.get(job_id)
+    if not job:
+        return {"name": name, "status": "not_started", "message": "No download job found."}
+    return job

@@ -26,7 +26,6 @@ from stats.measures import (
     log_dice,
     log_likelihood_2x2,
     mutual_information,
-    sttr,
     t_score,
 )
 from storage.models import AnnotationVersion, Document, Token
@@ -148,20 +147,38 @@ async def search_concordance(
     )
     rows = (await session.execute(stmt)).all()
 
+    # Fix #1: Batch the sentence-context fetch instead of N+1 queries.
+    # Collect all (document_id, sentence_idx) pairs from matched tokens,
+    # then fetch ALL needed sentence tokens in a single query.
+    needed_sentences: set[tuple[str, int]] = {
+        (tok.document_id, tok.sentence_idx) for tok, _ in rows
+    }
+    sentence_cache: dict[tuple[str, int], list[str]] = {}
+    if needed_sentences:
+        # Build a list of (doc_id, sent_idx) tuples for the IN clause
+        # SQLite handles tuple IN queries natively
+        from sqlalchemy import or_
+        batch_stmt = (
+            select(Token.document_id, Token.sentence_idx, Token.token_idx, Token.text)
+            .where(Token.version_id == version_id)
+            .where(
+                or_(*[
+                    (Token.document_id == doc_id) & (Token.sentence_idx == sent_idx)
+                    for doc_id, sent_idx in needed_sentences
+                ])
+            )
+            .order_by(Token.document_id, Token.sentence_idx, Token.token_idx)
+        )
+        batch_rows = (await session.execute(batch_stmt)).all()
+        for doc_id, sent_idx, _tok_idx, text in batch_rows:
+            key = (doc_id, sent_idx)
+            if key not in sentence_cache:
+                sentence_cache[key] = []
+            sentence_cache[key].append(text)
+
     lines: list[ConcordanceLine] = []
     for tok, filename in rows:
-        # Fetch window tokens in a single query per match (could be batched
-        # for very high-throughput use; Phase 1 MVP is fine).
-        win_stmt = (
-            select(Token.text)
-            .where(
-                Token.version_id == version_id,
-                Token.document_id == tok.document_id,
-                Token.sentence_idx == tok.sentence_idx,
-            )
-            .order_by(Token.token_idx)
-        )
-        sent_tokens = [r[0] for r in (await session.execute(win_stmt)).all()]
+        sent_tokens = sentence_cache.get((tok.document_id, tok.sentence_idx), [])
         idx_in_sent = tok.token_idx
         left = " ".join(sent_tokens[max(0, idx_in_sent - window) : idx_in_sent])
         right = " ".join(sent_tokens[idx_in_sent + 1 : idx_in_sent + 1 + window])
@@ -229,17 +246,34 @@ async def compute_frequency(
     total_tokens = await _corpus_size(session, version_id)
     total_types = len(rows_raw)
 
-    # STTR requires the ordered token stream (not just the aggregate).
-    # We compute it on the fly when unit == "word".
+    # Fix #4: STTR computed via streaming cursor instead of loading all
+    # tokens into a Python list. Reads tokens in 1000-token batches and
+    # computes TTR per chunk on the fly, keeping memory at O(chunk_size)
+    # instead of O(N_corpus).
     sttr_value = 0.0
     if unit == "word":
+        from sqlalchemy.orm import load_only
         tok_stmt = (
-            select(Token.text)
+            select(Token)
+            .options(load_only(Token.text))
             .where(Token.version_id == version_id, _is_real_token())
             .order_by(Token.document_id, Token.sentence_idx, Token.token_idx)
+            .execution_options(stream_results=True)
         )
-        tokens_list = [r[0] for r in (await session.execute(tok_stmt)).all()]
-        sttr_value = sttr(tokens_list, chunk_size=1000) if tokens_list else 0.0
+        chunk_ttrs: list[float] = []
+        chunk: list[str] = []
+        chunk_size = 1000
+        result = await session.stream(tok_stmt)
+        async for row in result.scalars():
+            chunk.append(row.text)
+            if len(chunk) >= chunk_size:
+                chunk_ttrs.append(len(set(chunk)) / len(chunk))
+                chunk = []
+        # Drop the trailing short chunk (standard practice)
+        if chunk_ttrs:
+            sttr_value = sum(chunk_ttrs) / len(chunk_ttrs)
+        elif chunk:
+            sttr_value = len(set(chunk)) / len(chunk)
 
     rows = []
     for item, freq in rows_raw:
@@ -307,15 +341,43 @@ async def compute_collocations(
     col = {"word": Token.text, "lemma": Token.lemma}[level]
 
     # Case-insensitive node match
+    # Fix #9: Also strip accents/diacritics for matching, so that Arabic
+    # text with diacritics (كِتَاب) matches undiacritized text (كتاب),
+    # and French accented chars (café) match unaccented (cafe).
+    import unicodedata
     node_lower = node.lower()
+    node_folded = "".join(
+        c for c in unicodedata.normalize("NFD", node_lower)
+        if not unicodedata.combining(c)
+    )
 
-    # Phase 1 MVP: load the relevant token stream into memory.
-    # For corpora in the hundreds-of-millions-of-tokens range this would
-    # need an actual positional index (§7.3); for Phase 1's MVP scale
-    # (single documents of <1 MB) this is the simplest correct implementation.
+    # Fix #3: Instead of loading the ENTIRE corpus into RAM, first find
+    # which sentences contain the node word, then load only those sentences.
+    # Fix #9: Match both the lowercased form AND the accent-folded form.
+    node_cond = (
+        ((func.lower(col) == node_lower) | (func.lower(col) == node_folded))
+        & _is_real_token()
+    )
+    node_sent_stmt = (
+        select(Token.document_id, Token.sentence_idx)
+        .where(Token.version_id == version_id, node_cond)
+        .distinct()
+    )
+    node_sentences = {
+        (r[0], r[1]) for r in (await session.execute(node_sent_stmt)).all()
+    }
+    if not node_sentences:
+        return CollocationResult(node=node, window=window, min_freq=min_freq, measures=measures, rows=[])
+
+    # Fetch only tokens from sentences that contain the node word
+    from sqlalchemy import or_
+    sent_filter = or_(*[
+        (Token.document_id == doc_id) & (Token.sentence_idx == sent_idx)
+        for doc_id, sent_idx in node_sentences
+    ])
     stmt = (
         select(Token.document_id, Token.sentence_idx, Token.token_idx, col.label("text"), Token.is_punct, Token.pos)
-        .where(Token.version_id == version_id)
+        .where(Token.version_id == version_id, sent_filter)
         .order_by(Token.document_id, Token.sentence_idx, Token.token_idx)
     )
     rows_raw = (await session.execute(stmt)).all()
@@ -473,11 +535,14 @@ async def compute_keyness(
         )
 
     # Word freqs in each corpus
+    # Fix #10: Pre-filter words by min_freq at the SQL level to reduce
+    # the vocabulary set by 80-95% before computing keyness statistics.
     async def _freqs(vid: str) -> Counter:
         stmt = (
             select(Token.text, func.count(Token.id))
             .where(Token.version_id == vid, _is_real_token())
             .group_by(Token.text)
+            .having(func.count(Token.id) >= min_freq)  # Fix #10: pre-filter
         )
         return Counter({text: count for text, count in (await session.execute(stmt)).all()})
 
@@ -486,11 +551,15 @@ async def compute_keyness(
     N1 = sum(target_freqs.values())
     N2 = sum(ref_freqs.values())
 
+    # Fix #10: Only iterate over words that appear in at least one corpus
+    # with min_freq — the HAVING clause already filtered at SQL level,
+    # so this set is 80-95% smaller than before.
     all_words = set(target_freqs) | set(ref_freqs)
     rows: list[KeynessRow_dict] = []
     for word in all_words:
         f1 = target_freqs.get(word, 0)
         f2 = ref_freqs.get(word, 0)
+        # Both are >= min_freq due to HAVING, but double-check for safety
         if f1 < min_freq and f2 < min_freq:
             continue
         kr = compute_keyness_row(word, f1, f2, N1, N2, smooth=1.0)

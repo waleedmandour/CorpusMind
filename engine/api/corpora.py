@@ -192,12 +192,23 @@ async def upload_documents(
 
     out: list[DocumentOut] = []
     for f in files:
+        # Fix #6: Enforce a maximum upload size (50 MB per file)
+        MAX_UPLOAD_SIZE = 50 * 1024 * 1024  # 50 MB
         raw = await f.read()
         if not raw:
             log.warning("upload_empty", filename=f.filename)
             continue
+        if len(raw) > MAX_UPLOAD_SIZE:
+            raise HTTPException(
+                413,
+                f"File '{f.filename}' is {len(raw) // 1024 // 1024} MB. "
+                f"Maximum upload size is {MAX_UPLOAD_SIZE // 1024 // 1024} MB."
+            )
+        # Fix #7: Sanitize filename to prevent path traversal and log injection
+        import os
+        safe_filename = os.path.basename(f.filename or "untitled.txt")
         try:
-            doc = await ingest_document(session, c, f.filename or "untitled.txt", raw, language=language)
+            doc = await ingest_document(session, c, safe_filename, raw, language=language)
             out.append(DocumentOut(
                 id=doc.id, corpus_id=doc.corpus_id, filename=doc.filename,
                 format=doc.format, encoding=doc.encoding,
@@ -205,8 +216,8 @@ async def upload_documents(
                 meta=doc.meta, created_at=doc.created_at,
             ))
         except Exception as e:
-            log.error("ingest_failed", filename=f.filename, error=str(e))
-            raise HTTPException(400, f"Failed to ingest '{f.filename}': {e}") from e
+            log.error("ingest_failed", filename=safe_filename, error=str(e))
+            raise HTTPException(400, f"Failed to ingest '{safe_filename}': {e}") from e
     return out
 
 
