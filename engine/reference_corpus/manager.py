@@ -197,7 +197,14 @@ class ReferenceCorpusManager:
         out: list[dict[str, Any]] = []
         for spec in self._catalogue.values():
             entry = self._manifest.get(spec.name)
-            available = bool(spec.source_url) and bool(spec.sha256)
+            # For full_corpus references, SHA-256 is intentionally empty
+            # (can't pre-compute hash of a remote ZIP that may change).
+            # They're available if they have a source_url — the download-full
+            # endpoint handles integrity via ZIP extraction + NLP parsing.
+            if spec.format == "full_corpus":
+                available = bool(spec.source_url)
+            else:
+                available = bool(spec.source_url) and bool(spec.sha256)
             row = {
                 "name": spec.name,
                 "display_name": spec.display_name,

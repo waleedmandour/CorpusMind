@@ -692,7 +692,20 @@ function BundledReferences() {
     }
   };
 
-  const refs = catalogue.data?.references ?? [];
+  // Sort: full_corpus references first (BNC Baby, BAWE, Leipzig),
+  // then frequency lists, then unavailable (Coming Soon) at the bottom.
+  const refs = (catalogue.data?.references ?? []).slice().sort((a, b) => {
+    // Installed items go to the very top
+    if (a.installed !== b.installed) return a.installed ? -1 : 1;
+    // Full corpora before frequency lists
+    const aFull = a.format === "full_corpus";
+    const bFull = b.format === "full_corpus";
+    if (aFull !== bFull) return aFull ? -1 : 1;
+    // Available before unavailable
+    if (a.downloadable !== b.downloadable) return a.downloadable ? -1 : 1;
+    // Alphabetical by display_name as tiebreaker
+    return a.display_name.localeCompare(b.display_name);
+  });
   const isLoading = catalogue.isLoading;
   const isError = catalogue.isError;
 
@@ -781,7 +794,9 @@ function BundledReferences() {
                     onClick={() => handleDownload(r.name)}
                     disabled={!r.downloadable || downloadingName !== null}
                   >
-                    {r.downloadable ? "Download" : "Coming Soon"}
+                    {r.downloadable
+                      ? (r.format === "full_corpus" ? "Download & Ingest" : "Download")
+                      : "Coming Soon"}
                   </button>
                 )}
               </div>
