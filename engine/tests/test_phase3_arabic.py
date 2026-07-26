@@ -1,7 +1,6 @@
 """Phase 3 integration tests — Arabic NLP pipeline (§8.21)."""
 from __future__ import annotations
 
-import importlib.util
 import os
 
 import pytest
@@ -18,22 +17,45 @@ get_settings.cache_clear()
 # camel_tools gate.
 #
 # The 9 tests marked @_needs_camel below exercise Arabic morphology,
-# normalization, or backend loading — all of which import camel_tools at
-# call time and raise ModuleNotFoundError if it's not installed. The other
-# 8 tests in this file (dialect ID by length heuristics, register
-# detection, AI tool registration, translation lookup, parallel
-# alignment, parallel concordance) have no camel_tools dependency and run
-# unconditionally — they were previously excluded from CI along with
-# everything else in this file by the file-level `--ignore` flag in
-# ci.yml, which silently dropped 8 perfectly runnable tests.
+# normalization, or backend loading. All of them require BOTH:
+#   (a) the camel_tools Python package to be importable, AND
+#   (b) the morphology database (calima-msa-r13) + dialect-ID model
+#       (model6) to be downloaded via `camel_data -i` and stored under
+#       ~/.camel_tools.
 #
-# This marker lets us narrow the exclusion to just the tests that
-# actually need camel_tools, so CI gets honest coverage of the rest.
+# A naive `find_spec("camel_tools")` check would only verify (a) and would
+# let the tests run when (b) is missing, producing confusing FileNotFoundError
+# / "assert 500 == 200" failures instead of clean skips. This deeper check
+# actually attempts to instantiate the MorphologyDB, which is the cheapest
+# operation that fails fast if either the package OR its data is missing.
+#
+# The other 8 tests in this file (dialect ID by length heuristics, register
+# detection, AI tool registration, translation lookup, parallel alignment,
+# parallel concordance) have no camel_tools dependency and run unconditionally
+# — they were previously excluded from CI along with everything else in this
+# file by the file-level `--ignore` flag in ci.yml, which silently dropped
+# 8 perfectly runnable tests.
 # ---------------------------------------------------------------------------
-_CAMEL_AVAILABLE = importlib.util.find_spec("camel_tools") is not None
+def _camel_is_usable() -> bool:
+    """Return True only if camel_tools is importable AND its morphology
+    database can actually be loaded. Used by the @_needs_camel skipif
+    marker so we skip cleanly when EITHER the package OR its data is
+    missing — not just the package."""
+    try:
+        import camel_tools  # noqa: F401
+        from camel_tools.morphology.database import MorphologyDB
+        # This will raise if the calima-msa-r13 database isn't downloaded.
+        MorphologyDB.built_db("calima-msa-r13")
+        return True
+    except Exception:
+        return False
+
+
+_CAMEL_AVAILABLE = _camel_is_usable()
 _needs_camel = pytest.mark.skipif(
     not _CAMEL_AVAILABLE,
-    reason="camel_tools not installed (morphology database not available in this env)",
+    reason="camel_tools not installed or its morphology DB not downloaded "
+           "(run `camel_data -i morphology-db-msa-r13` to install)",
 )
 
 

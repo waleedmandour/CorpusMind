@@ -2,7 +2,7 @@
 
 [![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.21226650-blue)](https://doi.org/10.5281/zenodo.21226650)
 [![License: AGPL-3.0-only](https://img.shields.io/badge/License-AGPL--3.0--only-blue.svg)](https://www.gnu.org/licenses/agpl-3.0.html)
-[![GitHub release](https://img.shields.io/badge/release-v0.1.25-blue)](https://github.com/waleedmandour/CorpusMind/releases)
+[![GitHub release](https://img.shields.io/badge/release-v0.1.26-blue)](https://github.com/waleedmandour/CorpusMind/releases)
 [![Build Status](https://img.shields.io/badge/CI-passing-brightgreen)](https://github.com/waleedmandour/CorpusMind/actions)
 
 > A local-first, AI-native research environment for corpus linguistics and multimodal discourse analysis.
@@ -444,6 +444,39 @@ on GitHub.
 ---
 
 *Built with ❤ to the Academic Community.*
+
+---
+
+## v0.1.26 Release Notes
+
+### Bug Fixes
+
+#### BNC/TEI-XML text extraction — word triplication + reordering
+- **Fixed: BNC Baby and BAWE documents were ingested with every word duplicated 3–4× and scrambled ordering, silently corrupting every frequency count and keyness comparison run against them.**
+  - **Root cause:** BNC/TEI-XML nests tags (`<w>`/`<c>` inside `<s>`, inside `<p>`, inside `<div>`/`<text>`/`<body>`). The extraction loop walked every `w/c/s/p/text/body` tag and called `get_text()` on each — but a parent tag's `get_text()` already returns the concatenation of all descendant text, so each word's text was appended once per ancestor level matched.
+  - **Fix:** Rely on BeautifulSoup's own `get_text(separator=" ")`, which walks nested tags correctly and visits each leaf text node exactly once in document order. Restrict to `<text>` so `<teiHeader>` bibliographic metadata isn't pulled into the body. Collapse runs of whitespace to single spaces.
+  - Verified against a synthetic BNC-style XML sample: 7 leaf `<w>`/`<c>` tokens → 7 output words (was 11 with the old code, and 3–4× on real BNC docs with deeper nesting).
+
+#### Keyness case-sensitivity — inconsistent rankings for the same corpus
+- **Fixed: The same target corpus could produce different keyword rankings depending on which reference type the user picked.**
+  - **Root cause:** `compute_keyness()` in `engine/stats/service.py` grouped by raw `Token.text`, so sentence-initial "The" and mid-sentence "the" were counted as two separate types. `compute_keyness_with_reference_list()` in `engine/reference_corpus/keyness_bridge.py` already lowercased target tokens to match lowercase bundled frequency lists (BE06, Leipzig). The two code paths were therefore inconsistent for any word with case variants.
+  - **Fix:** `GROUP BY LOWER(text)` at the SQL level, which correctly merges case variants during aggregation (a Python-level `.lower()` after fetching would not merge them, since the grouping already happened in SQL).
+  - Verified end-to-end: a target corpus with 5 "The" + 10 "the" now produces a single `"the"` entry with `f1=15` (was previously split into `"The"` and `"the"`).
+
+### UI Improvements
+
+#### `min_corpus_tokens` advisory warning
+- **Added: Non-blocking warning in the Keyness panel when the target corpus's token count is below the selected reference's `min_corpus_tokens`.**
+  - `ReferenceCorpusSpec.min_corpus_tokens` has a docstring promising "The UI shows a warning, not a hard block" — but nothing anywhere compared target size against it. A user could run keyness against a 200-token reference with no advisory at all, which is a real corpus-linguistics best-practice gap (small-N reference frequencies produce statistically unstable, easily-inflated log-likelihood scores).
+  - The KeynessPanel now compares the target corpus's token count (already available from its stats) against the selected reference's `min_corpus_tokens`, and shows an advisory — not an error — matching the docstring's stated intent. Bundled references use their spec value; uploaded references fall back to the `ReferenceCorpusSpec` default of 1,000.
+
+### Tests
+- **Engine: 110 passed, 0 failed** (test_phase3_arabic.py legitimately skipped: camel_tools not installed in this env, per the issue's explicit exclusion clause).
+- **Ruff**: All checks passed.
+- **Web typecheck**: passed (no errors).
+- **Web build**: built successfully.
+
+**Download:** https://github.com/waleedmandour/CorpusMind/releases/tag/v0.1.26
 
 ---
 
