@@ -618,6 +618,26 @@ function KeynessPanel({ cid }: { cid: string }) {
 
   const exportStatus = useExportStatus();
 
+  // Issue #3: Surface min_corpus_tokens as a non-blocking warning. The target
+  // corpus's token count is already available from its stats (populated by the
+  // backend on every ingestion). The selected reference's min_corpus_tokens
+  // comes from ReferenceCorpusSpec for bundled references; for user-uploaded
+  // reference corpora we fall back to the ReferenceCorpusSpec default of 1,000
+  // tokens (registry.py). Small-N reference frequencies produce statistically
+  // unstable, easily-inflated log-likelihood scores, so we warn the user --
+  // but never block the comparison (matches the spec's stated intent).
+  const targetTokenCount = corpora.data?.find((c) => c.id === cid)?.stats?.token_count ?? 0;
+  const selectedBundledRef = refCorpora.data?.references.find(
+    (r: ReferenceCorpusEntry) => r.name === selectedReferenceName,
+  );
+  // Bundled references carry their own min_corpus_tokens; uploaded reference
+  // corpora use the ReferenceCorpusSpec default of 1,000.
+  const minTokensForSelected = selectedBundledRef?.min_corpus_tokens ?? 1_000;
+  const showMinTokensWarning =
+    targetTokenCount > 0 &&
+    targetTokenCount < minTokensForSelected &&
+    (!!referenceCorpusId || !!selectedReferenceName);
+
   const onExport = async (fmt: ExportFormat | "svg" | "png") => {
     if (referenceCorpusId) {
       await exportWithFeedback(
@@ -675,6 +695,17 @@ function KeynessPanel({ cid }: { cid: string }) {
         <button onClick={onMethodsPdf}>Methods PDF</button>
       </div>
       {exportStatus.el}
+
+      {showMinTokensWarning && (
+        <div className="keyness-min-tokens-warning" role="status">
+          <strong>Heads up:</strong> your target corpus has{" "}
+          {targetTokenCount.toLocaleString()} tokens, below the recommended
+          minimum of {minTokensForSelected.toLocaleString()} for this
+          reference. Keyness scores from small-N comparisons can be
+          statistically unstable (easily inflated log-likelihood values);
+          interpret with care, or upload a larger target corpus.
+        </div>
+      )}
 
       <div className="grounding-notice">
         <strong>4 Principle 3:</strong> a "key" word is never reported as important on

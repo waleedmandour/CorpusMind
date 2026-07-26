@@ -378,15 +378,29 @@ async def download_full_reference(
                                     if fname.endswith(".xml"):
                                         from bs4 import BeautifulSoup
                                         soup = BeautifulSoup(content, "xml")
-                                        text_parts = []
-                                        for tag in soup.find_all(["w", "c", "s", "p", "text", "body"]):
-                                            if tag.name in ("w", "c"):
-                                                text_parts.append(tag.get_text())
-                                            elif tag.name in ("s", "p"):
-                                                text_parts.append(tag.get_text() + " ")
-                                        content = " ".join(text_parts).strip()
-                                        if not content:
-                                            content = soup.get_text(separator=" ")
+                                        # BNC/TEI-XML nests <w>/<c> inside <s>,
+                                        # inside <p>, inside <div>/<text>/<body>.
+                                        # A parent tag's get_text() already
+                                        # includes all descendant text, so
+                                        # walking w/c/s/p/text/body and
+                                        # concatenating get_text() from each
+                                        # (the old code) appended every word's
+                                        # text once per ancestor level matched
+                                        # -- 3-4x duplicated, out-of-order text
+                                        # in every ingested document.
+                                        # BeautifulSoup's own get_text() already
+                                        # walks nested tags correctly and visits
+                                        # each leaf text node exactly once, in
+                                        # document order -- no manual
+                                        # accumulation needed. Restrict to
+                                        # <text> so <teiHeader> bibliographic
+                                        # metadata isn't pulled into the body.
+                                        root = soup.find("text") or soup
+                                        content = root.get_text(separator=" ")
+                                        # BNC <w>/<c> tags are tightly packed
+                                        # with irregular whitespace; collapse
+                                        # runs of whitespace to single spaces.
+                                        content = " ".join(content.split())
                                     if content.strip():
                                         text_files.append((fname, content.encode("utf-8"), {"source": name, "genre": genre or spec.genre}))
                                 except Exception as e:

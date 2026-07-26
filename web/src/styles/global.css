@@ -712,6 +712,21 @@ code, pre { font-family: var(--font-mono); }
 }
 .grounding-notice strong { color: var(--text); }
 
+/* Issue #3: non-blocking warning shown in the Keyness panel when the target
+   corpus's token count is below the selected reference's min_corpus_tokens.
+   Uses --warning (not --error) to convey advisory, not blocking, intent. */
+.keyness-min-tokens-warning {
+  margin-block-start: var(--space-4);
+  padding: var(--space-3);
+  background: var(--notice-bg);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  color: var(--notice-fg);
+  border-inline-start: 3px solid var(--warning);
+  line-height: 1.5;
+}
+.keyness-min-tokens-warning strong { color: var(--warning); }
+
 .assistant-main {
   display: grid;
   grid-template-rows: 1fr auto;

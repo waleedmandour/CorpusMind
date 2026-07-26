@@ -537,11 +537,24 @@ async def compute_keyness(
     # Word freqs in each corpus
     # Fix #10: Pre-filter words by min_freq at the SQL level to reduce
     # the vocabulary set by 80-95% before computing keyness statistics.
+    #
+    # Group by lower(text), not raw text. Without this, a word split across
+    # case variants (sentence-initial "The" vs. mid-sentence "the") is
+    # counted as two separate types, which both (a) undercounts common
+    # words and can push them below min_freq spuriously, and (b) makes this
+    # function inconsistent with compute_keyness_with_reference_list() in
+    # reference_corpus/keyness_bridge.py, which already lowercases target
+    # tokens to match the lowercase bundled frequency lists (BE06, Leipzig,
+    # etc). Before this fix, the *same* target corpus could get different
+    # keyword rankings depending on whether the reference was a bundled
+    # frequency list or an uploaded reference Corpus -- a validity trap for
+    # exactly the comparison this feature exists to support.
     async def _freqs(vid: str) -> Counter:
+        text_norm = func.lower(Token.text)
         stmt = (
-            select(Token.text, func.count(Token.id))
+            select(text_norm, func.count(Token.id))
             .where(Token.version_id == vid, _is_real_token())
-            .group_by(Token.text)
+            .group_by(text_norm)
             .having(func.count(Token.id) >= min_freq)  # Fix #10: pre-filter
         )
         return Counter({text: count for text, count in (await session.execute(stmt)).all()})
