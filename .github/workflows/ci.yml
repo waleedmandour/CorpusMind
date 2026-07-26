@@ -36,6 +36,33 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
           pip install python-multipart cryptography
+          # camel_tools is declared in pyproject.toml but is optional in
+          # practice — its morphology databases are a separate ~170 MB
+          # download that doesn't ship with the wheel. We install it
+          # explicitly here (plus its runtime deps that aren't auto-pulled)
+          # so the 9 tests in test_phase3_arabic.py that actually exercise
+          # Arabic morphology can run in CI instead of being skipped.
+          pip install camel-tools docopt pyrsistent muddler emoji
+
+      - name: Cache CAMeL Tools data
+        # camel_tools' morphology DB (~40 MB) + dialect-ID model (~128 MB)
+        # are downloaded out-of-band by `camel_data -i` and stored under
+        # ~/.camel_tools. Cache that directory keyed on the installed
+        # camel-tools version so we don't re-download ~170 MB on every run.
+        uses: actions/cache@v4
+        with:
+          path: ~/.camel_tools
+          key: ${{ runner.os }}-camel-tools-data-${{ hashFiles('engine/pyproject.toml') }}
+
+      - name: Download CAMeL Tools morphology databases
+        # Idempotent: camel_data skips components that are already installed,
+        # so on a cache hit this is a no-op. We install only the two
+        # components this project actually imports (MorphologyDB for the
+        # Analyzer, DIDModel6 for dialect ID) — see nlp/arabic/pipeline.py.
+        # The full `defaults` meta-package is ~2 GB and unnecessary here.
+        run: |
+          camel_data -i morphology-db-msa-r13
+          camel_data -i dialectid-model6
 
       - name: Download spaCy model (en_core_web_sm)
         # Many engine tests (test_api, test_phase2, ...) require the small
@@ -47,10 +74,12 @@ jobs:
         run: ruff check .
 
       - name: Test (pytest)
-        run: pytest tests/ -v --tb=short --ignore=tests/test_phase3_arabic.py
-        # Note: test_phase3_arabic.py requires CAMeL Tools data that is not
-        # available in CI. We exclude it explicitly so real regressions are
-        # caught, instead of using || true which masked everything.
+        run: pytest tests/ -v --tb=short
+        # All 17 tests in test_phase3_arabic.py run unconditionally in CI
+        # now that camel_tools + its morphology databases are installed.
+        # The @_needs_camel skipif marker is still in place so that local
+        # dev environments without camel_tools get a clean "skipped with
+        # reason" signal instead of import-time failures.
 
   # -----------------------------------------------------------------------
   # Web: TypeScript typecheck + build

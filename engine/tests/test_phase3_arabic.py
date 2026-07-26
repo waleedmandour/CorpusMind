@@ -1,6 +1,7 @@
 """Phase 3 integration tests — Arabic NLP pipeline (§8.21)."""
 from __future__ import annotations
 
+import importlib.util
 import os
 
 import pytest
@@ -13,6 +14,29 @@ from app.settings import get_settings
 get_settings.cache_clear()
 
 
+# ---------------------------------------------------------------------------
+# camel_tools gate.
+#
+# The 9 tests marked @_needs_camel below exercise Arabic morphology,
+# normalization, or backend loading — all of which import camel_tools at
+# call time and raise ModuleNotFoundError if it's not installed. The other
+# 8 tests in this file (dialect ID by length heuristics, register
+# detection, AI tool registration, translation lookup, parallel
+# alignment, parallel concordance) have no camel_tools dependency and run
+# unconditionally — they were previously excluded from CI along with
+# everything else in this file by the file-level `--ignore` flag in
+# ci.yml, which silently dropped 8 perfectly runnable tests.
+#
+# This marker lets us narrow the exclusion to just the tests that
+# actually need camel_tools, so CI gets honest coverage of the rest.
+# ---------------------------------------------------------------------------
+_CAMEL_AVAILABLE = importlib.util.find_spec("camel_tools") is not None
+_needs_camel = pytest.mark.skipif(
+    not _CAMEL_AVAILABLE,
+    reason="camel_tools not installed (morphology database not available in this env)",
+)
+
+
 @pytest.fixture
 async def client():
     from app.main import app
@@ -23,6 +47,7 @@ async def client():
     await dispose_db()
 
 
+@_needs_camel
 @pytest.mark.asyncio
 async def test_arabic_morphology_analysis(client):
     """§8.21: Arabic morphology analysis — root, pattern, lemma, POS, Buckwalter,
@@ -53,6 +78,7 @@ async def test_arabic_morphology_analysis(client):
     assert maktaba["pattern"]  # non-empty pattern
 
 
+@_needs_camel
 @pytest.mark.asyncio
 async def test_arabic_broken_plural_detection(client):
     """§8.21: Broken plural (جمع تكسير) detection."""
@@ -72,6 +98,7 @@ async def test_arabic_broken_plural_detection(client):
         assert bp["pos"] in ("noun", "adj")
 
 
+@_needs_camel
 @pytest.mark.asyncio
 async def test_arabic_gender_and_number(client):
     """§8.21: Gender + number (singular/dual/plural) detection."""
@@ -110,6 +137,7 @@ async def test_arabic_dialect_id_with_cities(client):
         assert data.get("top_city") in (None, "MSA", "BEI", "CAI", "DOH", "RAB", "TUN")
 
 
+@_needs_camel
 @pytest.mark.asyncio
 async def test_arabic_root_extraction(client):
     """§8.21: Root extraction (الجذر)."""
@@ -155,6 +183,7 @@ async def test_arabic_register_detection(client):
     assert "dialectal" in dist
 
 
+@_needs_camel
 @pytest.mark.asyncio
 async def test_arabic_buckwalter_transliteration(client):
     """§8.21: Buckwalter transliteration."""
@@ -169,6 +198,7 @@ async def test_arabic_buckwalter_transliteration(client):
     assert "AlTlAb" in bw  # الطلاب → AlTlAb
 
 
+@_needs_camel
 @pytest.mark.asyncio
 async def test_arabic_dediacritization(client):
     """§8.21: Diacritics removal (التشكيل)."""
@@ -182,6 +212,7 @@ async def test_arabic_dediacritization(client):
     assert not any(c in diacritics for c in data["dediacritized"])
 
 
+@_needs_camel
 @pytest.mark.asyncio
 async def test_arabic_normalization(client):
     """§8.21: Normalization (alef variants, teh marbuta)."""
@@ -194,6 +225,7 @@ async def test_arabic_normalization(client):
     assert "ه" in data["normalized"]
 
 
+@_needs_camel
 @pytest.mark.asyncio
 async def test_arabic_backends_list(client):
     """§8.21: Backend listing."""
@@ -222,6 +254,7 @@ async def test_arabic_tools_registered(client):
         assert name in tool_names, f"missing Arabic tool: {name}"
 
 
+@_needs_camel
 @pytest.mark.asyncio
 async def test_arabic_clitic_segmentation(client):
     """§8.21: Clitic segmentation."""

@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.logging import get_logger
 from nlp.arabic.bilingual import (
     align_parallel_corpora,
     lookup_translation,
@@ -22,6 +23,8 @@ from nlp.arabic.pipeline import (
     transliterate_buckwalter,
 )
 from storage.session import get_session
+
+log = get_logger(__name__)
 
 router = APIRouter()
 
@@ -151,7 +154,17 @@ async def register_route(body: TranslitRequest) -> dict:
 
 @router.get("/arabic/backends")
 async def list_backends() -> dict:
-    """List available Arabic NLP backends + their capabilities."""
+    """List available Arabic NLP backends + their capabilities.
+
+    A backend is only reported as ``available`` if its ``.info()`` call
+    succeeds — i.e. the package is installed AND its morphological
+    database loads correctly. If the load fails, the backend is reported
+    as ``available=False`` with an ``error`` field explaining why, instead
+    of the previous behavior of silently reporting ``available=True`` with
+    no version/dialect info. That bare ``except Exception: pass`` made
+    broken camel_tools installs look healthy from the outside, hiding the
+    real reason Arabic analysis wasn't working for the user.
+    """
     backends = []
     for name, available in [("camel", True), ("farasa", False), ("sinatools", False)]:
         info = {"name": name, "available": available}
@@ -163,8 +176,14 @@ async def list_backends() -> dict:
                     "model": bi.model,
                     "dialects_supported": bi.dialects_supported,
                 })
-            except Exception:
-                pass
+            except Exception as e:
+                # A backend that can't actually load isn't available,
+                # regardless of whether the package is nominally installed.
+                # Flip available to False and surface the error so the
+                # caller (and the log) can see WHY it's broken.
+                info["available"] = False
+                info["error"] = str(e)
+                log.warning("arabic_backend_unavailable", backend=name, error=str(e))
         backends.append(info)
     return {"backends": backends}
 
