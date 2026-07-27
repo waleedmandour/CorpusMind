@@ -23,6 +23,7 @@ from multimodal.visual_grammar import analyse_visual_grammar
 from storage.models import Corpus, ImageSet
 from storage.models import Image as ImageModel
 from storage.session import get_session
+from vision.consent_gate import filter_describe_response
 from vision.pipeline import (
     analyse_image,
     detect_image_format,
@@ -443,9 +444,13 @@ async def describe_image_route(
     if cached_vlm and not body.refresh:
         # Cache hit — return without calling the model.
         cached_ocr = (img.analysis or {}).get("ocr", {}).get("text", "")
+        # Step 5: filter person-descriptive content through the consent
+        # gate BEFORE returning. The gate is enforced at response-shaping
+        # time, not at prompt time — see vision/consent_gate.py.
+        gate_result = filter_describe_response(cached_vlm["description"])
         return {
             "image_id": img.id,
-            "description": cached_vlm["description"],
+            "description": gate_result["description"],
             "model": cached_vlm["model"],
             "provider": cached_vlm["provider"],
             "prompt": cached_vlm["prompt"],
@@ -453,9 +458,10 @@ async def describe_image_route(
             "timestamp": cached_vlm["timestamp"],
             "cached": True,
             "ocr_disagreement": _detect_ocr_disagreement(
-                cached_vlm["description"], cached_ocr
+                gate_result["description"], cached_ocr
             ),
             "cached_ocr": cached_ocr,
+            "person_descriptive_redacted": gate_result["person_descriptive_redacted"],
         }
 
     # --- Provider lookup + health check ---------------------------------
@@ -632,15 +638,21 @@ async def describe_image_route(
         cached=False,
     )
 
+    # Step 5: filter person-descriptive content through the consent gate
+    # BEFORE returning. The gate is enforced at response-shaping time,
+    # not at prompt time — see vision/consent_gate.py.
+    gate_result = filter_describe_response(description)
+
     return {
         "image_id": img.id,
-        "description": description,
+        "description": gate_result["description"],
         "model": response.model or model_name,
         "provider": body.provider,
         "prompt": body.prompt,
         "prompt_hash": prompt_hash,
         "timestamp": timestamp,
         "cached": False,
-        "ocr_disagreement": _detect_ocr_disagreement(description, cached_ocr),
+        "ocr_disagreement": _detect_ocr_disagreement(gate_result["description"], cached_ocr),
         "cached_ocr": cached_ocr,
+        "person_descriptive_redacted": gate_result["person_descriptive_redacted"],
     }

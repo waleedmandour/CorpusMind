@@ -188,11 +188,19 @@ async def _try_llm_discourse(
     # to happen here in the route layer).
     await session.commit()
 
+    # Step 5: filter person-descriptive content through the consent gate
+    # BEFORE returning. The gate is enforced at response-shaping time,
+    # not at prompt time — see vision/consent_gate.py. Also filter the
+    # summary (vision-LMs sometimes put person descriptions there too).
+    from vision.consent_gate import filter_discourse_claims, filter_person_descriptive
+    claim_filter = filter_discourse_claims(result.claims)
+    summary_filter = filter_person_descriptive(result.summary)
+
     return {
         "analysis_type": result.analysis_type,
         "framework": result.framework,
-        "claims": result.claims,
-        "summary": result.summary,
+        "claims": claim_filter["claims"],
+        "summary": summary_filter.filtered_text,
         "provenance": {
             "mode": result.provenance.mode,
             "model": result.provenance.model,
@@ -201,6 +209,7 @@ async def _try_llm_discourse(
             "timestamp": result.provenance.timestamp,
             "cached": result.provenance.cached,
         } if result.provenance else None,
+        "person_descriptive_redacted": claim_filter["person_descriptive_redacted"] or summary_filter.was_filtered,
     }
 
 
