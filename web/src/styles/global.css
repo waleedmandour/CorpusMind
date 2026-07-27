@@ -4817,6 +4817,141 @@ html[dir="rtl"] .toggle-switch input:checked + .toggle-slider::before {
    The percentage text is bottom-centered, which works in both LTR and
    RTL without flipping. */
 
+/* ====================================================================== */
+/* Alignment inspector — CorpusMind Lens build step 6                    */
+/* ====================================================================== */
+
+.vision-alignment-panel {
+  margin-block-start: var(--space-4);
+  padding: var(--space-4);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.vision-alignment-input {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.vision-alignment-input textarea {
+  inline-size: 100%;
+  min-block-size: 60px;
+  resize: vertical;
+  font-family: inherit;
+  font-size: 13px;
+  padding: var(--space-2);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+}
+.vision-alignment-input textarea:focus {
+  outline: none;
+  border-color: var(--brand-500);
+}
+
+.vision-alignment-controls {
+  display: flex;
+  gap: var(--space-3);
+  align-items: end;
+  flex-wrap: wrap;
+}
+.vision-align-mode {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* Side-by-side layout for "both" mode */
+.vision-alignment-both {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+@media (max-inline-size: 700px) {
+  .vision-alignment-both {
+    grid-template-columns: 1fr;
+  }
+}
+
+.vision-alignment-result {
+  padding: var(--space-3);
+  background: var(--bg-subtle);
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.vision-align-result-heading {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.vision-align-fallback {
+  color: var(--warning);
+  font-style: italic;
+}
+.vision-align-redacted {
+  color: var(--warning);
+  font-style: italic;
+}
+
+.vision-align-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.vision-align-item {
+  background: var(--bg-elevated);
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  border-inline-start: 3px solid var(--brand-400);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.vision-align-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-2);
+}
+.vision-align-span {
+  font-weight: 600;
+  color: var(--text);
+  font-size: 13px;
+}
+.vision-align-confidence {
+  font-size: 11px;
+  background: var(--bg-subtle);
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.vision-align-region,
+.vision-align-reason {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+.vision-align-region strong,
+.vision-align-reason strong {
+  color: var(--text);
+}
+
 /* Confidence + MCQ in AI Assistant */
 .confidence-display {
   display: flex;

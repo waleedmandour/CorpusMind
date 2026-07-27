@@ -779,6 +779,10 @@ export interface AlignmentResult {
   spans: Array<{ span_id: string; text: string; start: number; end: number; pos_hint: string }>;
   alignments: Alignment[];
   cross_modal_relations: CrossModalRelation[];
+  // Step 6: LLM mode fields (present when ?mode=llm is used)
+  provenance?: { mode: string; model?: string; provider?: string };
+  fallback_reason?: string;
+  person_descriptive_redacted?: boolean;
 }
 
 // Phase 5 — multimodal discourse (9.11–9.18)
@@ -1152,8 +1156,8 @@ export const api = {
   getVisualGrammar: (imgId: string) =>
     jsonFetch<VisualGrammarResult>(`/api/v1/images/${imgId}/visual-grammar`, { method: "POST" }),
 
-  alignImageText: (imgId: string, text: string) =>
-    jsonFetch<AlignmentResult>(`/api/v1/images/${imgId}/align`, {
+  alignImageText: (imgId: string, text: string, mode?: "heuristic" | "llm", model?: string) =>
+    jsonFetch<AlignmentResult>(`/api/v1/images/${imgId}/align${mode ? `?mode=${mode}${model ? `&model=${model}` : ""}` : ""}`, {
       method: "POST",
       body: JSON.stringify({ text }),
     }),
