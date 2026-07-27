@@ -3,11 +3,13 @@ from __future__ import annotations
 
 from dataclasses import asdict
 from pathlib import Path
+from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ai.providers import ModelProviderError
 from app.logging import get_logger
 from multimodal.discourse import (
     CDA_FRAMEWORKS,
@@ -20,6 +22,7 @@ from multimodal.discourse import (
     analyse_social_semiotic,
     analyse_visual_metaphor,
 )
+from multimodal.discourse_llm import run_llm_discourse_analysis
 from storage.models import Image as ImageModel
 from storage.session import get_session
 from vision.facial import FacialAnalysisDisabledError, analyse_faces
@@ -68,18 +71,183 @@ async def _get_image_sub_analyses(img: ImageModel) -> tuple[ColourAnalysis, Comp
 
 
 # --------------------------------------------------------------------------- #
+# Vision-LM mode helper (CorpusMind Lens build step 4)
+#
+# Each of the eight discourse routes below accepts a ?mode= query param:
+#   - mode=heuristic (default): the existing purely-heuristic path
+#     (colour/geometry/OCR/caption). No LLM dependency. Fast, model-free.
+#   - mode=llm: sends the actual image bytes + the framework's
+#     theoretical lens to a local vision-LM, so the analysis can look
+#     at what the image actually depicts. Falls back to heuristic with
+#     a fallback_reason if no provider is available/healthy or the LLM
+#     call fails. Never an error state.
+#
+# The LLM path is implemented in multimodal/discourse_llm.py. This
+# helper handles the dispatch + fallback so each route stays a one-liner.
+# --------------------------------------------------------------------------- #
+
+
+class LLMModeRequest(BaseModel):
+    """Common query params for the LLM mode of every discourse route.
+
+    Each route accepts these as query params (?mode=llm&model=moondream).
+    The route's existing body (e.g. CDARequest.framework) still applies
+    in both modes.
+    """
+    mode: Literal["heuristic", "llm"] = Field(
+        default="heuristic",
+        description=(
+            "heuristic (default): existing colour/geometry/OCR/caption path. "
+            "llm: send the image to a vision-LM with the framework's lens. "
+            "Falls back to heuristic if no provider is available."
+        ),
+    )
+    model: str | None = Field(
+        default=None,
+        description="Model name for LLM mode. If None, uses the provider's default.",
+    )
+    provider: str = Field(
+        default="ollama",
+        description="Provider name for LLM mode: ollama | lmstudio | cloud",
+    )
+    refresh: bool = Field(
+        default=False,
+        description="If True, re-run the LLM analysis even if cached.",
+    )
+
+
+async def _try_llm_discourse(
+    request: Request,
+    img: ImageModel,
+    framework_key: str,
+    mode_params: LLMModeRequest,
+    session: AsyncSession,
+) -> dict | None:
+    """Try to run the LLM discourse analysis. Returns None if the
+    caller should fall back to the heuristic path.
+
+    On success, returns the LLM result as a dict (with provenance).
+    On fallback, returns None and logs the reason — the caller runs
+    the heuristic path and includes fallback_reason in the response.
+
+    Never raises — the caller's heuristic path is always available.
+    """
+    if mode_params.mode != "llm":
+        return None
+
+    try:
+        provider = request.app.state.providers.get(mode_params.provider)
+    except Exception as e:
+        log.warning(
+            "discourse_llm_provider_error",
+            framework=framework_key,
+            error=str(e),
+        )
+        return None
+
+    if provider is None:
+        log.warning(
+            "discourse_llm_no_provider",
+            framework=framework_key,
+            provider=mode_params.provider,
+        )
+        return None
+
+    # Health check before the call so we fall back cleanly instead of
+    # timing out.
+    try:
+        is_healthy = await provider.health()
+    except Exception:
+        is_healthy = False
+    if not is_healthy:
+        log.warning(
+            "discourse_llm_provider_unhealthy",
+            framework=framework_key,
+            provider=mode_params.provider,
+        )
+        return None
+
+    try:
+        result = await run_llm_discourse_analysis(
+            img,
+            framework_key,
+            provider,
+            model=mode_params.model,
+            refresh=mode_params.refresh,
+        )
+    except ModelProviderError as e:
+        log.warning(
+            "discourse_llm_call_failed",
+            framework=framework_key,
+            error=str(e),
+        )
+        return None
+
+    # Commit the cached analysis (run_llm_discourse_analysis mutates
+    # img.analysis via full reassignment, but the session commit has
+    # to happen here in the route layer).
+    await session.commit()
+
+    return {
+        "analysis_type": result.analysis_type,
+        "framework": result.framework,
+        "claims": result.claims,
+        "summary": result.summary,
+        "provenance": {
+            "mode": result.provenance.mode,
+            "model": result.provenance.model,
+            "provider": result.provenance.provider,
+            "prompt_hash": result.provenance.prompt_hash,
+            "timestamp": result.provenance.timestamp,
+            "cached": result.provenance.cached,
+        } if result.provenance else None,
+    }
+
+
+def _heuristic_response_with_fallback(
+    heuristic_result,
+    *,
+    fallback_reason: str | None = None,
+) -> dict:
+    """Wrap a heuristic DiscourseAnalysisResult as a dict, adding
+    mode + fallback_reason fields so the UI can show which path
+    produced the output."""
+    d = asdict(heuristic_result)
+    d["provenance"] = {"mode": "heuristic"}
+    if fallback_reason:
+        d["fallback_reason"] = fallback_reason
+    return d
+
+
+# --------------------------------------------------------------------------- #
 # §9.11 Social Semiotic
 # --------------------------------------------------------------------------- #
 
 
 @router.post("/images/{img_id}/social-semiotic")
-async def social_semiotic_route(img_id: str, session: AsyncSession = Depends(get_session)) -> dict:
+async def social_semiotic_route(
+    img_id: str,
+    request: Request,
+    mode_params: LLMModeRequest = Depends(),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
     img = await session.get(ImageModel, img_id)
     if not img:
         raise HTTPException(404, "Image not found")
+
+    # Vision-LM mode (build step 4): send the actual image bytes to a
+    # vision-LM with the social semiotic lens. Falls back to heuristic
+    # if no provider is available.
+    llm_result = await _try_llm_discourse(
+        request, img, "social_semiotic", mode_params, session,
+    )
+    if llm_result is not None:
+        return llm_result
+
     colours, composition, ocr, caption = await _get_image_sub_analyses(img)
     result = analyse_social_semiotic(colours, composition, ocr, caption)
-    return asdict(result)
+    fallback = "LLM mode requested but unavailable — using heuristic." if mode_params.mode == "llm" else None
+    return _heuristic_response_with_fallback(result, fallback_reason=fallback)
 
 
 # --------------------------------------------------------------------------- #
@@ -92,15 +260,33 @@ class CDARequest(BaseModel):
 
 
 @router.post("/images/{img_id}/cda")
-async def cda_route(img_id: str, body: CDARequest, session: AsyncSession = Depends(get_session)) -> dict:
+async def cda_route(
+    img_id: str,
+    body: CDARequest,
+    request: Request,
+    mode_params: LLMModeRequest = Depends(),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
     img = await session.get(ImageModel, img_id)
     if not img:
         raise HTTPException(404, "Image not found")
     if body.framework not in CDA_FRAMEWORKS:
         raise HTTPException(400, f"Unknown CDA framework: {body.framework}. Supported: {list(CDA_FRAMEWORKS.keys())}")
+
+    # Vision-LM mode: the framework_key includes the CDA sub-framework
+    # (e.g. "cda_fairclough") so each sub-framework gets its own cache key.
+    if mode_params.mode == "llm":
+        llm_framework_key = f"cda_{body.framework}"
+        llm_result = await _try_llm_discourse(
+            request, img, llm_framework_key, mode_params, session,
+        )
+        if llm_result is not None:
+            return llm_result
+
     colours, composition, ocr, caption = await _get_image_sub_analyses(img)
     result = analyse_cda(colours, composition, ocr, caption, framework=body.framework)  # type: ignore[arg-type]
-    return asdict(result)
+    fallback = "LLM mode requested but unavailable — using heuristic." if mode_params.mode == "llm" else None
+    return _heuristic_response_with_fallback(result, fallback_reason=fallback)
 
 
 @router.get("/cda-frameworks")
@@ -114,13 +300,26 @@ async def list_cda_frameworks() -> dict:
 
 
 @router.post("/images/{img_id}/persuasion")
-async def persuasion_route(img_id: str, session: AsyncSession = Depends(get_session)) -> dict:
+async def persuasion_route(
+    img_id: str,
+    request: Request,
+    mode_params: LLMModeRequest = Depends(),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
     img = await session.get(ImageModel, img_id)
     if not img:
         raise HTTPException(404, "Image not found")
+
+    llm_result = await _try_llm_discourse(
+        request, img, "persuasion", mode_params, session,
+    )
+    if llm_result is not None:
+        return llm_result
+
     _, _, ocr, caption = await _get_image_sub_analyses(img)
     result = analyse_persuasion(ocr, caption)
-    return asdict(result)
+    fallback = "LLM mode requested but unavailable — using heuristic." if mode_params.mode == "llm" else None
+    return _heuristic_response_with_fallback(result, fallback_reason=fallback)
 
 
 # --------------------------------------------------------------------------- #
@@ -129,13 +328,26 @@ async def persuasion_route(img_id: str, session: AsyncSession = Depends(get_sess
 
 
 @router.post("/images/{img_id}/framing")
-async def framing_route(img_id: str, session: AsyncSession = Depends(get_session)) -> dict:
+async def framing_route(
+    img_id: str,
+    request: Request,
+    mode_params: LLMModeRequest = Depends(),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
     img = await session.get(ImageModel, img_id)
     if not img:
         raise HTTPException(404, "Image not found")
+
+    llm_result = await _try_llm_discourse(
+        request, img, "framing", mode_params, session,
+    )
+    if llm_result is not None:
+        return llm_result
+
     _, _, ocr, caption = await _get_image_sub_analyses(img)
     result = analyse_framing(ocr, caption)
-    return asdict(result)
+    fallback = "LLM mode requested but unavailable — using heuristic." if mode_params.mode == "llm" else None
+    return _heuristic_response_with_fallback(result, fallback_reason=fallback)
 
 
 # --------------------------------------------------------------------------- #
@@ -144,13 +356,26 @@ async def framing_route(img_id: str, session: AsyncSession = Depends(get_session
 
 
 @router.post("/images/{img_id}/narrative")
-async def narrative_route(img_id: str, session: AsyncSession = Depends(get_session)) -> dict:
+async def narrative_route(
+    img_id: str,
+    request: Request,
+    mode_params: LLMModeRequest = Depends(),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
     img = await session.get(ImageModel, img_id)
     if not img:
         raise HTTPException(404, "Image not found")
+
+    llm_result = await _try_llm_discourse(
+        request, img, "narrative", mode_params, session,
+    )
+    if llm_result is not None:
+        return llm_result
+
     _, _, ocr, caption = await _get_image_sub_analyses(img)
     result = analyse_narrative(ocr, caption)
-    return asdict(result)
+    fallback = "LLM mode requested but unavailable — using heuristic." if mode_params.mode == "llm" else None
+    return _heuristic_response_with_fallback(result, fallback_reason=fallback)
 
 
 # --------------------------------------------------------------------------- #
@@ -159,13 +384,26 @@ async def narrative_route(img_id: str, session: AsyncSession = Depends(get_sessi
 
 
 @router.post("/images/{img_id}/visual-metaphor")
-async def visual_metaphor_route(img_id: str, session: AsyncSession = Depends(get_session)) -> dict:
+async def visual_metaphor_route(
+    img_id: str,
+    request: Request,
+    mode_params: LLMModeRequest = Depends(),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
     img = await session.get(ImageModel, img_id)
     if not img:
         raise HTTPException(404, "Image not found")
+
+    llm_result = await _try_llm_discourse(
+        request, img, "visual_metaphor", mode_params, session,
+    )
+    if llm_result is not None:
+        return llm_result
+
     colours, composition, ocr, caption = await _get_image_sub_analyses(img)
     result = analyse_visual_metaphor(colours, composition, ocr, caption)
-    return asdict(result)
+    fallback = "LLM mode requested but unavailable — using heuristic." if mode_params.mode == "llm" else None
+    return _heuristic_response_with_fallback(result, fallback_reason=fallback)
 
 
 # --------------------------------------------------------------------------- #
@@ -174,13 +412,26 @@ async def visual_metaphor_route(img_id: str, session: AsyncSession = Depends(get
 
 
 @router.post("/images/{img_id}/emotion")
-async def emotion_route(img_id: str, session: AsyncSession = Depends(get_session)) -> dict:
+async def emotion_route(
+    img_id: str,
+    request: Request,
+    mode_params: LLMModeRequest = Depends(),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
     img = await session.get(ImageModel, img_id)
     if not img:
         raise HTTPException(404, "Image not found")
+
+    llm_result = await _try_llm_discourse(
+        request, img, "emotion", mode_params, session,
+    )
+    if llm_result is not None:
+        return llm_result
+
     colours, _, ocr, caption = await _get_image_sub_analyses(img)
     result = analyse_combined_emotion(colours, ocr, caption)
-    return asdict(result)
+    fallback = "LLM mode requested but unavailable — using heuristic." if mode_params.mode == "llm" else None
+    return _heuristic_response_with_fallback(result, fallback_reason=fallback)
 
 
 # --------------------------------------------------------------------------- #
@@ -189,13 +440,26 @@ async def emotion_route(img_id: str, session: AsyncSession = Depends(get_session
 
 
 @router.post("/images/{img_id}/cultural")
-async def cultural_route(img_id: str, session: AsyncSession = Depends(get_session)) -> dict:
+async def cultural_route(
+    img_id: str,
+    request: Request,
+    mode_params: LLMModeRequest = Depends(),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
     img = await session.get(ImageModel, img_id)
     if not img:
         raise HTTPException(404, "Image not found")
+
+    llm_result = await _try_llm_discourse(
+        request, img, "cultural", mode_params, session,
+    )
+    if llm_result is not None:
+        return llm_result
+
     colours, _, ocr, caption = await _get_image_sub_analyses(img)
     result = analyse_cultural(colours, ocr, caption)
-    return asdict(result)
+    fallback = "LLM mode requested but unavailable — using heuristic." if mode_params.mode == "llm" else None
+    return _heuristic_response_with_fallback(result, fallback_reason=fallback)
 
 
 # --------------------------------------------------------------------------- #
