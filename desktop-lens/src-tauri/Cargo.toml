@@ -1,0 +1,37 @@
+[package]
+name = "corpusmind-lens"
+version = "0.1.26"
+description = "CorpusMind Lens desktop shell (Tauri 2) — vision-LM-powered multimodal discourse analysis. Manages the engine sidecar lifecycle and OS integration."
+authors = ["Dr. Waleed Mandour", "Prof. Wesam Ibrahim"]
+license = "AGPL-3.0-only"
+repository = "https://github.com/waleedmandour/CorpusMind"
+edition = "2021"
+rust-version = "1.77"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+name = "corpusmind_lens_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.0", features = [] }
+
+[dependencies]
+tauri = { version = "2.0", features = ["protocol-asset", "devtools"] }
+tauri-plugin-shell = "2.0"
+tauri-plugin-dialog = "2.0"
+tauri-plugin-fs = "2.0"
+tauri-plugin-http = "2.0"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+log = "0.4"
+env_logger = "0.11"
+thiserror = "1"
+tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "blocking", "multipart"] }
+dirs = "5"
+
+[features]
+# This feature is used for production builds or when a dev server is not specified, DO NOT REMOVE!!
+custom-protocol = ["tauri/custom-protocol"]

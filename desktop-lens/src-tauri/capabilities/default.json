@@ -1,0 +1,29 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Default capability set for CorpusMind Lens desktop — minimal permissions, scoped to localhost. Identical to the main CorpusMind desktop capabilities because Lens uses the same engine sidecar on the same port.",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "core:window:allow-start-dragging",
+    "shell:allow-execute",
+    "shell:allow-open",
+    "shell:allow-spawn",
+    "shell:allow-stdin-write",
+    "dialog:allow-open",
+    "dialog:allow-save",
+    "fs:allow-read-file",
+    "fs:allow-write-file",
+    "fs:allow-read-dir",
+    "fs:allow-mkdir",
+    {
+      "identifier": "http:default",
+      "allow": [
+        { "url": "http://127.0.0.1:8765/*" },
+        { "url": "http://localhost:8765/*" },
+        { "url": "http://127.0.0.1:11434/*" },
+        { "url": "http://127.0.0.1:1234/*" }
+      ]
+    }
+  ]
+}
