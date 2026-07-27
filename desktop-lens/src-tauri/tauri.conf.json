@@ -5,14 +5,15 @@
   "identifier": "org.corpusmind.lens",
   "build": {
     "frontendDist": "../../web/dist",
-    "devUrl": "http://localhost:5173",
+    "devUrl": "http://localhost:5173/?shell=lens",
     "beforeDevCommand": "",
     "beforeBuildCommand": ""
   },
   "app": {
     "windows": [
       {
-        "title": "CorpusMind Lens",
+        "title": "CorpusMind Lens — Vision Suite",
+        "url": "index.html?shell=lens",
         "width": 1280,
         "height": 832,
         "minWidth": 1024,

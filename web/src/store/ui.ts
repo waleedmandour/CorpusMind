@@ -25,6 +25,11 @@ interface UIState {
   lang: Lang;
   commandPaletteOpen: boolean;
   activeNav: NavTarget;
+  /** Whether we're running inside the CorpusMind Lens shell (vs the
+   * main CorpusMind app). Detected from the ?shell=lens URL query param
+   * that the Lens Tauri shell passes. In Lens mode, the sidebar shows
+   * only vision-relevant items and the app defaults to the Vision view. */
+  isLensMode: boolean;
   onboardingComplete: boolean;
   onboardingOpen: boolean;
   /** Which sidebar groups are expanded. Persisted so the user's
@@ -53,6 +58,16 @@ interface UIState {
   setStudentMode: (enabled: boolean) => void;
 }
 
+/** Detect whether we're running inside the Lens Tauri shell by checking
+ * the ?shell=lens URL query param. The Lens shell's tauri.conf.json sets
+ * the window URL to "index.html?shell=lens" so this works in both dev
+ * and production. In browser/PWA mode (no ?shell param), this returns
+ * false — the full CorpusMind UI is shown. */
+function detectLensMode(): boolean {
+  if (typeof window === "undefined") return false;
+  return new URLSearchParams(window.location.search).get("shell") === "lens";
+}
+
 export const useUI = create<UIState>()(
   persist(
     (set, get) => ({
@@ -60,7 +75,9 @@ export const useUI = create<UIState>()(
       dir: "ltr",
       lang: "en",
       commandPaletteOpen: false,
-      activeNav: "home",
+      // In Lens mode, default to the Vision view instead of Home.
+      activeNav: detectLensMode() ? "vision" : "home",
+      isLensMode: detectLensMode(),
       onboardingComplete: false,
       onboardingOpen: false,
       // Default expand state: Corpora + Analyze expanded; others collapsed.
@@ -112,7 +129,24 @@ export const useUI = create<UIState>()(
       setSidebarCollapsed: (sidebarCollapsed) => set({ sidebarCollapsed }),
       setStudentMode: (studentMode) => set({ studentMode }),
     }),
-    { name: "corpusmind-ui" },
+    {
+      name: "corpusmind-ui",
+      // Don't persist isLensMode — it's always re-detected from the URL
+      // query param (?shell=lens) on each load. Also don't persist
+      // activeNav when in Lens mode so it always defaults to Vision.
+      partialize: (state) => {
+        const { isLensMode, ...rest } = state;
+        // In Lens mode, don't persist activeNav (always default to Vision)
+        if (state.isLensMode) {
+          const { activeNav, ...restWithoutNav } = rest;
+          void activeNav;
+          void isLensMode;
+          return restWithoutNav;
+        }
+        void isLensMode;
+        return rest;
+      },
+    },
   ),
 );
 

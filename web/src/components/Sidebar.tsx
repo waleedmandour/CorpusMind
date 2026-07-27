@@ -113,8 +113,19 @@ export function Sidebar() {
   const toggleGroup = useUI((s) => s.toggleGroup);
   const sidebarCollapsed = useUI((s) => s.sidebarCollapsed);
   const toggleSidebar = useUI((s) => s.toggleSidebar);
+  const isLensMode = useUI((s) => s.isLensMode);
   const activeCorpusId = useApp((s) => s.activeCorpusId);
   const versionDisplay = useEngineVersionDisplay();
+
+  // In Lens mode, only show vision-relevant nav groups:
+  // Overview (Home), Corpora (target only — needed to select which
+  // corpus's images to analyse), Vision, AI Assistant, System.
+  // Hide: Analysis Tools (text-only), Arabic.
+  const visibleGroups = isLensMode
+    ? NAV_GROUPS.filter(g =>
+        ["overview", "corpora", "vision", "ai", "system"].includes(g.id)
+      )
+    : NAV_GROUPS;
 
   const activeCorpus = useQuery({
     queryKey: ["corpus", activeCorpusId],
@@ -134,7 +145,9 @@ export function Sidebar() {
           <img src="/icon-32.png" alt="CorpusMind" width="28" height="28" />
           {!sidebarCollapsed && (
             <div className="sidebar-logo-text-group">
-              <span className="sidebar-logo-text">CorpusMind</span>
+              <span className="sidebar-logo-text">
+                {isLensMode ? "CorpusMind Lens" : "CorpusMind"}
+              </span>
               <span className="sidebar-logo-version">{versionDisplay}</span>
             </div>
           )}
@@ -163,7 +176,7 @@ export function Sidebar() {
 
       {/* Navigation */}
       <div className="sidebar-nav">
-        {NAV_GROUPS.map((group) => {
+        {visibleGroups.map((group) => {
           const isExpanded = expandedGroups[group.id] ?? true;
           const hasActiveItem = group.items.some((item) => item.id === activeNav);
 
