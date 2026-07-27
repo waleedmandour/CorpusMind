@@ -4444,6 +4444,379 @@ html[dir="rtl"] .toggle-switch input:checked + .toggle-slider::before {
   max-inline-size: 450px;
 }
 
+/* ====================================================================== */
+/* Vision Suite — CorpusMind Lens build step 2 (image set manager +      */
+/* analysis viewer). Replaces the .vision-coming-soon placeholder; that  */
+/* class is kept above for backward compat in case any cached PWA still  */
+/* references it.                                                        */
+/* ====================================================================== */
+
+.vision-view {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  block-size: 100%;
+  min-block-size: 0;
+}
+
+.vision-toolbar {
+  display: flex;
+  gap: var(--space-3);
+  align-items: end;
+  flex-wrap: wrap;
+}
+
+.vision-set-picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.vision-set-picker select {
+  min-inline-size: 280px;
+}
+
+.vision-new-set-form {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+.vision-new-set-form input {
+  flex: 1;
+}
+
+.vision-workspace {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* Override the default dropzone sizing so it fits inside the workspace
+   without taking up the full panel height. */
+.vision-workspace .dropzone {
+  min-block-size: 80px;
+  padding: var(--space-4);
+}
+
+.vision-pending-upload {
+  padding: var(--space-3);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.vision-pending-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.vision-pending-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--space-1);
+  font-size: 12px;
+}
+.vision-pending-list li {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--space-1) var(--space-2);
+  background: var(--bg-elevated);
+  border-radius: var(--radius-sm);
+}
+.vision-pending-size { color: var(--text-muted); }
+.vision-pending-more {
+  grid-column: 1 / -1;
+  color: var(--text-muted) !important;
+  font-style: italic;
+  justify-content: center !important;
+}
+.vision-caption-input {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.vision-section-heading {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.vision-section-heading code {
+  text-transform: none;
+  font-weight: 400;
+  font-size: 12px;
+}
+
+/* Image grid */
+.vision-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: var(--space-3);
+}
+.vision-grid-item {
+  display: flex;
+  flex-direction: column;
+  text-align: start;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0;
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  color: inherit;
+  font: inherit;
+}
+.vision-grid-item:hover {
+  border-color: var(--brand-400);
+}
+.vision-grid-item.selected {
+  border-color: var(--brand-500);
+  box-shadow: 0 0 0 2px var(--brand-500);
+}
+.vision-grid-thumb {
+  block-size: 120px;
+  background: var(--bg-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-block-end: 1px solid var(--border);
+  /* Placeholder for a real thumbnail. The icon is a centered glyph that
+     reads as "image placeholder" — replaced by an actual <img> tag once
+     a /images/{id}/thumbnail route exists (build step 6, batch view). */
+}
+.vision-grid-thumb-icon {
+  font-size: 36px;
+  color: var(--text-subtle);
+  opacity: 0.5;
+}
+.vision-grid-meta {
+  padding: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.vision-grid-filename {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.vision-grid-dims {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.vision-grid-caption {
+  font-size: 11px;
+  color: var(--text-subtle);
+  font-style: italic;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Analysis drawer */
+.vision-analysis-drawer {
+  margin-block-start: var(--space-4);
+  padding: var(--space-4);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.vision-analysis-cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--space-4);
+}
+.vision-analysis-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.vision-col-heading {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0 0 var(--space-1) 0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding-block-end: var(--space-1);
+  border-block-end: 1px solid var(--border);
+}
+
+.vision-ocr-text {
+  white-space: pre-wrap;
+  background: var(--bg-subtle);
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  margin: 0;
+  max-block-size: 200px;
+  overflow: auto;
+  color: var(--text);
+}
+
+/* Colour swatches */
+.vision-colour-swatches {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+  gap: var(--space-1);
+}
+.vision-colour-swatch {
+  block-size: 48px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  position: relative;
+  display: flex;
+  align-items: end;
+  justify-content: center;
+  overflow: hidden;
+}
+.vision-colour-pct {
+  font-size: 10px;
+  color: white;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 1px 4px;
+  border-radius: 2px;
+  /* Hide the percentage label if the swatch is too small; the title
+     attribute on the parent still carries the full hex+percent for
+     mouse hover. */
+  pointer-events: none;
+}
+.vision-symbolism-notes {
+  list-style: disc;
+  padding-inline-start: var(--space-4);
+  margin: 0;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.vision-symbolism-notes li {
+  margin-block-end: var(--space-1);
+  line-height: 1.4;
+}
+
+/* Composition info-value list */
+.vision-info-value ul {
+  list-style: none;
+  padding: 0;
+  margin: var(--space-1) 0 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.vision-info-value li {
+  font-size: 11px;
+  background: var(--bg-subtle);
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+/* Visual Grammar panel */
+.vision-vg-section {
+  margin-block-start: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  align-items: start;
+}
+.vision-vg-panel {
+  inline-size: 100%;
+  padding: var(--space-3);
+  background: var(--bg-subtle);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.vision-vg-scores {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.vision-vg-claims {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.vision-vg-claim {
+  background: var(--bg-elevated);
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  border-inline-start: 3px solid var(--brand-400);
+}
+.vision-vg-claim-meta {
+  display: flex;
+  gap: var(--space-2);
+  font-size: 10px;
+  margin-block-end: var(--space-1);
+  align-items: center;
+  flex-wrap: wrap;
+}
+.vision-vg-metafunction {
+  font-weight: 600;
+  color: var(--brand-500);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.vision-vg-category {
+  color: var(--text-muted);
+}
+.vision-vg-confidence {
+  margin-inline-start: auto;
+  background: var(--bg-subtle);
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-weight: 600;
+}
+.vision-vg-claim-text {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text);
+}
+.vision-vg-evidence {
+  list-style: none;
+  padding: 0;
+  margin: var(--space-1) 0 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+.vision-vg-evidence li {
+  font-size: 10px;
+}
+.vision-vg-evidence code {
+  background: var(--bg-subtle);
+  padding: 1px 4px;
+  border-radius: 2px;
+  color: var(--text-muted);
+}
+
+/* RTL: keep the swatch percentage label readable in mirrored layout.
+   The percentage text is bottom-centered, which works in both LTR and
+   RTL without flipping. */
+
 /* Confidence + MCQ in AI Assistant */
 .confidence-display {
   display: flex;
