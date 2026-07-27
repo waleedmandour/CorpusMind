@@ -197,6 +197,71 @@ jobs:
           fi
 
   # -----------------------------------------------------------------------
+  # Desktop Lens (Rust) — CorpusMind Lens build step 8
+  # Same pattern as the desktop job above, but for the Lens Tauri shell.
+  # -----------------------------------------------------------------------
+  desktop-lens:
+    name: Desktop Lens (Rust)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: desktop-lens/src-tauri
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libssl-dev \
+            libgtk-3-dev
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo (lens)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            desktop-lens/src-tauri/target
+          key: ${{ runner.os }}-cargo-lens-${{ hashFiles('desktop-lens/src-tauri/Cargo.toml') }}
+          restore-keys: ${{ runner.os }}-cargo-lens-
+
+      - name: Temporarily clear externalBin + resources (no sidecar in CI)
+        working-directory: desktop-lens/src-tauri
+        run: |
+          cp tauri.conf.json tauri.conf.json.bak
+          python3 - <<'PY'
+          import json
+          p = "tauri.conf.json"
+          with open(p) as f:
+              c = json.load(f)
+          c["bundle"]["externalBin"] = []
+          c["bundle"]["resources"] = []
+          with open(p, "w") as f:
+              json.dump(c, f, indent=2)
+          print("externalBin + resources cleared for CI cargo check (lens)")
+          PY
+
+      - name: Cargo check (lens)
+        run: cargo check --manifest-path Cargo.toml
+
+      - name: Restore tauri.conf.json
+        if: always()
+        working-directory: desktop-lens/src-tauri
+        run: |
+          if [ -f tauri.conf.json.bak ]; then
+            mv tauri.conf.json.bak tauri.conf.json
+            echo "tauri.conf.json restored (lens)"
+          fi
+
+  # -----------------------------------------------------------------------
   # License gate
   # -----------------------------------------------------------------------
   license-gate:
