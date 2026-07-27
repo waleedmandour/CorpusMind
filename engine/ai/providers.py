@@ -22,6 +22,7 @@ prevent corporate VPNs from silently intercepting localhost requests.
 from __future__ import annotations
 
 import abc
+import base64
 import json
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
@@ -47,6 +48,20 @@ class Message:
     role: Role
     content: str
     name: str | None = None  # for tool messages
+    # Vision extension (CorpusMind Lens, build step 1): raw image bytes
+    # attached to this message. PNG or JPEG. Empty tuple for text-only
+    # messages (the default), so every existing text-only call site keeps
+    # working unchanged. The provider layer is responsible for translating
+    # this into the wire format expected by each backend:
+    #   - OllamaProvider: sibling "images": [<base64 str>, ...] field per
+    #     message in /api/chat. See https://github.com/ollama/ollama/blob/main/docs/api.md#generate-a-chat-completion
+    #   - _OpenAICompatibleProvider (LM Studio + Cloud + Ollama tool-call
+    #     fallback): content becomes a multipart array of
+    #     {"type": "text", "text": ...} + {"type": "image_url",
+    #     "image_url": {"url": "data:image/png;base64,<b64>"}} parts.
+    # This field is intentionally a tuple (not a list) so the dataclass
+    # stays hashable + safe to share between async tasks.
+    images: tuple[bytes, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -223,6 +238,85 @@ def _strip_thinking(text: str) -> str:
 
 
 # --------------------------------------------------------------------------- #
+# Vision-message wire-format helpers (CorpusMind Lens, build step 1)
+# --------------------------------------------------------------------------- #
+
+
+def _build_openai_message(m: Message) -> dict[str, Any]:
+    """Translate a Message into the OpenAI /v1/chat/completions message shape.
+
+    Text-only messages (the default — `images` is empty) produce the same
+    flat ``{"role", "content", "name"?}``` shape this provider has always
+    sent, so existing text-only call sites are byte-identical before and
+    after this change.
+
+    Vision messages (any non-empty ``images`` tuple) switch `content` to
+    the multipart array shape OpenAI introduced for GPT-4V and that every
+    OpenAI-compatible vision endpoint (LM Studio, vLLM, LocalAI, Ollama's
+    own /v1 endpoint, OpenAI itself, Anthropic's compat shim) accepts:
+        content: [
+            {"type": "text",      "text": "<the text content>"},
+            {"type": "image_url", "image_url": {"url": "data:image/png;base64,<b64>"}},
+            ...
+        ]
+    We use a base64 data URL rather than a plain URL because the image
+    bytes already live in-process (the engine just fetched them from
+    disk); going through a hosted URL would require either uploading
+    them somewhere (violates local-first §4 Principle 1) or running a
+    local file server inside the engine (a much larger change). The
+    data URL is the standard pattern for local-first OpenAI-compatible
+    vision clients.
+    """
+    if not m.images:
+        # Fast path: text-only — preserve the exact pre-vision wire shape.
+        msg: dict[str, Any] = {"role": m.role, "content": m.content}
+        if m.name:
+            msg["name"] = m.name
+        return msg
+
+    # Vision path: multipart content array.
+    parts: list[dict[str, Any]] = []
+    if m.content:
+        parts.append({"type": "text", "text": m.content})
+    for img_bytes in m.images:
+        b64 = base64.b64encode(img_bytes).decode("ascii")
+        # We don't sniff the format — the caller is responsible for passing
+        # PNG or JPEG bytes (both supported by every OpenAI-compatible
+        # vision endpoint). PNG is the safe default for screenshots /
+        # synthetic test images; JPEG is the safe default for photographs.
+        # The data URL scheme uses image/png as a generic label because
+        # most OpenAI-compatible servers sniff the actual format from the
+        # bytes rather than the MIME label, and the few that don't (real
+        # OpenAI) accept either label for either format.
+        parts.append({
+            "type": "image_url",
+            "image_url": {"url": f"data:image/png;base64,{b64}"},
+        })
+    msg = {"role": m.role, "content": parts}
+    if m.name:
+        msg["name"] = m.name
+    return msg
+
+
+def _build_ollama_message(m: Message) -> dict[str, Any]:
+    """Translate a Message into the Ollama /api/chat message shape.
+
+    Text-only messages produce the same flat shape OllamaProvider has
+    always sent. Vision messages add a sibling ``"images"`` field
+    containing base64-encoded strings — this is the native Ollama
+    vision format (see Ollama's docs/api.md). Unlike the OpenAI path,
+    Ollama does NOT switch `content` to an array; `content` stays a
+    plain string and the images ride alongside it.
+    """
+    msg: dict[str, Any] = {"role": m.role, "content": m.content}
+    if m.name:
+        msg["name"] = m.name
+    if m.images:
+        msg["images"] = [base64.b64encode(b).decode("ascii") for b in m.images]
+    return msg
+
+
+# --------------------------------------------------------------------------- #
 # OpenAI-compatible base (drives LM Studio and Cloud)
 # --------------------------------------------------------------------------- #
 
@@ -275,7 +369,7 @@ class _OpenAICompatibleProvider(ModelProvider):
     ) -> ChatResponse:
         payload: dict[str, Any] = {
             "model": model or self.default_model,
-            "messages": [{"role": m.role, "content": m.content, **({"name": m.name} if m.name else {})} for m in messages],
+            "messages": [_build_openai_message(m) for m in messages],
             "temperature": temperature,
             "stream": False,
         }
@@ -310,7 +404,7 @@ class _OpenAICompatibleProvider(ModelProvider):
     ) -> AsyncIterator[str]:
         payload = {
             "model": model or self.default_model,
-            "messages": [{"role": m.role, "content": m.content} for m in messages],
+            "messages": [_build_openai_message(m) for m in messages],
             "temperature": temperature,
             "stream": True,
         }
@@ -445,10 +539,7 @@ class OllamaProvider(ModelProvider):
         # Build /api/chat request body
         payload: dict[str, Any] = {
             "model": model_name,
-            "messages": [
-                {"role": m.role, "content": m.content, **({"name": m.name} if m.name else {})}
-                for m in messages
-            ],
+            "messages": [_build_ollama_message(m) for m in messages],
             "stream": False,
             "think": False,  # Disable thinking for ALL models (harmless for non-Qwen3)
             "options": {
@@ -553,10 +644,7 @@ class OllamaProvider(ModelProvider):
         """
         payload: dict[str, Any] = {
             "model": model,
-            "messages": [
-                {"role": m.role, "content": m.content, **({"name": m.name} if m.name else {})}
-                for m in messages
-            ],
+            "messages": [_build_openai_message(m) for m in messages],
             "temperature": temperature,
             "stream": False,
         }
@@ -608,7 +696,7 @@ class OllamaProvider(ModelProvider):
         model_name = model or self.default_model
         payload = {
             "model": model_name,
-            "messages": [{"role": m.role, "content": m.content} for m in messages],
+            "messages": [_build_ollama_message(m) for m in messages],
             "stream": True,
             "think": False,
             "options": {
