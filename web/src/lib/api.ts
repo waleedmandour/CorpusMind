@@ -785,6 +785,23 @@ export interface AlignmentResult {
   person_descriptive_redacted?: boolean;
 }
 
+// Phase 4 batch view (build step 7)
+export interface BatchAnalysisResult {
+  image_set_id: string;
+  image_set_name: string;
+  image_count: number;
+  images_with_vlm: number;
+  images_with_discourse: number;
+  recurring_themes: Array<{
+    framework: string;
+    total_claims: number;
+    categories: Array<{ category: string; count: number; example_claim: string }>;
+  }>;
+  ocr_frequency: Array<{ word: string; count: number }>;
+  descriptions: Array<{ image_id: string; filename: string; description: string; model: string }>;
+  note: string;
+}
+
 // Phase 5 — multimodal discourse (9.11–9.18)
 export interface DiscourseClaim {
   framework: string;
@@ -1161,6 +1178,10 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ text }),
     }),
+
+  // --- Phase 4 batch view (build step 7) ---
+  getBatchAnalysis: (isetId: string) =>
+    jsonFetch<BatchAnalysisResult>(`/api/v1/image-sets/${isetId}/batch-analysis`),
 
   // --- Phase 5 multimodal discourse (9.11–9.18) ---
   socialSemiotic: (imgId: string) =>

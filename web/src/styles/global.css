@@ -4952,6 +4952,153 @@ html[dir="rtl"] .toggle-switch input:checked + .toggle-slider::before {
   color: var(--text);
 }
 
+/* ====================================================================== */
+/* Batch view — CorpusMind Lens build step 7                            */
+/* ====================================================================== */
+
+.vision-batch-panel {
+  margin-block-start: var(--space-4);
+  padding: var(--space-4);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.vision-batch-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.vision-batch-note {
+  color: var(--text-muted);
+  font-style: italic;
+  padding: var(--space-2);
+  background: var(--bg-subtle);
+  border-radius: var(--radius-sm);
+}
+
+.vision-batch-cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--space-4);
+}
+
+.vision-batch-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.vision-batch-theme {
+  background: var(--bg-subtle);
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  margin-block-end: var(--space-2);
+}
+.vision-batch-theme-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-block-end: var(--space-1);
+}
+.vision-batch-framework {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+.vision-batch-total {
+  font-size: 11px;
+  color: var(--text-muted);
+  background: var(--bg-elevated);
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+
+.vision-batch-categories {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.vision-batch-category {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 11px;
+  flex-wrap: wrap;
+}
+.vision-batch-cat-name {
+  color: var(--text);
+  font-weight: 500;
+}
+.vision-batch-cat-count {
+  color: var(--brand-500);
+  font-weight: 600;
+}
+.vision-batch-cat-example {
+  inline-size: 100%;
+  color: var(--text-muted);
+  font-style: italic;
+  padding-inline-start: var(--space-3);
+  line-height: 1.4;
+}
+
+.vision-batch-freq-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+.vision-batch-freq-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  background: var(--bg-subtle);
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+}
+.vision-batch-freq-word {
+  color: var(--text);
+  font-weight: 500;
+}
+.vision-batch-freq-count {
+  color: var(--brand-500);
+  font-weight: 600;
+}
+
+.vision-batch-desc-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.vision-batch-desc-item {
+  background: var(--bg-subtle);
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  border-inline-start: 3px solid var(--brand-400);
+}
+.vision-batch-desc-filename {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+  margin-block-end: var(--space-1);
+}
+.vision-batch-desc-text {
+  font-size: 12px;
+  color: var(--text);
+  margin: 0 0 var(--space-1) 0;
+  line-height: 1.4;
+}
+
 /* Confidence + MCQ in AI Assistant */
 .confidence-display {
   display: flex;
