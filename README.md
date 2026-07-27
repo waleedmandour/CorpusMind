@@ -2,7 +2,7 @@
 
 [![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.21226650-blue)](https://doi.org/10.5281/zenodo.21226650)
 [![License: AGPL-3.0-only](https://img.shields.io/badge/License-AGPL--3.0--only-blue.svg)](https://www.gnu.org/licenses/agpl-3.0.html)
-[![GitHub release](https://img.shields.io/badge/release-v0.1.26-blue)](https://github.com/waleedmandour/CorpusMind/releases)
+[![GitHub release](https://img.shields.io/badge/release-v0.1.27-blue)](https://github.com/waleedmandour/CorpusMind/releases)
 [![Build Status](https://img.shields.io/badge/CI-passing-brightgreen)](https://github.com/waleedmandour/CorpusMind/actions)
 
 > A local-first, AI-native research environment for corpus linguistics and multimodal discourse analysis.
@@ -447,34 +447,61 @@ on GitHub.
 
 ---
 
+## v0.1.27 Release Notes
+
+### CorpusMind Lens — Vision-LM-Powered Multimodal Discourse Analysis
+
+This release ships **CorpusMind Lens**, a separate installable desktop app that connects to the same CorpusMind engine and focuses on vision-LM-powered image understanding. Lens runs fully against a local Ollama or LM Studio instance with zero cloud calls.
+
+**Lens build steps (all 8 complete):**
+
+1. **Vision-message provider support** — Extended `Message` dataclass with `images: tuple[bytes, ...]` field, threaded through both wire formats (Ollama native sibling `images` field + OpenAI-compatible multipart content array). 20 HTTP-mocked tests.
+2. **Image-set manager + analysis viewer** — Replaced the 39-line VisionView placeholder with a real frontend: image-set picker, drag-drop upload, thumbnail grid, cached analysis drawer (OCR/colours/composition), lazy-loaded Visual Grammar panel. 373 lines of CSS with RTL support.
+3. **`POST /images/{img_id}/describe` route** — The first route that sends real image bytes to a vision-LM. Provenance metadata, OCR disagreement detection, caching with full-reassignment pattern (JSON-column mutation safety), 500-on-empty-content with actionable hint. 13 tests + real E2E test against moondream.
+4. **Vision-LM sibling paths for 8 discourse routes** — All 8 discourse-framework routes (`social-semiotic`, `cda`, `persuasion`, `framing`, `narrative`, `visual-metaphor`, `emotion`, `cultural`) now accept `?mode=llm`. Hedging contract baked into system prompt (§4 Principle 5). Defensive JSON parser. Full-reassignment caching. Falls back to heuristic — never an error state. 14 tests + real E2E against moondream.
+5. **Consent-gate filter for all vision-LM output** — Post-processing filter that redacts person-descriptive content (age, gender, expression, appearance) from vision-LM output when the consent gate is closed. Applied to `/describe` + all 8 discourse LLM routes + alignment route, even on cache hits. 18 tests.
+6. **Alignment inspector UI + LLM alignment mode** — `?mode=llm` on `/align` route. Frontend with heuristic/llm/both modes (side-by-side comparison). 10 tests.
+7. **Batch view** — `GET /image-sets/{iset_id}/batch-analysis` aggregates cached vision-LM analysis across all images in a set: recurring framework themes, OCR-derived frequency list, VLM description summary. Frontend panel with three-column layout. 8 tests.
+8. **New Tauri shell** — `desktop-lens/` directory templated from `desktop/`. Same engine sidecar, same supervisor logic, different branding. New `desktop-lens` CI job (cargo check passes).
+
+### Bug Fixes (from earlier in this release cycle)
+
+- **BNC/TEI-XML word triplication + reordering** — Fixed extraction loop that duplicated every word 3–4×. Now uses BeautifulSoup's `get_text(separator=" ")`.
+- **BNC Baby multi-file extraction crash** — Fixed `root` variable shadowing that crashed on the 2nd `.xml` file in any directory (`TypeError: expected str, bytes or os.PathLike object, not Tag`).
+- **Keyness case-sensitivity** — Fixed `compute_keyness()` grouping by raw `Token.text` instead of `LOWER(text)`, making it inconsistent with `compute_keyness_with_reference_list()`.
+- **`min_corpus_tokens` UI warning** — Added non-blocking warning in Keyness panel when target corpus is below the reference's threshold.
+- **Arabic CI hardening** — Replaced file-level `--ignore` with per-test `skipif` markers. Added camel_tools + cached morphology DB to CI. All 17 Arabic tests now run in CI.
+- **`list_backends` exception-swallowing** — Fixed bare `except Exception: pass` that hid broken camel_tools installs.
+
+### Tests
+- **Engine: 202 passed, 9 skipped** (camel_tools data not installed in some envs — cleanly skipped with reason), 0 failed.
+- **Ruff**: All checks passed.
+- **Web typecheck + build**: passed.
+- **Cargo check**: passes for both `desktop` and `desktop-lens` Tauri shells in CI.
+
+**Download:** https://github.com/waleedmandour/CorpusMind/releases/tag/v0.1.27
+
+---
+
 ## v0.1.26 Release Notes
 
 ### Bug Fixes
 
 #### BNC/TEI-XML text extraction — word triplication + reordering
 - **Fixed: BNC Baby and BAWE documents were ingested with every word duplicated 3–4× and scrambled ordering, silently corrupting every frequency count and keyness comparison run against them.**
-  - **Root cause:** BNC/TEI-XML nests tags (`<w>`/`<c>` inside `<s>`, inside `<p>`, inside `<div>`/`<text>`/`<body>`). The extraction loop walked every `w/c/s/p/text/body` tag and called `get_text()` on each — but a parent tag's `get_text()` already returns the concatenation of all descendant text, so each word's text was appended once per ancestor level matched.
-  - **Fix:** Rely on BeautifulSoup's own `get_text(separator=" ")`, which walks nested tags correctly and visits each leaf text node exactly once in document order. Restrict to `<text>` so `<teiHeader>` bibliographic metadata isn't pulled into the body. Collapse runs of whitespace to single spaces.
-  - Verified against a synthetic BNC-style XML sample: 7 leaf `<w>`/`<c>` tokens → 7 output words (was 11 with the old code, and 3–4× on real BNC docs with deeper nesting).
 
 #### Keyness case-sensitivity — inconsistent rankings for the same corpus
 - **Fixed: The same target corpus could produce different keyword rankings depending on which reference type the user picked.**
-  - **Root cause:** `compute_keyness()` in `engine/stats/service.py` grouped by raw `Token.text`, so sentence-initial "The" and mid-sentence "the" were counted as two separate types. `compute_keyness_with_reference_list()` in `engine/reference_corpus/keyness_bridge.py` already lowercased target tokens to match lowercase bundled frequency lists (BE06, Leipzig). The two code paths were therefore inconsistent for any word with case variants.
-  - **Fix:** `GROUP BY LOWER(text)` at the SQL level, which correctly merges case variants during aggregation (a Python-level `.lower()` after fetching would not merge them, since the grouping already happened in SQL).
-  - Verified end-to-end: a target corpus with 5 "The" + 10 "the" now produces a single `"the"` entry with `f1=15` (was previously split into `"The"` and `"the"`).
 
 ### UI Improvements
 
 #### `min_corpus_tokens` advisory warning
 - **Added: Non-blocking warning in the Keyness panel when the target corpus's token count is below the selected reference's `min_corpus_tokens`.**
-  - `ReferenceCorpusSpec.min_corpus_tokens` has a docstring promising "The UI shows a warning, not a hard block" — but nothing anywhere compared target size against it. A user could run keyness against a 200-token reference with no advisory at all, which is a real corpus-linguistics best-practice gap (small-N reference frequencies produce statistically unstable, easily-inflated log-likelihood scores).
-  - The KeynessPanel now compares the target corpus's token count (already available from its stats) against the selected reference's `min_corpus_tokens`, and shows an advisory — not an error — matching the docstring's stated intent. Bundled references use their spec value; uploaded references fall back to the `ReferenceCorpusSpec` default of 1,000.
 
 ### Tests
-- **Engine: 110 passed, 0 failed** (test_phase3_arabic.py legitimately skipped: camel_tools not installed in this env, per the issue's explicit exclusion clause).
+- **Engine: 110 passed, 0 failed** (test_phase3_arabic.py legitimately skipped).
 - **Ruff**: All checks passed.
-- **Web typecheck**: passed (no errors).
-- **Web build**: built successfully.
+- **Web typecheck + build**: passed.
 
 **Download:** https://github.com/waleedmandour/CorpusMind/releases/tag/v0.1.26
 
