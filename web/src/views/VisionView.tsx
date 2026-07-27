@@ -331,6 +331,10 @@ function ImageSetWorkspace({
       {selectedImageId && (
         <AnalysisDrawer imageId={selectedImageId} />
       )}
+
+      {selectedImageId && (
+        <AlignmentPanel imageId={selectedImageId} />
+      )}
     </div>
   );
 }
@@ -554,6 +558,171 @@ function VisualGrammarPanel({ data }: { data: VisualGrammarResult }) {
                   {c.evidence.map((e, j) => <li key={j}><code>{e}</code></li>)}
                 </ul>
               )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+
+// ---------------------------------------------------------------------------
+// AlignmentPanel — image-text alignment inspector (build step 6)
+//
+// Frontend for the /images/{img_id}/align route. Lets the user enter
+// co-occurring text, choose heuristic/llm/both mode, and see the
+// alignments side by side. The "both" mode shows heuristic and LLM
+// alignments together so the user can compare which mode produced
+// what — honest about which path produced the output.
+// ---------------------------------------------------------------------------
+
+type AlignMode = "heuristic" | "llm" | "both";
+
+function AlignmentPanel({ imageId }: { imageId: string }) {
+  const [text, setText] = useState("");
+  const [mode, setMode] = useState<AlignMode>("heuristic");
+  const [submitted, setSubmitted] = useState<{ text: string; mode: AlignMode } | null>(null);
+
+  // Heuristic alignment query
+  const heuristicQuery = useQuery({
+    queryKey: ["align", imageId, submitted?.text, "heuristic"],
+    queryFn: () => api.alignImageText(imageId, submitted!.text, "heuristic"),
+    enabled: !!submitted && (submitted.mode === "heuristic" || submitted.mode === "both"),
+  });
+
+  // LLM alignment query
+  const llmQuery = useQuery({
+    queryKey: ["align", imageId, submitted?.text, "llm"],
+    queryFn: () => api.alignImageText(imageId, submitted!.text, "llm", "moondream"),
+    enabled: !!submitted && (submitted.mode === "llm" || submitted.mode === "both"),
+  });
+
+  const onAlign = () => {
+    if (!text.trim()) return;
+    setSubmitted({ text: text.trim(), mode });
+  };
+
+  return (
+    <div className="vision-alignment-panel">
+      <h3 className="vision-section-heading">Image-text alignment</h3>
+      <div className="vision-alignment-input">
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) onAlign();
+          }}
+          placeholder="Enter the co-occurring text (caption, article body, etc.) to align with this image..."
+          rows={3}
+        />
+        <div className="vision-alignment-controls">
+          <label className="vision-align-mode">
+            <span>Mode</span>
+            <select value={mode} onChange={(e) => setMode(e.target.value as AlignMode)}>
+              <option value="heuristic">Heuristic (colour/positional)</option>
+              <option value="llm">Vision-LM (looks at image)</option>
+              <option value="both">Both (side by side)</option>
+            </select>
+          </label>
+          <button
+            className="btn-primary"
+            onClick={onAlign}
+            disabled={!text.trim() || heuristicQuery.isFetching || llmQuery.isFetching}
+          >
+            {(heuristicQuery.isFetching || llmQuery.isFetching) ? "Aligning..." : "Align"}
+          </button>
+        </div>
+        <div className="hint">Ctrl+Enter to align</div>
+      </div>
+
+      {submitted && submitted.mode === "heuristic" && (
+        <AlignmentResultView
+          title="Heuristic alignment"
+          query={heuristicQuery}
+        />
+      )}
+
+      {submitted && submitted.mode === "llm" && (
+        <AlignmentResultView
+          title="Vision-LM alignment"
+          query={llmQuery}
+        />
+      )}
+
+      {submitted && submitted.mode === "both" && (
+        <div className="vision-alignment-both">
+          <AlignmentResultView
+            title="Heuristic alignment"
+            query={heuristicQuery}
+          />
+          <AlignmentResultView
+            title="Vision-LM alignment"
+            query={llmQuery}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+function AlignmentResultView({
+  title,
+  query,
+}: {
+  title: string;
+  query: ReturnType<typeof useQuery<any>>;
+}) {
+  if (query.isLoading) return <div className="hint">Running {title.toLowerCase()}...</div>;
+  if (query.error) {
+    return (
+      <div className="uploader-status error">
+        {title} failed: {(query.error as Error).message}
+      </div>
+    );
+  }
+  if (!query.data) return null;
+
+  const data = query.data;
+  return (
+    <div className="vision-alignment-result">
+      <h4 className="vision-align-result-heading">{title}</h4>
+      <div className="result-meta">
+        Method: <strong>{data.method}</strong>
+        {data.provenance && (
+          <> · Mode: <strong>{data.provenance.mode}</strong>
+          {data.provenance.model && <> · Model: <strong>{data.provenance.model}</strong></>}
+          </>
+        )}
+        {data.fallback_reason && (
+          <div className="hint vision-align-fallback">{data.fallback_reason}</div>
+        )}
+        {data.person_descriptive_redacted && (
+          <div className="hint vision-align-redacted">
+            Person-descriptive content was redacted (enable facial analysis in Settings to view).
+          </div>
+        )}
+      </div>
+
+      {data.alignments.length === 0 ? (
+        <div className="hint">No alignments found.</div>
+      ) : (
+        <ul className="vision-align-list">
+          {data.alignments.map((a: any, i: number) => (
+            <li key={i} className="vision-align-item">
+              <div className="vision-align-item-header">
+                <span className="vision-align-span">"{a.span_text}"</span>
+                <span className="vision-align-confidence">
+                  {(a.confidence * 100).toFixed(0)}%
+                </span>
+              </div>
+              <div className="vision-align-region">
+                <strong>Region:</strong> {a.region_descriptor}
+              </div>
+              <div className="vision-align-reason">
+                <strong>Reason:</strong> {a.match_reason}
+              </div>
             </li>
           ))}
         </ul>

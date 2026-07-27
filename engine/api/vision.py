@@ -6,6 +6,7 @@ import os
 from dataclasses import asdict
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Literal
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from pydantic import BaseModel, Field
@@ -19,6 +20,7 @@ from multimodal.alignment import (
     align_image_text,
     detect_cross_modal_relations,
 )
+from multimodal.alignment_llm import run_llm_alignment
 from multimodal.visual_grammar import analyse_visual_grammar
 from storage.models import Corpus, ImageSet
 from storage.models import Image as ImageModel
@@ -267,13 +269,37 @@ class AlignmentRequest(BaseModel):
     text: str = Field(..., description="Co-occurring text (caption, article body, etc.)")
 
 
+class AlignModeParams(BaseModel):
+    """Query params for the /align route's mode selection (step 6).
+
+    mode=heuristic (default): existing colour/positional heuristic.
+    mode=llm: send the image + text to a vision-LM for alignment.
+    Falls back to heuristic if no provider is available.
+    """
+    mode: Literal["heuristic", "llm"] = Field(
+        default="heuristic",
+        description="heuristic (default) or llm (vision-LM alignment).",
+    )
+    model: str | None = Field(default=None, description="Model name for LLM mode.")
+    provider: str = Field(default="ollama", description="Provider for LLM mode.")
+
+
 @router.post("/images/{img_id}/align")
-async def align_route(img_id: str, body: AlignmentRequest,
-                       session: AsyncSession = Depends(get_session)) -> dict:
+async def align_route(
+    img_id: str,
+    body: AlignmentRequest,
+    request: Request,
+    mode_params: AlignModeParams = Depends(),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
     """Align image regions with text spans (§9.8) — the flagship feature.
 
     Returns each alignment with a confidence score + the exact spans/regions
     linked. Every alignment is inspectable, not a black box.
+
+    ?mode=heuristic (default): colour-term + positional heuristic.
+    ?mode=llm: vision-LM looks at the image + text to identify
+    correspondences. Falls back to heuristic if no provider available.
     """
     img = await session.get(ImageModel, img_id)
     if not img:
@@ -281,11 +307,50 @@ async def align_route(img_id: str, body: AlignmentRequest,
     if not img.storage_path or not os.path.exists(img.storage_path):
         raise HTTPException(400, "Image file not found on disk. Re-ingest.")
 
+    # --- LLM mode (step 6) ----------------------------------------------
+    if mode_params.mode == "llm":
+        try:
+            provider = request.app.state.providers.get(mode_params.provider)
+        except Exception as e:
+            log.warning("align_llm_provider_error", error=str(e))
+            provider = None
+
+        if provider is not None:
+            try:
+                is_healthy = await provider.health()
+            except Exception:
+                is_healthy = False
+
+            if is_healthy:
+                try:
+                    llm_result = await run_llm_alignment(
+                        img, body.text, provider,
+                        model=mode_params.model,
+                    )
+                    return {
+                        "image_id": img.id,
+                        "text": body.text,
+                        "method": llm_result.method,
+                        "note": llm_result.note,
+                        "regions": [],  # LLM mode doesn't produce grid regions
+                        "spans": [],    # LLM mode doesn't produce text spans
+                        "alignments": llm_result.alignments,
+                        "cross_modal_relations": [],
+                        "provenance": llm_result.provenance,
+                        "person_descriptive_redacted": llm_result.person_descriptive_redacted,
+                    }
+                except ModelProviderError as e:
+                    log.warning("align_llm_call_failed", error=str(e))
+                    # Fall through to heuristic
+            else:
+                log.warning("align_llm_provider_unhealthy", provider=mode_params.provider)
+
+    # --- Heuristic mode (default + fallback) ----------------------------
     pil_img = load_image(Path(img.storage_path).read_bytes())
     result = align_image_text(pil_img, body.text)
     cross_modal = detect_cross_modal_relations(result)
 
-    return {
+    response = {
         "image_id": img.id,
         "text": body.text,
         "method": result.method,
@@ -294,7 +359,11 @@ async def align_route(img_id: str, body: AlignmentRequest,
         "spans": [asdict(s) for s in result.spans],
         "alignments": [asdict(a) for a in result.alignments],
         "cross_modal_relations": [asdict(r) for r in cross_modal],
+        "provenance": {"mode": "heuristic"},
     }
+    if mode_params.mode == "llm":
+        response["fallback_reason"] = "LLM mode requested but unavailable — using heuristic."
+    return response
 
 
 # --------------------------------------------------------------------------- #
