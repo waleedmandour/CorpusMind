@@ -30,7 +30,7 @@ import { useState, useRef, type KeyboardEvent } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
 
-import { api, type ImageRecord, type ImageAnalysis, type VisualGrammarResult } from "@/lib/api";
+import { api, type ImageRecord, type ImageAnalysis, type VisualGrammarResult, type BatchAnalysisResult } from "@/lib/api";
 import { useApp } from "@/store/app";
 
 
@@ -335,6 +335,8 @@ function ImageSetWorkspace({
       {selectedImageId && (
         <AlignmentPanel imageId={selectedImageId} />
       )}
+
+      <BatchViewPanel isetId={setId} />
     </div>
   );
 }
@@ -727,6 +729,132 @@ function AlignmentResultView({
           ))}
         </ul>
       )}
+    </div>
+  );
+}
+
+
+// ---------------------------------------------------------------------------
+// BatchViewPanel — recurring themes + OCR frequency across an image set
+// (build step 7)
+//
+// Surfaces cached vision-LM analysis across all images in the set:
+//   1. Recurring framework themes (grouped by framework, counted by category)
+//   2. OCR-derived frequency list (Python-side Counter over OCR text)
+//   3. Vision-LM description summary (one per image that has a cached desc)
+//
+// This is a READ-ONLY view — it doesn't call any model, just aggregates
+// what's already cached.
+// ---------------------------------------------------------------------------
+
+function BatchViewPanel({ isetId }: { isetId: string }) {
+  const [enabled, setEnabled] = useState(false);
+
+  const batchQuery = useQuery({
+    queryKey: ["batch-analysis", isetId],
+    queryFn: () => api.getBatchAnalysis(isetId),
+    enabled,
+  });
+
+  return (
+    <div className="vision-batch-panel">
+      <div className="vision-batch-header">
+        <h3 className="vision-section-heading">Batch view</h3>
+        <button
+          className="btn-secondary"
+          onClick={() => setEnabled((v) => !v)}
+          aria-expanded={enabled}
+        >
+          {enabled ? "Hide" : "Show"} batch analysis
+        </button>
+      </div>
+
+      {enabled && batchQuery.isLoading && <div className="hint">Loading batch analysis…</div>}
+      {enabled && batchQuery.error && (
+        <div className="uploader-status error">
+          Failed to load batch analysis: {(batchQuery.error as Error).message}
+        </div>
+      )}
+      {enabled && batchQuery.data && <BatchViewContent data={batchQuery.data} />}
+    </div>
+  );
+}
+
+
+function BatchViewContent({ data }: { data: BatchAnalysisResult }) {
+  return (
+    <div className="vision-batch-content">
+      <div className="result-meta">
+        {data.image_count} images · {data.images_with_vlm} with VLM descriptions ·{" "}
+        {data.images_with_discourse} with discourse analysis
+      </div>
+
+      {data.note && <div className="hint vision-batch-note">{data.note}</div>}
+
+      <div className="vision-batch-cols">
+        {/* Recurring themes */}
+        <div className="vision-batch-col">
+          <h4 className="vision-col-heading">Recurring framework themes</h4>
+          {data.recurring_themes.length === 0 ? (
+            <div className="hint">No discourse analysis cached yet.</div>
+          ) : (
+            data.recurring_themes.map((t) => (
+              <div key={t.framework} className="vision-batch-theme">
+                <div className="vision-batch-theme-header">
+                  <span className="vision-batch-framework">{t.framework}</span>
+                  <span className="vision-batch-total">{t.total_claims} claims</span>
+                </div>
+                <ul className="vision-batch-categories">
+                  {t.categories.map((c) => (
+                    <li key={c.category} className="vision-batch-category">
+                      <span className="vision-batch-cat-name">{c.category}</span>
+                      <span className="vision-batch-cat-count">{c.count}</span>
+                      {c.example_claim && (
+                        <div className="vision-batch-cat-example">{c.example_claim}</div>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* OCR frequency */}
+        <div className="vision-batch-col">
+          <h4 className="vision-col-heading">OCR word frequency</h4>
+          {data.ocr_frequency.length === 0 ? (
+            <div className="hint">No OCR text found in any image.</div>
+          ) : (
+            <div className="vision-batch-freq-list">
+              {data.ocr_frequency.slice(0, 30).map((f) => (
+                <div key={f.word} className="vision-batch-freq-item">
+                  <span className="vision-batch-freq-word">{f.word}</span>
+                  <span className="vision-batch-freq-count">{f.count}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* VLM descriptions */}
+        <div className="vision-batch-col">
+          <h4 className="vision-col-heading">Vision-LM descriptions</h4>
+          {data.descriptions.length === 0 ? (
+            <div className="hint">No VLM descriptions cached yet.</div>
+          ) : (
+            <ul className="vision-batch-desc-list">
+              {data.descriptions.map((d) => (
+                <li key={d.image_id} className="vision-batch-desc-item">
+                  <div className="vision-batch-desc-filename">{d.filename}</div>
+                  <p className="vision-batch-desc-text">{d.description}</p>
+                  <div className="hint">Model: {d.model}</div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

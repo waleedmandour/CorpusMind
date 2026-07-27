@@ -725,3 +725,155 @@ async def describe_image_route(
         "cached_ocr": cached_ocr,
         "person_descriptive_redacted": gate_result["person_descriptive_redacted"],
     }
+
+
+# --------------------------------------------------------------------------- #
+# §9.x Batch view — recurring themes + OCR frequency across an image set
+# (CorpusMind Lens build step 7)
+#
+# Once several images in a set have vision-LM analysis cached, this
+# endpoint surfaces:
+#   1. Recurring framework themes: aggregates all cached
+#      vision_llm_discourse claims across images, groups by framework,
+#      counts recurring claim categories.
+#   2. OCR-derived frequency list: Python-side Counter over all
+#      img.analysis["ocr"]["text"] strings. We DON'T reuse the SQL-level
+#      compute_frequency() in stats/service.py because OCR text is plain
+#      strings, not Token rows in an AnnotationVersion — forcing it
+#      through the SQL stats layer would be a bad fit (see review note
+#      from the initial plan assessment).
+#   3. Vision-LM description summary: aggregates all cached vision_llm
+#      descriptions across images.
+#
+# This is a READ-ONLY aggregation endpoint — it doesn't call any model.
+# It only surfaces what's already cached. If no images have cached
+# vision-LM analysis, it returns empty lists with a note.
+# --------------------------------------------------------------------------- #
+
+
+@router.get("/image-sets/{iset_id}/batch-analysis")
+async def batch_analysis_route(
+    iset_id: str,
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    """Aggregate cached vision-LM analysis across all images in a set.
+
+    Returns:
+      - image_count: total images in the set
+      - images_with_vlm: how many have cached vision-LM descriptions
+      - images_with_discourse: how many have cached discourse analysis
+      - recurring_themes: framework → [{category, count, example_claim}]
+      - ocr_frequency: [{word, count}] — Python-side Counter over OCR text
+      - descriptions: [{image_id, filename, description, model}] summary
+    """
+    iset = await session.get(ImageSet, iset_id)
+    if not iset:
+        raise HTTPException(404, "Image set not found")
+
+    # Load all images in the set.
+    stmt = select(ImageModel).where(ImageModel.image_set_id == iset_id).order_by(ImageModel.created_at)
+    images = (await session.execute(stmt)).scalars().all()
+
+    # --- Aggregate cached vision-LM descriptions -----------------------
+    descriptions: list[dict] = []
+    images_with_vlm = 0
+    for img in images:
+        vlm = (img.analysis or {}).get("vision_llm", {})
+        if vlm:
+            images_with_vlm += 1
+            # Take the first cached description (there may be multiple
+            # keyed on different prompts/models — the batch view just
+            # wants a representative sample).
+            first = next(iter(vlm.values()), None)
+            if first:
+                descriptions.append({
+                    "image_id": img.id,
+                    "filename": img.filename,
+                    "description": first.get("description", ""),
+                    "model": first.get("model", ""),
+                })
+
+    # --- Aggregate cached discourse analysis (recurring themes) --------
+    from collections import Counter
+
+    # framework → Counter(category → count)
+    theme_counts: dict[str, Counter] = {}
+    # framework → list of (claim, image_id) for examples
+    theme_examples: dict[str, list[dict]] = {}
+    images_with_discourse = 0
+
+    for img in images:
+        discourse = (img.analysis or {}).get("vision_llm_discourse", {})
+        if discourse:
+            images_with_discourse += 1
+        for cache_key, cached in discourse.items():
+            # cache_key is f"{framework_key}:{model}:{prompt_hash}"
+            # framework_key is the first segment
+            framework_key = cache_key.split(":")[0] if ":" in cache_key else cache_key
+            framework_name = cached.get("framework", framework_key)
+            for claim in cached.get("claims", []):
+                category = claim.get("category", "unspecified")
+                theme_counts.setdefault(framework_name, Counter())[category] += 1
+                # Keep up to 3 example claims per framework
+                if len(theme_examples.setdefault(framework_name, [])) < 3:
+                    theme_examples.setdefault(framework_name, []).append({
+                        "claim": claim.get("claim", ""),
+                        "image_id": img.id,
+                        "filename": img.filename,
+                    })
+
+    recurring_themes: list[dict] = []
+    for framework, counts in sorted(theme_counts.items()):
+        categories = [
+            {"category": cat, "count": cnt, "example_claim": ""}
+            for cat, cnt in counts.most_common(10)
+        ]
+        # Attach example claims to the first category
+        examples = theme_examples.get(framework, [])
+        if examples and categories:
+            categories[0]["example_claim"] = examples[0]["claim"]
+        recurring_themes.append({
+            "framework": framework,
+            "total_claims": sum(counts.values()),
+            "categories": categories,
+        })
+
+    # --- OCR-derived frequency list (Python-side Counter) --------------
+    # We don't reuse compute_frequency() from stats/service.py because
+    # OCR text is plain strings in img.analysis["ocr"]["text"], not
+    # Token rows in an AnnotationVersion. A Python Counter is the right
+    # tool for this — ~10 lines, no SQL gymnastics.
+    ocr_counter: Counter = Counter()
+    for img in images:
+        ocr_text = (img.analysis or {}).get("ocr", {}).get("text", "")
+        if ocr_text:
+            # Simple whitespace tokenization + lowercase. This is OCR
+            # text, not NLP-parsed tokens — we're counting surface word
+            # forms, not lemmas. Arabic-script text works fine here too
+            # (whitespace tokenization is language-agnostic).
+            words = ocr_text.lower().split()
+            # Filter out very short tokens (punctuation that slipped through)
+            ocr_counter.update(w for w in words if len(w) > 1)
+
+    ocr_frequency = [
+        {"word": word, "count": count}
+        for word, count in ocr_counter.most_common(50)
+    ]
+
+    return {
+        "image_set_id": iset_id,
+        "image_set_name": iset.name,
+        "image_count": len(images),
+        "images_with_vlm": images_with_vlm,
+        "images_with_discourse": images_with_discourse,
+        "recurring_themes": recurring_themes,
+        "ocr_frequency": ocr_frequency,
+        "descriptions": descriptions,
+        "note": (
+            f"Aggregated cached analysis across {len(images)} images. "
+            f"{images_with_vlm} have vision-LM descriptions, "
+            f"{images_with_discourse} have discourse analysis. "
+            f"Run /describe and /social-semiotic?mode=llm on individual "
+            f"images to populate this view."
+        ) if images_with_vlm == 0 and images_with_discourse == 0 else "",
+    }
