@@ -395,8 +395,20 @@ async def download_full_reference(
                                         # accumulation needed. Restrict to
                                         # <text> so <teiHeader> bibliographic
                                         # metadata isn't pulled into the body.
-                                        root = soup.find("text") or soup
-                                        content = root.get_text(separator=" ")
+                                        # Note: named xml_root, NOT root -- the
+                                        # outer os.walk() loop above already
+                                        # uses `root` for the current directory
+                                        # path. Reusing that name here silently
+                                        # overwrote it after the first .xml file
+                                        # in any directory, so os.path.join(root,
+                                        # fname) crashed with "expected str,
+                                        # bytes or os.PathLike object, not
+                                        # BeautifulSoup"/"not Tag" on every
+                                        # subsequent file in that directory --
+                                        # which is every real multi-file BNC
+                                        # Baby genre folder.
+                                        xml_root = soup.find("text") or soup
+                                        content = xml_root.get_text(separator=" ")
                                         # BNC <w>/<c> tags are tightly packed
                                         # with irregular whitespace; collapse
                                         # runs of whitespace to single spaces.

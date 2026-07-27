@@ -360,5 +360,48 @@ def test_background_task_set_exists():
     assert isinstance(api_ref._full_corpus_tasks, set)
 
 
+# --------------------------------------------------------------------------- #
+# Test 6 — Multiple .xml files in the same directory all extract (Fix #13)
+# --------------------------------------------------------------------------- #
+
+
+def _bnc_xml(word1: str, word2: str) -> str:
+    """A minimal but structurally real BNC/TEI-XML document: <w> nested in
+    <s> nested in <body> nested in <text>, matching the actual shape that
+    triggered both this bug and the earlier word-duplication bug."""
+    return (
+        f"<text><body><div1><p>"
+        f'<s n="1"><w c5="AT0">{word1} </w><w c5="NN1">{word2}</w>'
+        f'<c c5="PUN">.</c></s>'
+        f"</p></div1></body></text>"
+    )
+
+
+@pytest.mark.asyncio
+async def test_multiple_xml_files_in_same_directory_all_extract(client, monkeypatch):
+    """Reproduces Fix #13: a genre folder with 3 .xml files must extract
+    all 3, not crash on the 2nd file with a root-variable TypeError."""
+    zip_bytes = _build_zip_archive({
+        "Texts/Aca/AA0.xml": _bnc_xml("First", "document"),
+        "Texts/Aca/AA1.xml": _bnc_xml("Second", "document"),
+        "Texts/Aca/AA2.xml": _bnc_xml("Third", "document"),
+    })
+
+    ingested_files = _patch_download(monkeypatch, zip_bytes)
+
+    r = await client.post("/api/v1/reference-corpora/bnc-baby/download-full")
+    assert r.status_code == 200, r.text
+
+    job = await _wait_for_job(client, "bnc-baby")
+    assert job["status"] == "installed", (
+        f"Expected installed, got: {job!r}. Without the fix this fails on "
+        f"the 2nd .xml file in the directory with "
+        f"\"TypeError: expected str, bytes or os.PathLike object, not "
+        f"BeautifulSoup\" (or \"not Tag\")."
+    )
+    assert job["document_count"] == 3, f"Expected 3 docs, got {job['document_count']}"
+    assert len(ingested_files) == 3
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "--tb=short"])
