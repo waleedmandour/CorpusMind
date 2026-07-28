@@ -43,6 +43,12 @@ export default function App() {
 
   useEffect(() => {
     applyHtmlAttrs();
+    // Set data-shell="lens" on <html> when running inside the Lens
+    // Tauri shell. This triggers the blue brand-color override in CSS.
+    const isLens = useUI.getState().isLensMode;
+    if (isLens) {
+      document.documentElement.dataset.shell = "lens";
+    }
   }, [theme, dir, lang]);
 
   useEffect(() => {

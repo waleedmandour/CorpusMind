@@ -2,7 +2,7 @@
 
 [![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.21226650-blue)](https://doi.org/10.5281/zenodo.21226650)
 [![License: AGPL-3.0-only](https://img.shields.io/badge/License-AGPL--3.0--only-blue.svg)](https://www.gnu.org/licenses/agpl-3.0.html)
-[![GitHub release](https://img.shields.io/badge/release-v0.1.27-blue)](https://github.com/waleedmandour/CorpusMind/releases)
+[![GitHub release](https://img.shields.io/badge/release-v1.0.0-blue)](https://github.com/waleedmandour/CorpusMind/releases)
 [![Build Status](https://img.shields.io/badge/CI-passing-brightgreen)](https://github.com/waleedmandour/CorpusMind/actions)
 
 > A local-first, AI-native research environment for corpus linguistics and multimodal discourse analysis.
@@ -444,6 +444,45 @@ on GitHub.
 ---
 
 *Built with ❤ to the Academic Community.*
+
+---
+
+## v1.0.0 Release Notes
+
+### First stable release — CorpusMind + CorpusMind Lens
+
+This is the first stable (1.0) release. It includes all features from the v0.1.x development cycle plus the completed CorpusMind Lens vision-LM subsystem.
+
+**CorpusMind Lens** is a separate installable desktop app that connects to the same engine and focuses on vision-LM-powered multimodal discourse analysis. It has a **blue theme** (vs the main app's green), opens directly to the Vision Suite, and shows only vision-relevant navigation.
+
+**What's new in v1.0.0 (on top of v0.1.27):**
+
+- **Removed "Coming Soon" label** from the Vision Suite nav item — the Vision Suite is fully functional.
+- **Added vision models to the download catalogue**: `moondream` (1.7 GB, 1.8B), `llama3.2-vision:11b` (7.9 GB, 11B), and `gemma3:4b` (3.3 GB, 4B, multilingual) are now listed in Settings → Model Providers with a "vision" tag. Users can download them directly from within the app.
+- **Updated About view** — shows "CorpusMind Lens" branding when running inside the Lens shell. Updated test count to 202, added "Discourse Lenses (LLM)" stat.
+- **Updated User Guide** — the Vision Suite section now documents all Lens features: image-set management, vision-LM description, discourse LLM modes, alignment inspector, batch view, consent gate, and how to download vision models.
+- **Blue theme for Lens** — the Lens shell uses blue brand colors (`#2563eb`) instead of the main app's green, applied via a `[data-shell="lens"]` CSS override. The main CorpusMind app is unchanged.
+- **Lens UI is distinct** — Lens shows only vision-relevant sidebar items (Overview, Corpora, Vision, AI, System), defaults to the Vision view, and the sidebar logo says "CorpusMind Lens."
+
+**Full feature set (cumulative from v0.1.0):**
+
+- Corpus management: upload, clean, tokenize (spaCy + CAMeL Tools for Arabic)
+- Analysis: concordance, frequency, collocation, keyness (with case-insensitive grouping), dispersion, n-grams, POS, grammar, dependency, discourse, vocabulary, sentiment, metaphor
+- Reference corpora: BE06, Leipzig, BNC Baby, BAWE (with magic-byte archive detection + TEI-XML extraction fix)
+- Arabic NLP: full CAMeL Tools integration (morphology, dialect ID, register detection, bilingual alignment)
+- Vision Suite: image-set management, cached analysis (OCR/colour/composition), Visual Grammar (Kress & van Leeuwen)
+- Vision-LM: image description, 8 discourse frameworks with `?mode=llm`, alignment inspector, batch view, consent gate
+- AI Assistant: 25 grounded-AI tools, tool-calling agent with citation-enforced output
+- Desktop: Tauri 2 shells for both CorpusMind (green) and CorpusMind Lens (blue), cross-platform (Windows, Linux, macOS)
+- Privacy: local-first by default, cloud opt-in, no telemetry
+
+### Tests
+- **Engine: 202 passed, 9 skipped** (camel_tools data not installed in some envs), 0 failed.
+- **Ruff**: All checks passed.
+- **Web typecheck + build**: passed.
+- **Cargo check**: passes for both `desktop` and `desktop-lens` Tauri shells in CI.
+
+**Download:** https://github.com/waleedmandour/CorpusMind/releases/tag/v1.0.0
 
 ---
 

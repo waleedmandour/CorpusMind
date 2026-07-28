@@ -44,6 +44,15 @@
   --z-cmdk: 1000;
 }
 
+/* Lens shell — override brand colors to blue.
+   Applied when <html data-shell="lens"> is set by App.tsx.
+   Works in both light and dark themes. */
+[data-shell="lens"] {
+  --brand-500: #2563eb;
+  --brand-600: #1d4ed8;
+  --brand-400: #3b82f6;
+}
+
 /* Light theme (default) */
 :root,
 [data-theme="light"] {

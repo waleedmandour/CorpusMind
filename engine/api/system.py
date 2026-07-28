@@ -139,6 +139,27 @@ RECOMMENDED_OLLAMA_MODELS: list[dict] = [
         "languages": ["en", "ar", "fr", "de", "es", "ja", "ko", "zh"],
         "recommended": False,
     },
+    # --- Vision models (for CorpusMind Lens — multimodal discourse analysis) ---
+    {
+        "name": "moondream",
+        "size": "1.7 GB",
+        "params": "1.8B",
+        "ram": "4 GB",
+        "description": "Moondream2 — small vision-language model. Runs on any machine. Good for basic image description and alignment. Recommended for CorpusMind Lens.",
+        "languages": ["en"],
+        "recommended": True,
+        "vision": True,
+    },
+    {
+        "name": "llama3.2-vision:11b",
+        "size": "7.9 GB",
+        "params": "11B",
+        "ram": "8 GB",
+        "description": "Llama 3.2 Vision 11B — high-quality image understanding. Better than moondream for complex visual discourse analysis. Needs 8 GB+ RAM.",
+        "languages": ["en"],
+        "recommended": True,
+        "vision": True,
+    },
 ]
 
 

@@ -2,19 +2,22 @@
  * AboutView -- project info, authors, license, acknowledgements.
  */
 import { useEngineVersion } from "@/hooks/useEngineVersion";
+import { useUI } from "@/store/ui";
 
 export function AboutView() {
   const version = useEngineVersion();
+  const isLensMode = useUI((s) => s.isLensMode);
+  const appName = isLensMode ? "CorpusMind Lens" : "CorpusMind";
+  const tagline = isLensMode
+    ? "Vision-LM-powered multimodal discourse analysis. Runs fully against a local Ollama or LM Studio instance with zero cloud calls."
+    : "Local-first, AI-native research environment for corpus linguistics and multimodal discourse analysis.";
   return (
     <div className="about-view">
       <div className="about-hero">
-        <img src="/icon-512.png" alt="CorpusMind" width="96" height="96" className="about-logo-img" />
-        <h1>CorpusMind</h1>
+        <img src="/icon-512.png" alt={appName} width="96" height="96" className="about-logo-img" />
+        <h1>{appName}</h1>
         <p className="about-version">Version {version} | AGPL-3.0-only</p>
-        <p className="about-tagline">
-          Local-first, AI-native research environment for corpus linguistics
-          and multimodal discourse analysis.
-        </p>
+        <p className="about-tagline">{tagline}</p>
       </div>
 
       <section className="about-section">
@@ -87,12 +90,12 @@ export function AboutView() {
       <section className="about-section">
         <h2>Key Numbers</h2>
         <div className="about-stats">
-          <div className="about-stat"><span className="num">97</span><span className="label">Tests Passing</span></div>
+          <div className="about-stat"><span className="num">202</span><span className="label">Tests Passing</span></div>
           <div className="about-stat"><span className="num">25</span><span className="label">Grounded-AI Tools</span></div>
-          <div className="about-stat"><span className="num">85</span><span className="label">API Routes</span></div>
+          <div className="about-stat"><span className="num">90+</span><span className="label">API Routes</span></div>
           <div className="about-stat"><span className="num">12</span><span className="label">Framework Templates</span></div>
           <div className="about-stat"><span className="num">20</span><span className="label">Statistical Formulas</span></div>
-          <div className="about-stat"><span className="num">163</span><span className="label">Source Files</span></div>
+          <div className="about-stat"><span className="num">8</span><span className="label">Discourse Lenses (LLM)</span></div>
         </div>
       </section>
 

@@ -342,14 +342,14 @@ camel_data -i morphology-db-msa-r13`}</pre>
       <>
         <p>
           The <strong>Vision Suite</strong> supports multimodal discourse analysis — analyzing
-          images alongside text using Kress and van Leeuwen's Visual Grammar framework.
+          images alongside text using Kress and van Leeuwen's Visual Grammar framework, and
+          now with vision-LM-powered image understanding via local models.
         </p>
-        <h4>Image analysis</h4>
+        <h4>Image set management</h4>
         <ul>
-          <li><strong>OCR</strong> — extract text embedded in images.</li>
-          <li><strong>Object and scene detection</strong> — identify what's in the image.</li>
-          <li><strong>Composition and color</strong> — color palette, brightness, contrast,
-            rule-of-thirds analysis.</li>
+          <li>Create image sets within a corpus to organize images for analysis.</li>
+          <li>Drag-and-drop upload with optional per-image captions.</li>
+          <li>Automatic cached analysis: OCR (Tesseract), colour palette, composition geometry.</li>
         </ul>
         <h4>Visual Grammar (Kress &amp; van Leeuwen 2006)</h4>
         <p>
@@ -361,15 +361,31 @@ camel_data -i morphology-db-msa-r13`}</pre>
           <li><strong>Compositional</strong> — information value, framing, salience.</li>
           <li><strong>Modal</strong> — modality cues (color saturation, focus, illumination).</li>
         </ul>
-        <h4>Multimodal alignment</h4>
+        <h4>Vision-LM image description</h4>
         <p>
-          Aligns image regions with text spans to study cross-modal meaning-making. Useful for
-          analyzing how images reinforce, contradict, or extend the verbal text.
+          With a local vision model installed (e.g. <code>ollama pull moondream</code>), you can:
         </p>
-        <p className="hint">
-          Vision features require the optional <code>[vision]</code> extra:
-          <code> pip install -e ".[vision]"</code>.
+        <ul>
+          <li><strong>Describe</strong> — POST <code>/images/{`{img_id}`}/describe</code> sends the image to the vision-LM for a grounded description with provenance metadata.</li>
+          <li><strong>Discourse analysis</strong> — All 8 discourse routes accept <code>?mode=llm</code> to send the image + framework lens to the vision-LM. Falls back to heuristic if no model is available.</li>
+          <li><strong>Alignment</strong> — POST <code>/images/{`{img_id}`}/align?mode=llm</code> asks the vision-LM to identify which text spans refer to which image regions.</li>
+          <li><strong>Batch view</strong> — GET <code>/image-sets/{`{iset_id}`}/batch-analysis</code> aggregates recurring framework themes + OCR word frequency across all images in a set.</li>
+        </ul>
+        <h4>Consent gate</h4>
+        <p>
+          Person-descriptive content (age, gender, expression, appearance) from vision-LM output
+          is automatically redacted unless the user explicitly enables facial analysis in
+          Settings. This applies to <em>all</em> vision-LM routes.
         </p>
+        <h4>Downloading vision models</h4>
+        <p>
+          Go to <strong>Settings → Model Providers</strong> to download vision models:
+        </p>
+        <ul>
+          <li><strong>moondream</strong> (1.7 GB, 1.8B) — runs on any machine, good for basic image description.</li>
+          <li><strong>llama3.2-vision:11b</strong> (7.9 GB, 11B) — higher quality, needs 8 GB+ RAM.</li>
+          <li><strong>gemma3:4b</strong> (3.3 GB, 4B) — also supports vision, multilingual including Arabic.</li>
+        </ul>
       </>
     ),
   },
