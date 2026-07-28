@@ -460,9 +460,11 @@ This is the first stable (1.0) release. It includes all features from the v0.1.x
 - **Removed "Coming Soon" label** from the Vision Suite nav item — the Vision Suite is fully functional.
 - **Added vision models to the download catalogue**: `moondream` (1.7 GB, 1.8B), `llama3.2-vision:11b` (7.9 GB, 11B), and `gemma3:4b` (3.3 GB, 4B, multilingual) are now listed in Settings → Model Providers with a "vision" tag. Users can download them directly from within the app.
 - **Updated About view** — shows "CorpusMind Lens" branding when running inside the Lens shell. Updated test count to 202, added "Discourse Lenses (LLM)" stat.
-- **Updated User Guide** — the Vision Suite section now documents all Lens features: image-set management, vision-LM description, discourse LLM modes, alignment inspector, batch view, consent gate, and how to download vision models.
+- **Updated User Guide** — the Vision Suite section now documents all Lens features: image-set management, vision-LM description, discourse LLM modes, alignment inspector, batch view, consent gate, and how to download vision models. A comprehensive 15-page PDF user guide is available on the [release page](https://github.com/waleedmandour/CorpusMind/releases/tag/v1.0.0).
 - **Blue theme for Lens** — the Lens shell uses blue brand colors (`#2563eb`) instead of the main app's green, applied via a `[data-shell="lens"]` CSS override. The main CorpusMind app is unchanged.
 - **Lens UI is distinct** — Lens shows only vision-relevant sidebar items (Overview, Corpora, Vision, AI, System), defaults to the Vision view, and the sidebar logo says "CorpusMind Lens."
+- **Consent-gate gaps fixed** — the consent gate now also filters ethnicity/race descriptors (Asian, Black, Caucasian, etc.), religious/cultural attire (hijab, turban, kippah, etc.), and socioeconomic speculation (wealthy, poor, working-class, etc.). Previously only age, gender, expression, and appearance were filtered.
+- **Port conflict fixed** — both desktop shells now check if an engine is already running on port 8765 before spawning a new one. If CorpusMind and Lens are both installed and running, the second app connects to the existing engine instead of crashing with "address already in use."
 
 **Full feature set (cumulative from v0.1.0):**
 
@@ -477,7 +479,7 @@ This is the first stable (1.0) release. It includes all features from the v0.1.x
 - Privacy: local-first by default, cloud opt-in, no telemetry
 
 ### Tests
-- **Engine: 202 passed, 9 skipped** (camel_tools data not installed in some envs), 0 failed.
+- **Engine: 205 passed, 9 skipped** (camel_tools data not installed in some envs), 0 failed.
 - **Ruff**: All checks passed.
 - **Web typecheck + build**: passed.
 - **Cargo check**: passes for both `desktop` and `desktop-lens` Tauri shells in CI.
@@ -513,7 +515,7 @@ This release ships **CorpusMind Lens**, a separate installable desktop app that 
 - **`list_backends` exception-swallowing** — Fixed bare `except Exception: pass` that hid broken camel_tools installs.
 
 ### Tests
-- **Engine: 202 passed, 9 skipped** (camel_tools data not installed in some envs — cleanly skipped with reason), 0 failed.
+- **Engine: 205 passed, 9 skipped** (camel_tools data not installed in some envs — cleanly skipped with reason), 0 failed.
 - **Ruff**: All checks passed.
 - **Web typecheck + build**: passed.
 - **Cargo check**: passes for both `desktop` and `desktop-lens` Tauri shells in CI.

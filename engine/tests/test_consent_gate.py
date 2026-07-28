@@ -162,6 +162,30 @@ class TestFilterPersonDescriptive:
         result = filter_person_descriptive(text)
         assert result.was_filtered is True
 
+    def test_filters_ethnicity_keywords_when_gate_closed(self, monkeypatch):
+        monkeypatch.delenv("CORPUSMIND_FACIAL_ANALYSIS_ENABLED", raising=False)
+        from vision.consent_gate import filter_person_descriptive
+        text = "An Asian woman is standing in the centre of the image."
+        result = filter_person_descriptive(text)
+        assert result.was_filtered is True
+        assert "asian" not in result.filtered_text.lower()
+
+    def test_filters_religious_attire_keywords_when_gate_closed(self, monkeypatch):
+        monkeypatch.delenv("CORPUSMIND_FACIAL_ANALYSIS_ENABLED", raising=False)
+        from vision.consent_gate import filter_person_descriptive
+        text = "A woman wearing a hijab is visible in the background."
+        result = filter_person_descriptive(text)
+        assert result.was_filtered is True
+        assert "hijab" not in result.filtered_text.lower()
+
+    def test_filters_socioeconomic_keywords_when_gate_closed(self, monkeypatch):
+        monkeypatch.delenv("CORPUSMIND_FACIAL_ANALYSIS_ENABLED", raising=False)
+        from vision.consent_gate import filter_person_descriptive
+        text = "The man appears wealthy and is wearing expensive clothing."
+        result = filter_person_descriptive(text)
+        assert result.was_filtered is True
+        assert "wealthy" not in result.filtered_text.lower()
+
     def test_no_false_positives_on_colour_descriptions(self, monkeypatch):
         """Colour/geometry descriptions should NOT be filtered — no
         person-descriptive keywords."""

@@ -290,6 +290,26 @@ impl EngineSidecar {
             return Ok(());
         }
 
+        // Cross-process check: before spawning a new engine, check if one is
+        // already running on ENGINE_PORT (e.g., CorpusMind Lens launched its
+        // engine, or the user is running a dev server). If so, connect to it
+        // instead of spawning a duplicate — this prevents "address already in
+        // use" crashes when both apps are installed and run simultaneously.
+        let health_url = format!("http://{ENGINE_HOST}:{ENGINE_PORT}/api/v1/health");
+        if let Ok(resp) = reqwest::blocking::Client::builder()
+            .timeout(std::time::Duration::from_secs(2))
+            .build()
+            .and_then(|c| c.get(&health_url).send())
+        {
+            if resp.status().is_success() {
+                info!(
+                    "engine already running on port {} (likely from another CorpusMind app) — connecting instead of spawning",
+                    ENGINE_PORT
+                );
+                return Ok(());
+            }
+        }
+
         let log_path = app
             .path()
             .app_log_dir()

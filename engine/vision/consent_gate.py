@@ -124,11 +124,56 @@ _APPEARANCE_KEYWORDS = [
     "fair skin", "olive skin",
 ]
 
+# Ethnicity / race descriptors
+_ETHNICITY_KEYWORDS = [
+    "asian", "african", "european", "middle eastern", "middle-eastern",
+    "hispanic", "latino", "latina", "latin american", "native american",
+    "indigenous", "south asian", "east asian", "southeast asian",
+    "caucasian", "white person", "white man", "white woman", "white people",
+    "black person", "black man", "black woman", "black people",
+    "brown person", "brown man", "brown woman",
+    "person of color", "person of colour", "racial", "ethnicity",
+    "ethnic background", "ethnic appearance",
+    "african american", "afro",
+    "mediterranean", "nordic", "scandinavian",
+]
+
+# Religious / cultural attire
+_RELIGIOUS_KEYWORDS = [
+    "hijab", "niqab", "burqa", "chador", "abaya", "khimar",
+    "turban", "dastar", "pagri",
+    "kippah", "yarmulke", "kipa",
+    "cross necklace", "crucifix", "rosary",
+    "veil", "head covering", "headscarf", "head scarf",
+    "religious attire", "religious garment", "religious dress",
+    "prayer shawl", "tallit", "tzitzit",
+    "clerical collar", "habit", "cassock",
+    "sikh", "muslim", "jewish", "christian", "buddhist", "hindu",
+    "orthodox", "fundamentalist",
+    "religious", "devout", "practicing",
+]
+
+# Socioeconomic speculation
+_SOCIOECONOMIC_KEYWORDS = [
+    "wealthy", "rich", "poor", "impoverished", "destitute",
+    "affluent", "privileged", "underprivileged",
+    "working class", "middle class", "upper class", "lower class",
+    "homeless", "beggar", "panhandler",
+    "socioeconomic", "social class", "economic status",
+    "luxury", "designer clothes", "expensive clothing",
+    "ragged", "unkempt", "shabby",
+    "professional-looking", "business attire",
+    "blue-collar", "white-collar",
+]
+
 # Combined list, compiled into a single regex for efficient scanning.
 # Each keyword is matched as a whole word (\\b boundaries) to avoid
 # false positives like "adult" matching inside "adulthood" — though
 # we accept some over-matching for compound phrases.
-_ALL_KEYWORDS = _AGE_KEYWORDS + _GENDER_KEYWORDS + _EXPRESSION_KEYWORDS + _APPEARANCE_KEYWORDS
+_ALL_KEYWORDS = (
+    _AGE_KEYWORDS + _GENDER_KEYWORDS + _EXPRESSION_KEYWORDS + _APPEARANCE_KEYWORDS
+    + _ETHNICITY_KEYWORDS + _RELIGIOUS_KEYWORDS + _SOCIOECONOMIC_KEYWORDS
+)
 
 # Build a single alternation regex, longest-first so "young adult"
 # matches before "young" / "adult" individually.
