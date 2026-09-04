@@ -109,7 +109,7 @@ export = [
 corpusmind-engine = "app.main:run"
 
 [tool.hatch.build.targets.wheel]
-packages = ["app", "ingestion", "nlp", "stats", "discourse", "vision", "multimodal", "ai", "storage", "api"]
+packages = ["app", "ingestion", "nlp", "stats", "discourse", "vision", "multimodal", "ai", "storage", "api", "reference_corpus"]
 
 [tool.ruff]
 line-length = 100

@@ -28,6 +28,7 @@ COPY engine/discourse /build/discourse
 COPY engine/vision /build/vision
 COPY engine/multimodal /build/multimodal
 COPY engine/storage /build/storage
+COPY engine/reference_corpus /build/reference_corpus
 
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
@@ -58,7 +59,9 @@ VOLUME ["/data"]
 
 EXPOSE 8765
 
+# Issue 4 fix: the runtime image is python:3.12-slim, which ships no curl/wget —
+# the previous curl-based healthcheck could never pass. Use a stdlib probe instead.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
-    CMD curl -fs http://127.0.0.1:8765/api/v1/health || exit 1
+    CMD ["python", "-c", "import urllib.request,sys; urllib.request.urlopen('http://127.0.0.1:8765/api/v1/health'); sys.exit(0)"]
 
 CMD ["corpusmind-engine"]

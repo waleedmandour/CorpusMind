@@ -274,3 +274,34 @@ jobs:
         run: |
           test -f THIRD_PARTY_LICENSES.md
           test -f LICENSE
+
+  # -----------------------------------------------------------------------
+  # Issue 4 fix: validate the self-hosted Docker image actually builds AND
+  # boots. The v1.0.0 image crash-looped at startup (reference_corpus missing
+  # from the wheel) and its curl-based healthcheck could never pass — none of
+  # which any CI job caught. This job gates both failure classes.
+  # -----------------------------------------------------------------------
+  docker-image:
+    name: Docker image builds + engine boots
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build engine image
+        run: docker build -f infra/Dockerfile -t corpusmind-engine-ci .
+      - name: Boot engine and probe /api/v1/health
+        run: |
+          docker run -d --name engine -p 8765:8765 corpusmind-engine-ci
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8765/api/v1/health >/dev/null 2>&1; then
+              echo "engine is healthy"; exit 0
+            fi
+            sleep 2
+          done
+          echo "engine did not become healthy in time"
+          docker logs engine
+          exit 1
+      - name: Verify container healthcheck passes
+        run: |
+          sleep 35
+          docker inspect --format '{{.State.Health.Status}}' engine | grep -q healthy
