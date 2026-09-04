@@ -29,6 +29,12 @@ class Settings(BaseSettings):
     host: str = "127.0.0.1"
     port: int = 8765
     log_level: Literal["debug", "info", "warning", "error"] = "info"
+    # Issue 8: shared bearer token for non-loopback deployments. When the
+    # engine binds a non-loopback host AND this is set, every /api request
+    # (except /api/v1/health) must present "Authorization: Bearer <token>".
+    # Unset (default) keeps the local-first no-auth experience; the shared
+    # bearer model means "shared trust boundary" — see infra/docker-compose.yml.
+    auth_token: str = ""
 
     # --- Storage ---
     data_dir: Path = Field(default=Path.home() / ".corpusmind", description="Root for projects, indices, caches.")

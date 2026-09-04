@@ -6,7 +6,10 @@
 #
 # Phase 6 additions:
 #   - Optional Nginx reverse proxy with TLS for secure multi-user access
-#   - Optional at-rest encryption (set CORPUSMIND_ENCRYPTION_KEY)
+#   - Optional at-rest encryption for IMAGE FILES ONLY (set CORPUSMIND_ENCRYPTION_KEY).
+#     Issue 11: the database (all corpus text + AI transcripts) is NOT encrypted —
+#     full DB encryption (SQLCipher) is a future task. Do not rely on this for
+#     protecting corpus TEXT at rest.
 #   - Collaboration features (§10.2 project sharing + §7.4 sync)
 #
 # Bring up with:  docker compose -f infra/docker-compose.yml up -d
@@ -30,7 +33,8 @@ services:
       # Cloud is hard-disabled in self-hosted mode by default — protects
       # against accidental cloud-provider routing on shared infrastructure.
       CORPUSMIND_CLOUD_DISABLED_HARD: "true"
-      # Optional: enable at-rest encryption (§13.2)
+      # Optional: enable at-rest encryption of IMAGE FILES ONLY (§13.2).
+      # Issue 11: the SQLite DB (corpus text, transcripts) stays UNENCRYPTED.
       # Generate a key with: python -c "import secrets; print(secrets.token_hex(32))"
       # CORPUSMIND_ENCRYPTION_KEY: "your-64-char-hex-key-here"
     healthcheck:

@@ -1,28 +1,57 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Default capability set for CorpusMind desktop — minimal permissions, scoped to localhost.",
-  "windows": ["main"],
+  "description": "Default capability set for CorpusMind desktop. Issue 10 fix: the shell-spawn/fs-write grants were broader than this file's own 'minimal permissions' claim \u2014 the webview never spawns shells or writes files (the Rust side owns the sidecar and Ollama lifecycle, which is not IPC-gated), so shell-spawn and fs-mutating permissions are removed entirely and fs reads are scoped to app data + common user folders (dialog-picked paths are auto-allowed by the dialog plugin).",
+  "windows": [
+    "main"
+  ],
   "permissions": [
     "core:default",
     "core:window:allow-start-dragging",
-    "shell:allow-execute",
     "shell:allow-open",
-    "shell:allow-spawn",
-    "shell:allow-stdin-write",
     "dialog:allow-open",
     "dialog:allow-save",
-    "fs:allow-read-file",
-    "fs:allow-write-file",
-    "fs:allow-read-dir",
-    "fs:allow-mkdir",
+    {
+      "identifier": "fs:allow-read-file",
+      "allow": [
+        {
+          "path": "$APPDATA/**"
+        },
+        {
+          "path": "$APPLOCALDATA/**"
+        },
+        {
+          "path": "$HOME/**"
+        },
+        {
+          "path": "$DOCUMENT/**"
+        },
+        {
+          "path": "$DOWNLOAD/**"
+        },
+        {
+          "path": "$DESKTOP/**"
+        },
+        {
+          "path": "$PICTURE/**"
+        }
+      ]
+    },
     {
       "identifier": "http:default",
       "allow": [
-        { "url": "http://127.0.0.1:8765/*" },
-        { "url": "http://localhost:8765/*" },
-        { "url": "http://127.0.0.1:11434/*" },
-        { "url": "http://127.0.0.1:1234/*" }
+        {
+          "url": "http://127.0.0.1:8765/*"
+        },
+        {
+          "url": "http://localhost:8765/*"
+        },
+        {
+          "url": "http://127.0.0.1:11434/*"
+        },
+        {
+          "url": "http://127.0.0.1:1234/*"
+        }
       ]
     }
   ]

@@ -14,6 +14,9 @@ All endpoints are prefixed with ``/api/v1/reference-corpora``.
 """
 from __future__ import annotations
 
+import zipfile
+from pathlib import Path, PurePosixPath
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -233,6 +236,23 @@ _full_corpus_jobs: dict[str, dict] = {}
 _full_corpus_tasks: set = set()
 
 
+def _validate_zip_members(zf: zipfile.ZipFile, dest: str) -> None:
+    """Issue 9 fix: reject zip members that would extract outside `dest`.
+
+    Mirrors the guarantees of tarfile's filter="data" for the zip branch:
+    rejects absolute paths, ".." traversal components, and (on extraction)
+    symlinks cannot occur in zf.namelist form but path escape can.
+    """
+    dest_abs = Path(dest).resolve()
+    for name in zf.namelist():
+        p = PurePosixPath(name)
+        if p.is_absolute() or ".." in p.parts:
+            raise ValueError(f"Unsafe archive member path: {name!r}")
+        target = (Path(dest) / name).resolve()
+        if not target.is_relative_to(dest_abs):
+            raise ValueError(f"Unsafe archive member path escapes destination: {name!r}")
+
+
 @router.post("/reference-corpora/{name}/download-full")
 async def download_full_reference(
     name: str,
@@ -339,7 +359,10 @@ async def download_full_reference(
             if is_gzip:
                 with tempfile.TemporaryDirectory() as tmpdir:
                     with tarfile.open(fileobj=io.BytesIO(archive_bytes), mode="r:gz") as tar:
-                        tar.extractall(tmpdir)
+                        # Issue 9 fix: "data" filter (Python 3.12+) rejects
+                        # absolute paths, ".." traversal, symlinks and device
+                        # files — extraction can no longer escape tmpdir.
+                        tar.extractall(tmpdir, filter="data")
                     for root, _d, files in os.walk(tmpdir):
                         for fname in files:
                             if fname.endswith("-sentences.txt"):
@@ -357,6 +380,9 @@ async def download_full_reference(
             elif is_zip:
                 with tempfile.TemporaryDirectory() as tmpdir:
                     with zipfile.ZipFile(io.BytesIO(archive_bytes)) as zf:
+                        # Issue 9 fix: validate every member path before
+                        # extraction — zipfile has no built-in "data" filter.
+                        _validate_zip_members(zf, tmpdir)
                         zf.extractall(tmpdir)
                     for root, _d, files in os.walk(tmpdir):
                         dir_name = os.path.basename(root) if root != tmpdir else ""

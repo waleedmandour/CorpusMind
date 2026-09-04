@@ -105,6 +105,38 @@ def create_app() -> FastAPI:
             resp.headers["Access-Control-Allow-Private-Network"] = "true"
         return resp
 
+    # Issue 8: minimal shared-bearer-token auth for non-loopback deployments.
+    #
+    # The documented "shared lab instance" mode (infra/docker-compose.yml,
+    # infra/nginx.conf) exposes the engine on a LAN. Without any auth, anyone
+    # who can reach the port can read/modify/delete every researcher's data.
+    # Full multi-tenant auth is a larger project; this middleware closes the
+    # most dangerous gap with a shared token model:
+    #   - binds to 127.0.0.1/localhost (the default) → no auth required;
+    #   - CORPUSMIND_AUTH_TOKEN unset → no auth required (local-first default);
+    #   - otherwise every /api request except /api/v1/health (used by the
+    #     Docker healthcheck, which cannot present credentials) must send
+    #     "Authorization: Bearer <CORPUSMIND_AUTH_TOKEN>".
+    @app.middleware("http")
+    async def enforce_shared_token(request: Request, call_next):
+        # Read the (lru-cached) settings per request — tests and runtime
+        # re-configuration must be able to change auth without a re-import.
+        current = get_settings()
+        token = current.auth_token
+        host = current.host
+        loopback = host in ("127.0.0.1", "::1", "localhost") or host.startswith("127.")
+        if token and not loopback and request.url.path.startswith("/api/"):
+            if request.url.path != "/api/v1/health":
+                provided = request.headers.get("Authorization", "")
+                import secrets as _secrets
+                if not _secrets.compare_digest(provided, f"Bearer {token}"):
+                    from fastapi.responses import JSONResponse
+                    return JSONResponse(
+                        {"detail": "Unauthorized. Set Authorization: Bearer <CORPUSMIND_AUTH_TOKEN>."},
+                        status_code=401,
+                    )
+        return await call_next(request)
+
     app.include_router(health.router, prefix="/api/v1", tags=["health"])
     app.include_router(system.router, prefix="/api/v1", tags=["system"])
     app.include_router(ai_routes.router, prefix="/api/v1/ai", tags=["ai"])
