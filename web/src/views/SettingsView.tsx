@@ -675,9 +675,13 @@ function GeminiKeyInput({
   const [key, setKey] = useState("");
   const [showKey, setShowKey] = useState(false);
   const [savedMsg, setSavedMsg] = useState("");
+  // Issue 12 fix: saving a Gemini key sends error context (which may embed
+  // corpus text) to Google — require the same explicit data-leaves-device
+  // acknowledgment the cloud providers use.
+  const [ackDataLeaves, setAckDataLeaves] = useState(false);
 
   const saveMutation = useMutation({
-    mutationFn: (k: string) => api.setGeminiKey(k),
+    mutationFn: (k: string) => api.setGeminiKey(k, ackDataLeaves),
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ["troubleshoot-status"] });
       setKey("");
@@ -733,6 +737,19 @@ function GeminiKeyInput({
             The key is stored in-memory in the engine (never written to disk)
             and never sent back to the browser.
           </p>
+          <label className="gemini-consent-row" style={{ display: "flex", alignItems: "flex-start", gap: 8, margin: "8px 0", fontSize: 13, cursor: "pointer" }}>
+            <input
+              type="checkbox"
+              checked={ackDataLeaves}
+              onChange={(e) => setAckDataLeaves(e.target.checked)}
+              style={{ marginTop: 2 }}
+            />
+            <span>
+              I understand that using Gemini sends this app&apos;s error context —
+              which may include snippets of corpus text — to Google&apos;s servers
+              (data leaves this device).
+            </span>
+          </label>
           <div className="gemini-key-input-row">
             <input
               type={showKey ? "text" : "password"}
@@ -752,7 +769,7 @@ function GeminiKeyInput({
             <button
               className="btn-primary gemini-save-btn"
               onClick={() => key.trim() && saveMutation.mutate(key.trim())}
-              disabled={!key.trim() || saveMutation.isPending}
+              disabled={!key.trim() || saveMutation.isPending || !ackDataLeaves}
             >
               {saveMutation.isPending ? "Saving..." : "Save"}
             </button>

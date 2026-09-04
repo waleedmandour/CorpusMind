@@ -79,6 +79,20 @@ class EmbeddingResponse:
     provider: str
 
 
+def _debug_raw(data: Any) -> str:
+    """Issue 13: raw provider responses can embed corpus-derived model output.
+
+    Returning them inside error strings persists that content into logs and
+    API error details (visible to other users on a shared engine). Raw bodies
+    are only included when explicitly opted in via CORPUSMIND_DEBUG_RAW=1.
+    """
+    import os
+
+    if os.environ.get("CORPUSMIND_DEBUG_RAW") == "1":
+        return str(data)[:300]
+    return "(raw response withheld — set CORPUSMIND_DEBUG_RAW=1 to include)"
+
+
 class ModelProviderError(RuntimeError):
     """Base error for any provider failure (network, auth, model-missing, ...)."""
 
@@ -338,8 +352,19 @@ class _OpenAICompatibleProvider(ModelProvider):
 
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
+        # Issue 7 fix: httpx CONCATENATES the client base path with the
+        # request path (it does not follow RFC 3986 join semantics). With
+        # base_url "https://api.openai.com/v1" and a request path
+        # "/v1/chat/completions" the effective URL was
+        # https://api.openai.com/v1/v1/chat/completions — a guaranteed 404
+        # for BOTH cloud providers (openai and anthropic), verified with
+        # httpx.build_request. The code writes full "/v1/..." paths, so the
+        # client base must be host-root + any non-/v1 prefix.
+        base = self.base_url.rstrip("/")
+        if base.endswith("/v1"):
+            base = base[: -len("/v1")]
         self._client = httpx.AsyncClient(
-            base_url=self.base_url.rstrip("/"),
+            base_url=base,
             timeout=httpx.Timeout(60.0, connect=5.0),
             headers=self._default_headers(),
             # Bypass proxies for loopback traffic (corporate VPN fix)
@@ -390,7 +415,7 @@ class _OpenAICompatibleProvider(ModelProvider):
         try:
             content = data["choices"][0]["message"]["content"]
         except (KeyError, IndexError) as e:
-            raise ModelProviderError(f"[{self.name}] unexpected response shape: {data}") from e
+            raise ModelProviderError(f"[{self.name}] unexpected response shape: {_debug_raw(data)}") from e
         return ChatResponse(content=content, model=data.get("model", payload["model"]), provider=self.name, raw=data)
 
     # --- stream ---
@@ -578,13 +603,14 @@ class OllamaProvider(ModelProvider):
 
         # Capture raw response text BEFORE parsing (for debugging)
         raw_text = r.text
-        log.debug("ollama_raw_response", length=len(raw_text), preview=raw_text[:500])
+        # Issue 13: preview gated behind CORPUSMIND_DEBUG_RAW=1
+        log.debug("ollama_raw_response", length=len(raw_text), preview=_debug_raw(raw_text))
 
         try:
             data = json.loads(raw_text)
         except json.JSONDecodeError as e:
             raise ModelProviderError(
-                f"[ollama] failed to parse response: {e}. Raw (first 200 chars): {raw_text[:200]}"
+                f"[ollama] failed to parse response: {e}. Raw: {_debug_raw(raw_text)}"
             ) from e
 
         # Extract content from /api/chat response format:
@@ -610,8 +636,7 @@ class OllamaProvider(ModelProvider):
 
         if not content:
             raise ModelProviderError(
-                f"[ollama] empty translation. Model: {model_name}. "
-                f"Raw response (first 300 chars): {raw_text[:300]}"
+                f"[ollama] empty translation. Model: {model_name}. Raw: {_debug_raw(raw_text)}"
             )
 
         log.info("ollama_chat_success", model=model_name, content_len=len(content))
@@ -680,7 +705,7 @@ class OllamaProvider(ModelProvider):
         # content and let the caller check raw["choices"][0]["message"]
         # for tool_calls.
         if not content and not msg.get("tool_calls"):
-            log.warning("ollama_openai_compat_empty_content", model=model, raw=str(data)[:300])
+            log.warning("ollama_openai_compat_empty_content", model=model, raw=_debug_raw(data))
 
         return ChatResponse(content=content, model=data.get("model", model), provider=self.name, raw=data)
 
@@ -842,6 +867,14 @@ class CloudProvider(_OpenAICompatibleProvider):
             "openai": "https://api.openai.com/v1",
             "anthropic": "https://api.anthropic.com/v1",
         }.get(provider, "")
+
+    def _default_headers(self) -> dict[str, str]:
+        # Issue 7 fix: Anthropic requires an anthropic-version header on its
+        # native API and accepts (documents) it on the OpenAI-compat endpoint.
+        h = super()._default_headers()
+        if self.settings.cloud_provider == "anthropic":
+            h["anthropic-version"] = "2023-06-01"
+        return h
 
     async def _enforce(self) -> None:
         if self._disabled or self.settings.cloud_disabled_hard:

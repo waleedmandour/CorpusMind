@@ -1367,10 +1367,10 @@ export const api = {
       method: "POST",
       body: JSON.stringify(req),
     }),
-  setGeminiKey: (apiKey: string) =>
+  setGeminiKey: (apiKey: string, acknowledgeDataLeavesDevice: boolean) =>
     jsonFetch<{ ok: boolean; available: boolean; source: string }>("/api/v1/troubleshoot/gemini-key", {
       method: "POST",
-      body: JSON.stringify({ api_key: apiKey }),
+      body: JSON.stringify({ api_key: apiKey, acknowledge_data_leaves_device: acknowledgeDataLeavesDevice }),
     }),
   clearGeminiKey: () =>
     jsonFetch<{ ok: boolean; available: boolean; source: string }>("/api/v1/troubleshoot/gemini-key", {

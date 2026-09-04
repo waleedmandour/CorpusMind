@@ -130,6 +130,11 @@ async def troubleshoot_status() -> dict:
 class GeminiKeyRequest(BaseModel):
     """Set the Gemini API key from the UI."""
     api_key: str = Field(..., min_length=1, description="Google Gemini API key")
+    # Issue 12 fix: mirror CloudConfigRequest.acknowledge_data_leaves_device —
+    # enabling Gemini sends engine error text (which can embed corpus
+    # snippets) to a third party. Require explicit consent, like every other
+    # cloud path in the app.
+    acknowledge_data_leaves_device: bool = False
 
 
 @router.post("/troubleshoot/gemini-key")
@@ -140,6 +145,15 @@ async def set_gemini_key(req: GeminiKeyRequest) -> dict:
     precedence over the CORPUSMIND_GEMINI_API_KEY environment variable.
     The key is never exposed back to the browser.
     """
+    if not req.acknowledge_data_leaves_device:
+        from fastapi import HTTPException
+
+        raise HTTPException(
+            status_code=422,
+            detail="You must acknowledge that using Gemini sends error "
+            "context (which may include corpus text) to Google's servers. "
+            "Enable 'I understand data leaves this device' and try again.",
+        )
     global _runtime_gemini_key
     _runtime_gemini_key = req.api_key.strip()
     return {"ok": True, "available": True, "source": "ui"}
@@ -217,12 +231,17 @@ async def interpret_error(req: InterpretRequest) -> InterpretResponse:
     }
 
     try:
+        # Issue 12 fix: the API key must travel in the x-goog-api-key header,
+        # never as a URL query parameter — keys in URLs leak into proxy and
+        # HTTP-layer logs between the engine and Google.
         async with httpx.AsyncClient(timeout=30.0) as client:
             r = await client.post(
                 url,
-                params={"key": key},
                 json=payload,
-                headers={"Content-Type": "application/json"},
+                headers={
+                    "Content-Type": "application/json",
+                    "x-goog-api-key": key,
+                },
             )
     except httpx.HTTPError as e:
         return InterpretResponse(
@@ -244,7 +263,9 @@ async def interpret_error(req: InterpretRequest) -> InterpretResponse:
                 f"Gemini returned HTTP {r.status_code}. The error could not be "
                 "auto-interpreted."
             ),
-            likely_cause=f"Gemini API error: {r.text[:200]}",
+            # Issue 12 fix: do not echo the raw upstream response body —
+            # it can embed corpus-derived error text and leaks it to clients.
+            likely_cause=f"Gemini API returned HTTP {r.status_code} without a usable error body.",
             suggested_fix="Verify the Gemini API key is valid and has quota.",
             should_report=False,
             raw_error=req.error_message,
