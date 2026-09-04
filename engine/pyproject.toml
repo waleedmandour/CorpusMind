@@ -1,12 +1,12 @@
 [build-system]
-requires = ["hatchling>=1.21"]
+requires = ["hatchling>=1.21,<1.32"]
 build-backend = "hatchling.build"
 
 [project]
 name = "corpusmind-engine"
 version = "1.0.0"
 description = "CorpusMind engine — local-first, AI-native research environment for corpus linguistics and multimodal discourse analysis."
-readme = "../README.md"
+readme = "README.md"
 requires-python = ">=3.12"
 license = "AGPL-3.0-only"
 authors = [
