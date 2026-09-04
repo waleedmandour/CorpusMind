@@ -49,13 +49,21 @@ async def _latest_version_id(session: AsyncSession, corpus_id: str) -> str | Non
     return await session.scalar(stmt)
 
 
-async def _corpus_size(session: AsyncSession, version_id: str) -> int:
-    """Total token count for a version (excluding punctuation and whitespace)."""
+async def _corpus_size(
+    session: AsyncSession, version_id: str, document_ids: list[str] | None = None
+) -> int:
+    """Total token count for a version (excluding punctuation and whitespace).
+
+    Issue 2: when ``document_ids`` is provided (subcorpus restriction), only
+    tokens belonging to those documents are counted.
+    """
     stmt = select(func.count(Token.id)).where(
         Token.version_id == version_id,
         Token.is_punct == False,  # noqa: E712
         Token.pos != "SPACE",
     )
+    if document_ids is not None:
+        stmt = stmt.where(Token.document_id.in_(document_ids))
     return await session.scalar(stmt) or 0
 
 
@@ -101,8 +109,12 @@ async def search_concordance(
     window: int = 5,
     limit: int = 100,
     offset: int = 0,
+    document_ids: list[str] | None = None,
 ) -> ConcordanceResult:
     """KWIC search. `query` is matched against the chosen `level` (word/lemma/POS).
+
+    Issue 2: when ``document_ids`` is provided (subcorpus restriction), the
+    search is restricted to tokens from those documents only.
 
     Phase 1 supports: exact match (case-insensitive by default), wildcard `*`
     (any sequence), and a POS-tag query (e.g. `NOUN` or `VERB.*`).
@@ -134,6 +146,8 @@ async def search_concordance(
 
     # Count first
     count_stmt = select(func.count(Token.id)).where(Token.version_id == version_id, cond)
+    if document_ids is not None:
+        count_stmt = count_stmt.where(Token.document_id.in_(document_ids))
     total = await session.scalar(count_stmt) or 0
 
     # Fetch the matching tokens with pagination
@@ -145,6 +159,8 @@ async def search_concordance(
         .limit(limit)
         .offset(offset)
     )
+    if document_ids is not None:
+        stmt = stmt.where(Token.document_id.in_(document_ids))
     rows = (await session.execute(stmt)).all()
 
     # Fix #1: Batch the sentence-context fetch instead of N+1 queries.
@@ -224,7 +240,9 @@ async def compute_frequency(
     min_freq: int = 1,
     limit: int = 1000,
     include_punct: bool = False,
+    document_ids: list[str] | None = None,
 ) -> FrequencyResult:
+    # Issue 2: ``document_ids`` optionally restricts all counts to a subcorpus.
     version_id = await _latest_version_id(session, corpus_id)
     if not version_id:
         return FrequencyResult(unit=unit, total_tokens=0, total_types=0, rows=[], sttr=0.0)
@@ -241,9 +259,11 @@ async def compute_frequency(
     )
     if not include_punct:
         stmt = stmt.where(_is_real_token())
+    if document_ids is not None:
+        stmt = stmt.where(Token.document_id.in_(document_ids))
 
     rows_raw = (await session.execute(stmt)).all()
-    total_tokens = await _corpus_size(session, version_id)
+    total_tokens = await _corpus_size(session, version_id, document_ids)
     total_types = len(rows_raw)
 
     # Fix #4: STTR computed via streaming cursor instead of loading all
@@ -260,6 +280,8 @@ async def compute_frequency(
             .order_by(Token.document_id, Token.sentence_idx, Token.token_idx)
             .execution_options(stream_results=True)
         )
+        if document_ids is not None:
+            tok_stmt = tok_stmt.where(Token.document_id.in_(document_ids))
         chunk_ttrs: list[float] = []
         chunk: list[str] = []
         chunk_size = 1000
@@ -321,6 +343,7 @@ async def compute_collocations(
     min_freq: int = 3,
     measures: list[str] | None = None,
     limit: int = 100,
+    document_ids: list[str] | None = None,
 ) -> CollocationResult:
     """Compute collocation measures for `node` against all co-occurring tokens.
 
@@ -363,6 +386,8 @@ async def compute_collocations(
         .where(Token.version_id == version_id, node_cond)
         .distinct()
     )
+    if document_ids is not None:
+        node_sent_stmt = node_sent_stmt.where(Token.document_id.in_(document_ids))
     node_sentences = {
         (r[0], r[1]) for r in (await session.execute(node_sent_stmt)).all()
     }
@@ -380,6 +405,8 @@ async def compute_collocations(
         .where(Token.version_id == version_id, sent_filter)
         .order_by(Token.document_id, Token.sentence_idx, Token.token_idx)
     )
+    if document_ids is not None:
+        stmt = stmt.where(Token.document_id.in_(document_ids))
     rows_raw = (await session.execute(stmt)).all()
 
     # Group by (doc, sentence) and build per-sentence token lists
@@ -502,7 +529,10 @@ async def compute_keyness(
     min_freq: int = 5,
     measures: list[str] | None = None,
     limit: int = 100,
+    target_document_ids: list[str] | None = None,
 ) -> KeynessResult:
+    # Issue 2: ``target_document_ids`` optionally restricts the TARGET corpus
+    # side of the comparison to a subcorpus (the reference side is unaffected).
     """Compare target vs reference corpus. Returns both significance and
     effect-size measures (§4 Principle 3) — never present one without the other.
 
@@ -549,7 +579,7 @@ async def compute_keyness(
     # keyword rankings depending on whether the reference was a bundled
     # frequency list or an uploaded reference Corpus -- a validity trap for
     # exactly the comparison this feature exists to support.
-    async def _freqs(vid: str) -> Counter:
+    async def _freqs(vid: str, document_ids: list[str] | None = None) -> Counter:
         text_norm = func.lower(Token.text)
         stmt = (
             select(text_norm, func.count(Token.id))
@@ -557,9 +587,11 @@ async def compute_keyness(
             .group_by(text_norm)
             .having(func.count(Token.id) >= min_freq)  # Fix #10: pre-filter
         )
+        if document_ids is not None:
+            stmt = stmt.where(Token.document_id.in_(document_ids))
         return Counter({text: count for text, count in (await session.execute(stmt)).all()})
 
-    target_freqs = await _freqs(target_vid)
+    target_freqs = await _freqs(target_vid, target_document_ids)
     ref_freqs = await _freqs(ref_vid)
     N1 = sum(target_freqs.values())
     N2 = sum(ref_freqs.values())

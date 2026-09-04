@@ -308,68 +308,84 @@ async def recompile_corpus(cid: str, session: AsyncSession = Depends(get_session
     if not docs:
         raise HTTPException(400, "No documents to recompile")
 
-    # Re-ingest each document (creates a new annotation version)
+    # Re-ingest every document into ONE new annotation version.
+    # Issue 1 fix — three stacked bugs hid behind the old per-document
+    # try/except (which returned HTTP 200 with "recompiled": 0):
+    #   1. `parsed.tokens` — ParsedDocument has no such attribute (tokens
+    #      live on each sentence; indexes come from enumeration).
+    #   2. Invalid AnnotationVersion kwargs (`backend=`, `spacy_version=`)
+    #      — the model has neither column; the backend folds into model_name.
+    #   3. A new version was created PER DOCUMENT, so the latest version only
+    #      ever contained the last document's tokens. A recompile is a single
+    #      pipeline re-run over the whole corpus → one version row, tokens
+    #      from every successfully re-parsed document.
+    from nlp.general.pipeline import get_pipeline
+    from storage.models import AnnotationVersion, Token
+
+    pipeline = get_pipeline(backend="spacy", language=corpus.language or "en")
+    info = pipeline.info()
+
+    existing = await session.scalar(
+        select(AnnotationVersion)
+        .where(AnnotationVersion.corpus_id == cid)
+        .order_by(AnnotationVersion.created_at.desc())
+        .limit(1)
+    )
+    version_n = 1
+    if existing and existing.version_label.startswith("v"):
+        try:
+            version_n = int(existing.version_label[1:]) + 1
+        except ValueError:
+            pass
+
+    av = AnnotationVersion(
+        corpus_id=cid,
+        version_label=f"v{version_n}",
+        # Mirror ingestion/service.py's column mapping exactly.
+        model_name=f"{info.backend}:{info.model_name}",
+        model_version=info.model_version,
+        tokenizer=info.backend,
+        tagger=info.backend,
+        parser=info.backend,
+        token_count=0,
+        type_count=0,
+    )
+    session.add(av)
+    await session.flush()
+
     recompiled = 0
+    failed: list[dict] = []
+    total_tokens = 0
+    all_texts: set[str] = set()
     for doc in docs:
         try:
             # Re-parse from the stored cleaned text
-            from nlp.general.pipeline import get_pipeline
-            from storage.models import AnnotationVersion, Token
-
-            pipeline = get_pipeline(backend="spacy", language=corpus.language or "en")
-            info = pipeline.info()
             parsed = pipeline.parse_document(doc.cleaned_text)
-
-            # Create a new annotation version
-            existing = await session.scalar(
-                select(AnnotationVersion)
-                .where(AnnotationVersion.corpus_id == cid)
-                .order_by(AnnotationVersion.created_at.desc())
-                .limit(1)
-            )
-            version_n = 1
-            if existing and existing.version_label.startswith("v"):
-                try:
-                    version_n = int(existing.version_label[1:]) + 1
-                except ValueError:
-                    pass
-
-            av = AnnotationVersion(
-                corpus_id=cid,
-                version_label=f"v{version_n}",
-                backend=info.backend,
-                model_name=info.model_name,
-                model_version=info.model_version,
-                spacy_version=info.spacy_version,
-                token_count=len(parsed.tokens),
-                type_count=len(set(t.text for t in parsed.tokens)),
-            )
-            session.add(av)
-            await session.flush()
-
-            # Insert tokens
-            for tok in parsed.tokens:
-                t = Token(
-                    version_id=av.id,
-                    document_id=doc.id,
-                    sentence_idx=tok.sentence_idx,
-                    token_idx=tok.token_idx,
-                    text=tok.text,
-                    lemma=tok.lemma,
-                    pos=tok.pos,
-                    is_punct=tok.is_punct,
-                )
-                session.add(t)
-
+            for sent_idx, sent in enumerate(parsed.sentences):
+                for tok_idx, tok in enumerate(sent.tokens):
+                    session.add(Token(
+                        version_id=av.id,
+                        document_id=doc.id,
+                        sentence_idx=sent_idx,
+                        token_idx=tok_idx,
+                        text=tok.text,
+                        lemma=tok.lemma,
+                        pos=tok.pos,
+                        is_punct=tok.is_punct,
+                    ))
+                    all_texts.add(tok.text)
+                    total_tokens += 1
             recompiled += 1
         except Exception as e:
             log.error("recompile_doc_failed", doc=doc.filename, error=str(e))
+            # Issue 1 fix: report per-document failures in the response body
+            # instead of silently claiming success.
+            failed.append({"document_id": doc.id, "filename": doc.filename, "error": str(e)})
 
-    # Update corpus stats — reassign dict (not in-place mutation) for SQLAlchemy
-    from storage.models import AnnotationVersion
-    latest = await session.scalar(
-        select(AnnotationVersion).where(AnnotationVersion.corpus_id == cid).order_by(AnnotationVersion.created_at.desc()).limit(1)
-    )
+    av.token_count = total_tokens
+    av.type_count = len(all_texts)
+    await session.flush()
+    latest = av
     if latest:
         new_stats = dict(corpus.stats or {})
         new_stats.update({
@@ -394,6 +410,8 @@ async def recompile_corpus(cid: str, session: AsyncSession = Depends(get_session
     return {
         "recompiled": recompiled,
         "total_documents": len(docs),
+        "failed": failed,
+        "success": recompiled == len(docs),
         "token_count": latest.token_count if latest else 0,
         "type_count": latest.type_count if latest else 0,
     }
@@ -496,32 +514,35 @@ async def delete_subcorpus(cid: str, sid: str, session: AsyncSession = Depends(g
     return {"deleted": sid}
 
 
-def apply_subcorpus_filter(
-    session: AsyncSession, version_id: str, subcorpus_id: str | None
-) -> select:
-    """Return a SELECT statement for tokens, optionally filtered by subcorpus.
+async def resolve_subcorpus_document_ids(session: AsyncSession, subcorpus_id: str) -> list[str]:
+    """Resolve a saved subcorpus (named filter) to its matching document IDs.
 
-    v0.1.19: If a subcorpus_id is provided, this function loads the
-    subcorpus's filter_criteria, finds matching document IDs, and
-    restricts the token query to only those documents.
+    Issue 2 fix: the previous helper (``apply_subcorpus_filter``) called
+    ``session.get_sync()``, which does not exist on AsyncSession, and was not
+    called from anywhere — so subcorpora could be created but never used for
+    analysis. The analysis handlers (concordance / frequency / collocations /
+    keyness) now accept an optional ``subcorpus_id``, resolve it through this
+    function, and restrict their token queries to the returned documents.
+
+    Raises HTTPException(404) if the subcorpus does not exist. Returns the
+    (possibly empty) list of matching document IDs.
     """
-    from storage.models import Token
-    stmt = select(Token).where(Token.version_id == version_id)
-    if subcorpus_id:
-        sc = session.get_sync(Subcorpus, subcorpus_id)
-        if sc and sc.filter_criteria:
-            # Find documents whose meta matches the filter criteria
-            doc_stmt = select(Document.id).where(Document.corpus_id == sc.corpus_id)
-            # Apply each filter criterion as a JSON match
-            # For simple key-value pairs: meta->>'key' = 'value'
-            # For year_min/year_max: meta->>'year' >= year_min
-            for key, value in sc.filter_criteria.items():
-                if key == "year_min":
-                    doc_stmt = doc_stmt.where(Document.meta["year"].as_string() >= str(value))
-                elif key == "year_max":
-                    doc_stmt = doc_stmt.where(Document.meta["year"].as_string() <= str(value))
-                else:
-                    doc_stmt = doc_stmt.where(Document.meta[key].as_string() == str(value))
-            # Restrict tokens to matching documents
-            stmt = stmt.where(Token.document_id.in_(doc_stmt))
-    return stmt
+    sc = await session.get(Subcorpus, subcorpus_id)
+    if not sc:
+        raise HTTPException(404, "Subcorpus not found")
+    if not sc.filter_criteria:
+        return []
+    # Find documents whose meta matches the filter criteria
+    doc_stmt = select(Document.id).where(Document.corpus_id == sc.corpus_id)
+    # Apply each filter criterion as a JSON match
+    # For simple key-value pairs: meta->>'key' = 'value'
+    # For year_min/year_max: meta->>'year' >= year_min
+    for key, value in sc.filter_criteria.items():
+        if key == "year_min":
+            doc_stmt = doc_stmt.where(Document.meta["year"].as_string() >= str(value))
+        elif key == "year_max":
+            doc_stmt = doc_stmt.where(Document.meta["year"].as_string() <= str(value))
+        else:
+            doc_stmt = doc_stmt.where(Document.meta[key].as_string() == str(value))
+    rows = (await session.execute(doc_stmt)).scalars().all()
+    return list(rows)
