@@ -49,6 +49,10 @@ async def _latest_version_id(session: AsyncSession, corpus_id: str) -> str | Non
     return await session.scalar(stmt)
 
 
+# Issue 17: hard cap on rows fetched for random sampling (memory guard).
+_SAMPLING_FETCH_CAP = 20_000
+
+
 async def _corpus_size(
     session: AsyncSession, version_id: str, document_ids: list[str] | None = None
 ) -> int:
@@ -110,6 +114,8 @@ async def search_concordance(
     limit: int = 100,
     offset: int = 0,
     document_ids: list[str] | None = None,
+    random_sample: int | None = None,
+    sample_seed: int | None = None,
 ) -> ConcordanceResult:
     """KWIC search. `query` is matched against the chosen `level` (word/lemma/POS).
 
@@ -119,6 +125,13 @@ async def search_concordance(
     Phase 1 supports: exact match (case-insensitive by default), wildcard `*`
     (any sequence), and a POS-tag query (e.g. `NOUN` or `VERB.*`).
     Phase 2 will add CQL-style structured queries (§8.3).
+
+    Issue 17: when ``random_sample`` is given, a random (seeded, reproducible)
+    sample of that many lines is drawn from the FULL match set — ``total``
+    still reports the number of matches, and the seed actually used is
+    returned in ``query["sample_seed"]`` so the sample can be reproduced.
+    Sampling fetches up to _SAMPLING_FETCH_CAP rows and samples in Python;
+    corpus sizes at MVP scale make this safe (documented trade-off).
     """
     version_id = await _latest_version_id(session, corpus_id)
     if not version_id:
@@ -161,7 +174,20 @@ async def search_concordance(
     )
     if document_ids is not None:
         stmt = stmt.where(Token.document_id.in_(document_ids))
+    if random_sample:
+        # Issue 17: draw the sample from the FULL match set (not just the
+        # first `limit` rows). Deterministic per (match-set, seed).
+        stmt = stmt.limit(_SAMPLING_FETCH_CAP)
+        stmt = stmt.offset(0)
+    else:
+        stmt = stmt.limit(limit).offset(offset)
     rows = (await session.execute(stmt)).all()
+    if random_sample:
+        import random as _random
+
+        rng = _random.Random(sample_seed)
+        k = min(random_sample, len(rows))
+        rows = sorted(rng.sample(list(rows), k), key=lambda r: (r[0].document_id, r[0].sentence_idx, r[0].token_idx))
 
     # Fix #1: Batch the sentence-context fetch instead of N+1 queries.
     # Collect all (document_id, sentence_idx) pairs from matched tokens,
@@ -211,10 +237,14 @@ async def search_concordance(
             lemma=tok.lemma,
         ))
 
+    query_meta: dict = {"q": query, "level": level, "window": window, "case_sensitive": case_sensitive}
+    if random_sample:
+        query_meta["random_sample"] = random_sample
+        query_meta["sample_seed"] = sample_seed
     return ConcordanceResult(
         lines=lines,
         total=total,
-        query={"q": query, "level": level, "window": window, "case_sensitive": case_sensitive},
+        query=query_meta,
     )
 
 

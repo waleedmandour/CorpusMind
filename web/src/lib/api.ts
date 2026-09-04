@@ -859,6 +859,14 @@ async function smartFetch(path: string, init?: RequestInit): Promise<Response> {
   return fetch(url, init);
 }
 
+
+/** Issue 19: binary GET via the authenticated smartFetch path (PWA + Tauri + auth). */
+async function rawFetchBlob(path: string): Promise<Blob> {
+  const resp = await smartFetch(path, { method: "GET" });
+  if (!resp.ok) throw new Error(`Request failed: HTTP ${resp.status}`);
+  return await resp.blob();
+}
+
 // Task 1: Track engine readiness so callers can wait for it.
 let _engineReady: boolean | null = null;
 
@@ -998,10 +1006,14 @@ export const api = {
 
   // --- Analysis ---
   concordance: (cid: string, query: string, level: "word" | "lemma" | "pos" = "word",
-                window = 5, limit = 100, offset = 0, case_sensitive = false) =>
+                window = 5, limit = 100, offset = 0, case_sensitive = false,
+                random_sample?: number | null, sample_seed?: number | null) =>
     jsonFetch<ConcordanceResult>(`/api/v1/corpora/${cid}/concordance`, {
       method: "POST",
-      body: JSON.stringify({ query, level, window, limit, offset, case_sensitive }),
+      body: JSON.stringify({
+        query, level, window, limit, offset, case_sensitive,
+        ...(random_sample ? { random_sample, sample_seed } : {}),
+      }),
     }),
 
   frequency: (cid: string, unit: "word" | "lemma" | "pos" = "word",
@@ -1184,6 +1196,25 @@ export const api = {
     }),
 
   // --- Phase 4 batch view (build step 7) ---
+  // Issue 16 fix: /images/{id}/describe previously had NO frontend wrapper
+  // and zero call sites — the batch view's "Vision-LM descriptions" column
+  // could never be populated. This wrapper backs the new per-image Describe action.
+  describeImage: (imgId: string, model?: string) =>
+    jsonFetch<{ image_id: string; description: string; model: string; provider: string; cached: boolean }>(
+      `/api/v1/images/${imgId}/describe`,
+      {
+        method: "POST",
+        body: JSON.stringify(model ? { model } : {}),
+      },
+    ),
+
+  // Issue 19 fix: fetch a downscaled thumbnail as an object URL (uses the
+  // authenticated smartFetch path so it works in PWA + Tauri + auth mode).
+  fetchImageThumbnailUrl: async (imgId: string): Promise<string> => {
+    const blob = await rawFetchBlob(`/api/v1/images/${imgId}/thumbnail`);
+    return URL.createObjectURL(blob);
+  },
+
   getBatchAnalysis: (isetId: string) =>
     jsonFetch<BatchAnalysisResult>(`/api/v1/image-sets/${isetId}/batch-analysis`),
 

@@ -81,6 +81,17 @@ function ProjectSelector() {
   const [language, setLanguage] = useState("en");
 
   const projects = useQuery({ queryKey: ["projects"], queryFn: api.listProjects });
+  // Issue 18 fix: wire the previously-unused api.deleteProject to the UI.
+  const [confirmDeleteProject, setConfirmDeleteProject] = useState<{ msg: string; onConfirm: () => void } | null>(null);
+  const deleteProject = useMutation({
+    mutationFn: (pid: string) => api.deleteProject(pid),
+    onSuccess: (_res, pid) => {
+      if (activeProjectId === pid) {
+        setActiveProject(null);
+      }
+      qc.invalidateQueries({ queryKey: ["projects"] });
+    },
+  });
 
   const createProject = useMutation({
     mutationFn: () => api.createProject(name, language),
@@ -109,6 +120,22 @@ function ProjectSelector() {
           ))}
         </select>
       </label>
+      {activeProjectId && (
+        <button
+          className="btn-small"
+          title="Delete the active project and all of its corpora — cannot be undone"
+          onClick={() => {
+            const p = projects.data?.find((x) => x.id === activeProjectId);
+            setConfirmDeleteProject({
+              msg: `Delete project "${p?.name ?? activeProjectId}" and all of its corpora? This cannot be undone.`,
+              onConfirm: () => deleteProject.mutate(activeProjectId),
+            });
+          }}
+          disabled={deleteProject.isPending}
+        >
+          Delete
+        </button>
+      )}
       {!showNew ? (
         <button className="btn-small" onClick={() => setShowNew(true)}>+ New Project</button>
       ) : (
@@ -138,6 +165,10 @@ function ProjectSelector() {
           <button className="btn-small" onClick={() => setShowNew(false)}>Cancel</button>
         </div>
       )}
+      <ConfirmDialog
+        state={confirmDeleteProject}
+        onClose={() => setConfirmDeleteProject(null)}
+      />
     </div>
   );
 }
@@ -157,6 +188,19 @@ function CorpusListPanel({ mode }: { mode: CorpusMode }) {
     queryFn: () => activeProjectId ? api.listCorpora(activeProjectId) : Promise.resolve([]),
     enabled: !!activeProjectId,
   });
+  // Issue 18 fix: wire the previously-unused api.deleteCorpus to the UI.
+  const [confirmDelete, setConfirmDelete] = useState<{ msg: string; onConfirm: () => void } | null>(null);
+  const deleteCorpus = useMutation({
+    mutationFn: (cid: string) => api.deleteCorpus(cid),
+    onSuccess: (_res, cid) => {
+      if (activeCorpusId === cid) {
+        setActive("");
+      }
+      qc.invalidateQueries({ queryKey: ["corpora", activeProjectId] });
+      qc.invalidateQueries({ queryKey: ["projects"] });
+    },
+  });
+
 
   return (
     <section className="corpus-panel">
@@ -200,12 +244,32 @@ function CorpusListPanel({ mode }: { mode: CorpusMode }) {
                 {isReference ? "Reference" : "Active"}
               </span>
             )}
+            {/* Issue 18 fix: corpora could never be deleted from the UI —
+                api.deleteCorpus existed but had zero call sites. */}
+            <button
+              className="corpus-delete-btn"
+              title="Delete this corpus (and all its documents) — cannot be undone"
+              aria-label={`Delete corpus ${c.name}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                setConfirmDelete({
+                  msg: `Delete corpus "${c.name}" and all of its documents? This cannot be undone.`,
+                  onConfirm: () => deleteCorpus.mutate(c.id),
+                });
+              }}
+              disabled={deleteCorpus.isPending}
+            >
+              ✕
+            </button>
           </li>
         ))}
         {corpora.data?.length === 0 && activeProjectId && (
           <li className="corpus-empty">No corpora yet. Click "+ New" to create one.</li>
         )}
       </ul>
+
+      {/* Issue 18: delete-corpus confirmation */}
+      <ConfirmDialog state={confirmDelete} onClose={() => setConfirmDelete(null)} />
 
       {/* Stats Dashboard — shown when a corpus is selected */}
       {activeCorpusId && (
@@ -1365,6 +1429,7 @@ function ReferenceUpload() {
     queryFn: () => activeProjectId ? api.listCorpora(activeProjectId) : Promise.resolve([]),
     enabled: !!activeProjectId,
   });
+
 
   const createAndUpload = useMutation({
     mutationFn: async ({ name, lang }: { name: string; lang: string }) => {

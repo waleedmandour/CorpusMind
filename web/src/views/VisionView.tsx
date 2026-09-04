@@ -355,11 +355,15 @@ function ImageGridItem({
   selected: boolean;
   onSelect: () => void;
 }) {
-  // No thumbnail route exists yet; show a placeholder card with the
-  // metadata we DO have. This is enough for the user to identify which
-  // image is which (filename + dimensions + size), and the actual pixel
-  // preview is a later enhancement (either a thumbnail route or a
-  // File-object-URL rendered at upload time).
+  // Issue 19 fix: the engine now serves a scoped, downscaled thumbnail
+  // (GET /images/{id}/thumbnail) — render the actual image with the
+  // placeholder as fallback while loading or on failure.
+  const thumbQuery = useQuery({
+    queryKey: ["image-thumbnail", image.id],
+    queryFn: () => api.fetchImageThumbnailUrl(image.id),
+    staleTime: Infinity,
+    retry: false,
+  });
   return (
     <button
       className={clsx("vision-grid-item", { selected })}
@@ -369,7 +373,16 @@ function ImageGridItem({
       title={image.filename}
     >
       <div className="vision-grid-thumb" aria-hidden="true">
-        <span className="vision-grid-thumb-icon">{"\u25A3"}</span>
+        {thumbQuery.data ? (
+          <img
+            src={thumbQuery.data}
+            alt=""
+            className="vision-grid-thumb-img"
+            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          />
+        ) : (
+          <span className="vision-grid-thumb-icon">{"\u25A3"}</span>
+        )}
       </div>
       <div className="vision-grid-meta">
         <div className="vision-grid-filename" title={image.filename}>{image.filename}</div>
@@ -390,9 +403,23 @@ function ImageGridItem({
 // ---------------------------------------------------------------------------
 
 function AnalysisDrawer({ imageId }: { imageId: string }) {
+  const queryClient = useQueryClient();
   const analysisQuery = useQuery({
     queryKey: ["image-analysis", imageId],
     queryFn: () => api.getImageAnalysis(imageId),
+  });
+
+  // Issue 16 fix: POST /images/{id}/describe had no frontend surface, so the
+  // "Vision-LM descriptions" column in the batch view could never populate.
+  const [describeMsg, setDescribeMsg] = useState("");
+  const describeMutation = useMutation({
+    mutationFn: () => api.describeImage(imageId),
+    onSuccess: (data) => {
+      setDescribeMsg(data.cached ? "Loaded cached description." : "Description generated.");
+      queryClient.invalidateQueries({ queryKey: ["image-analysis", imageId] });
+      queryClient.invalidateQueries({ queryKey: ["batch-analysis"] });
+    },
+    onError: (e: Error) => setDescribeMsg(`Error: ${e.message}`),
   });
 
   // Visual Grammar is a separate POST that runs on demand (it's not
@@ -423,6 +450,19 @@ function AnalysisDrawer({ imageId }: { imageId: string }) {
       <div className="result-meta">
         Dimensions: <strong>{a.dimensions}</strong>
         {a.caption && <> · Caption: <strong>{a.caption}</strong></>}
+      </div>
+
+      {/* Issue 16 fix: run /describe so VLM descriptions (and the batch
+          view's descriptions column) can actually be populated. */}
+      <div className="vision-describe-row" style={{ margin: "8px 0", display: "flex", gap: 8, alignItems: "center" }}>
+        <button
+          className="btn-secondary"
+          onClick={() => describeMutation.mutate()}
+          disabled={describeMutation.isPending}
+        >
+          {describeMutation.isPending ? "Describing…" : "Run Vision-LM describe"}
+        </button>
+        {describeMsg && <span className="hint">{describeMsg}</span>}
       </div>
 
       <div className="vision-analysis-cols">

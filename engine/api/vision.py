@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Literal
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Response, UploadFile
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -182,6 +182,43 @@ async def list_images(iset_id: str, session: AsyncSession = Depends(get_session)
 # --------------------------------------------------------------------------- #
 # §9.4 Image analysis (retrieve cached)
 # --------------------------------------------------------------------------- #
+
+
+@router.get("/images/{img_id}/thumbnail")
+async def get_image_thumbnail(img_id: str, session: AsyncSession = Depends(get_session)) -> Response:
+    """Serve a downscaled JPEG preview (max 320px) of the stored image.
+
+    Issue 19 fix: the Vision Suite previously had no way to SEE the image
+    being analysed — the grid rendered a placeholder card. This route keeps
+    the "engine doesn't serve raw files" boundary mostly intact: it returns a
+    downscaled derivative, not the original bytes, and honours the at-rest
+    encryption wrapper (images are encrypted when CORPUSMIND_ENCRYPTION_KEY
+    is set). Requires authentication when the shared-token mode is active,
+    like every other /api route.
+    """
+    from pathlib import Path as _Path
+
+    from storage.encryption import decrypt_file, is_encryption_enabled
+
+    img = await session.get(ImageModel, img_id)
+    if not img:
+        raise HTTPException(404, "Image not found")
+    if not img.storage_path or not _Path(img.storage_path).exists():
+        raise HTTPException(400, "Image file not found on disk. Re-ingest.")
+
+    raw = _Path(img.storage_path).read_bytes()
+    if is_encryption_enabled():
+        raw = decrypt_file(raw)
+
+    from io import BytesIO as _BytesIO
+
+    from PIL import Image as _PILImage
+
+    pil = _PILImage.open(_BytesIO(raw))
+    pil.thumbnail((320, 320))
+    buf = _BytesIO()
+    pil.convert("RGB").save(buf, "JPEG", quality=80)
+    return Response(content=buf.getvalue(), media_type="image/jpeg")
 
 
 @router.get("/images/{img_id}/analysis")

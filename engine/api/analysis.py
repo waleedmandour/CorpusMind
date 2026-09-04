@@ -41,6 +41,8 @@ class ConcordanceRequest(BaseModel):
     limit: int = Field(100, ge=1, le=1000)
     offset: int = Field(0, ge=0)
     subcorpus_id: str | None = None  # Issue 2: optional subcorpus restriction
+    random_sample: int | None = Field(None, ge=1, le=10000)  # Issue 17
+    sample_seed: int | None = None  # Issue 17: reproducible sampling
 
 
 @router.post("/corpora/{cid}/concordance")
@@ -57,6 +59,7 @@ async def concordance(cid: str, body: ConcordanceRequest, session: AsyncSession 
         level=body.level, case_sensitive=body.case_sensitive,
         window=body.window, limit=body.limit, offset=body.offset,
         document_ids=document_ids,
+        random_sample=body.random_sample, sample_seed=body.sample_seed,
     )
     return {
         "lines": [asdict(l) for l in result.lines],

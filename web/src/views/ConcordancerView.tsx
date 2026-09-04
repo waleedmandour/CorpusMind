@@ -29,21 +29,27 @@ export function ConcordancerView() {
   const [window, setWindow] = useState(5);
   const [caseSensitive, setCaseSensitive] = useState(false);
   const [randomSample, setRandomSample] = useState(false);
+  // Issue 17 fix: the toggle previously did nothing — random_sample was never
+  // sent and the engine had no sampling support. The seed is now generated
+  // per search, echoed back by the engine in query.sample_seed, and shown in
+  // the result metadata so the sample is reproducible.
+  const [sampleSeed, setSampleSeed] = useState<number | null>(null);
   const [offset, setOffset] = useState(0);
-  const [submitted, setSubmitted] = useState<{ q: string; l: string; w: number; cs: boolean; rs: boolean } | null>(null);
+  const [submitted, setSubmitted] = useState<{ q: string; l: string; w: number; cs: boolean; rs: boolean; seed: number | null } | null>(null);
   // Issue 5: visible export status so the user knows what happened
   const [exportStatus, setExportStatus] = useState<{ kind: "success" | "error" | "info"; msg: string } | null>(null);
 
   const result = useQuery({
     queryKey: ["concordance", cid, submitted, offset],
-    queryFn: () => api.concordance(cid!, submitted!.q, submitted!.l as any, submitted!.w, PAGE_SIZE, offset, submitted!.cs),
+    queryFn: () => api.concordance(cid!, submitted!.q, submitted!.l as any, submitted!.w, PAGE_SIZE, offset, submitted!.cs, submitted!.rs ? 100 : null, submitted!.seed),
     enabled: !!cid && !!submitted,
   });
 
   const onSearch = () => {
     if (!query.trim()) return;
     setOffset(0);
-    setSubmitted({ q: query.trim(), l: level, w: window, cs: caseSensitive, rs: randomSample });
+    setSampleSeed(randomSample ? Math.floor(Math.random() * 1_000_000) : null);
+    setSubmitted({ q: query.trim(), l: level, w: window, cs: caseSensitive, rs: randomSample, seed: sampleSeed });
   };
 
   // Issue 5: wrap in exportWithFeedback so both backend errors (engine
@@ -109,7 +115,7 @@ export function ConcordancerView() {
             <strong>{result.data.total.toLocaleString()}</strong> match{result.data.total === 1 ? "" : "es"}
             {" "}for <code>{result.data.query.q as string}</code> ({result.data.query.level as string} level)
             {caseSensitive && " (case sensitive)"}
-            {randomSample && " (randomized)"}
+            {submitted?.rs && " (random sample of 100, seed " + (result.data.query.sample_seed ?? submitted.seed) + ")"}
             {total > PAGE_SIZE && (
               <span className="pagination-info">
                 {" "} - showing {offset + 1}-{Math.min(offset + PAGE_SIZE, total)}
