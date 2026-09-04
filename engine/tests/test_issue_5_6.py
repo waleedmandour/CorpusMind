@@ -10,8 +10,6 @@ consent gate could be bypassed by any client that could reach the API.
 """
 from __future__ import annotations
 
-import io
-
 import pytest
 from httpx import ASGITransport, AsyncClient
 
