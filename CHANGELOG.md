@@ -6,6 +6,114 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
+## [1.1.0] — 2026-09-05 — Verified fixes, security hardening, feature completion
+
+Issue-numbered fixes verified by execution (fresh-clone install, 230+ test
+suite, live reproductions). See the unified fix prompt for full detail.
+
+- **Issue 3: Fixed** — engine packaging: real `engine/README.md`, in-project
+  readme path, hatchling upper bound. The documented Quickstart
+  (`pip install -e ".[dev]"`) failed on any fresh environment with current
+  hatchling (readme path validation) — the same command CI runs.
+- **Issue 1: Fixed** — `POST /corpora/{cid}/recompile` was a complete silent
+  no-op: three stacked bugs (nonexistent `parsed.tokens`; invalid
+  AnnotationVersion kwargs; a NEW annotation version created per document so
+  the latest version only ever held the last document's tokens) hid behind a
+  per-document `except Exception` that returned HTTP 200 with
+  `recompiled: 0`. Now: one version per recompile, correct column mapping,
+  per-document `failed` list + `success` flag in the response. Regression
+  tests added (would have failed three ways).
+- **Issue 2: Fixed** — subcorpus filtering was broken (`session.get_sync`
+  does not exist on AsyncSession) and wired to nothing. Concordance /
+  frequency / collocations / keyness now accept an optional `subcorpus_id`,
+  resolved against the saved filter's criteria; empty-criteria subcorpora
+  yield empty results (never unrestricted). 7 regression tests added.
+- **Issue 4: Fixed** — self-hosted Docker path was dead on arrival:
+  `reference_corpus` missing from wheel packages (container crash-looped at
+  startup), `engine/README.md` missing from git (COPY failed on fresh
+  clone), and a curl-based healthcheck in an image that ships no curl
+  (unhealthy forever). Fixed all three; ci.yml now builds the image, boots
+  it, probes /health, and asserts the container reaches healthy.
+- **Issue 5: Fixed** — the human-in-the-loop AI verification loop was
+  unreachable end-to-end: the persisted assistant turn's DB id was never
+  returned, so the frontend's Accept/Reject/Edit buttons could never render
+  and /research/verify-turn was dead code. turn_id now flows through
+  AssistantTurn → ChatResponse → ChatTurnResponse → AssistantView; failed
+  verifications no longer mask themselves as verified.
+- **Issue 6: Fixed** — consent-gate bypass: `/images/{id}/analysis` and
+  `/image-sets/{id}/batch-analysis` served the RAW cached Vision-LM output
+  (only /describe filtered), defeating the §18 ethical guardrails. Both read
+  paths now route descriptions and discourse claims through the consent
+  gate; `filter_discourse_claims` also filters `summary` as its docstring
+  always promised. Tests assert raw person-descriptive text never reaches
+  any read route while the gate is closed.
+- **Issue 7: Fixed** — cloud providers were broken for EVERYONE (not just
+  Anthropic): httpx concatenates base path + request path, so
+  `https://api.openai.com/v1` + `/v1/chat/completions` produced
+  `/v1/v1/chat/completions` (404 always). Client base now strips a trailing
+  /v1; Anthropic sends the required anthropic-version header. Tests pin the
+  exact final URLs for openai, anthropic, and custom base_url overrides.
+- **Issue 8: Added** — minimal shared-bearer-token auth for non-loopback
+  deployments (`CORPUSMIND_AUTH_TOKEN`): every /api request except /health
+  requires `Authorization: Bearer <token>`; loopback + unset token keep the
+  local-first no-auth default. docker-compose documents the shared-trust-
+  boundary nature of the shared-lab mode.
+- **Issue 9: Fixed** — zip-slip/tar-slip: reference-corpus archives now use
+  tarfile's `filter="data"` (tar) and a member-path validator (zip). E2E
+  test: a hostile `../../` zip is refused, job reports failure.
+- **Issue 10: Fixed** — Tauri capabilities scoped: unused shell-spawn and
+  fs-mutating grants removed in both shells; fs reads scoped to app data +
+  user folders; CSP `script-src 'unsafe-inline'` dropped.
+- **Issue 11: Documented** — at-rest encryption covers IMAGE FILES ONLY; the
+  database is NOT encrypted (SQLCipher remains a future task). Compose
+  comments no longer imply otherwise.
+- **Issue 12: Fixed** — Gemini API key moves from URL query parameter (log
+  leak) to the `x-goog-api-key` header; raw upstream error bodies are no
+  longer echoed to clients; setting a key now requires the same explicit
+  data-leaves-device acknowledgment as the other cloud paths (backend 422 +
+  Settings checkbox).
+- **Issue 13: Fixed** — raw provider responses (which can embed
+  corpus-derived model output) are no longer embedded in error strings and
+  logs by default; gated behind `CORPUSMIND_DEBUG_RAW=1`.
+- **Issue 14: Fixed** — single test-gated release pipeline: a test-gate job
+  (ruff + engine pytest + web typecheck/build) gates all platform jobs;
+  build-release.yml is dispatch-only (tag-race eliminated); uploads fail on
+  unmatched files; SHA256SUMS manifest attached to releases.
+- **Issue 15: Documented** — ~30 engine endpoints shipped without frontend
+  consumers (Phase-5 discourse suite, collaboration, open-access, research
+  workflow, bilingual align, conversation history, export queue); marked
+  experimental in the README until their UI surfaces ship.
+- **Issue 16: Added** — per-image "Run Vision-LM describe" action; the batch
+  view's VLM descriptions column can now actually be populated.
+- **Issue 17: Added** — real server-side random sampling for the
+  concordancer (seeded, reproducible, sampled from the full match set; seed
+  echoed in the response). The UI toggle previously did nothing.
+- **Issue 18: Added** — delete corpora and projects from the UI (confirm-
+  guarded), wiring the previously-unused engine DELETE routes.
+- **Issue 19: Added** — Vision Suite image previews via a new scoped
+  `GET /images/{id}/thumbnail` (downscaled derivative, honours at-rest
+  decryption); the grid previously rendered placeholder cards only.
+- **Issue 20: Removed** — retired `Ribbon.tsx` dead component.
+- **Issue 21: Fixed** — frontend/desktop robustness batch: unhandled
+  rejections (image upload, set creation, corpus creation), reference-
+  download Cancel is now terminal (no more 10-minute zombie polls), Ollama
+  pull poller overlap/unmount leak, desktop cleanup moved to
+  RunEvent::ExitRequested/Exit, hazardous unused `test_sidecar` command
+  removed.
+- **Issue 22: Fixed** — README "Status" section rewritten around the current
+  release (it still advertised Suite B as "Coming Soon" and Phase 4 as
+  🚧); version metadata unified at 1.1.0 across pyproject, both Tauri
+  shells, CITATION.cff, compose image tag, and the frontend fallback.
+- **Issue 23: Documented** — mypy strict mode is configured but not enforced
+  (397 errors at the time of writing); CI tracks the count rather than
+  pretending the guarantee holds.
+- **Issue 24: Fixed** — this entry restores the missing release paper-trail;
+  a versioning-scheme note now explains the mid-project 0.1.x→phase switch.
+- **Issue 25: Deferred** — THIRD_PARTY_LICENSES.md sync + committed
+  reference-data license records (tracked for the next docs pass).
+- **Issue 26: Fixed** — npm ci (not npm install) and pinned Tauri CLI (@2)
+  across workflows; Cargo.lock no longer gitignored.
+
 ## [0.1.16] — 2026-07-22 — Critical Issues Resolution
 
 This release addresses 5 critical functionality, reliability, and usability

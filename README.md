@@ -34,12 +34,27 @@ run entirely on the researcher's own machine.
 
 ## Status
 
-**Suite A (Text):** complete through Phase 6 (cleaning, corpus hub, research features,
-deterministic AI layer, Ollama auto-start, multi-format export, professional UI).
+**Current release: v1.1.0** — both suites are fully functional.
 
-**Suite B (Vision):** backend implemented (20+ endpoints for image analysis, Visual
-Grammar, multimodal alignment), UI integration in progress — currently shows
-"Coming Soon" in the app.
+**Suite A (Text):** complete — cleaning (16 options), corpus hub, concordance,
+frequency, collocations, keyness, dispersion, subcorpus filtering, deterministic
+grounded-AI layer, Ollama/LM Studio auto-detection, multi-format + diagram
+export, bilingual (EN/AR) UI, research workflow tools.
+
+**Suite B (Vision):** complete — image ingestion with OCR, Visual Grammar
+(Kress & van Leeuwen), multimodal image–text alignment, Vision-LM describe
+with a consent-gated ethical guardrail (§18), batch analysis with recurring
+themes, and image thumbnails.
+
+**Both suites:** installable PWA + two Tauri 2 desktop shells (CorpusMind and
+CorpusMind Lens), 230+ backend tests, ruff-clean, self-hosted Docker image.
+
+<details>
+<summary><strong>Phase history (Phase 0 → 6)</strong></summary>
+
+This narrative has moved out of the README top so it can no longer go stale
+above the fold (Issue 22). The authoritative history lives in
+[CHANGELOG.md](CHANGELOG.md).
 
 ### Phase 0 — Foundations ✅
 - ✅ Monorepo scaffold
@@ -102,8 +117,26 @@ Grammar, multimodal alignment), UI integration in progress — currently shows
 - ✅ **Windows build script** — `scripts/build-corpusmind-windows.ps1` produces both NSIS `.exe` and MSI `.msi`, uninstalls previous versions, installs for the current user
 - ✅ **CI fixes** — Desktop (Rust) job now passes (externalBin clearing pattern + E0597 lifetime fix); engine tests improved from 71→88 passing by downloading the spaCy model in CI
 
-### 🚧 Phase 4 — Suite B MVP (Vision)
-- 🚧 Image ingestion, OCR, Visual Grammar (Kress & van Leeuwen), multimodal image–text alignment; + 8.22 bilingual tools + full CAMeL DialectIdentifier model
+### Phase 4 — Suite B MVP (Vision) ✅
+- ✅ Image ingestion, OCR, Visual Grammar (Kress & van Leeuwen), multimodal image–text alignment; + 8.22 bilingual tools + full CAMeL DialectIdentifier model
+
+</details>
+
+### Experimental API surface (v1.1.0)
+
+The engine ships several endpoint clusters whose UI surfaces are not yet
+implemented; they are exposed for API consumers and marked **experimental**
+until then (Issue 15). UI presence and API surface now match for all
+non-experimental features:
+
+- Phase-5 multimodal discourse frameworks (CDA, persuasion, framing,
+  narrative, visual metaphor, emotion, cultural, opt-in facial analysis)
+- Phase-6 collaboration (saved searches, bookmarks, favorites, share, sync)
+- Open-access corpus search/download
+- Research workflow (frequency-list import/export, compare-concordance)
+- Bilingual alignment (`/bilingual/align`, `/parallel-concordance`)
+- Export queue (`/export/jobs*`)
+- AI conversation history endpoints (used by future Assistant history UI)
 
 ---
 
@@ -146,7 +179,7 @@ Health check:
 
 ```bash
 curl http://127.0.0.1:8765/api/v1/health
-# {"status":"ok","engine":"corpusmind-engine","version":"0.1.2"}
+# {"status":"ok","engine":"corpusmind-engine","version":"1.1.0"}
 ```
 
 ### 2. Run the web frontend (PWA)
@@ -382,7 +415,7 @@ If you use CorpusMind in your research, please cite it as:
 
 > Mandour, W., & Ibrahim, W. (2026). *CorpusMind: A local-first, AI-native
 > research environment for corpus linguistics and multimodal discourse
-> analysis* (Version 0.1.2) [Computer software]. Zenodo.
+> analysis* (Version 1.1.0) [Computer software]. Zenodo.
 > https://doi.org/10.5281/zenodo.21226650
 >
 > Dr. Waleed Mandour, Sultan Qaboos University, ORCID: 0000-0002-9262-5993
@@ -397,7 +430,7 @@ If you use CorpusMind in your research, please cite it as:
                    for corpus linguistics and multimodal discourse analysis}},
   month        = jul,
   year         = 2026,
-  version      = {0.1.2},
+  version      = {1.1.0},
   publisher    = {Zenodo},
   doi          = {10.5281/zenodo.21226650},
   url          = {https://doi.org/10.5281/zenodo.21226650}
@@ -455,7 +488,7 @@ This is the first stable (1.0) release. It includes all features from the v0.1.x
 
 **CorpusMind Lens** is a separate installable desktop app that connects to the same engine and focuses on vision-LM-powered multimodal discourse analysis. It opens directly to the Vision Suite and shows only vision-relevant navigation. Lens has its own Zenodo DOI: [10.5281/zenodo.21673083](https://doi.org/10.5281/zenodo.21673083).
 
-**What's new in v1.0.0 (on top of v0.1.27):**
+**What's new in v1.0.0:**
 
 - **Removed "Coming Soon" label** from the Vision Suite nav item — the Vision Suite is fully functional.
 - **Added vision models to the download catalogue**: `moondream` (1.7 GB, 1.8B), `llama3.2-vision:11b` (7.9 GB, 11B), and `gemma3:4b` (3.3 GB, 4B, multilingual) are now listed in Settings → Model Providers with a "vision" tag. Users can download them directly from within the app.

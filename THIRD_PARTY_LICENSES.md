@@ -87,8 +87,6 @@ allowing users to use the full CAMeL Tools stack.
 | --- | --- | --- |
 | [numpy](https://numpy.org/) | BSD-3-Clause | Numerical computing |
 | [scipy](https://scipy.org/) | BSD-3-Clause | Scientific computing |
-| [statsmodels](https://www.statsmodels.org/) | BSD-3-Clause | Statistical models |
-| [pingouin](https://pingouin-stats.org/) | Apache-2.0 | Statistical tests (§9.21) |
 
 ### Storage
 
@@ -97,11 +95,32 @@ allowing users to use the full CAMeL Tools stack.
 | [sqlalchemy](https://www.sqlalchemy.org/) | MIT | SQL ORM |
 | [aiosqlite](https://aiosqlite.omnilib.dev/) | MIT | Async SQLite driver |
 
+### Engine runtime utilities (added in Issue 25 sync, v1.1.0)
+
+| Package | License | Purpose |
+| --- | --- | --- |
+| [beautifulsoup4](https://www.crummy.com/software/BeautifulSoup/) | MIT | HTML parsing (archive ingestion) |
+| [lxml](https://lxml.de/) | BSD-3-Clause | XML/HTML parsing |
+| [charset-normalizer](https://github.com/Ousret/charset_normalizer) | MIT | Text encoding detection |
+| [langdetect](https://github.com/Mimino667/langdetect) | Apache-2.0 | Language detection |
+| [python-docx](https://github.com/python-openxml/python-docx) | MIT | DOCX ingestion/export |
+| [openpyxl](https://openpyxl.readthedocs.io/) | MIT | XLSX export |
+| [pypdf](https://github.com/py-pdf/pypdf) | BSD-3-Clause | PDF ingestion |
+| [reportlab](https://www.reportlab.com/) | BSD-3-Clause | PDF export |
+| [websockets](https://websockets.readthedocs.io/) | BSD-3-Clause | WebSocket support (uvicorn) |
+| [python-multipart](https://github.com/kludex/python-multipart) | Apache-2.0 | Multipart upload parsing |
+| [openapi-core](https://github.com/openapi-generators/openapi-core) | BSD-3-Clause | OpenAPI validation (tests) |
+| [cryptography](https://cryptography.io/) | Apache-2.0 OR BSD-3-Clause | AES-256-GCM at-rest encryption |
+| [tenacity](https://tenacity.readthedocs.io/) | Apache-2.0 | Retry logic |
+| [structlog](https://www.structlog.org/) | MIT/Apache-2.0 | Structured logging |
+| [httpx](https://www.python-httpx.org/) | BSD-3-Clause | Async HTTP client (providers) |
+| [camel-tools](https://camel.abudhabi.nyu.edu/) | Apache-2.0 | Arabic NLP toolkit |
+
 ### Vision (Phase 4+, optional install via `pip install -e ".[vision]"`)
 
 | Package | License | Purpose |
 | --- | --- | --- |
-| (future) [opencv-python](https://opencv.org/) | Apache-2.0 | Computer vision |
+| [opencv-python](https://opencv.org/) | Apache-2.0 | Computer vision (release build dependency) |
 | [pillow](https://python-pillow.org/) | MIT-CMU | Image processing |
 
 ---
