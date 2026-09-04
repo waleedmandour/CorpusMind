@@ -209,9 +209,15 @@ function CorpusListPanel({ mode }: { mode: CorpusMode }) {
         {activeProjectId && (
           <NewCorpusDialog
             onCreate={(name, lang, genre) => {
-              api.createCorpus(activeProjectId, name, lang, genre).then(() => {
-                qc.invalidateQueries({ queryKey: ["corpora"] });
-              });
+              api.createCorpus(activeProjectId, name, lang, genre)
+                .then(() => {
+                  qc.invalidateQueries({ queryKey: ["corpora"] });
+                })
+                .catch((e) => {
+                  // Issue 21 fix: creation failures were silent — the dialog
+                  // had already closed and the user got no feedback.
+                  alert(`Could not create corpus: ${e?.message || String(e)}`);
+                });
             }}
           />
         )}
@@ -675,6 +681,8 @@ function BundledReferences() {
   const [statusMsg, setStatusMsg] = useState("");
   const [statusKind, setStatusKind] = useState<"success" | "error" | "info">("info");
   const [downloadingName, setDownloadingName] = useState<string | null>(null);
+  // Issue 21 fix: names whose download was cancelled — terminal state for the poll loop.
+  const cancelledDownloadsRef = useRef<Set<string>>(new Set());
   // v0.1.19: confirm dialog state (replaces window.confirm)
   const [confirmMsg, setConfirmMsg] = useState<string | null>(null);
   const pendingDeleteRef = useRef<string | null>(null);
@@ -720,11 +728,17 @@ function BundledReferences() {
             return;
           }
           try {
+            // Issue 21 fix: a user-cancelled download is terminal — stop polling.
+            if (cancelledDownloadsRef.current.has(name)) {
+              cancelledDownloadsRef.current.delete(name);
+              return;
+            }
             const status = await api.getFullReferenceStatus(name);
             const progress = status.status === "downloading" ? 25
               : status.status === "extracting" ? 50
               : status.status === "ingesting" ? 75
               : status.status === "installed" ? 100
+              : status.status === "cancelled" ? 0
               : status.status === "failed" ? 0 : 50;
             setDownloadProgress({
               name, displayName: ref.display_name,

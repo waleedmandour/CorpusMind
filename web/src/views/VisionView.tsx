@@ -93,12 +93,17 @@ export function VisionView() {
 
   const onCreateSet = async () => {
     if (!newSetName.trim()) return;
-    const created = await api.createImageSet(cid, newSetName.trim());
-    setNewSetName("");
-    setShowNewSetForm(false);
-    setActiveSetId(created.id);
-    // Invalidate the list so the new set appears at the top.
-    queryClient.invalidateQueries({ queryKey: ["image-sets", cid] });
+    try {
+      const created = await api.createImageSet(cid, newSetName.trim());
+      setNewSetName("");
+      setShowNewSetForm(false);
+      setActiveSetId(created.id);
+      // Invalidate the list so the new set appears at the top.
+      queryClient.invalidateQueries({ queryKey: ["image-sets", cid] });
+    } catch (e) {
+      // Issue 21 fix: surface creation failures (dialog stays open).
+      alert(`Could not create image set: ${(e as Error).message}`);
+    }
   };
 
   return (
@@ -217,9 +222,15 @@ function ImageSetWorkspace({
 
   const onUpload = async () => {
     if (pendingFiles.length === 0) return;
-    await uploadMutation.mutateAsync({ files: pendingFiles, caption });
-    setPendingFiles([]);
-    setCaption("");
+    try {
+      await uploadMutation.mutateAsync({ files: pendingFiles, caption });
+      setPendingFiles([]);
+      setCaption("");
+    } catch {
+      // Issue 21 fix: the rejection was previously unhandled — pending files
+      // were silently kept and no feedback was shown. uploadMutation's
+      // onError already surfaces the message; keep state intact for retry.
+    }
   };
 
   const openFilePicker = () => fileInputRef.current?.click();

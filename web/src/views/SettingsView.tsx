@@ -17,7 +17,7 @@
  *   In browser/PWA mode, we fall back to the engine's /api/v1/providers
  *   endpoint (which is fine — in browser mode the engine is always remote).
  */
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
 import {
@@ -823,6 +823,9 @@ function OllamaModelManager({ ollamaHealthy }: { ollamaHealthy: boolean }) {
     refetchInterval: 10_000,
   });
   const [pullingModel, setPullingModel] = useState<string | null>(null);
+  // Issue 21.3: hold the active poll interval so overlapping pulls and
+  // unmounts cannot leak it.
+  const pullIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [pullStatus, setPullStatus] = useState<{ completed: number; total: number; status: string } | null>(null);
   const [showImport, setShowImport] = useState(false);
   const [importName, setImportName] = useState("");
@@ -871,6 +874,10 @@ function OllamaModelManager({ ollamaHealthy }: { ollamaHealthy: boolean }) {
     }
     setPullingModel(modelName);
     setPullStatus({ completed: 0, total: 0, status: "starting" });
+    // Issue 21.3 fix: guard against overlapping pulls — each new pull stops
+    // the previous interval, so a stalled poll can no longer poll forever or
+    // setState after navigation.
+    if (pullIntervalRef.current) clearInterval(pullIntervalRef.current);
     try {
       await api.ollamaPull(modelName);
       // Poll for progress
@@ -884,6 +891,7 @@ function OllamaModelManager({ ollamaHealthy }: { ollamaHealthy: boolean }) {
           });
           if (status.status === "success" || status.status === "error") {
             clearInterval(poll);
+            pullIntervalRef.current = null;
             setPullingModel(null);
             qc.invalidateQueries({ queryKey: ["ollama-models"] });
             if (status.status === "error") {

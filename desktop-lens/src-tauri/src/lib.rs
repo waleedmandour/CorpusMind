@@ -1689,12 +1689,27 @@ pub fn run() {
             pick_corpus_files,
             upload_corpus_files,
             save_file_to_disk,
-            test_sidecar,
             engine_logs,
             verify_sidecar
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|app_handle, event| {
+            // Issue 21.5 fix: cleanup previously ran ONLY on
+            // WindowEvent::Destroyed — the wrong lifecycle hook. On macOS,
+            // closing the window destroys it while the app keeps running
+            // (killing the engine under a live app), and programmatic exit
+            // paths (AppHandle::exit) never emit Destroyed at all, skipping
+            // cleanup entirely. Handle the run-loop exit events here; the
+            // window hook remains as a fallback.
+            use tauri::RunEvent;
+            if let RunEvent::ExitRequested { .. } | RunEvent::Exit = event {
+                let sidecar: State<EngineSidecar> = app_handle.state();
+                sidecar.shutdown();
+                let ollama: State<OllamaManager> = app_handle.state();
+                ollama.shutdown();
+            }
+        });
 }
 
 /// Return the canonical Rust target triple for the build host.
@@ -1737,77 +1752,3 @@ fn strip_verbatim_prefix(path: &std::path::Path) -> std::path::PathBuf {
     }
 }
 
-/// Diagnostic command: run the sidecar exe directly with --version and capture
-/// its stdout + stderr. This lets the user see the ACTUAL error when the engine
-/// crashes (e.g., missing DLL, Python import error) instead of just empty logs.
-///
-/// The regular spawn redirects stdout/stderr to log files, but if the process
-/// crashes before the PyInstaller bootloader even starts writing, those files
-/// stay empty. This command runs the exe synchronously and captures everything.
-#[tauri::command]
-fn test_sidecar(app: tauri::AppHandle) -> String {
-    let sidecar: State<EngineSidecar> = app.state();
-    let (program, args, _wd) = sidecar.resolve_command(&app);
-
-    // Strip \\?\ prefix
-    let program_clean = if program.starts_with(r"\\?\") {
-        program[4..].to_string()
-    } else {
-        program.clone()
-    };
-
-    info!(target: "sidecar", "test_sidecar: running {} {}", program_clean, args.join(" "));
-
-    // Set the working directory to the exe's parent dir (for PyInstaller _internal/)
-    let exe_path = std::path::Path::new(&program_clean);
-    let working_dir = exe_path.parent().map(|p| {
-        strip_verbatim_prefix(p)
-    });
-
-    let mut cmd = Command::new(&program_clean);
-    cmd.args(&args)
-        .env("CORPUSMIND_HOST", ENGINE_HOST)
-        .env("CORPUSMIND_PORT", ENGINE_PORT.to_string())
-        .env("PYTHONUNBUFFERED", "1")
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped());
-
-    if let Some(ref wd) = working_dir {
-        cmd.current_dir(wd);
-    }
-
-    match cmd.output() {
-        Ok(output) => {
-            let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-            let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-            let exit_code = output.status.code().unwrap_or(-1);
-
-            info!(target: "sidecar", "test_sidecar: exit code={}, stdout={} bytes, stderr={} bytes",
-                  exit_code, stdout.len(), stderr.len());
-
-            serde_json::json!({
-                "ok": output.status.success(),
-                "exit_code": exit_code,
-                "stdout": stdout,
-                "stderr": stderr,
-                "program": program_clean,
-                "message": if output.status.success() {
-                    "Sidecar ran successfully".to_string()
-                } else {
-                    format!("Sidecar exited with code {}. See stderr for details.", exit_code)
-                }
-            }).to_string()
-        }
-        Err(e) => {
-            error!(target: "sidecar", "test_sidecar: failed to run: {}", e);
-            serde_json::json!({
-                "ok": false,
-                "exit_code": null,
-                "stdout": "",
-                "stderr": format!("Failed to execute sidecar: {}", e),
-                "program": program_clean,
-                "message": format!("Could not run sidecar exe: {}. This usually means the file doesn't exist or Windows blocked it (antivirus).", e)
-            }).to_string()
-        }
-    }
-}
