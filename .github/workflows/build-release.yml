@@ -13,19 +13,20 @@ name: Build & Release v1.0.0
 #   6. Runs `tauri build` to produce the platform installer
 #   7. Uploads the installer to the GitHub release
 #
-# Trigger: manually via "Run workflow" in the Actions tab, or automatically
-# when a v0.1.* tag is pushed.
+# Trigger: manually via "Run workflow" in the Actions tab (dispatch-only since
+# Issue 14 — release.yml owns tag-triggered releases).
 
 on:
+  # Issue 14 fix: this workflow previously ALSO triggered on 'v*' tags and
+  # raced release.yml to upload identically-named assets to the same GitHub
+  # Release (nondeterministic overwrites). Dispatch-only now; release.yml is
+  # the single tag-gated release pipeline.
   workflow_dispatch:
     inputs:
       tag:
         description: 'Release tag (e.g. v1.0.0)'
         required: true
         default: 'v1.0.0'
-  push:
-    tags:
-      - 'v*'
 
 permissions:
   contents: write  # needed to upload assets to the release
