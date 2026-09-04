@@ -83,6 +83,9 @@ export function AssistantView() {
         {
           role: "assistant",
           content: turn.content,
+          // Issue 5 fix: carry the persisted turn id so Accept/Reject/Edit
+          // can render and api.verifyTurn becomes reachable.
+          turn_id: turn.turn_id ?? undefined,
           grounded: turn.grounded,
           tool_calls: turn.tool_calls,
           evidence: turn.evidence,
@@ -130,9 +133,10 @@ export function AssistantView() {
         i === msgIndex ? { ...m, verified } : m
       ));
     } catch (e) {
-      setMessages((prev) => prev.map((m, i) =>
-        i === msgIndex ? { ...m, verified } : m
-      ));
+      // Issue 5 fix: a failed verification must NOT mark the turn as
+      // verified — leave it unverified so the buttons remain available
+      // and the user can retry.
+      console.error("verifyTurn failed", e);
     }
   };
 

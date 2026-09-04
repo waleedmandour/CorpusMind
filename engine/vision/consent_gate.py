@@ -310,9 +310,17 @@ def filter_discourse_claims(claims: list[dict[str, Any]]) -> dict[str, Any]:
         result = filter_person_descriptive(claim_text)
         if result.was_filtered:
             any_filtered = True
+        # Issue 6 fix: the docstring always promised that `summary` is
+        # filtered independently, but the code only filtered `claim` — a
+        # latent bypass for any caller that trusts the docstring. Filter
+        # both fields now (and any future caller is safe by default).
+        summary_result = filter_person_descriptive(c.get("summary", ""))
+        if summary_result.was_filtered:
+            any_filtered = True
         filtered_claims.append({
             **c,
             "claim": result.filtered_text,
+            "summary": summary_result.filtered_text,
         })
     return {
         "claims": filtered_claims,

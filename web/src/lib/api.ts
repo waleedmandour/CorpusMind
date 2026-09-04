@@ -327,6 +327,10 @@ export interface EvidenceItem {
 
 export interface ChatTurnResponse {
   conversation_id: string;
+  // Issue 5 fix: DB id of the persisted assistant turn — required for the
+  // human-in-the-loop verification loop (api.verifyTurn). Was missing, so
+  // Accept/Reject/Edit could never render.
+  turn_id?: number | null;
   content: string;
   grounded: boolean;
   tool_calls: Array<Record<string, unknown>>;

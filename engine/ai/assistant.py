@@ -43,6 +43,10 @@ class AssistantTurn:
     evidence: list[Evidence] = field(default_factory=list)
     tool_calls: list[dict[str, Any]] = field(default_factory=list)
     elapsed_ms: int = 0
+    # Issue 5 fix: DB id of the persisted assistant turn. Without it the
+    # frontend can never call /research/turns/{id}/verify, so the
+    # human-in-the-loop verification loop was unreachable end-to-end.
+    turn_id: int | None = None
     # Confidence layer (deterministic interpretation)
     confidence: float = 1.0
     confidence_reasoning: str = ""
@@ -293,6 +297,7 @@ class Assistant:
                 log.warning("confidence_layer_error", error=str(e))
 
         # === Persist the assistant turn in a NEW session ===
+        persisted_turn_id: int | None = None
         async with session_scope() as session:
             # Use selectinload to eagerly load turns (avoid greenlet lazy-load error)
             stmt = (
@@ -314,6 +319,8 @@ class Assistant:
                     elapsed_ms=elapsed,
                 )
                 session.add(at)
+                await session.flush()  # Issue 5 fix: populate the autoincrement id
+                persisted_turn_id = at.id
 
         log.info("assistant_turn",
                  conversation=convo_id,
@@ -331,6 +338,7 @@ class Assistant:
             confidence_reasoning=confidence_reasoning,
             needs_validation=needs_validation,
             mcqs=mcqs,
+            turn_id=persisted_turn_id,
         )
 
 

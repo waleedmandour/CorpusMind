@@ -190,11 +190,39 @@ async def get_image_analysis(img_id: str, session: AsyncSession = Depends(get_se
     img = await session.get(ImageModel, img_id)
     if not img:
         raise HTTPException(404, "Image not found")
+
+    analysis = img.analysis
+    # Issue 6 fix: /describe stores the RAW model output in
+    # analysis["vision_llm"][cache_key]["description"] and filters only its
+    # own response. This read endpoint previously returned img.analysis
+    # verbatim, serving the unfiltered person-descriptive text even with the
+    # consent gate CLOSED — bypassing the §18 guardrails. Apply the same
+    # response-shaping filter here (and to cached discourse claims below).
+    if analysis and isinstance(analysis, dict):
+        import copy as _copy
+
+        from vision.consent_gate import filter_describe_response, filter_discourse_claims
+
+        analysis = _copy.deepcopy(analysis)
+        vlm_cache = analysis.get("vision_llm")
+        if isinstance(vlm_cache, dict):
+            for cache_key, cached in vlm_cache.items():
+                if isinstance(cached, dict) and cached.get("description"):
+                    vlm_cache[cache_key]["description"] = filter_describe_response(
+                        cached["description"]
+                    )["description"]
+        discourse_cache = analysis.get("vision_llm_discourse")
+        if isinstance(discourse_cache, dict):
+            for cache_key, cached in discourse_cache.items():
+                if isinstance(cached, dict) and isinstance(cached.get("claims"), list):
+                    filtered = filter_discourse_claims(cached["claims"])
+                    discourse_cache[cache_key]["claims"] = filtered["claims"]
+
     return {
         "image_id": img.id,
         "filename": img.filename,
         "dimensions": f"{img.width}x{img.height}",
-        "analysis": img.analysis,
+        "analysis": analysis,
         "caption": img.caption,
     }
 
@@ -786,10 +814,14 @@ async def batch_analysis_route(
             # wants a representative sample).
             first = next(iter(vlm.values()), None)
             if first:
+                # Issue 6 fix: route cached descriptions through the consent
+                # gate — the cache holds RAW model output (see /describe).
+                from vision.consent_gate import filter_describe_response
+
                 descriptions.append({
                     "image_id": img.id,
                     "filename": img.filename,
-                    "description": first.get("description", ""),
+                    "description": filter_describe_response(first.get("description", ""))["description"],
                     "model": first.get("model", ""),
                 })
 

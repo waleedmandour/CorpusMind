@@ -27,6 +27,9 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     conversation_id: str
+    # Issue 5 fix: DB id of the persisted assistant turn — the frontend needs
+    # it to call POST /research/turns/{turn_id}/verify (Accept/Reject/Edit).
+    turn_id: int | None = None
     content: str
     grounded: bool
     tool_calls: list[dict]
@@ -137,6 +140,7 @@ async def chat(req: ChatRequest, request: Request, session: AsyncSession = Depen
             raise HTTPException(status_code=502, detail=f"Model call failed: {error_msg}") from e
 
     return ChatResponse(
+        turn_id=turn.turn_id,
         conversation_id=convo_id,
         content=turn.content,
         grounded=turn.grounded,
@@ -185,6 +189,9 @@ async def get_conversation(cid: str, session: AsyncSession = Depends(get_session
         "updated_at": convo.updated_at.isoformat(),
         "turns": [
             {
+                # Issue 5 fix: expose the persisted turn id so clients can
+                # cross-reference turns for verification after page reloads.
+                "id": t.id,
                 "idx": t.idx,
                 "role": t.role,
                 "content": t.content,
