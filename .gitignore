@@ -61,7 +61,8 @@ shared/.env
 # Desktop (Rust / Tauri)
 # ---------------------------------------------------------------------------
 desktop/src-tauri/target/
-desktop/src-tauri/Cargo.lock
+# Issue 26: Cargo.lock MUST be tracked for reproducible desktop builds
+# desktop/src-tauri/Cargo.lock
 desktop/src-tauri/gen/
 desktop/binaries/*
 !desktop/binaries/.gitkeep

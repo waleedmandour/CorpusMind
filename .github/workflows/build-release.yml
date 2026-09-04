@@ -88,13 +88,13 @@ jobs:
       - name: Build web frontend
         run: |
           cd web
-          npm install --no-audit --no-fund
+          npm ci --no-audit --no-fund
           npm run build
 
       - name: Build Tauri app (deb + AppImage)
         run: |
           cd desktop/src-tauri
-          npx @tauri-apps/cli@latest build --bundles deb,appimage
+          npx @tauri-apps/cli@2 build --bundles deb,appimage
 
       - name: Upload artifacts to release
         uses: softprops/action-gh-release@v2
@@ -151,13 +151,13 @@ jobs:
       - name: Build web frontend
         run: |
           cd web
-          npm install --no-audit --no-fund
+          npm ci --no-audit --no-fund
           npm run build
 
       - name: Build Tauri app (Universal DMG)
         run: |
           cd desktop/src-tauri
-          npx @tauri-apps/cli@latest build --bundles dmg --target universal-apple-darwin
+          npx @tauri-apps/cli@2 build --bundles dmg --target universal-apple-darwin
 
       - name: Upload artifacts to release
         uses: softprops/action-gh-release@v2
@@ -216,14 +216,14 @@ jobs:
       - name: Build web frontend
         run: |
           cd web
-          npm install --no-audit --no-fund
+          npm ci --no-audit --no-fund
           npm run build
         shell: bash
 
       - name: Build Tauri app (NSIS + MSI)
         run: |
           cd desktop/src-tauri
-          npx @tauri-apps/cli@latest build --bundles nsis,msi
+          npx @tauri-apps/cli@2 build --bundles nsis,msi
         shell: bash
 
       - name: Upload artifacts to release
@@ -291,13 +291,13 @@ jobs:
       - name: Build web frontend
         run: |
           cd web
-          npm install --no-audit --no-fund
+          npm ci --no-audit --no-fund
           npm run build
 
       - name: Build Lens Tauri app (deb + AppImage)
         run: |
           cd desktop-lens/src-tauri
-          npx @tauri-apps/cli@latest build --bundles deb,appimage
+          npx @tauri-apps/cli@2 build --bundles deb,appimage
 
       - name: Upload Lens artifacts to release
         uses: softprops/action-gh-release@v2
@@ -354,13 +354,13 @@ jobs:
       - name: Build web frontend
         run: |
           cd web
-          npm install --no-audit --no-fund
+          npm ci --no-audit --no-fund
           npm run build
 
       - name: Build Lens Tauri app (Universal DMG)
         run: |
           cd desktop-lens/src-tauri
-          npx @tauri-apps/cli@latest build --bundles dmg --target universal-apple-darwin
+          npx @tauri-apps/cli@2 build --bundles dmg --target universal-apple-darwin
 
       - name: Upload Lens artifacts to release
         uses: softprops/action-gh-release@v2
@@ -419,14 +419,14 @@ jobs:
       - name: Build web frontend
         run: |
           cd web
-          npm install --no-audit --no-fund
+          npm ci --no-audit --no-fund
           npm run build
         shell: bash
 
       - name: Build Lens Tauri app (NSIS + MSI)
         run: |
           cd desktop-lens/src-tauri
-          npx @tauri-apps/cli@latest build --bundles nsis,msi
+          npx @tauri-apps/cli@2 build --bundles nsis,msi
         shell: bash
 
       - name: Upload Lens artifacts to release
@@ -451,7 +451,7 @@ jobs:
       - name: Build web frontend
         run: |
           cd web
-          npm install --no-audit --no-fund
+          npm ci --no-audit --no-fund
           npm run build
 
       - name: Zip web dist

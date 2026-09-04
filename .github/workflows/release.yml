@@ -24,11 +24,49 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Issue 14 fix: releases were built from completely unverified code —
+  # neither release workflow ran tests and ci.yml doesn't trigger on tags.
+  # This gate runs the engine suite + web typecheck/build; every platform
+  # job needs: it, so a red gate blocks the release.
+  test-gate:
+    name: Test gate (engine + web)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install engine + dev deps
+        working-directory: engine
+        run: |
+          python -m pip install --upgrade pip
+          pip install --no-cache-dir -e ".[dev]"
+          python -m spacy download en_core_web_sm
+      - name: Ruff
+        working-directory: engine
+        run: ruff check .
+      - name: Engine test suite
+        working-directory: engine
+        run: python -m pytest tests/ -q
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Web typecheck + build
+        working-directory: web
+        run: |
+          npm ci
+          npm run typecheck --if-present
+          npm run build
+
   # ──────────────────────────────────────────────────────────────────────
   # Windows x86_64
   # ──────────────────────────────────────────────────────────────────────
   windows:
     name: Windows (x64)
+    needs: test-gate
     runs-on: windows-latest
     timeout-minutes: 45
     steps:
@@ -185,7 +223,7 @@ jobs:
           # See web/src/lib/api.ts for the full story.
           VITE_ENGINE_URL: http://127.0.0.1:8765
         run: |
-          npm install
+          npm ci
           npm run build
 
       - name: Build Tauri app (NSIS + MSI)
@@ -215,7 +253,7 @@ jobs:
           files: |
             desktop/src-tauri/target/release/bundle/nsis/*.exe
             desktop/src-tauri/target/release/bundle/msi/*.msi
-          fail_on_unmatched_files: false
+          fail_on_unmatched_files: true  # Issue 14: a silently-empty release must fail
           generate_release_notes: true
 
   # ──────────────────────────────────────────────────────────────────────
@@ -223,6 +261,7 @@ jobs:
   # ──────────────────────────────────────────────────────────────────────
   macos-arm64:
     name: macOS (Apple Silicon)
+    needs: test-gate
     runs-on: macos-14
     timeout-minutes: 45
     steps:
@@ -309,7 +348,7 @@ jobs:
           # See web/src/lib/api.ts for the full story.
           VITE_ENGINE_URL: http://127.0.0.1:8765
         run: |
-          npm install
+          npm ci
           npm run build
 
       - name: Build Tauri app (arm64)
@@ -328,13 +367,14 @@ jobs:
         with:
           files: |
             desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
-          fail_on_unmatched_files: false
+          fail_on_unmatched_files: true  # Issue 14: a silently-empty release must fail
 
   # ──────────────────────────────────────────────────────────────────────
   # Linux x86_64 (AppImage + deb)
   # ──────────────────────────────────────────────────────────────────────
   linux:
     name: Linux (x64)
+    needs: test-gate
     runs-on: ubuntu-22.04
     timeout-minutes: 45
     steps:
@@ -422,7 +462,7 @@ jobs:
           # See web/src/lib/api.ts for the full story.
           VITE_ENGINE_URL: http://127.0.0.1:8765
         run: |
-          npm install
+          npm ci
           npm run build
 
       - name: Build Tauri app (AppImage + deb)
@@ -448,4 +488,27 @@ jobs:
         with:
           files: |
             desktop/src-tauri/target/release/bundle/deb/*.deb
-          fail_on_unmatched_files: false
+          fail_on_unmatched_files: true  # Issue 14: a silently-empty release must fail
+
+  # Issue 14: publish a SHA256SUMS manifest so users can verify installer
+  # integrity (SmartScreen/Gatekeeper warnings make this more important
+  # until proper code signing is in place).
+  checksums:
+    name: SHA256SUMS manifest
+    needs: [windows, macos-arm64, linux]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download release assets
+        uses: robinraju/release-downloader@v1
+        with:
+          tag: ${{ github.ref_name }}
+          fileName: '*'
+          out-file-path: release-assets
+      - name: Generate and attach SHA256SUMS
+        working-directory: release-assets
+        run: |
+          sha256sum * > SHA256SUMS.txt
+          gh release upload "${{ github.ref_name }}" SHA256SUMS.txt --clobber
+        env:
+          GH_TOKEN: ${{ github.token }}
