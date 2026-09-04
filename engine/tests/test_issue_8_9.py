@@ -118,7 +118,7 @@ def test_issue9_validate_zip_members_rejects_traversal(evil_member, tmp_path):
     from api.reference_corpus import _validate_zip_members
 
     zf = zipfile.ZipFile(io.BytesIO(_build_evil_zip(evil_member)))
-    with pytest.raises(ValueError, match="[Uu]nsafe archive member"):
+    with pytest.raises(ValueError, match=r"[Uu]nsafe archive member"):
         _validate_zip_members(zf, str(tmp_path))
 
 

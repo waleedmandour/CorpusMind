@@ -124,8 +124,8 @@ async def test_issue5_chat_returns_persisted_turn_id(client):
     """End-to-end: POST /ai/chat with a mocked provider → response carries the
     DB id of the persisted assistant turn, and GET /ai/conversations/{id}
     shows the same turn row."""
-    img_id, _ = await _setup_corpus_with_image(client)  # corpus for context
-    mock = _inject_mock_provider(client, provider_name="ollama", chat_content="Grounded answer.")
+    await _setup_corpus_with_image(client)  # corpus for context
+    _inject_mock_provider(client, provider_name="ollama", chat_content="Grounded answer.")
 
     r = await client.post("/api/v1/ai/chat", json={
         "message": "What is in the corpus?",
