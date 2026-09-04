@@ -458,10 +458,10 @@ jobs:
       - name: Zip web dist
         run: |
           cd web
-          zip -r ../corpusmind-web-v1.0.0.zip dist/
+          zip -r "../corpusmind-web-${{ inputs.tag }}.zip" dist/  # Issue 26: derive from the dispatched tag, not a hardcoded name
 
       - name: Upload artifact to release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ inputs.tag || github.ref_name }}
-          files: corpusmind-web-v1.0.0.zip
+          files: "corpusmind-web-${{ inputs.tag }}.zip"
