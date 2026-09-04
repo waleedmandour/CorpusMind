@@ -29,6 +29,7 @@ COPY engine/vision /build/vision
 COPY engine/multimodal /build/multimodal
 COPY engine/storage /build/storage
 COPY engine/reference_corpus /build/reference_corpus
+COPY engine/export_queue /build/export_queue
 
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
