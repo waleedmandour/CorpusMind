@@ -1489,8 +1489,28 @@ export const api = {
       method: "POST",
     }),
   // Task 3: Poll full-corpus download status (BNC Baby, BAWE, Leipzig)
+  // v1.2.0: the engine reports REAL byte-level progress (0-100) now.
   getFullReferenceStatus: (name: string) =>
-    jsonFetch<{ name: string; status: string; message: string; corpus_id: string | null; document_count: number }>(`/api/v1/reference-corpora/${name}/download-full/status`),
+    jsonFetch<{ name: string; status: string; message: string; progress?: number; corpus_id: string | null; document_count: number }>(`/api/v1/reference-corpora/${name}/download-full/status`),
+  // v1.2.0: cancel an in-flight full-corpus download (separate endpoint from
+  // the frequency-list cancel — the full-corpus job is a different pipeline).
+  cancelFullReferenceDownload: (name: string) =>
+    jsonFetch<{ name: string; cancel_requested: boolean }>(`/api/v1/reference-corpora/${name}/download-full/cancel`, {
+      method: "POST",
+    }),
+  // v1.2.0 offline import: install a full reference corpus from an archive
+  // the user downloaded manually (e.g. when the OTA gateway 504s). Multipart
+  // upload, same transport as uploadDocuments (Tauri plugin-http inside the
+  // desktop webview, native fetch in the browser).
+  importFullReferenceArchive: (name: string, file: File) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    // Do NOT set Content-Type — the runtime sets the multipart boundary.
+    return smartFetch(`/api/v1/reference-corpora/${name}/import-archive`, { method: "POST", body: fd }).then(async (r) => {
+      if (!r.ok) throw new Error(`HTTP ${r.status}: ${await r.text()}`);
+      return (await r.json()) as { name: string; status: string; job_id: string; message: string };
+    });
+  },
   cancelReferenceDownload: (name: string) =>
     jsonFetch<{ name: string; cancel_requested: boolean }>(`/api/v1/reference-corpora/${name}/cancel`, {
       method: "POST",

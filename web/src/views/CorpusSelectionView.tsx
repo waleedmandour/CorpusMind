@@ -24,6 +24,7 @@
  *     - Bundled (pre-built frequency lists: BE06, AmE06, etc.)
  */
 import { useState, useRef } from "react";
+import { useTroubleshoot } from "@/store/troubleshooting";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
 
@@ -711,67 +712,23 @@ function BundledReferences() {
       showStatus(`Downloading + ingesting ${name} (this may take a few minutes)…`, "info");
       setDownloadProgress({
         name, displayName: ref.display_name, status: "downloading",
-        message: "Starting…", progress: 5,
+        message: "Starting…", progress: 2,
       });
       try {
-        // Start the async download job
+        // Start the async download job, then poll its status. The engine
+        // tries every source URL (mirror first) with retries + resume and
+        // reports real byte-level progress (v1.2.0).
         await api.downloadFullReferenceCorpus(name);
-        // Poll for status until complete
-        let pollCount = 0;
-        const maxPolls = 120; // 10 minutes at 5s intervals
-        const poll = async () => {
-          pollCount++;
-          if (pollCount > maxPolls) {
-            setDownloadProgress({ name, displayName: ref.display_name, status: "failed", message: "Timed out", progress: 0 });
-            showStatus(`✗ Download timed out for ${name}`, "error");
-            setDownloadingName(null);
-            return;
-          }
-          try {
-            // Issue 21 fix: a user-cancelled download is terminal — stop polling.
-            if (cancelledDownloadsRef.current.has(name)) {
-              cancelledDownloadsRef.current.delete(name);
-              return;
-            }
-            const status = await api.getFullReferenceStatus(name);
-            const progress = status.status === "downloading" ? 25
-              : status.status === "extracting" ? 50
-              : status.status === "ingesting" ? 75
-              : status.status === "installed" ? 100
-              : status.status === "cancelled" ? 0
-              : status.status === "failed" ? 0 : 50;
-            setDownloadProgress({
-              name, displayName: ref.display_name,
-              status: status.status as any,
-              message: status.message,
-              progress,
-            });
-            if (status.status === "installed") {
-              showStatus(`✓ ${status.message}`, "success");
-              qc.invalidateQueries({ queryKey: ["reference-corpora"] });
-              qc.invalidateQueries({ queryKey: ["corpora"] });
-              setDownloadingName(null);
-              // Auto-clear progress after 10 seconds
-              setTimeout(() => clearDownloadProgress(), 10000);
-              return;
-            }
-            if (status.status === "failed") {
-              showStatus(`✗ ${status.message}`, "error");
-              setDownloadingName(null);
-              return;
-            }
-            // Keep polling
-            setTimeout(poll, 5000);
-          } catch {
-            // If status poll fails, keep trying
-            setTimeout(poll, 5000);
-          }
-        };
-        setTimeout(poll, 2000); // Start polling after 2s
+        startFullCorpusPolling(name, ref.display_name);
       } catch (e: any) {
         const msg = e?.message || String(e);
         showStatus(`✗ Failed to download ${name}: ${msg}`, "error");
         setDownloadProgress({ name, displayName: ref.display_name, status: "failed", message: msg, progress: 0 });
+        useTroubleshoot.getState().captureError({
+          message: msg,
+          endpoint: `/reference-corpora/${name}/download-full`,
+          context: `Reference corpus download: ${ref.display_name}`,
+        });
         setDownloadingName(null);
       }
       return;
@@ -807,12 +764,142 @@ function BundledReferences() {
 
   const handleCancel = async (name: string) => {
     try {
-      await api.cancelReferenceDownload(name);
+      // v1.2.0: full-corpus downloads run a different pipeline — cancel
+      // through the dedicated endpoint (falls back to the freq-list one).
+      const ref = catalogue.data?.references.find(r => r.name === name);
+      if (ref?.format === "full_corpus") {
+        await api.cancelFullReferenceDownload(name);
+        cancelledDownloadsRef.current.add(name);
+        setDownloadingName(null);
+        clearDownloadProgress();
+      } else {
+        await api.cancelReferenceDownload(name);
+      }
       showStatus(`Cancelled download of ${name}`, "info");
       qc.invalidateQueries({ queryKey: ["reference-corpora"] });
     } catch (e: any) {
       showStatus(`✗ Cancel failed: ${e?.message || String(e)}`, "error");
     }
+  };
+
+  // v1.2.0: offline import — install a full reference corpus from an archive
+  // the user downloaded manually in a browser (the guaranteed path when the
+  // Oxford Text Archive gateway 504s). Same job + polling as download-full.
+  const handleImportArchive = async (name: string, file: File) => {
+    const ref = catalogue.data?.references.find(r => r.name === name);
+    const displayName = ref?.display_name || name;
+    setDownloadingName(name);
+    setDownloadProgress({
+      name, displayName, status: "extracting",
+      message: `Importing ${file.name}…`, progress: 45,
+    });
+    showStatus(`Importing ${file.name} for ${displayName}…`, "info");
+    try {
+      await api.importFullReferenceArchive(name, file);
+      startFullCorpusPolling(name, displayName);
+    } catch (e: any) {
+      const msg = e?.message || String(e);
+      showStatus(`✗ Import failed: ${msg}`, "error");
+      setDownloadProgress({ name, displayName, status: "failed", message: msg, progress: 0 });
+      useTroubleshoot.getState().captureError({
+        message: msg,
+        endpoint: `/reference-corpora/${name}/import-archive`,
+        context: `Reference corpus offline import: ${displayName}`,
+      });
+      setDownloadingName(null);
+    }
+  };
+
+  // Shared status poller for both download-full and import-archive jobs.
+  const startFullCorpusPolling = (name: string, displayName: string) => {
+    let pollCount = 0;
+    const maxPolls = 360; // 30 minutes at 5s intervals (BAWE ingest is slow)
+    const poll = async () => {
+      pollCount++;
+      if (pollCount > maxPolls) {
+        setDownloadProgress({ name, displayName, status: "failed", message: "Timed out", progress: 0 });
+        showStatus(`✗ Download timed out for ${name}`, "error");
+        useTroubleshoot.getState().captureError({
+          message: `Reference corpus install for ${name} timed out after 30 minutes.`,
+          code: "NETWORK",
+          endpoint: `/reference-corpora/${name}/download-full/status`,
+          context: "Reference corpus install polling",
+        });
+        setDownloadingName(null);
+        return;
+      }
+      try {
+        // Issue 21 fix: a user-cancelled download is terminal — stop polling.
+        if (cancelledDownloadsRef.current.has(name)) {
+          cancelledDownloadsRef.current.delete(name);
+          return;
+        }
+        const status = await api.getFullReferenceStatus(name);
+        // v1.2.0: the engine reports REAL byte-level progress during the
+        // download phase; fall back to phase-based estimates for older jobs.
+        const fallback = status.status === "downloading" ? 25
+          : status.status === "extracting" ? 50
+          : status.status === "ingesting" ? 75
+          : status.status === "installed" ? 100
+          : status.status === "failed" ? 0 : 50;
+        const progress = typeof status.progress === "number" && status.progress > 0
+          ? status.progress
+          : fallback;
+        setDownloadProgress({
+          name, displayName,
+          status: status.status as any,
+          message: status.message,
+          progress,
+        });
+        if (status.status === "installed") {
+          showStatus(`✓ ${status.message}`, "success");
+          qc.invalidateQueries({ queryKey: ["reference-corpora"] });
+          qc.invalidateQueries({ queryKey: ["corpora"] });
+          setDownloadingName(null);
+          // Auto-clear progress after 10 seconds
+          setTimeout(() => clearDownloadProgress(), 10000);
+          return;
+        }
+        if (status.status === "failed") {
+          showStatus(`✗ ${status.message}`, "error");
+          // v1.2.0: route the failure into Smart Troubleshooting so the
+          // user gets an instant one-line fix suggestion (download errors
+          // bypass React Query, so this used to be invisible to it).
+          // User-initiated cancellations are not errors.
+          if (!/cancel/i.test(status.message)) {
+            useTroubleshoot.getState().captureError({
+              message: status.message,
+              endpoint: `/reference-corpora/${name}/download-full`,
+              context: `Reference corpus install: ${displayName}`,
+            });
+          }
+          setDownloadingName(null);
+          return;
+        }
+        // Keep polling
+        setTimeout(poll, 5000);
+      } catch {
+        // If status poll fails, keep trying
+        setTimeout(poll, 5000);
+      }
+    };
+    setTimeout(poll, 2000); // Start polling after 2s
+  };
+
+  // v1.2.0: hidden file picker for the offline import button.
+  const importInputRef = useRef<HTMLInputElement | null>(null);
+  const importTargetRef = useRef<string | null>(null);
+  const openImportPicker = (name: string) => {
+    importTargetRef.current = name;
+    if (importInputRef.current) {
+      importInputRef.current.value = ""; // allow re-picking the same file
+      importInputRef.current.click();
+    }
+  };
+  const onImportPicked = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const name = importTargetRef.current;
+    const file = e.target.files?.[0];
+    if (name && file) void handleImportArchive(name, file);
   };
 
   const handleDelete = async (name: string) => {
@@ -930,15 +1017,27 @@ function BundledReferences() {
                     </button>
                   </>
                 ) : (
-                  <button
-                    className="btn-small"
-                    onClick={() => handleDownload(r.name)}
-                    disabled={!r.downloadable || downloadingName !== null}
-                  >
-                    {r.downloadable
-                      ? (r.format === "full_corpus" ? "Download & Ingest" : "Download")
-                      : "Coming Soon"}
-                  </button>
+                  <>
+                    <button
+                      className="btn-small"
+                      onClick={() => handleDownload(r.name)}
+                      disabled={!r.downloadable || downloadingName !== null}
+                    >
+                      {r.downloadable
+                        ? (r.format === "full_corpus" ? "Download & Ingest" : "Download")
+                        : "Coming Soon"}
+                    </button>
+                    {r.format === "full_corpus" && r.downloadable && (
+                      <button
+                        className="btn-small"
+                        onClick={() => openImportPicker(r.name)}
+                        disabled={downloadingName !== null}
+                        title="Already downloaded the archive manually? Install it from the file — always works even when the source server is down"
+                      >
+                        Import archive
+                      </button>
+                    )}
+                  </>
                 )}
               </div>
             </div>
@@ -957,6 +1056,17 @@ function BundledReferences() {
           {statusMsg}
         </div>
       )}
+
+      {/* v1.2.0: hidden picker for offline archive import (full corpora) */}
+      <input
+        ref={importInputRef}
+        type="file"
+        accept=".zip,.gz,.tgz,.tar.gz"
+        style={{ display: "none" }}
+        onChange={onImportPicked}
+        aria-hidden="true"
+        tabIndex={-1}
+      />
 
       <ConfirmDialog
         state={confirmMsg ? { msg: confirmMsg, onConfirm: confirmDeleteRef } : null}
