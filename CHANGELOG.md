@@ -6,6 +6,60 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
+## [1.0.0] — 2026-09-05 — Unified stable release: CorpusMind 1.0.0 + CorpusMind Lens 1.0.0
+
+Both applications ship as **1.0.0** on the same release page. This entry
+consolidates the fix rounds that were folded into the 1.0.0 artifacts
+(the earlier 1.1.0/1.2.0 entries below document the same work as it
+progressed; the published release page is v1.0.0).
+
+### Main app
+
+- **AI Assistant grounding fixed.** The assistant no longer dead-ends in
+  "I cannot ground this in corpus evidence — answering from parametric
+  memory only." Three changes: (1) a live corpus snapshot
+  (`get_corpus_overview`, cached 5 min) is injected into the system prompt
+  on every turn; (2) UI context ("the user is viewing X") now actually
+  reaches the prompt — `ChatRequest.context` was accepted but dropped;
+  (3) when a tool-capable model fails to emit tool calls, the assistant
+  auto-runs the most relevant corpus tools deterministically (concordance,
+  frequency, collocations, dispersion, n-grams, POS) and answers from the
+  real results. With no corpus selected, it now guides the user instead of
+  refusing.
+- **Interactive collocation network rebuilt.** NetworkX-backed graph
+  assembly on the engine (`/collocations/network` + `/expand`: nodes =
+  word + top collocates, depth-2 meshing so degrees are informative) and a
+  Graphology + Sigma.js (WebGL) frontend: node size ∝ corpus frequency,
+  edge thickness ∝ the selected association measure — MI, T-score,
+  log-likelihood, Dice, Log-Dice, χ², ΔP — switchable without a refetch
+  (every edge carries all measures), click-to-expand second-order
+  collocates, collapse, right-click to re-center, node dragging,
+  zoom/pan, hover tooltips with exact statistics, and PNG + JSON export.
+- **Cloud AI providers.** Settings now offers Google Gemini (via its
+  OpenAI-compatible endpoint, default `gemini-2.5-flash`), OpenAI,
+  Anthropic, and ANY OpenAI-compatible cloud API (DeepSeek, Mistral, Groq,
+  OpenRouter, xAI, Together, …) via a required Base URL for `custom`.
+  Consent-gated and in-memory-key only, as before.
+- **Vision Suite guidance.** The Vision view now shows a first-run card
+  pointing to the Ollama model library for `qwen3-vl` downloads and
+  explaining that CorpusMind and CorpusMind Lens analyse text and images
+  with the same engine — and that the AI Assistant can interpret both
+  apps' data together in one conversation.
+
+### CorpusMind Lens
+
+The full Lens fix round (16 issues) ships in these artifacts: Lens
+installers restored to the tag-gated release pipeline (previously missing
+from every release since v1.0.0), capability-aware vision-model selection,
+qwen3-vl model catalogue with multilingual (incl. Arabic) OCR guidance,
+encryption-aware image reads, VisionView i18n (en/ar), discourse-lenses
+panel wired to the 8 Phase-5 routes, batch runner, set/image export and
+deletion, Lens-aware onboarding and branding, upload hardening, frameworks
+catalogue endpoint, and richer vision-LM outputs (`max_tokens=2048`).
+
+Engine suite 306 green (+15 tests for auto-grounding, network endpoints,
+cloud provider config); web production build clean.
+
 ## [1.2.0] — 2026-09-05 — User-reported issues: downloads, tagsets, assistant, interactive network
 
 Eight user-reported issues fixed end-to-end (code-level root causes verified
