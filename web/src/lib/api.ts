@@ -421,6 +421,16 @@ export interface FrequencyRow {
   freq: number;
   per_million: number;
   percent: number;
+  range: number;
+  range_percent: number | null;
+}
+
+export interface LexicalDiversity {
+  ttr: number;
+  sttr: number;
+  mattr: number;
+  mtld: number;
+  guiraud: number;
 }
 
 export interface FrequencyResult {
@@ -429,6 +439,7 @@ export interface FrequencyResult {
   total_types: number;
   rows: FrequencyRow[];
   sttr: number;
+  lexical_diversity: LexicalDiversity;
 }
 
 export interface CollocationRow {
@@ -443,6 +454,8 @@ export interface CollocationRow {
   dice?: number;
   log_dice?: number;
   chi_square?: number;
+  chi2_min_expected?: number;
+  fisher?: number;
   delta_p_y_given_x?: number;
   delta_p_x_given_y?: number;
 }
@@ -450,9 +463,12 @@ export interface CollocationRow {
 export interface CollocationResult {
   node: string;
   window: number;
+  span_left: number;
+  span_right: number;
   min_freq: number;
   measures: string[];
   rows: CollocationRow[];
+  warnings: string[];
 }
 
 // ── Collocation network (NetworkX graph assembly, v1.0.0) ────────────────
@@ -525,13 +541,73 @@ export interface KeynessResult {
   negative_keywords: KeynessRow[];
   N1: number;
   N2: number;
+  warnings: string[];
 }
 
 export interface DispersionResult {
   term: string;
   juillands_d: number;
   gries_dp: number;
+  gries_dp_norm: number;
+  range: number;
+  range_percent: number;
   per_part_freqs: number[];
+  part_sizes: number[];
+}
+
+// ── v1.0.1: KWIC sort spec (AntConc-style L1/R1/L2/R2) ─────────────────
+type ConcordanceLevel = "word" | "lemma" | "pos" | "root" | "pattern";
+
+export interface ConcordanceSortSpec {
+  side: "left" | "right";
+  offset: number;
+}
+
+// ── v1.0.1: word lists / readability / document stats / group pivot ──────
+
+export interface StopwordList {
+  id: string;
+  name: string;
+  language: string;
+  words: string[];
+  builtin: boolean;
+}
+
+export interface DocumentStatsRow {
+  document_id: string;
+  filename: string;
+  language: string;
+  tokens: number;
+  types: number;
+  sentences: number;
+  ttr: number;
+  avg_sentence_length: number;
+  lix: number;
+  rix: number;
+}
+
+export interface ReadabilityPanel {
+  words: number;
+  sentences: number;
+  avg_sentence_length: number;
+  long_words: number;
+  lix: number;
+  rix: number;
+  flesch_reading_ease: number | null;
+  flesch_kincaid_grade: number | null;
+  note?: string;
+  documents?: number;
+}
+
+export interface GroupFrequencyResult {
+  meta_field: string;
+  unit: string;
+  groups: Array<{ name: string; documents: number; tokens: number }>;
+  rows: Array<{
+    item: string;
+    total: number;
+    groups: Record<string, { freq: number; per_million: number }>;
+  }>;
 }
 
 // ----------------------------------------------------------------------- //
@@ -1085,29 +1161,44 @@ export const api = {
   },
 
   // --- Analysis ---
-  concordance: (cid: string, query: string, level: "word" | "lemma" | "pos" = "word",
+  concordance: (cid: string, query: string, level: ConcordanceLevel = "word",
                 window = 5, limit = 100, offset = 0, case_sensitive = false,
-                random_sample?: number | null, sample_seed?: number | null) =>
+                random_sample?: number | null, sample_seed?: number | null,
+                regex = false, sort?: ConcordanceSortSpec[] | null) =>
     jsonFetch<ConcordanceResult>(`/api/v1/corpora/${cid}/concordance`, {
       method: "POST",
       body: JSON.stringify({
         query, level, window, limit, offset, case_sensitive,
+        ...(regex ? { regex: true } : {}),
+        ...(sort && sort.length ? { sort } : {}),
         ...(random_sample ? { random_sample, sample_seed } : {}),
       }),
     }),
 
-  frequency: (cid: string, unit: "word" | "lemma" | "pos" = "word",
-              min_freq = 1, limit = 1000, include_punct = false) =>
+  frequency: (cid: string, unit: ConcordanceLevel = "word",
+              min_freq = 1, limit = 1000, include_punct = false,
+              stopword_list_id?: string | null) =>
     jsonFetch<FrequencyResult>(`/api/v1/corpora/${cid}/frequency`, {
       method: "POST",
-      body: JSON.stringify({ unit, min_freq, limit, include_punct }),
+      body: JSON.stringify({ unit, min_freq, limit, include_punct,
+        ...(stopword_list_id ? { stopword_list_id } : {}) }),
     }),
 
   collocations: (cid: string, node: string, level: "word" | "lemma" = "word",
-                 window = 5, min_freq = 3, measures?: string[], limit = 100) =>
+                 window = 5, min_freq = 3, measures?: string[], limit = 100,
+                 opts?: { span_left?: number | null; span_right?: number | null;
+                          pos_include?: string[] | null; pos_exclude?: string[] | null;
+                          stopword_list_id?: string | null }) =>
     jsonFetch<CollocationResult>(`/api/v1/corpora/${cid}/collocations`, {
       method: "POST",
-      body: JSON.stringify({ node, level, window, min_freq, measures, limit }),
+      body: JSON.stringify({
+        node, level, window, min_freq, measures, limit,
+        ...(opts?.span_left != null ? { span_left: opts.span_left } : {}),
+        ...(opts?.span_right != null ? { span_right: opts.span_right } : {}),
+        ...(opts?.pos_include?.length ? { pos_include: opts.pos_include } : {}),
+        ...(opts?.pos_exclude?.length ? { pos_exclude: opts.pos_exclude } : {}),
+        ...(opts?.stopword_list_id ? { stopword_list_id: opts.stopword_list_id } : {}),
+      }),
     }),
 
   // Collocation network — NetworkX-backed graph for the Sigma.js view.
@@ -1125,16 +1216,46 @@ export const api = {
       body: JSON.stringify(req),
     }),
 
-  keyness: (cid: string, reference_corpus_id: string, min_freq = 5, limit = 100) =>
+  keyness: (cid: string, reference_corpus_id: string, min_freq = 5, limit = 100,
+            stopword_list_id?: string | null) =>
     jsonFetch<KeynessResult>(`/api/v1/corpora/${cid}/keyness`, {
       method: "POST",
-      body: JSON.stringify({ reference_corpus_id, min_freq, limit }),
+      body: JSON.stringify({ reference_corpus_id, min_freq, limit,
+        ...(stopword_list_id ? { stopword_list_id } : {}) }),
     }),
 
   dispersion: (cid: string, term: string, level: "word" | "lemma" = "word") =>
     jsonFetch<DispersionResult>(`/api/v1/corpora/${cid}/dispersion`, {
       method: "POST",
       body: JSON.stringify({ term, level }),
+    }),
+
+  // --- v1.0.1: word lists, document stats, readability, group pivot ---
+  stopwordLists: {
+    list: () =>
+      jsonFetch<{ items: StopwordList[] }>("/api/v1/stopword-lists", { method: "GET" }),
+    create: (name: string, language: string, words: string[]) =>
+      jsonFetch<StopwordList>("/api/v1/stopword-lists", {
+        method: "POST",
+        body: JSON.stringify({ name, language, words }),
+      }),
+    remove: (id: string) =>
+      jsonFetch<{ deleted: string }>(`/api/v1/stopword-lists/${id}`, { method: "DELETE" }),
+  },
+
+  documentStats: (cid: string) =>
+    jsonFetch<{ items: DocumentStatsRow[] }>(`/api/v1/corpora/${cid}/documents/stats`, {
+      method: "GET",
+    }),
+
+  readability: (cid: string) =>
+    jsonFetch<ReadabilityPanel>(`/api/v1/corpora/${cid}/readability`, { method: "GET" }),
+
+  groupFrequency: (cid: string, meta_field: string, unit = "word",
+                   min_freq = 1, limit = 200) =>
+    jsonFetch<GroupFrequencyResult>(`/api/v1/corpora/${cid}/groups/frequency`, {
+      method: "POST",
+      body: JSON.stringify({ meta_field, unit, min_freq, limit }),
     }),
 
   // --- Phase 2 analysis ---

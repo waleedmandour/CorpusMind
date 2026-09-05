@@ -17,7 +17,7 @@
  *   In browser/PWA mode, we fall back to the engine's /api/v1/providers
  *   endpoint (which is fine — in browser mode the engine is always remote).
  */
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
 import {
@@ -30,6 +30,7 @@ import {
   nativeEngineLogs,
   nativeVerifySidecar,
   nativePickModelFile,
+  type StopwordList,
 } from "@/lib/api";
 import { useTroubleshoot } from "@/store/troubleshooting";
 import { useUI } from "@/store/ui";
@@ -510,6 +511,9 @@ export function SettingsView() {
           </div>
         </div>
       </section>
+
+      {/* v1.0.1: Stopword lists manager */}
+      <StopwordListsCard />
 
       {/* Research + Reproducibility card */}
       <ResearchCard />
@@ -1195,5 +1199,133 @@ function CloudProviderConfig() {
       )}
       {status && <div className={clsx("uploader-status", status.includes("Failed") ? "error" : "success")} style={{ marginTop: "var(--space-2)" }}>{status}</div>}
     </div>
+  );
+}
+
+
+// ── v1.0.1: Stopword lists manager ────────────────────────────────────────
+
+function StopwordListsCard() {
+  const [lists, setLists] = useState<StopwordList[] | null>(null);
+  const [name, setName] = useState("");
+  const [language, setLanguage] = useState("en");
+  const [words, setWords] = useState("");
+  const [status, setStatus] = useState<{ ok: boolean; msg: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const refresh = useCallback(async () => {
+    try {
+      const r = await api.stopwordLists.list();
+      setLists(r.items);
+    } catch (e: any) {
+      setStatus({ ok: false, msg: `Failed to load stopword lists: ${e?.message ?? e}` });
+    }
+  }, []);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
+
+  const onCreate = async () => {
+    const parsed = words.split(/[\s,;]+/).map((w) => w.trim()).filter(Boolean);
+    if (!name.trim() || parsed.length === 0) {
+      setStatus({ ok: false, msg: "Give the list a name and at least one word." });
+      return;
+    }
+    setBusy(true);
+    try {
+      await api.stopwordLists.create(name.trim(), language, parsed);
+      setStatus({ ok: true, msg: `Created stopword list "${name.trim()}" (${parsed.length} words).` });
+      setName("");
+      setWords("");
+      await refresh();
+    } catch (e: any) {
+      setStatus({ ok: false, msg: `Create failed: ${e?.message ?? e}` });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const onDelete = async (id: string, label: string) => {
+    setBusy(true);
+    try {
+      await api.stopwordLists.remove(id);
+      setStatus({ ok: true, msg: `Deleted "${label}".` });
+      await refresh();
+    } catch (e: any) {
+      setStatus({ ok: false, msg: `Delete failed: ${e?.message ?? e}` });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <section className="settings-card">
+      <div className="settings-card-header">
+        <span className="settings-card-icon" aria-hidden>{"\u25A6"}</span>
+        <div>
+          <h2>Stopword lists</h2>
+          <p className="settings-card-desc">
+            Function-word filters you can apply in Frequency, Collocation, Keyness
+            and Compare-groups analyses. Built-in lists are always available;
+            custom lists are stored with your project data.
+          </p>
+        </div>
+      </div>
+      <div className="settings-card-body">
+        {lists && lists.length > 0 && (
+          <div className="settings-feature-list" style={{ marginBottom: "var(--space-3)" }}>
+            {lists.map((sw) => (
+              <div className="settings-feature-item" key={sw.id}>
+                <span className="settings-feature-check">{sw.builtin ? "\u2713" : "\u25CF"}</span>
+                <span style={{ flex: 1 }}>
+                  <strong>{sw.name}</strong>{" "}
+                  <span style={{ color: "var(--text-subtle)" }}>
+                    ({sw.words.length} words, {sw.language})
+                  </span>
+                </span>
+                {!sw.builtin && (
+                  <button className="btn-small" disabled={busy}
+                          onClick={() => onDelete(sw.id, sw.name)}>
+                    Delete
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap", alignItems: "flex-end" }}>
+          <label style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            Name
+            <input type="text" value={name} onChange={(e) => setName(e.target.value)}
+                   placeholder="e.g. My academic list" style={{ minWidth: 180 }} />
+          </label>
+          <label style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            Language
+            <select value={language} onChange={(e) => setLanguage(e.target.value)}>
+              <option value="en">English</option>
+              <option value="ar">Arabic</option>
+            </select>
+          </label>
+          <label style={{ display: "flex", flexDirection: "column", gap: 2, flex: 1, minWidth: 240 }}>
+            Words (space, comma or newline separated)
+            <textarea value={words} onChange={(e) => setWords(e.target.value)}
+                      rows={3}
+                      placeholder="the, a, an, in, on ... or Arabic function words" />
+          </label>
+          <button onClick={onCreate} disabled={busy || !name.trim() || !words.trim()}>
+            Create list
+          </button>
+        </div>
+
+        {status && (
+          <div className={clsx("uploader-status", status.ok ? "success" : "error")}
+               style={{ marginTop: "var(--space-2)" }}>
+            {status.msg}
+          </div>
+        )}
+      </div>
+    </section>
   );
 }

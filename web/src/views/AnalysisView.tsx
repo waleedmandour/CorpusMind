@@ -151,7 +151,8 @@ function escapeHtml(s: string): string {
 
 type Tab =
   | "frequency" | "collocation" | "keyness" | "dispersion"
-  | "ngrams" | "pos" | "grammar" | "dep" | "discourse" | "vocab" | "sentiment" | "metaphor";
+  | "ngrams" | "pos" | "grammar" | "dep" | "discourse" | "vocab" | "sentiment" | "metaphor"
+  | "documents" | "readability" | "groups";
 
 const NAV_TO_TAB: Record<string, Tab> = {
   frequency: "frequency",
@@ -173,6 +174,9 @@ const TABS: { id: Tab; label: string; phase: 1 | 2 }[] = [
   { id: "collocation", label: "Collocation", phase: 1 },
   { id: "keyness", label: "Keyness", phase: 1 },
   { id: "dispersion", label: "Dispersion", phase: 1 },
+  { id: "documents", label: "Documents", phase: 1 },
+  { id: "readability", label: "Readability", phase: 1 },
+  { id: "groups", label: "Compare groups", phase: 1 },
   { id: "ngrams", label: "N-grams", phase: 2 },
   { id: "pos", label: "POS", phase: 2 },
   { id: "grammar", label: "Grammar", phase: 2 },
@@ -222,17 +226,26 @@ export function AnalysisView() {
       {tab === "vocab" && <VocabPanel cid={cid} />}
       {tab === "sentiment" && <SentimentPanel cid={cid} />}
       {tab === "metaphor" && <MetaphorPanel cid={cid} />}
+      {tab === "documents" && <DocumentStatsPanel cid={cid} />}
+      {tab === "readability" && <ReadabilityPanelView cid={cid} />}
+      {tab === "groups" && <GroupFrequencyPanel cid={cid} />}
     </div>
   );
 }
 
 
 function FrequencyPanel({ cid }: { cid: string }) {
-  const [unit, setUnit] = useState<"word" | "lemma" | "pos">("word");
+  const [unit, setUnit] = useState<"word" | "lemma" | "pos" | "root" | "pattern">("word");
   const [minFreq, setMinFreq] = useState(1);
+  const [stopwordListId, setStopwordListId] = useState<string | null>(null);
+  // v1.0.1: optional stopword filter
+  const stopwordLists = useQuery({
+    queryKey: ["stopword-lists"],
+    queryFn: () => api.stopwordLists.list(),
+  });
   const result = useQuery({
-    queryKey: ["frequency", cid, unit, minFreq],
-    queryFn: () => api.frequency(cid, unit, minFreq, 200),
+    queryKey: ["frequency", cid, unit, minFreq, stopwordListId],
+    queryFn: () => api.frequency(cid, unit, minFreq, 200, false, stopwordListId),
   });
 
   const exportStatus = useExportStatus();
@@ -245,6 +258,8 @@ function FrequencyPanel({ cid }: { cid: string }) {
     );
   };
 
+  const div = result.data?.lexical_diversity;
+
   return (
     <div className="panel-content">
       <div className="toolbar">
@@ -253,10 +268,21 @@ function FrequencyPanel({ cid }: { cid: string }) {
             <option value="word">Word</option>
             <option value="lemma">Lemma</option>
             <option value="pos">POS tag</option>
+            <option value="root">Root (Arabic)</option>
+            <option value="pattern">Pattern (Arabic)</option>
           </select>
         </label>
         <label>Min freq
           <input type="number" min={1} value={minFreq} onChange={(e) => setMinFreq(Number(e.target.value))} />
+        </label>
+        <label title="Exclude function words from the list and the totals">
+          Stopwords
+          <select value={stopwordListId ?? ""} onChange={(e) => setStopwordListId(e.target.value || null)}>
+            <option value="">- None -</option>
+            {(stopwordLists.data?.items ?? []).map((sw) => (
+              <option key={sw.id} value={sw.id}>{sw.name}</option>
+            ))}
+          </select>
         </label>
         <ExportButton onExport={onExport} disabled={!result.data} />
       </div>
@@ -266,13 +292,20 @@ function FrequencyPanel({ cid }: { cid: string }) {
         <>
           <div className="result-meta">
             <strong>{result.data.total_tokens.toLocaleString()}</strong> tokens ·
-            <strong> {result.data.total_types.toLocaleString()}</strong> types ·
-            STTR (1000-token chunks) = <strong>{result.data.sttr.toFixed(4)}</strong>
+            <strong> {result.data.total_types.toLocaleString()}</strong> types
+            {div && (
+              <> · STTR = <strong>{div.sttr.toFixed(4)}</strong> · MATTR = <strong>{div.mattr.toFixed(4)}</strong> ·{" "}
+                MTLD = <strong>{div.mtld.toFixed(2)}</strong> · Guiraud = <strong>{div.guiraud.toFixed(3)}</strong>
+              </>
+            )}
           </div>
           <DataTable
-            headers={[unit, "Frequency", "Per million", "%"]}
-            rows={result.data.rows.map((r) => [r.item, r.freq, r.per_million, r.percent])}
+            headers={[unit, "Frequency", "Per million", "%", "Range", "Range %"]}
+            rows={result.data.rows.map((r) => [r.item, r.freq, r.per_million, r.percent, r.range, r.range_percent ?? "—"])}
           />
+          <div className="hint" style={{ marginTop: "var(--space-2)" }}>
+            Range = number of documents containing the item; Range % = share of documents in scope.
+          </div>
         </>
       )}
     </div>
@@ -284,18 +317,36 @@ function CollocationPanel({ cid }: { cid: string }) {
   const [node, setNode] = useState("");
   const [level, setLevel] = useState<"word" | "lemma">("lemma");
   const [window, setWindow] = useState(5);
+  const [spanLeft, setSpanLeft] = useState<number | null>(null);
+  const [spanRight, setSpanRight] = useState<number | null>(null);
+  const [posExclude, setPosExclude] = useState<string>("");
+  const [stopwordListId, setStopwordListId] = useState<string | null>(null);
   const [minFreq, setMinFreq] = useState(3);
-  const [submitted, setSubmitted] = useState<{ n: string; l: string; w: number; mf: number } | null>(null);
+  const [submitted, setSubmitted] = useState<{ n: string; l: string; w: number; mf: number; sl: number | null; sr: number | null; pe: string[]; sw: string | null } | null>(null);
+
+  const stopwordLists = useQuery({
+    queryKey: ["stopword-lists"],
+    queryFn: () => api.stopwordLists.list(),
+  });
 
   const result = useQuery({
     queryKey: ["collocations", cid, submitted],
-    queryFn: () => api.collocations(cid, submitted!.n, submitted!.l as any, submitted!.w, submitted!.mf),
+    queryFn: () => api.collocations(cid, submitted!.n, submitted!.l as any, submitted!.w, submitted!.mf, undefined, 100, {
+      span_left: submitted!.sl, span_right: submitted!.sr,
+      pos_exclude: submitted!.pe.length ? submitted!.pe : null,
+      stopword_list_id: submitted!.sw,
+    }),
     enabled: !!submitted,
   });
 
   const onSearch = () => {
     if (!node.trim()) return;
-    setSubmitted({ n: node.trim(), l: level, w: window, mf: minFreq });
+    setSubmitted({
+      n: node.trim(), l: level, w: window, mf: minFreq,
+      sl: spanLeft, sr: spanRight,
+      pe: posExclude.split(/[\s,]+/).map((s) => s.trim().toUpperCase()).filter(Boolean),
+      sw: stopwordListId,
+    });
   };
 
   const exportStatus = useExportStatus();
@@ -353,6 +404,28 @@ function CollocationPanel({ cid }: { cid: string }) {
           <input type="number" min={1} value={minFreq}
                  onChange={(e) => setMinFreq(Number(e.target.value))} />
         </label>
+        <label title="Left span (blank = symmetric window)">L-span
+          <input type="number" min={0} max={20} value={spanLeft ?? ""}
+                 placeholder={String(window)}
+                 onChange={(e) => setSpanLeft(e.target.value === "" ? null : Number(e.target.value))} />
+        </label>
+        <label title="Right span (blank = symmetric window)">R-span
+          <input type="number" min={0} max={20} value={spanRight ?? ""}
+                 placeholder={String(window)}
+                 onChange={(e) => setSpanRight(e.target.value === "" ? null : Number(e.target.value))} />
+        </label>
+        <label title="Exclude collocates with these UPOS tags (prefix match)">Exclude POS
+          <input type="text" value={posExclude} onChange={(e) => setPosExclude(e.target.value)}
+                 placeholder="e.g. DET ADP" style={{ width: 90 }} />
+        </label>
+        <label title="Exclude stopword-list items from the collocate pool">Stopwords
+          <select value={stopwordListId ?? ""} onChange={(e) => setStopwordListId(e.target.value || null)}>
+            <option value="">- None -</option>
+            {(stopwordLists.data?.items ?? []).map((sw) => (
+              <option key={sw.id} value={sw.id}>{sw.name}</option>
+            ))}
+          </select>
+        </label>
         <button onClick={onSearch} disabled={!node.trim()}>Compute</button>
         <ExportButton onExport={onExport} disabled={!result.data} />
         <ExportButton
@@ -372,8 +445,12 @@ function CollocationPanel({ cid }: { cid: string }) {
       {result.data && (
         <>
           <div className="result-meta">
-            Node: <code>{result.data.node}</code> · Window ±{result.data.window} · Min freq {result.data.min_freq}
+            Node: <code>{result.data.node}</code> · Spans {result.data.span_left}/{result.data.span_right} · Min freq {result.data.min_freq}
+            · Marginals: whole-corpus (folded)
           </div>
+          {(result.data.warnings ?? []).map((w, i) => (
+            <div key={i} className="keyness-min-tokens-warning" role="status">⚠ {w}</div>
+          ))}
           {result.data.rows.length === 0 ? (
             <div className="empty-state">No collocates met the min-frequency threshold.</div>
           ) : (
@@ -391,7 +468,7 @@ function CollocationPanel({ cid }: { cid: string }) {
                 level={submitted!.l as "word" | "lemma"}
                 window={submitted!.w}
                 minFreq={submitted!.mf}
-                onSetCenter={(word) => { setNode(word); setSubmitted({ n: word, l: level, w: window, mf: minFreq }); }}
+                onSetCenter={(word) => { setNode(word); setSubmitted({ n: word, l: level, w: window, mf: minFreq, sl: spanLeft, sr: spanRight, pe: posExclude.split(/[\s,]+/).map((s) => s.trim().toUpperCase()).filter(Boolean), sw: stopwordListId }); }}
               />
             </>
           )}
@@ -409,6 +486,11 @@ function KeynessPanel({ cid }: { cid: string }) {
   const setReferenceCorpus = useApp((s) => s.setReferenceCorpus);
   const selectedReferenceName = useApp((s) => s.selectedReferenceName);
   const [minFreq, setMinFreq] = useState(5);
+  const [stopwordListId, setStopwordListId] = useState<string | null>(null);
+  const stopwordLists = useQuery({
+    queryKey: ["stopword-lists"],
+    queryFn: () => api.stopwordLists.list(),
+  });
 
   // Need to list corpora in the active project to populate the reference picker
   const activeProjectId = useApp((s) => s.activeProjectId);
@@ -426,10 +508,10 @@ function KeynessPanel({ cid }: { cid: string }) {
 
   // Use the uploaded reference corpus if set, otherwise the selected bundled reference
   const result = useQuery({
-    queryKey: ["keyness", cid, referenceCorpusId, selectedReferenceName, minFreq],
+    queryKey: ["keyness", cid, referenceCorpusId, selectedReferenceName, minFreq, stopwordListId],
     queryFn: () => {
       if (referenceCorpusId) {
-        return api.keyness(cid, referenceCorpusId, minFreq, 200);
+        return api.keyness(cid, referenceCorpusId, minFreq, 200, stopwordListId);
       } else if (selectedReferenceName) {
         return api.keynessWithReference(cid, selectedReferenceName, minFreq, 200) as any;
       }
@@ -513,6 +595,15 @@ function KeynessPanel({ cid }: { cid: string }) {
         <label>Min freq
           <input type="number" min={1} value={minFreq} onChange={(e) => setMinFreq(Number(e.target.value))} />
         </label>
+        <label title="Exclude stopword-list items from both target and reference">
+          Stopwords
+          <select value={stopwordListId ?? ""} onChange={(e) => setStopwordListId(e.target.value || null)}>
+            <option value="">- None -</option>
+            {(stopwordLists.data?.items ?? []).map((sw) => (
+              <option key={sw.id} value={sw.id}>{sw.name}</option>
+            ))}
+          </select>
+        </label>
         <ExportButton onExport={onExport} disabled={!result.data} />
         <button onClick={onMethodsPdf}>Methods PDF</button>
       </div>
@@ -535,6 +626,10 @@ function KeynessPanel({ cid }: { cid: string }) {
         Simple Maths, and Odds Ratio ride alongside log-likelihood - never report
         one without the other.
       </div>
+
+      {(result.data as any)?.warnings?.map((w: string, i: number) => (
+        <div key={i} className="keyness-min-tokens-warning" role="status">⚠ {w}</div>
+      ))}
 
       {result.data && (
         <>
@@ -593,17 +688,20 @@ function DispersionPanel({ cid }: { cid: string }) {
       {result.data && (
         <>
           <div className="result-meta">
-            Juilland's D = <strong>{result.data.juillands_d}</strong> · Gries' DP = <strong>{result.data.gries_dp}</strong>
+            Juilland's D = <strong>{result.data.juillands_d}</strong> · Gries' DP = <strong>{result.data.gries_dp}</strong> ·{" "}
+            DP-norm = <strong>{result.data.gries_dp_norm}</strong>
+            <div>Range = <strong>{result.data.range}</strong> documents ({result.data.range_percent}%)</div>
             <div className="hint">
-              Juilland's D: 1 = perfectly even, 0 = maximally concentrated.
-              Gries' DP: 0 = perfectly even, (n−1)/n = maximally concentrated.
+              Juilland's D: 1 = perfectly even, 0 = maximally concentrated (assumes roughly equal-sized parts).
+              Gries' DP: 0 = perfectly even, 1 = concentrated — expected proportions are weighted by document size (v1.0.1).
+              DP-norm makes DP comparable across different numbers of documents.
             </div>
           </div>
           <h3>Frequency per document</h3>
           <div className="bar-chart">
             {result.data.per_part_freqs.map((f, i) => (
               <div key={i} className="bar-row">
-                <span className="bar-label">Doc {i + 1}</span>
+                <span className="bar-label">Doc {i + 1}{result.data.part_sizes?.[i] != null ? ` (${result.data.part_sizes[i].toLocaleString()} tok)` : ""}</span>
                 <div className="bar-track">
                   <div className="bar-fill" style={{ width: `${(f / Math.max(...result.data.per_part_freqs, 1)) * 100}%` }} />
                 </div>
@@ -1203,6 +1301,210 @@ function MetaphorPanel({ cid }: { cid: string }) {
           {result.data.candidates.length === 0 && (
             <div className="empty-state">No metaphor candidates found in this corpus.</div>
           )}
+        </>
+      )}
+    </div>
+  );
+}
+
+
+// ── v1.0.1: per-document statistics ──────────────────────────────────────
+
+function DocumentStatsPanel({ cid }: { cid: string }) {
+  const result = useQuery({
+    queryKey: ["document-stats", cid],
+    queryFn: () => api.documentStats(cid),
+  });
+  const exportStatus = useExportStatus();
+
+  const onExport = async (fmt: ExportFormat | "svg" | "png") => {
+    if (!result.data) return;
+    const headers = ["Document", "Language", "Tokens", "Types", "Sentences", "TTR", "Avg sentence length", "LIX", "RIX"];
+    await exportWithFeedback(
+      () => downloadTable(result.data.items.map((d) => [
+        d.filename, d.language, d.tokens, d.types, d.sentences, d.ttr,
+        d.avg_sentence_length, d.lix, d.rix,
+      ]), headers, fmt as ExportFormat),
+      `document_stats.${fmt}`,
+      exportStatus.set,
+    );
+  };
+
+  return (
+    <div className="panel-content">
+      <div className="toolbar">
+        <ExportButton onExport={onExport} disabled={!result.data?.items?.length} />
+      </div>
+      {exportStatus.el}
+      {result.data && (result.data.items.length === 0 ? (
+        <div className="empty-state">No documents with tokens yet.</div>
+      ) : (
+        <DataTable
+          headers={["Document", "Lang", "Tokens", "Types", "Sentences", "TTR", "Avg SL", "LIX", "RIX"]}
+          rows={result.data.items.map((d) => [
+            d.filename, d.language || "?", d.tokens, d.types, d.sentences,
+            d.ttr, d.avg_sentence_length, d.lix, d.rix,
+          ])}
+        />
+      ))}
+      <div className="hint" style={{ marginTop: "var(--space-2)" }}>
+        LIX/RIX are language-neutral readability indices (long words &gt; 6 chars).
+        TTR per document is sample-size-sensitive — compare documents of similar length.
+      </div>
+    </div>
+  );
+}
+
+async function downloadTable(rows: (string | number)[][], headers: string[], _fmt: string): Promise<Blob> {
+  // CSV serialization (client-side; the table is small — one row per document)
+  void _fmt;
+  const esc = (v: string | number) => {
+    const s = String(v ?? "");
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const lines = [headers.map(esc).join(",")];
+  for (const r of rows) lines.push(r.map(esc).join(","));
+  return new Blob([lines.join("\n")], { type: "text/csv" });
+}
+
+// ── v1.0.1: corpus readability ───────────────────────────────────────────
+
+function ReadabilityPanelView({ cid }: { cid: string }) {
+  const result = useQuery({
+    queryKey: ["readability", cid],
+    queryFn: () => api.readability(cid),
+  });
+  const exportStatus = useExportStatus();
+
+  const onExport = async (_fmt: ExportFormat | "svg" | "png") => {
+    if (!result.data) return;
+    await exportWithFeedback(
+      async () => {
+        const rows = Object.entries(result.data!).map(([k, v]) => [k, String(v)]);
+        const body = [["measure", "value"], ...rows].map((r) => r.join(",")).join("\n");
+        return new Blob([body], { type: "text/csv" });
+      },
+      `readability.csv`,
+      exportStatus.set,
+    );
+  };
+
+  const d = result.data;
+  return (
+    <div className="panel-content">
+      <div className="toolbar">
+        <ExportButton onExport={onExport} disabled={!d} />
+      </div>
+      {exportStatus.el}
+      {d && (
+        <>
+          <div className="stat-row" style={{ display: "flex", gap: "var(--space-4)", flexWrap: "wrap", margin: "var(--space-3) 0" }}>
+            <Stat label="Flesch Reading Ease" value={d.flesch_reading_ease != null ? d.flesch_reading_ease.toFixed(1) : "—"}
+                  hint="100 = very easy, 0 = very difficult (English only)" />
+            <Stat label="Flesch–Kincaid grade" value={d.flesch_kincaid_grade != null ? d.flesch_kincaid_grade.toFixed(1) : "—"}
+                  hint="U.S. school-grade level (English only)" />
+            <Stat label="LIX" value={d.lix.toFixed(1)}
+                  hint="< 30 very easy · 30–40 easy · 40–50 medium · 50–60 difficult · > 60 very difficult" />
+            <Stat label="RIX" value={d.rix.toFixed(2)} hint="Long words per sentence (language-neutral)" />
+          </div>
+          <div className="result-meta">
+            {d.words.toLocaleString()} words · {d.sentences.toLocaleString()} sentences ·{" "}
+            {d.long_words.toLocaleString()} long words (&gt; 6 chars) · ASL = {d.avg_sentence_length}
+            {d.documents != null && <> · {d.documents} documents</>}
+          </div>
+          {d.note && <div className="grounding-notice">{d.note}</div>}
+        </>
+      )}
+    </div>
+  );
+}
+
+function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
+  return (
+    <div className="stat-card" title={hint}>
+      <div className="stat-value" style={{ fontSize: 28, fontWeight: 700, color: "var(--accent, #1b4d3e)" }}>{value}</div>
+      <div className="stat-label" style={{ fontWeight: 600 }}>{label}</div>
+      {hint && <div className="hint" style={{ maxWidth: 220 }}>{hint}</div>}
+    </div>
+  );
+}
+
+// ── v1.0.1: frequency pivot by metadata variable ─────────────────────────
+
+function GroupFrequencyPanel({ cid }: { cid: string }) {
+  const [metaField, setMetaField] = useState("genre");
+  const [minFreq, setMinFreq] = useState(1);
+  const [submitted, setSubmitted] = useState<{ f: string; mf: number } | null>(null);
+
+  const result = useQuery({
+    queryKey: ["group-frequency", cid, submitted],
+    queryFn: () => api.groupFrequency(cid, submitted!.f, "word", submitted!.mf, 100),
+    enabled: !!submitted,
+  });
+  const exportStatus = useExportStatus();
+
+  const data = result.data;
+  const groupNames = data?.groups.map((g) => g.name) ?? [];
+
+  const onExport = async (_fmt: ExportFormat | "svg" | "png") => {
+    if (!data) return;
+    await exportWithFeedback(
+      async () => {
+        const headers = ["item", "total", ...groupNames.flatMap((g) => [`${g} freq`, `${g} per-million`])];
+        const lines = [headers.join(",")];
+        for (const row of data.rows) {
+          const cells = [row.item, row.total];
+          for (const g of groupNames) {
+            const c = row.groups[g] ?? { freq: 0, per_million: 0 };
+            cells.push(c.freq, c.per_million);
+          }
+          lines.push(cells.join(","));
+        }
+        return new Blob([lines.join("\n")], { type: "text/csv" });
+      },
+      `group_frequency_${metaField}.csv`,
+      exportStatus.set,
+    );
+  };
+
+  return (
+    <div className="panel-content">
+      <div className="toolbar">
+        <label title="Document metadata field to group by (e.g. genre, year, register)">
+          Metadata field
+          <input type="text" value={metaField} onChange={(e) => setMetaField(e.target.value)} style={{ width: 120 }} />
+        </label>
+        <label>Min freq
+          <input type="number" min={1} value={minFreq} onChange={(e) => setMinFreq(Number(e.target.value))} />
+        </label>
+        <button onClick={() => setSubmitted({ f: metaField.trim(), mf: minFreq })}
+                disabled={!metaField.trim()}>Compare</button>
+        <ExportButton onExport={onExport} disabled={!data} />
+      </div>
+      {exportStatus.el}
+
+      {data && (
+        <>
+          <div className="result-meta">
+            Groups by <code>{data.meta_field}</code>:{" "}
+            {data.groups.map((g) => `${g.name} (${g.documents} docs, ${g.tokens.toLocaleString()} tokens)`).join(" · ")}
+          </div>
+          {data.rows.length === 0 ? (
+            <div className="empty-state">No rows met the threshold.</div>
+          ) : (
+            <DataTable
+              headers={["Item", "Total", ...groupNames.map((g) => `${g} / pm`)]}
+              rows={data.rows.map((row) => [
+                row.item, row.total,
+                ...groupNames.map((g) => row.groups[g]?.per_million ?? 0),
+              ])}
+            />
+          )}
+          <div className="hint" style={{ marginTop: "var(--space-2)" }}>
+            Columns show per-million frequencies in each metadata group —
+            normalized so groups of different sizes are directly comparable.
+            Documents without the field are grouped under "(uncategorised)".
+          </div>
         </>
       )}
     </div>
