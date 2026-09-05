@@ -1,4 +1,8 @@
-"""Runtime configuration for the opt-in Cloud AI provider (OpenAI/Anthropic).
+"""Runtime configuration for the opt-in Cloud AI provider.
+
+Supported backends (v1.2.1): Google Gemini, OpenAI, Anthropic, and ANY
+OpenAI-compatible cloud API (DeepSeek, Mistral, Groq, OpenRouter, xAI,
+Together, …) via a custom base URL.
 
 The key is held in-memory only (never written to disk, never echoed back to
 the browser after saving) - same privacy posture as the existing Gemini
@@ -17,7 +21,7 @@ router = APIRouter()
 
 
 class CloudConfigRequest(BaseModel):
-    provider: Literal["anthropic", "openai"]
+    provider: Literal["anthropic", "openai", "gemini", "custom"]
     api_key: str = Field(..., min_length=1)
     model: str = ""
     base_url: str = ""
@@ -52,6 +56,12 @@ async def set_cloud_config(req: CloudConfigRequest, request: Request) -> dict:
         raise HTTPException(
             403,
             "Cloud provider is hard-disabled (CORPUSMIND_CLOUD_DISABLED_HARD=1).",
+        )
+    if req.provider == "custom" and not (req.base_url or settings.cloud_base_url):
+        raise HTTPException(
+            400,
+            "The 'custom' provider requires a Base URL — any OpenAI-compatible "
+            "endpoint (e.g. https://api.deepseek.com/v1).",
         )
     # Push config into the shared Settings object so the next provider
     # construction picks it up.

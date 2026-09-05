@@ -1302,7 +1302,16 @@ class CloudProvider(_OpenAICompatibleProvider):
             )
 
         self.base_url = settings.cloud_base_url or self._default_base_url(settings.cloud_provider)
+        if settings.cloud_provider == "custom" and not settings.cloud_base_url:
+            raise CloudDisabledError(
+                "The 'custom' cloud provider requires a Base URL "
+                "(any OpenAI-compatible endpoint, e.g. https://api.deepseek.com/v1)."
+            )
         self.default_model = settings.cloud_default_model
+        if not self.default_model and settings.cloud_provider == "gemini":
+            # Sensible fallback so a bare API key works out of the box;
+            # the OpenAI-compat /models listing can still override.
+            self.default_model = "gemini-2.5-flash"
         self.auth_header = f"Bearer {settings.cloud_api_key}"
         self._disabled = False
         super().__init__(settings)
@@ -1312,6 +1321,13 @@ class CloudProvider(_OpenAICompatibleProvider):
         return {
             "openai": "https://api.openai.com/v1",
             "anthropic": "https://api.anthropic.com/v1",
+            # v1.2.1: Google Gemini via its OpenAI-compatible endpoint —
+            # same /chat/completions wire format, Bearer auth with the
+            # AI Studio key. No native SDK needed.
+            "gemini": "https://generativelanguage.googleapis.com/v1beta/openai",
+            # v1.2.1: any OpenAI-compatible cloud (DeepSeek, Mistral, Groq,
+            # OpenRouter, xAI, Together, …) — cloud_base_url is REQUIRED.
+            "custom": "",
         }.get(provider, "")
 
     async def pick_vision_model(self) -> str | None:

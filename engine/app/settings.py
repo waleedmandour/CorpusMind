@@ -46,7 +46,10 @@ class Settings(BaseSettings):
     ollama_default_model: str = "llama3.2:3b"
     lmstudio_base_url: str = "http://127.0.0.1:1234/v1"
     lmstudio_default_model: str = "local-model"
-    cloud_provider: Literal["anthropic", "openai", "none"] = "none"
+    # v1.2.1: "gemini" routes through Google's OpenAI-compatible endpoint;
+    # "custom" accepts ANY OpenAI-compatible cloud API (DeepSeek, Mistral,
+    # Groq, OpenRouter, xAI, Together, …) via cloud_base_url.
+    cloud_provider: Literal["anthropic", "openai", "gemini", "custom", "none"] = "none"
     cloud_api_key: str = ""
     cloud_default_model: str = ""
     cloud_base_url: str = ""  # override for proxies / Azure / Bedrock-compatible gateways
