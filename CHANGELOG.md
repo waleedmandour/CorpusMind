@@ -6,6 +6,38 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
+## [1.0.2] — 2026-09-05 — Windows installer hardening
+
+The v1.0.1 Windows packages could fail to install or appear broken on real
+machines. This release fixes every identified install-time defect for both
+desktop apps.
+
+### Fixed (Windows installers)
+
+- **Zombie engine sidecar locked files**: the stock NSIS template only stops
+  the main executable, so a surviving `corpusmind-engine.exe` (crashed
+  session, Task-Manager close) made install/upgrade fail with *Error opening
+  file for writing*. Custom NSIS `PREINSTALL`/`PREUNINSTALL` hooks now
+  tree-kill the app and the sidecar before any file operation (both apps).
+- **First-run "engine offline" on slower machines**: Windows Defender scans
+  the entire ~700-file PyInstaller sidecar tree on first launch, which could
+  exceed the previous 30-second shell wait and 15-second UI wait. Both
+  budgets are now 60 seconds; the UI keeps polling and recovers
+  automatically once the engine is up.
+- **Publisher metadata**: Windows "Apps & features" and the MSI now show the
+  authors ("Dr. Waleed Mandour (Sultan Qaboos University) & Prof. Wesam
+  Ibrahim (PNU)") instead of the identifier fallback "corpusmind".
+- **CI verification steps**: the Windows jobs' size/model verification steps
+  called a broken `ath]::Round` (a corrupted `[math]::Round`) which crashed
+  the steps with a PowerShell ParserError; syntax restored.
+
+### Notes
+
+- The `.exe` (NSIS) installs per-user without administrator rights; the
+  `.msi` installs per-machine and requires elevation. Machines without the
+  WebView2 runtime need internet access during installation (the runtime is
+  fetched from Microsoft at install time).
+
 ## [1.0.1] — 2026-09-05 — Linguistics QA round: statistical validity + missing core features
 
 An expert corpus-linguistics review of the v1.0.0 code found seven validity
