@@ -183,6 +183,69 @@ def odds_ratio(f1: int, f2: int, N1: int, N2: int) -> float:
     return (f1 * (N2 - f2)) / denom
 
 
+def odds_ratio_haldane(f1: int, f2: int, N1: int, N2: int) -> float:
+    """Odds Ratio with the Haldane–Anscombe 0.5 continuity correction,
+    applied automatically whenever any of the four cells is zero
+    (standard practice — the raw OR is undefined/infinite there).
+    Identical to :func:`odds_ratio` when no cell is zero."""
+    b, d = N1 - f1, N2 - f2
+    if f1 > 0 and f2 > 0 and b > 0 and d > 0:
+        return odds_ratio(f1, f2, N1, N2)
+    return ((f1 + 0.5) * (d + 0.5)) / ((f2 + 0.5) * (b + 0.5))
+
+
+def fisher_exact_2x2(a: int, b: int, c: int, d: int) -> float:
+    """Two-tailed Fisher's exact test on the 2×2 table (hypergeometric).
+
+    Sum of the probabilities of every table (same marginals) whose
+    probability is ≤ the observed table's — the standard 'sum of tables not
+    more likely' definition. Computed in log-space via lgamma so large
+    marginals don't overflow. Sparse-data-safe where χ²/LL are not.
+    """
+    total = a + b + c + d
+    if total <= 0:
+        return 0.0
+    row1, col1 = a + b, a + c
+
+    def log_hypge(x: int) -> float:
+        # log P(x) = log C(row1, x) + log C(total-row1, col1-x) - log C(total, col1)
+        def log_choose(n: int, k: int) -> float:
+            if k < 0 or k > n:
+                return float("-inf")
+            return math.lgamma(n + 1) - math.lgamma(k + 1) - math.lgamma(n - k + 1)
+        return log_choose(row1, x) + log_choose(total - row1, col1 - x) - log_choose(total, col1)
+
+    a_min = max(0, row1 + col1 - total)
+    a_max = min(row1, col1)
+    if a_max < a_min:
+        return 0.0
+    p_obs = log_hypge(a)
+    # tables at least as extreme as the observed one (± log tolerance)
+    log_sum = float("-inf")
+    for x in range(a_min, a_max + 1):
+        lp = log_hypge(x)
+        if lp <= p_obs + 1e-9:
+            # log-space running sum
+            if lp == float("-inf"):
+                continue
+            log_sum = lp if log_sum == float("-inf") else (
+                max(log_sum, lp) + math.log1p(math.exp(min(lp, log_sum) - max(lp, log_sum)))
+            )
+    return min(1.0, math.exp(log_sum)) if log_sum != float("-inf") else 0.0
+
+
+def chi2_min_expected(a: int, b: int, c: int, d: int) -> float:
+    """Smallest expected cell count of the 2×2 table — the Cochran validity
+    diagnostic for χ² (all expected cells should be ≥ 5). Callers surface it
+    as a warning flag instead of silently trusting χ² on sparse tables."""
+    total = a + b + c + d
+    if total <= 0:
+        return 0.0
+    r1, r2 = a + b, c + d
+    c1, c2 = a + c, b + d
+    return min(r1 * c1, r1 * c2, r2 * c1, r2 * c2) / total
+
+
 def keyness_ll(f1: int, f2: int, N1: int, N2: int) -> float:
     """Log-likelihood for keyness — 2×2 table where the two corpora are the rows
     and the term-vs-other is the column."""
@@ -209,7 +272,9 @@ def compute_keyness_row(
         "log_ratio": log_ratio(f1, f2, N1, N2),
         "pct_diff": pct_diff(f1, f2, N1, N2),
         "simple_maths": simple_maths(f1, f2, N1, N2, smooth=smooth),
-        "odds_ratio": odds_ratio(f1, f2, N1, N2),
+        # Haldane–Anscombe-corrected so zero cells yield a finite, rankable
+        # value instead of ±inf (v1.0.1 linguistics QA).
+        "odds_ratio": odds_ratio_haldane(f1, f2, N1, N2),
     }
     return KeynessRow(term=term, f1=f1, f2=f2, N1=N1, N2=N2, measures=measures)
 
@@ -233,11 +298,13 @@ def juillands_d(freqs: list[int]) -> float:
     return max(0.0, 1 - (cv / math.sqrt(n - 1)))
 
 
-def gries_dp(observed: list[int]) -> float:
+def gries_dp(observed: list[int], sizes: list[int] | None = None) -> float:
     """Gries' DP = 0.5 · Σ |observed_proportionᵢ − expected_proportionᵢ|  (Gries 2008).
 
-    `observed` is the per-part raw frequencies. Expected proportions are uniform
-    (1/n_parts) unless the caller supplies non-uniform sizes (Phase 1+).
+    `observed` is the per-part raw frequencies. Expected proportions are the
+    part SIZES as a share of the corpus (sizeᵢ / Σsize) when ``sizes`` is
+    given — the correct treatment for corpora of unequal document lengths —
+    and fall back to uniform (1/n_parts) when it is not.
     """
     n = len(observed)
     if n == 0:
@@ -245,8 +312,30 @@ def gries_dp(observed: list[int]) -> float:
     total = sum(observed)
     if total == 0:
         return 0.0
-    expected = 1.0 / n
-    return 0.5 * sum(abs((f / total) - expected) for f in observed)
+    if sizes is not None:
+        size_total = sum(sizes)
+        if size_total <= 0 or len(sizes) != n:
+            expected = 1.0 / n
+        else:
+            expected = None  # per-part, computed in the loop below
+    else:
+        expected = 1.0 / n
+
+    acc = 0.0
+    for i, f in enumerate(observed):
+        e = (sizes[i] / size_total) if expected is None else expected
+        acc += abs((f / total) - e)
+    return 0.5 * acc
+
+
+def gries_dp_norm(observed: list[int], sizes: list[int] | None = None) -> float:
+    """DP-norm = DP · n/(n−1)  (Gries 2020) — comparable across different
+    numbers of corpus parts. Returns plain DP when n < 2."""
+    n = len(observed)
+    dp = gries_dp(observed, sizes)
+    if n < 2:
+        return dp
+    return dp * n / (n - 1)
 
 
 # --------------------------------------------------------------------------- #
@@ -258,6 +347,71 @@ def type_token_ratio(tokens: list[str]) -> float:
     if not tokens:
         return 0.0
     return len(set(tokens)) / len(tokens)
+
+
+def mattr(tokens: list[str], *, window: int = 50) -> float:
+    """Moving-Average TTR (Covington & McFall 2010): mean TTR over every
+    consecutive `window`-token window, advanced one token at a time.
+    Falls back to raw TTR when the input is shorter than the window.
+    O(n) via an incremental window counter."""
+    n = len(tokens)
+    if n == 0:
+        return 0.0
+    if n <= window:
+        return type_token_ratio(tokens)
+    from collections import Counter
+
+    counts: Counter = Counter(tokens[:window])
+    ttr_sum = len(counts) / window
+    for i in range(window, n):
+        old = tokens[i - window]
+        counts[old] -= 1
+        if counts[old] == 0:
+            del counts[old]
+        counts[tokens[i]] += 1
+        ttr_sum += len(counts) / window
+    return ttr_sum / (n - window + 1)
+
+
+def _mtld_half(tokens: list[str], threshold: float) -> float:
+    from collections import Counter
+
+    types: Counter = Counter()
+    run_len = 0
+    factors = 0.0
+    for t in tokens:
+        run_len += 1
+        types[t] += 1
+        if len(types) / run_len <= threshold:
+            factors += 1.0
+            types = Counter()
+            run_len = 0
+    if run_len > 0:
+        ttr = len(types) / run_len
+        # partial factor: linear interpolation of the unfinished factor
+        factors += (1.0 - ttr) / (1.0 - threshold)
+    return factors
+
+
+def mtld(tokens: list[str], *, threshold: float = 0.72) -> float:
+    """Measure of Textual Lexical Diversity (McCarthy & Jarvis 2010): the
+    number of factor-runs (TTR falling to `threshold`) per 100 tokens,
+    averaged over the forward and backward pass."""
+    if not tokens:
+        return 0.0
+    forward = _mtld_half(tokens, threshold)
+    backward = _mtld_half(list(reversed(tokens)), threshold)
+    if forward == 0 or backward == 0:
+        return 0.0
+    return len(tokens) / ((forward + backward) / 2.0)
+
+
+def guiraud(tokens: list[str]) -> float:
+    """Guiraud's Root TTR = types / √tokens — a size-robust one-number index."""
+    n = len(tokens)
+    if n == 0:
+        return 0.0
+    return len(set(tokens)) / math.sqrt(n)
 
 
 def sttr(tokens: list[str], *, chunk_size: int = 1000) -> float:

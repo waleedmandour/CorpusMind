@@ -339,3 +339,20 @@ class Subcorpus(Base):
     # e.g. {"genre": "news"} or {"register": "academic", "year_min": 2015}
     filter_criteria: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
+class StopwordList(Base):
+    """A named stopword list (v1.0.1).
+
+    User-editable word lists applied as an optional filter in frequency,
+    collocation and keyness analysis. Built-in lists (English, Arabic) are
+    resolved virtually via the reserved ids 'builtin:en' / 'builtin:ar' and
+    are not stored in the table.
+    """
+    __tablename__ = "stopword_lists"
+
+    id: Mapped[str] = mapped_column(String(16), primary_key=True, default=_uuid)
+    name: Mapped[str] = mapped_column(String(128), nullable=False)
+    language: Mapped[str] = mapped_column(String(8), default="en")
+    words: Mapped[list] = mapped_column(JSON, default=list)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)

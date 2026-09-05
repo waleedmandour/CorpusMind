@@ -25,6 +25,26 @@ def _get_engine():
             # SQLite needs this for foreign keys + concurrent writes from one process.
             connect_args={"check_same_thread": False, "timeout": 30.0},
         )
+        # v1.0.1: register a REGEXP function on every raw SQLite connection so
+        # concordance queries can use `col REGEXP pattern` (Python re syntax).
+        # The function itself is case-sensitive; callers prepend (?i) for
+        # case-insensitive matching.
+        from sqlalchemy import event
+
+        @event.listens_for(_engine.sync_engine, "connect")
+        def _register_regexp(dbapi_connection, _record):
+            import re as _re
+
+            def _regexp(pattern, value):
+                if pattern is None or value is None:
+                    return None
+                try:
+                    return _re.search(pattern, str(value)) is not None
+                except _re.error:
+                    return None
+
+            dbapi_connection.create_function("REGEXP", 2, _regexp)
+
         _sessionmaker = async_sessionmaker(_engine, expire_on_commit=False, class_=AsyncSession)
     return _engine
 

@@ -139,37 +139,10 @@ _ARABIC_DIACRITICS_RE = re.compile(
 )
 _ARABIC_TATWEEL = "\u0640"  # ـ kashida
 
-# Stopword lists (small, embedded — full lists would be a separate data file)
-_ENGLISH_STOPWORDS = frozenset({
-    "the", "a", "an", "and", "or", "but", "if", "then", "else", "when",
-    "at", "by", "for", "with", "about", "against", "between", "into",
-    "through", "during", "before", "after", "above", "below", "to", "from",
-    "up", "down", "in", "out", "on", "off", "over", "under", "again",
-    "further", "once", "here", "there", "all", "any", "both", "each",
-    "few", "more", "most", "other", "some", "such", "no", "nor", "not",
-    "only", "own", "same", "so", "than", "too", "very", "s", "t", "can",
-    "will", "just", "don", "should", "now", "d", "ll", "m", "o", "re",
-    "ve", "y", "ain", "aren", "couldn", "didn", "doesn", "hadn", "hasn",
-    "haven", "isn", "ma", "mightn", "mustn", "needn", "shan", "shouldn",
-    "wasn", "weren", "won", "wouldn", "is", "am", "are", "was", "were",
-    "be", "been", "being", "have", "has", "had", "having", "do", "does",
-    "did", "doing", "this", "that", "these", "those", "i", "me", "my",
-    "myself", "we", "our", "ours", "ourselves", "you", "your", "yours",
-    "he", "him", "his", "she", "her", "hers", "it", "its", "they", "them",
-    "their", "theirs", "what", "which", "who", "whom", "of",
-})
-
-_ARABIC_STOPWORDS = frozenset({
-    "في", "من", "على", "إلى", "عن", "مع", "هذا", "هذه", "ذلك", "تلك",
-    "التي", "الذي", "الذين", "اللاتي", "اللذان", "اللواتي", "هو", "هي",
-    "هم", "هن", "نحن", "أنا", "أنت", "أنتم", "كان", "كانت", "يكون",
-    "تكون", "قد", "لقد", "لن", "لم", "لا", "إن", "أن", "ما", "إلا",
-    "ثم", "أو", "أم", "بل", "حتى", "كل", "بعض", "غير", "بين", "عند",
-    "لدى", "نعم", "بلى", "كلا", "كلتا", "أيضا", "فقط", "حيث", "كي",
-    "لكي", "لكيلا", "لأن", "لذلك", "كما", "إذا", "إذ", "لو", "لكن",
-    "واو", "الفاء", "الباء", "اللام",
-})
-
+# Stopword lists — moved to nlp/stopwords.py in v1.0.1 (single source of
+# truth shared with the Arabic tagger, which flags is_stop at ingestion).
+from nlp.stopwords import ARABIC_STOPWORDS as _ARABIC_STOPWORDS  # noqa: E402
+from nlp.stopwords import ENGLISH_STOPWORDS as _ENGLISH_STOPWORDS  # noqa: E402
 
 # --------------------------------------------------------------------------- #
 # Cleaning functions

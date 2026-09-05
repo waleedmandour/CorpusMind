@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from collections import Counter, defaultdict
 from dataclasses import dataclass
+from functools import lru_cache
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -839,8 +840,37 @@ class VocabProfileResult:
     academic_words: list[dict]  # in the academic word list
 
 
-# A small starter Academic Word List (AWL) — Phase 3 will expand.
-# This is a subset of Coxhead's AWL (2000), which is open for research use.
+# v1.0.1: the full Coxhead (2000) Academic Word List is loaded from
+# reference-data/wordlists/awl-sublists.tsv (570 families, 10 sublists).
+# STARTER_AWL remains as a fallback when the data file is unavailable.
+@lru_cache(maxsize=1)
+def _load_awl() -> frozenset[str]:
+    """All AWL forms (headwords + family members), lowercased."""
+    from pathlib import Path
+
+    path = (
+        Path(__file__).resolve().parent.parent.parent
+        / "reference-data"
+        / "wordlists"
+        / "awl-sublists.tsv"
+    )
+    forms: set[str] = set()
+    if path.exists():
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if not line or line.startswith("#"):
+                continue
+            parts = line.split("\t")
+            if not parts or not parts[0]:
+                continue
+            forms.add(parts[0].strip().lower())
+            if len(parts) > 2:
+                for member in parts[2].split():
+                    forms.add(member.strip().lower())
+    return frozenset(forms)
+
+
+# A small starter Academic Word List (AWL) — fallback only; the full list
+# (Coxhead 2000, 570 families) loads from reference-data when present.
 STARTER_AWL = {
     "analyze",
     "approach",
@@ -951,6 +981,8 @@ async def compute_vocab_profile(
     total_tokens = sum(c for _, _, c in rows)
     total_types = len(rows)
 
+    awl_set = _load_awl() or frozenset(STARTER_AWL)
+
     bands = {"K1": 0, "K2_K9": 0, "AWL": 0, "Off-list": 0}
     rare_words = []
     academic_words = []
@@ -959,7 +991,7 @@ async def compute_vocab_profile(
         lemma_lower = (lemma or text).lower()
         if lemma_lower in k1_set:
             bands["K1"] += freq
-        elif lemma_lower in STARTER_AWL:
+        elif lemma_lower in awl_set:
             bands["AWL"] += freq
             if len(academic_words) < limit:
                 academic_words.append({"word": lemma_lower, "freq": freq})

@@ -522,6 +522,7 @@ class ArabicPipeline:
 
     def parse(self, text: str):
         from nlp.general.pipeline import ParsedSentence, ParsedToken
+        from nlp.stopwords import is_arabic_stopword
 
         analysis = self._backend.analyze(text, dediacritize=False)
 
@@ -540,6 +541,12 @@ class ArabicPipeline:
                 morph_parts.append(f"pattern={at.pattern}")
             morph = "|".join(morph_parts) if morph_parts else ""
 
+            # v1.0.1: flag Arabic stopwords on the dediacritized form so
+            # skip_stop / stopword filtering works for Arabic corpora.
+            is_stop = is_arabic_stopword(at.dediacritized or "") or is_arabic_stopword(
+                at.lemma or ""
+            )
+
             tokens.append(
                 ParsedToken(
                     text=at.text,
@@ -553,17 +560,29 @@ class ArabicPipeline:
                     dep_head=0,  # Arabic backend doesn't produce dependency parse
                     dep_rel="dep",
                     is_punct=at.pos.lower() == "punct",
-                    is_stop=False,  # CAMeL doesn't have a stopword list built-in
+                    is_stop=is_stop,
                 )
             )
 
         yield ParsedSentence(tokens=tokens)
 
     def parse_document(self, text: str):
+        """Segment into sentences, then analyze each one.
+
+        v1.0.1 fix: previously the whole document was yielded as a SINGLE
+        sentence, which made sentence-scoped operations degenerate for Arabic
+        (KWIC context = whole document, n-gram sentence boundaries inert,
+        'same-sentence' collocation = same document). This rule-based
+        sentencizer splits on Arabic/Latin terminal punctuation while
+        protecting decimal numbers ('3.4', '٢٠٠٧.' at line ends still split).
+        """
         from nlp.general.pipeline import ParsedDocument
 
-        sentences = list(self.parse(text))
-        return ParsedDocument(sentences=sentences)
+        doc = ParsedDocument(sentences=[])
+        for chunk in split_arabic_sentences(text):
+            for parsed in self.parse(chunk):
+                doc.sentences.append(parsed)
+        return doc
 
     @staticmethod
     def _map_pos(arabic_pos: str) -> str:
@@ -604,3 +623,50 @@ class ArabicPipeline:
             "noun_prop": "PROPN",
         }
         return mapping.get(pos_lower, "X")
+
+
+# --------------------------------------------------------------------------- #
+# v1.0.1 — Arabic sentence segmentation (rule-based)
+# --------------------------------------------------------------------------- #
+
+_ARABIC_TERMINALS = set(".!?؟؛…\n")
+_ARABIC_DIGITS = set("٠١٢٣٤٥٦٧٨٩0123456789")
+
+
+def split_arabic_sentences(text: str) -> list[str]:
+    """Rule-based Arabic sentence segmentation.
+
+    Splits after terminal punctuation (. ! ؟ ؛ … and newlines) when followed
+    by whitespace or end-of-text, EXCEPT a period sandwiched between digits
+    (decimal numbers like 3.4 / ٣٫٤-style latin-decimal forms). Returns
+    non-empty chunks; if no terminal punctuation is found the whole text is
+    one segment (same as before for very short inputs).
+    """
+    if not text or not text.strip():
+        return []
+    chunks: list[str] = []
+    buf: list[str] = []
+    chars = text
+    n = len(chars)
+    for i, ch in enumerate(chars):
+        buf.append(ch)
+        if ch in _ARABIC_TERMINALS:
+            if ch == ".":
+                prev_digit = i > 0 and chars[i - 1] in _ARABIC_DIGITS
+                next_char = chars[i + 1] if i + 1 < n else ""
+                next_digit = next_char in _ARABIC_DIGITS
+                if prev_digit and next_digit:
+                    # decimal number like 3.4 — not a sentence boundary
+                    continue
+            # a newline always ends a sentence; other terminals need
+            # whitespace (or end-of-text) after them
+            nxt = chars[i + 1] if i + 1 < n else ""
+            if ch == "\n" or nxt == "" or nxt.isspace():
+                candidate = "".join(buf).strip()
+                if candidate:
+                    chunks.append(candidate)
+                buf = []
+    tail = "".join(buf).strip()
+    if tail:
+        chunks.append(tail)
+    return chunks if chunks else ([text.strip()] if text.strip() else [])
