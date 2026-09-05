@@ -3338,6 +3338,10 @@ html[dir="rtl"] .app-name {
 .trouble-interp.severity-error { border-inline-start: 2px solid var(--danger); }
 .trouble-interp.severity-warning { border-inline-start: 2px solid var(--warning); }
 .trouble-interp.severity-info { border-inline-start: 2px solid var(--brand-400); }
+/* v1.2.0: instant offline one-line fix suggestion */
+.trouble-interp.suggestion {
+  border-inline-start: 2px solid var(--brand-400);
+}
 .trouble-interp.unavailable {
   font-style: italic;
   color: var(--text-muted);

@@ -3,14 +3,21 @@
  *
  * Only renders when there are unresolved issues. Shows a red badge with the
  * count of active issues. Clicking it expands a panel showing the details
- * of each issue, the Gemini interpretation (if available), and a
+ * of each issue, an instant one-line fix suggestion (v1.2.0, offline rules
+ * table), the Gemini interpretation (if available), and a
  * "Report to Developer" button that opens a mailto: link.
+ *
+ * v1.2.0: fully internationalized (en/ar) — the mute toggle previously had
+ * a malformed unicode escape ("\u1F50A" parses as U+1F50 + literal "A",
+ * rendering "ὐA On") and no translations at all.
  *
  * When everything is healthy, this component renders nothing.
  */
 import { useState } from "react";
 import { useTroubleshoot, type TroubleshootIssue } from "@/store/troubleshooting";
 import { useEngineVersion } from "@/hooks/useEngineVersion";
+import { t } from "@/lib/i18n";
+import { useUI } from "@/store/ui";
 
 const DEVELOPER_EMAIL = "w.abumandour@squ.edu.om";
 
@@ -42,6 +49,10 @@ function buildMailto(issue: TroubleshootIssue, version: string): string {
     `Message: ${issue.message}`,
     "",
   ];
+
+  if (issue.suggestion) {
+    lines.push(`=== INSTANT SUGGESTION === ${issue.suggestion}`, "");
+  }
 
   if (issue.stackTrace) {
     lines.push("=== STACK TRACE ===", issue.stackTrace, "");
@@ -82,6 +93,7 @@ function buildMailto(issue: TroubleshootIssue, version: string): string {
 function IssueCard({ issue, version }: { issue: TroubleshootIssue; version: string }) {
   const resolveIssue = useTroubleshoot((s) => s.resolveIssue);
   const fetchInterpretation = useTroubleshoot((s) => s.fetchInterpretation);
+  const lang = useUI((s) => s.lang);
   const [showFull, setShowFull] = useState(false);
 
   const sev = issue.interpretation?.severity ?? "error";
@@ -102,47 +114,57 @@ function IssueCard({ issue, version }: { issue: TroubleshootIssue; version: stri
               className="trouble-toggle-full"
               onClick={() => setShowFull(!showFull)}
             >
-              {showFull ? "Show less" : "Show full"}
+              {showFull ? t(lang, "trouble_show_less") : t(lang, "trouble_show_full")}
             </button>
           )}
           <div className="trouble-issue-tags">
-            <span className="trouble-tag">Code: {issue.code}</span>
-            {issue.endpoint && <span className="trouble-tag">Endpoint: {issue.endpoint}</span>}
+            <span className="trouble-tag">{t(lang, "trouble_code")}: {issue.code}</span>
+            {issue.endpoint && <span className="trouble-tag">{t(lang, "trouble_endpoint")}: {issue.endpoint}</span>}
             <span className="trouble-tag">{new Date(issue.timestamp).toLocaleTimeString()}</span>
-            {issue.resolved && <span className="trouble-tag resolved">Resolved</span>}
+            {issue.resolved && <span className="trouble-tag resolved">{t(lang, "trouble_resolved")}</span>}
           </div>
         </div>
         {!issue.resolved && (
           <button
             className="trouble-resolve-btn"
             onClick={() => resolveIssue(issue.id)}
-            title="Mark as resolved"
+            title={t(lang, "trouble_resolve_title")}
           >
             {"\u2713"}
           </button>
         )}
       </div>
 
-      {/* Gemini interpretation */}
+      {/* v1.2.0: instant offline one-line suggestion — shown immediately,
+          no Gemini key or network needed. */}
+      {issue.suggestion && (
+        <div className="trouble-interp suggestion" role="note">
+          <div className="trouble-interp-row">
+            <strong>{t(lang, "trouble_fix_label")}:</strong> {issue.suggestion}
+          </div>
+        </div>
+      )}
+
+      {/* Gemini interpretation (deeper, optional layer) */}
       {interp === null && (
         <div className="trouble-interp loading">
           <span className="trouble-spinner" aria-hidden />
-          Asking Gemini to interpret this error…
+          {t(lang, "trouble_asking_gemini")}
         </div>
       )}
       {interp && interp.available && (
         <div className={`trouble-interp ${severityClass(interp.severity)}`}>
           <div className="trouble-interp-row">
-            <strong>What happened:</strong> {interp.plain_language}
+            <strong>{t(lang, "trouble_what_happened")}:</strong> {interp.plain_language}
           </div>
           <div className="trouble-interp-row">
-            <strong>Likely cause:</strong> {interp.likely_cause}
+            <strong>{t(lang, "trouble_likely_cause")}:</strong> {interp.likely_cause}
           </div>
           <div className="trouble-interp-row">
-            <strong>Suggested fix:</strong> {interp.suggested_fix}
+            <strong>{t(lang, "trouble_suggested_fix")}:</strong> {interp.suggested_fix}
           </div>
           {interp.model && (
-            <div className="trouble-interp-model">Interpreted by {interp.model}</div>
+            <div className="trouble-interp-model">{t(lang, "trouble_interpreted_by")} {interp.model}</div>
           )}
         </div>
       )}
@@ -159,7 +181,7 @@ function IssueCard({ issue, version }: { issue: TroubleshootIssue; version: stri
             className="trouble-action-btn retry"
             onClick={() => fetchInterpretation(issue.id)}
           >
-            Retry interpretation
+            {t(lang, "trouble_retry_interp")}
           </button>
         ) : null}
         <a
@@ -167,7 +189,7 @@ function IssueCard({ issue, version }: { issue: TroubleshootIssue; version: stri
           href={buildMailto(issue, version)}
           title={`Report this issue to ${DEVELOPER_EMAIL}`}
         >
-          {"\u2709"} Report to developer
+          {"\u2709"} {t(lang, "trouble_report_dev")}
         </a>
       </div>
     </div>
@@ -184,6 +206,7 @@ export function TroubleshootingBar() {
   const muted = useTroubleshoot((s) => s.muted);
   const setMuted = useTroubleshoot((s) => s.setMuted);
   const version = useEngineVersion();
+  const lang = useUI((s) => s.lang);
 
   const unresolved = issues.filter((i) => !i.resolved);
 
@@ -205,15 +228,16 @@ export function TroubleshootingBar() {
           className={`trouble-bar-indicator ${unresolved.length > 0 ? "has-issues" : "backend-down"}`}
           onClick={() => setPanelOpen(!panelOpen)}
           aria-expanded={panelOpen}
-          aria-label={`${unresolved.length} unresolved issue${unresolved.length === 1 ? "" : "s"}`}
+          aria-label={`${unresolved.length} ${unresolved.length === 1 ? t(lang, "trouble_badge_issue") : t(lang, "trouble_badge_issues")}`}
         >
           <span className="trouble-bar-dot" aria-hidden />
           {unresolved.length > 0 ? (
             <span>
-              {unresolved.length} issue{unresolved.length === 1 ? "" : "s"} detected
+              {unresolved.length}{" "}
+              {unresolved.length === 1 ? t(lang, "trouble_badge_issue") : t(lang, "trouble_badge_issues")}
             </span>
           ) : (
-            <span>Backend offline</span>
+            <span>{t(lang, "trouble_backend_offline")}</span>
           )}
           <span className="trouble-bar-chevron">{panelOpen ? "\u25BC" : "\u25C2"}</span>
         </button>
@@ -221,31 +245,34 @@ export function TroubleshootingBar() {
 
       {/* The expandable panel */}
       {panelOpen && (
-        <div className="trouble-panel" role="dialog" aria-label="Troubleshooting details">
+        <div className="trouble-panel" role="dialog" aria-label={t(lang, "trouble_dialog_label")}>
           <div className="trouble-panel-header">
-            <strong>Smart Troubleshooting</strong>
+            <strong>{t(lang, "trouble_title")}</strong>
             <div className="trouble-panel-actions">
               <button
                 className="trouble-panel-btn mute-toggle"
                 onClick={() => setMuted(!muted)}
-                title={muted ? "Unmute notifications" : "Mute notifications"}
+                title={muted ? t(lang, "trouble_mute_unmute") : t(lang, "trouble_mute_mute")}
               >
-                {muted ? "\u23F8 Muted" : "\u1F50A On"}
+                {/* v1.2.0 bugfix: the old label used "\u1F50A", which JS
+                    parses as U+1F50 + literal "A" → rendered "ὐA On".
+                    Correct escapes (or literals) render the speaker emoji. */}
+                {muted ? `\u23F8 ${t(lang, "trouble_muted_label")}` : `\u{1F508} ${t(lang, "trouble_on_label")}`}
               </button>
               {issues.some((i) => i.resolved) && (
                 <button className="trouble-panel-btn" onClick={clearResolved}>
-                  Clear resolved
+                  {t(lang, "trouble_clear_resolved")}
                 </button>
               )}
               {issues.length > 0 && (
                 <button className="trouble-panel-btn" onClick={clearAll}>
-                  Clear all
+                  {t(lang, "trouble_clear_all")}
                 </button>
               )}
               <button
                 className="trouble-panel-btn close"
                 onClick={() => setPanelOpen(false)}
-                aria-label="Close troubleshooting panel"
+                aria-label={t(lang, "trouble_close")}
               >
                 {"\u2715"}
               </button>
@@ -254,18 +281,22 @@ export function TroubleshootingBar() {
 
           {muted && (
             <div className="trouble-muted-banner">
-              Notifications are muted. Errors are still being captured
-              silently — you can review them here anytime.
+              {t(lang, "trouble_muted_banner")}
             </div>
           )}
 
           <div className="trouble-panel-body">
             {issues.length === 0 ? (
               <div className="trouble-empty">
-                No issues recorded. {muted && "Muted — the badge will not appear even if errors occur."}
-                {!backendReachable && " The backend is currently unreachable — check that "}
-                {!backendReachable && <code>corpusmind-engine</code>}
-                {!backendReachable && " is running on port 8765."}
+                {t(lang, "trouble_empty")}
+                {!backendReachable && (
+                  <>
+                    {" "}
+                    {t(lang, "trouble_backend_down_pre")}
+                    <code>corpusmind-engine</code>
+                    {t(lang, "trouble_backend_down_post")}
+                  </>
+                )}
               </div>
             ) : (
               issues.map((issue) => <IssueCard key={issue.id} issue={issue} version={version} />)

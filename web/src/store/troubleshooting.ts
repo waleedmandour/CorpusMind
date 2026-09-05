@@ -39,6 +39,66 @@ export interface TroubleshootIssue {
   resolved: boolean;
   /** Gemini interpretation, if available. Null while loading, undefined if not requested. */
   interpretation: InterpretErrorResponse | null | undefined;
+  /** v1.2.0: instant offline one-line fix suggestion (no LLM needed).
+   * Computed at capture time from the built-in rules table. */
+  suggestion?: string;
+}
+
+/**
+ * v1.2.0: instant one-line fix suggestions, keyed on status code + message
+ * patterns. This runs locally (no Gemini key, no network) so every issue
+ * card shows an actionable hint immediately — the Gemini interpretation,
+ * when available, adds depth on top of this.
+ */
+export function suggestFix(
+  message: string,
+  code: string | number,
+  endpoint: string | null,
+): string {
+  const m = message.toLowerCase();
+  const ep = (endpoint ?? "").toLowerCase();
+
+  // AI provider failures (the Ollama 502/400 the user reported)
+  if (m.includes("model call failed") || m.includes("[ollama]") || m.includes("[lmstudio]")) {
+    if (m.includes("400") || m.includes("bad request")) {
+      return "Open Settings → Model Providers and pick a tool-capable model (e.g. llama3.1, qwen2.5); the current one rejected the request.";
+    }
+    return "Make sure the model server (Ollama / LM Studio) is running, then re-send your message.";
+  }
+  // Reference-corpus download hints (engine messages mention these paths)
+  if (m.includes("import archive") || ep.includes("reference-corpora")) {
+    if (m.includes("504") || m.includes("gateway") || m.includes("timed out") || m.includes("timeout")) {
+      return "The source server is down or overloaded. Try again later, or use 'Import archive' with the file downloaded in your browser — that always works.";
+    }
+    if (m.includes("checksum") || m.includes("magic bytes")) {
+      return "The downloaded file looks wrong — re-download the archive and try the offline 'Import archive' option.";
+    }
+  }
+  if (code === 504 || (typeof code === "string" && code.toLowerCase().includes("504")) || m.includes("gateway time-out")) {
+    return "The remote server timed out. Wait a minute and retry; large downloads retry automatically.";
+  }
+  if (code === 429 || m.includes("429") || m.includes("rate limit")) {
+    return "Rate limit reached — wait a few seconds before retrying.";
+  }
+  if (code === 404 || m.includes("404")) {
+    if (ep.includes("corpora") || m.includes("corpus")) {
+      return "This corpus no longer exists — re-select it from 'Your Corpus'.";
+    }
+    return "The requested item was not found — it may have been deleted; refresh the view.";
+  }
+  if (code === 413) {
+    return "The file is too large — split it into smaller documents or use a lower-size archive.";
+  }
+  if (code === 422 || m.includes("422")) {
+    return "The request was rejected — check your input values and try again.";
+  }
+  if (code === "NETWORK" || (typeof code === "string" && code.toUpperCase().includes("NETWORK"))) {
+    return "Check that the CorpusMind engine is running on port 8765 (the desktop app starts it automatically).";
+  }
+  if (code === 500 || m.includes("500") || m.includes("internal server error")) {
+    return "Internal engine error — retry the action; if it repeats, use 'Report to developer' below.";
+  }
+  return "Retry the action; if it persists, use 'Report to developer' below.";
 }
 
 interface TroubleshootState {
@@ -144,6 +204,9 @@ export const useTroubleshoot = create<TroubleshootState>()(
       stackTrace: params.stackTrace ?? null,
       resolved: false,
       interpretation: undefined,
+      // v1.2.0: instant offline one-liner (rendered even before/without
+      // any Gemini interpretation).
+      suggestion: suggestFix(params.message, code, endpoint),
     };
 
     // If muted, store the issue silently but do NOT auto-open the panel

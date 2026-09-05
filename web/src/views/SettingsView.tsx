@@ -34,6 +34,7 @@ import {
 import { useTroubleshoot } from "@/store/troubleshooting";
 import { useUI } from "@/store/ui";
 import { useApp } from "@/store/app";
+import { t } from "@/lib/i18n";
 
 export function SettingsView() {
   const qc = useQueryClient();
@@ -787,16 +788,13 @@ function GeminiKeyInput({
 function MuteToggle() {
   const muted = useTroubleshoot((s) => s.muted);
   const setMuted = useTroubleshoot((s) => s.setMuted);
+  const lang = useUI((s) => s.lang);
 
   return (
     <div className="mute-toggle-row">
       <div>
-        <strong>Notifications:</strong>
-        <p className="settings-text-muted">
-          When ON, a red badge appears in the taskbar when errors occur and the
-          panel auto-opens. When OFF (muted), errors are still captured silently
-          and can be reviewed here anytime.
-        </p>
+        <strong>{t(lang, "trouble_mute_mute")}:</strong>
+        <p className="settings-text-muted">{t(lang, "settings_mute_hint")}</p>
       </div>
       <label className="toggle-switch">
         <input
