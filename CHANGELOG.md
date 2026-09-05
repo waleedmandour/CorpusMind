@@ -6,6 +6,71 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
+## [1.2.0] — 2026-09-05 — User-reported issues: downloads, tagsets, assistant, interactive network
+
+Eight user-reported issues fixed end-to-end (code-level root causes verified
+before implementation; engine suite 254 green; web build clean).
+
+### Fixed
+- **Top-bar status pill (1)** — shows the active corpus's name
+  ("{name} · Corpus ready", i18n en/ar) instead of a bare "Corpus ready".
+- **Smart Troubleshooting (2)** — every issue card now shows an instant
+  offline one-line **Fix:** suggestion (status-code + message rules table,
+  no Gemini key needed); the mute toggle's malformed `"\u1F50A"` escape
+  (rendered "ὐA On") is fixed; the whole panel + Settings mute toggle are
+  internationalized (en/ar). Reference-corpus failures now reach the
+  troubleshooter (they previously bypassed React Query entirely).
+- **AI Assistant 502 (7a)** — defense in depth: tool schemas sent to local
+  OpenAI-compatible servers are sanitized (older Ollama 400s on
+  default/minimum/maximum keywords); an HTTP 400 on the tools payload now
+  retries once WITHOUT tools so the user gets an (un-grounded) answer
+  instead of `Model call failed`; models are capability-gated via
+  /api/tags `capabilities` (embedding models never receive tool payloads);
+  auto-selection prefers tool-capable models; error text includes the
+  server's response body.
+- **Buttons (6)** — one consistent button language: export triggers are
+  solid brand like Compute/Search (the outline override is gone), uniform
+  touch height, and every analysis panel places its Export control in the
+  toolbar row (phase-2 panels had it inside the note box).
+- **Feature labels (5)** — the trailing " 2" is gone from
+  N-grams/POS/Grammar/Dependency/Discourse/Vocabulary/Sentiment/Metaphor.
+
+### Added
+- **Tagset selection (4)** — per-corpus tagset choice, persisted and used
+  as the analysis default: grammatical **UD UPOS / Penn Treebank /
+  CLAWS-7** (English), **UD UPOS / CAMeL native Calima** (Arabic), and
+  semantic **USAS top-level** (new experimental
+  `/corpora/{cid}/semantic-analysis`; lexicon derived from UCREL
+  Multilingual-USAS, CC BY-NC-SA 4.0, see
+  `reference-data/tagsets/`). Selector card in "Your Corpus", tagset
+  picker in the POS panel and the Arabic tool; Arabic POS output is now
+  color-coded. Recompile persists the full annotation (it previously
+  dropped `pos_fine`/`morph`/`dep_*`, which would have silently broken
+  PTB/CLAWS-7/Calima after re-tagging).
+- **Floating AI Assistant (7b)** — floating button on every screen opens
+  an in-window chat drawer (grounded tool calls, evidence, grounded badge)
+  that survives navigation; context-aware ("user is viewing X" is sent
+  with each turn); suggested query chips from corpus-derived dynamic
+  suggestions.
+- **Interactive Collocation Network (8)** — click a collocate to expand
+  its collocates on a local orbit (progressive, cached per pivot), click
+  again to collapse, hover pauses rotation with tooltips, drag to orbit,
+  wheel zoom, set-as-center via context menu, node budget + depth counter,
+  HiDPI-sharp canvas, labels on all nodes, "Export view (PNG)". Zero new
+  frontend dependencies.
+
+### Changed
+- **Reference corpus downloads (3)** — the Oxford Text Archive gateway
+  routinely 504s large archives (reproduced for BAWE and BNC Baby). The
+  full-corpus pipeline now streams to disk in chunks (no more 108 MB in
+  RAM), retries with backoff, resumes via HTTP Range, reports REAL
+  byte-level progress, and supports cancellation. BAWE carries a
+  CC-BY-NC-SA-compliant processed mirror hosted on the project's GitHub
+  releases (tried first; BNC Baby cannot be redistributed and keeps the
+  canonical source). New **"Import archive"** option installs a manually
+  downloaded ZIP/tar.gz — the guaranteed path when every remote source
+  fails. All six other bundled sources verified healthy.
+
 ## [1.1.0] — 2026-09-05 — Verified fixes, security hardening, feature completion
 
 Issue-numbered fixes verified by execution (fresh-clone install, 230+ test
