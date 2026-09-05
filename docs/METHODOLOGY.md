@@ -97,6 +97,38 @@ over the same 2×2 table as G².
 - **Use:** collocation and keyness significance
 - **Distribution:** χ² with 1 degree of freedom
 - **Caveat:** unreliable when any expected cell count is < 5; prefer G² in that case
+- **v1.0.1:** every collocation row now carries `chi2_min_expected` (the smallest
+  expected cell count), and the UI surfaces a Cochran-rule warning when it is
+  below 5
+
+### Fisher's exact test (v1.0.1)
+
+Two-tailed hypergeometric test on the same 2×2 table: the sum of the
+probabilities of all tables (with the same marginals) whose probability is
+less than or equal to the observed table's. Computed in log-space via
+`lgamma` so large marginals do not overflow.
+
+- **Use:** collocation significance for sparse pairs, where χ²/G² validity
+  conditions fail (expected cells < 5)
+- **Range:** [0, 1] — a p-value, not a strength score; lower = stronger association
+- **Why it matters:** exact test — no distributional assumptions — the standard
+  choice for distinctive collexeme analysis (Stefanowitsch & Gries 2003)
+
+**Reference:** Pedersen, T. (1996). Fishing for exactness. *Proceedings of the SAS Users Group*.
+
+### Collocation marginals convention (v1.0.1)
+
+The marginals used by every collocation measure are **whole-corpus
+frequencies** (the Sketch Engine / AntConc convention):
+
+- `O` = co-occurrences within the span (same sentence by default)
+- `f(x)`, `f(y)` = corpus-wide frequencies of node and collocate
+- `N` = corpus size in real tokens
+
+Collocates aggregate under the same case- and diacritic-folding rule as the
+node, so `The`/`the` and (Arabic) كِتَاب/كتاب are single rows. Spans may be
+asymmetric (`span_left` / `span_right`), and collocates can be filtered by
+UPOS prefix or by a stopword list.
 
 ### Delta P (ΔP) — Gries (2013); Ellis (2007)
 
@@ -171,6 +203,19 @@ $$\text{Odds Ratio} = \frac{f_1 \cdot (N_2 - f_2)}{f_2 \cdot (N_1 - f_1)}$$
 - **Use:** keyness effect size
 - **Sign:** 1.0 at parity, > 1 when over-represented in target, < 1 when under-represented
 - **Property:** the only measure in the battery that is invariant to corpus size (a property of the odds ratio in general)
+- **v1.0.1:** when any of the four cells is zero, the **Haldane–Anscombe 0.5
+  continuity correction** is applied automatically, so the reported value is
+  always finite and rankable (standard practice for sparse tables)
+
+#### Reference-list keyness caveat (v1.0.1)
+
+A bundled **top-N frequency list** is not a full corpus. A target word absent
+from the list is *not* absent from the reference population — treating `f2 = 0`
+as a real zero produced floods of spurious `±inf` Log Ratio / %DIFF scores.
+The bridge therefore (a) **excludes** target words the list does not cover from
+the ranking, and (b) returns a machine-readable `warnings` array the UI
+displays. For publishable keyness, install and use a full bundled reference
+corpus (BNC Baby, BAWE, Leipzig) instead of a top-N list.
 
 ---
 
@@ -196,15 +241,58 @@ frequency across `n` corpus parts.
 $$DP = \frac{1}{2} \sum_{i} \left| \text{observed proportion}_i - \text{expected proportion}_i \right|$$
 
 where `observed proportion_i` is the term's frequency in part `i` divided by
-its total frequency, and `expected proportion_i` is `1/n` (uniform) or the
-part's share of corpus size (non-uniform parts).
+its total frequency, and `expected proportion_i` is the part's **share of
+corpus size** (`size_i / N`) — the correct treatment for corpora of unequal
+document lengths. When part sizes are unavailable it falls back to uniform
+`1/n`.
 
-- **Range:** [0, (n−1)/n]; 0 = perfectly even, (n−1)/n = maximally concentrated in one part
-- **Why DP over D:** DP does not assume a particular distribution shape and is more sensitive to the specific parts where concentration occurs
+- **Range:** [0, 1]; 0 = perfectly even, 1 = maximally concentrated
+- **DP-norm (v1.0.1):** `DP_norm = DP · n/(n−1)` (Gries 2020) is reported
+  alongside DP so values are comparable across corpora with different numbers
+  of parts
+- **Juilland's D caveat:** D assumes roughly equal-sized parts; CorpusMind
+  computes it on raw part counts and flags it accordingly — **prefer DP (with
+  size weighting) for corpora with heterogeneous document lengths**
+- **Range (v1.0.1):** every dispersion result also reports `range` (number of
+  documents containing the term) and `range_percent`
 
 **Reference:** Gries, S. Th. (2008). Dispersions and adjusted frequencies in corpora. *International Journal of Corpus Linguistics*, 13(4), 403–437.
 
 ---
+
+## Readability (v1.0.1)
+
+### Flesch Reading Ease — Flesch (1948)
+
+$$FRE = 206.835 - 1.015 \cdot ASL - 84.6 \cdot ASW$$
+
+with `ASL` = average sentence length (words/sentence) and `ASW` = average
+syllables per word. Higher = easier. Syllables are estimated with the
+vowel-group heuristic (silent -e subtracted; consonant+`le` counted as
+syllabic; -ed/-es silent except after t/d and sibilants).
+
+### Flesch–Kincaid Grade — Kincaid et al. (1975)
+
+$$FKGL = 0.39 \cdot ASL + 11.8 \cdot ASW - 15.59$$
+
+U.S. school-grade level.
+
+- **Flesch scores are computed for English only** — syllable counting is not
+  valid for Arabic script; for non-English corpora they are reported as `null`
+
+### LIX — Björnsson (1968); RIX — Anderson (1983)
+
+$$LIX = \frac{W}{S} + 100 \cdot \frac{L}{W}, \qquad RIX = \frac{L}{S}$$
+
+with `W` = words, `S` = sentences, `L` = long words (> 6 characters).
+
+- **Language-neutral:** LIX/RIX need only word, sentence and long-word counts,
+  so they are reported for **every** language including Arabic
+- **LIX interpretation:** < 30 very easy · 30–40 easy · 40–50 medium ·
+  50–60 difficult · > 60 very difficult
+
+Both are computed per document (`GET /corpora/{id}/documents/stats`) and for
+the corpus as a whole (`GET /corpora/{id}/readability`).
 
 ## Lexical variation
 
@@ -228,7 +316,30 @@ where each chunk is a fixed-size consecutive slice (default 1000 tokens) and
 
 **Reference:** Baker, J. P. (1988). *Computational approaches to the study of language*. (See also Richards, 1987, on the type-token ratio problem.)
 
----
+### MATTR — Covington & McFall (2010) — new in v1.0.1
+
+$$\text{MATTR} = \frac{1}{n - w + 1} \sum_{i=1}^{n-w+1} \text{TTR}(\text{window}_i)$$
+
+mean TTR over every consecutive `w`-token window (default 50), advanced one
+token at a time; O(n) via an incremental window counter.
+
+- **Use:** size-robust lexical diversity, stable for texts shorter than
+  typical STTR chunking needs (falls back to raw TTR when `n ≤ w`)
+
+### MTLD — McCarthy & Jarvis (2010) — new in v1.0.1
+
+The number of sequential factor-runs (TTR falling to 0.72) per token count,
+averaged over the forward and backward pass; partial final factors are linearly
+interpolated. Higher = more diverse.
+
+### Guiraud's Root TTR — new in v1.0.1
+
+$$\text{Guiraud} = \frac{|\text{types}|}{\sqrt{|\text{tokens}|}}$$
+
+- **Use:** a one-number size-robust index, common in L2/child-language research
+
+All five indices (TTR, STTR, MATTR, MTLD, Guiraud) are returned together in
+the frequency result's `lexical_diversity` object.
 
 ## Reproducibility
 

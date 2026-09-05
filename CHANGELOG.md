@@ -6,6 +6,72 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
+## [1.0.1] — 2026-09-05 — Linguistics QA round: statistical validity + missing core features
+
+An expert corpus-linguistics review of the v1.0.0 code found seven validity
+issues and a set of missing table-stakes features. This release fixes all of
+them (the full methodology now lives in `docs/METHODOLOGY.md`; new tests in
+`engine/tests/test_linguistics_qa.py`).
+
+### Fixed (statistical validity)
+
+- **Gries' DP is now size-weighted**: expected proportions use each document's
+  token share instead of uniform `1/n`, which is the correct treatment for
+  corpora of unequal document lengths. **DP-norm** (`DP·n/(n−1)`) is reported
+  alongside for cross-corpus comparability, and dispersion results now include
+  **range** (documents containing the term) and `range_percent`.
+- **Collocation marginals aligned with the Sketch Engine / AntConc convention**:
+  `f(node)`, `f(collocate)` and `N` are whole-corpus frequencies (previously
+  computed only within node-containing sentences, which made rankings
+  incomparable with other tools).
+- **Collocates aggregate under the same case+diacritic folding as the node** —
+  `The`/`the` and كِتَاب/كتاب are single rows (previously split).
+- **Keyness vs bundled top-N lists**: words absent from the reference list are
+  excluded from the ranking instead of scoring `f2 = 0` (which produced floods
+  of spurious infinite Log Ratio / %DIFF), with a machine-readable `warnings`
+  array surfaced in the UI. `camel-arabic-top1000.tsv` — which contained the
+  literal text "404: Not Found" from a failed download — was rebuilt from the
+  Leipzig `ara_news_2022_10K` corpus (CC BY 4.0) with its registry SHA updated.
+- **χ² Cochran diagnostic**: collocation rows carry `chi2_min_expected`; the UI
+  warns when expected cells fall below 5.
+- **Odds Ratio** now applies the **Haldane–Anscombe 0.5 correction** on zero
+  cells, so keyness tables are always finite and rankable.
+- **Arabic sentence segmentation**: documents are split into sentences by a
+  rule-based sentencizer (terminal punctuation, newlines, decimal-protection)
+  instead of one giant "sentence" per document — this fixes KWIC context
+  clipping, n-gram sentence boundaries and same-sentence collocation scoping
+  for Arabic. Arabic tokens are now flagged `is_stop` from a shared MSA
+  stopword list, making stopword filtering work for Arabic n-grams and
+  collocations.
+
+### Added (missing core features)
+
+- **KWIC sorting** — AntConc-style sort levels (L1/R1/L2/R2, up to three),
+  applied over the full match set before pagination.
+- **Regex search** (Python syntax, SQLite `REGEXP` UDF) and **phrase
+  queries** (whitespace = multi-word sequence with wildcard support).
+- **Asymmetric collocation spans** (`span_left`/`span_right`), collocate
+  **POS include/exclude** filters, and **stopword-list filtering** for
+  collocations, frequency and keyness.
+- **Fisher's exact test** added to the collocation measure battery.
+- **Lexical diversity battery**: MATTR (rolling-window TTR), MTLD and
+  Guiraud's root TTR join TTR/STTR in every frequency result.
+- **Readability**: Flesch Reading Ease and Flesch–Kincaid grade (English),
+  plus language-neutral LIX/RIX for every language — corpus-level and
+  per-document endpoints.
+- **Per-document statistics** table (tokens, types, sentences, TTR, LIX, RIX).
+- **Compare groups**: frequency pivot by any document metadata variable
+  (genre, year, register …) with per-million normalization per group.
+- **User-editable stopword lists**: CRUD API + Settings manager card; built-in
+  English and Arabic lists resolve virtually.
+- **Root & pattern frequency levels** for Arabic corpora (aggregates the CAMeL
+  morph layer), plus root/pattern concordance levels.
+- **Server-side exports** through the async export queue for n-grams, POS
+  analysis, dispersion, vocabulary profile, readability, document stats and
+  group comparisons (previously client-side JSON only).
+- **Full Coxhead (2000) Academic Word List** (570 families, 10 sublists)
+  replaces the 57-word starter in vocabulary profiling.
+
 ## [1.0.0] — 2026-09-05 — Unified stable release: CorpusMind 1.0.0 + CorpusMind Lens 1.0.0
 
 Both applications ship as **1.0.0** on the same release page. This entry
