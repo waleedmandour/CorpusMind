@@ -6123,3 +6123,143 @@ html[dir="rtl"] .toggle-switch input:checked + .toggle-slider::before {
 .reference-card.installed {
   border-color: var(--success-fg);
 }
+
+/* ====================================================================== */
+/* Vision Suite — v1.2.0 Lens round: batch runner, lenses panel, delete,  */
+/* model picker, provenance badges + the previously-missing selectors     */
+/* (vision-describe-row, vision-batch-content, vision-grid-thumb-img,     */
+/* vision-set-picker-label were used in TSX but had no rules).            */
+/* ====================================================================== */
+
+/* Danger button (delete image / delete set) */
+.btn-danger {
+  background: var(--error-bg, #b91c1c);
+  color: #fff;
+  border: 1px solid var(--error-fg, #dc2626);
+  border-radius: var(--radius-md, 8px);
+  padding: var(--space-2) var(--space-4);
+  min-height: 44px;
+  font-size: 14px;
+  cursor: pointer;
+}
+.btn-danger:hover { filter: brightness(1.1); }
+.btn-danger:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Toolbar status line (export / delete / create feedback) */
+.vision-action-msg {
+  margin: var(--space-2) 0;
+  white-space: pre-wrap;
+}
+
+/* Set picker label was previously unstyled */
+.vision-set-picker-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted, #6b7280);
+}
+
+/* Grid item wrapper with corner delete button */
+.vision-grid-item-wrap {
+  position: relative;
+}
+.vision-grid-delete {
+  position: absolute;
+  inset-block-start: 6px;
+  inset-inline-end: 6px;
+  inline-size: 24px;
+  block-size: 24px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  z-index: 2;
+}
+.vision-grid-item-wrap:hover .vision-grid-delete,
+.vision-grid-item-wrap:focus-within .vision-grid-delete {
+  display: inline-flex;
+}
+.vision-grid-delete:hover { background: #b91c1c; }
+.vision-grid-thumb-img { display: block; }
+
+/* Describe row (was inline-styled before) */
+.vision-describe-row {
+  margin: var(--space-2) 0;
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* Vision model picker */
+.vision-model-select {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 13px;
+}
+.vision-model-select span {
+  font-weight: 600;
+  color: var(--text-muted, #6b7280);
+}
+.vision-model-select select { min-inline-size: 170px; }
+
+/* Batch content wrapper (was unstyled) */
+.vision-batch-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* Discourse lenses panel */
+.vision-lenses-panel,
+.vision-batchrun-panel {
+  margin-block-start: var(--space-4);
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: var(--radius-lg, 12px);
+  padding: var(--space-4);
+}
+.vision-lenses-controls {
+  display: flex;
+  gap: var(--space-3);
+  align-items: end;
+  flex-wrap: wrap;
+  margin-block: var(--space-2);
+}
+.vision-lens-result {
+  margin-block-start: var(--space-3);
+}
+.vision-lens-summary {
+  margin: var(--space-2) 0;
+  color: var(--text);
+}
+.vision-mode-badge {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.vision-mode-badge.heuristic {
+  background: var(--surface-2, #f3f4f6);
+  color: var(--text-muted, #6b7280);
+}
+.vision-mode-badge.llm {
+  background: var(--brand-500);
+  color: #fff;
+}
+
+/* Batch runner progress */
+.vision-batchrun-status {
+  margin-block-start: var(--space-2);
+}
+.vision-batchrun-status ul {
+  margin: var(--space-1) 0 0;
+  padding-inline-start: var(--space-5);
+}

@@ -65,6 +65,25 @@ export function suggestFix(
     }
     return "Make sure the model server (Ollama / LM Studio) is running, then re-send your message.";
   }
+  // v1.2.0 Lens round — vision-specific failures
+  if (m.includes("does not support image input") || m.includes("no vision model")) {
+    return "Install a vision model: run `ollama pull qwen3-vl:2b` in a terminal (1.9 GB, multilingual OCR incl. Arabic), then retry.";
+  }
+  if (m.includes("magic-byte")) {
+    return "The file isn't a real image — re-export it as PNG or JPEG and upload it again.";
+  }
+  if (m.includes("rename the file")) {
+    return "The file extension doesn't match its content — rename it to the real format before uploading.";
+  }
+  if (m.includes("per-image limit") || (code === 413 && ep.includes("image"))) {
+    return "The image exceeds the 25 MB limit — downscale or recompress it and upload again.";
+  }
+  if (m.includes("too many files")) {
+    return "Split the upload into smaller batches (max 50 images per upload).";
+  }
+  if (m.includes("batch run is already in progress")) {
+    return "A batch run is already running for this set — watch its progress bar or cancel it first.";
+  }
   // Reference-corpus download hints (engine messages mention these paths)
   if (m.includes("import archive") || ep.includes("reference-corpora")) {
     if (m.includes("504") || m.includes("gateway") || m.includes("timed out") || m.includes("timeout")) {

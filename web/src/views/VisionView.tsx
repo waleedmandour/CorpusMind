@@ -1,37 +1,33 @@
 /**
- * VisionView — Suite B (9.1–9.10).
+ * VisionView — Suite B (9.1–9.18).
  *
- * CorpusMind Lens build step 2: image set manager + analysis viewer.
- *
- * This is the first real frontend for the vision subsystem. The backend
- * has been live since Phase 4 — every route this view calls already
- * exists and is tested (engine/tests/test_phase4_vision.py). This view
- * is intentionally model-free: it surfaces the cached colour /
- * composition / OCR analysis the engine produces at upload time, with
- * no LLM dependency. Vision-LM-backed routes (describe, CDA+llm, etc.)
- * are later build steps and will slot in as siblings to the panels
- * rendered here.
+ * CorpusMind Lens core view. v1.2.0 Lens round: this view is now
+ * fully i18n (en/ar), and gains the missing feature surface:
+ *   - Discourse lenses panel (the 8 Phase-5 routes were backend-only)
+ *   - Vision-model picker (capability-aware auto-pick or explicit)
+ *   - Batch runner (analyse the whole set — no per-image clicking)
+ *   - Set/image export + deletion
+ *   - Provenance badges (heuristic vs vision-LM, model, confidence)
  *
  * Layout (top-to-bottom):
- *   1. Toolbar — image-set picker + "New set" button.
- *   2. Dropzone — drag-drop or click to upload images into the active set.
- *   3. Image grid — thumbnails of all images in the active set.
- *   4. Analysis drawer — when an image is selected, shows its cached
- *      analysis (OCR text, dominant colours, composition geometry) and
- *      a button to run Visual Grammar analysis on it.
- *
- * Accessibility:
- *   - The dropzone is a button (role + tabIndex + Enter/Space handler).
- *   - The image grid is a list of buttons, not a list of divs, so the
- *     screen reader announces them as actionable.
- *   - Every section has an <h3> heading so the page has a real outline.
+ *   1. Toolbar — image-set picker, new-set, delete-set, export set.
+ *   2. Dropzone + pending upload list.
+ *   3. Image grid (thumbnails, delete per image).
+ *   4. Analysis drawer for the selected image (OCR / colours /
+ *      composition + Vision-LM describe + Visual Grammar + Discourse
+ *      lenses + alignment + facial analysis).
+ *   5. Batch runner + read-only batch view.
  */
 import { useState, useRef, type KeyboardEvent } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
 
-import { api, type ImageRecord, type ImageAnalysis, type VisualGrammarResult, type BatchAnalysisResult } from "@/lib/api";
+import { api, exportWithFeedback, type ImageRecord, type ImageAnalysis, type VisualGrammarResult, type BatchAnalysisResult, type DiscourseResult, type DiscourseClaim } from "@/lib/api";
+import { ExportButton } from "@/components/ExportButton";
 import { useApp } from "@/store/app";
+import { useUI } from "@/store/ui";
+import { t, type TranslationKey } from "@/lib/i18n";
+import { useTroubleshoot } from "@/store/troubleshooting";
 
 
 // ---------------------------------------------------------------------------
@@ -44,15 +40,52 @@ function formatBytes(n: number): string {
   return `${(n / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+/** Localize a template that contains {n}/{done}/{total} placeholders. */
+function tf(lang: "en" | "ar", key: TranslationKey, vars: Record<string, string | number>): string {
+  let s = t(lang, key);
+  for (const [k, v] of Object.entries(vars)) s = s.replaceAll(`{${k}}`, String(v));
+  return s;
+}
+
+/** Route an error into Smart Troubleshooting so the Fix: hint appears. */
+function reportVisionError(e: unknown, endpoint: string, context: string): string {
+  const msg = (e as Error)?.message || String(e);
+  useTroubleshoot.getState().captureError({
+    message: msg,
+    endpoint,
+    context,
+  });
+  return msg;
+}
+
 const IMAGE_ACCEPT = "image/png,image/jpeg,image/webp,image/gif";
 
-// Note on thumbnails: the backend stores raw image bytes on disk under
-// data_dir/images/{id}.{ext} but does NOT expose a public HTTP route to
-// fetch them (the engine intentionally serves only analysis results, not
-// raw files). For v1 we render a placeholder card per image with the
-// metadata we DO have (filename, dimensions, size, caption). The actual
-// pixel preview is a later enhancement — either a /images/{id}/thumbnail
-// route or rendering the local File object URL during upload.
+// The 8 discourse-lens routes (Phase 5 §9.11–9.18). Labels are i18n keys.
+const LENS_ROUTES: Array<{ route: string; labelKey: TranslationKey; isCda?: boolean }> = [
+  { route: "social-semiotic", labelKey: "vision_lens_framework" },
+  { route: "cda", labelKey: "vision_lens_framework", isCda: true },
+  { route: "persuasion", labelKey: "vision_lens_framework" },
+  { route: "framing", labelKey: "vision_lens_framework" },
+  { route: "narrative", labelKey: "vision_lens_framework" },
+  { route: "visual-metaphor", labelKey: "vision_lens_framework" },
+  { route: "emotion", labelKey: "vision_lens_framework" },
+  { route: "cultural", labelKey: "vision_lens_framework" },
+];
+
+// Friendly route → display names (framework names come from the engine
+// response; these only back the dropdown).
+const LENS_NAMES: Record<string, { en: string; ar: string }> = {
+  "social-semiotic": { en: "Social semiotics", ar: "السيميائيات الاجتماعية" },
+  "cda": { en: "Critical discourse analysis", ar: "التحليل النقدي للخطاب" },
+  "persuasion": { en: "Persuasion strategies", ar: "استراتيجيات الإقناع" },
+  "framing": { en: "Framing", ar: "ال تأطير" },
+  "narrative": { en: "Narrative structure", ar: "البنية السردية" },
+  "visual-metaphor": { en: "Visual metaphor", ar: "الاستعارة البصرية" },
+  "emotion": { en: "Emotion appeal", ar: "مناشدة العاطفة" },
+  "cultural": { en: "Cultural semiotics", ar: "السيميائيات الثقافية" },
+};
+
+const CDA_VARIANTS = ["fairclough", "van_dijk", "wodak", "machin_mayr"] as const;
 
 
 // ---------------------------------------------------------------------------
@@ -61,11 +94,13 @@ const IMAGE_ACCEPT = "image/png,image/jpeg,image/webp,image/gif";
 
 export function VisionView() {
   const cid = useApp((s) => s.activeCorpusId);
+  const lang = useUI((s) => s.lang);
   const queryClient = useQueryClient();
   const [activeSetId, setActiveSetId] = useState<string | null>(null);
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
   const [showNewSetForm, setShowNewSetForm] = useState(false);
   const [newSetName, setNewSetName] = useState("");
+  const [actionMsg, setActionMsg] = useState("");
 
   // List image sets for the active corpus.
   const setsQuery = useQuery({
@@ -83,10 +118,8 @@ export function VisionView() {
   if (!cid) {
     return (
       <div className="empty-state">
-        <h2>Select a corpus</h2>
-        <p className="hint">
-          Image sets live inside a corpus. Pick one from <strong>Your Corpus</strong> in the sidebar.
-        </p>
+        <h2>{t(lang, "vision_select_corpus_h")}</h2>
+        <p className="hint">{t(lang, "vision_select_corpus_hint")}</p>
       </div>
     );
   }
@@ -98,19 +131,49 @@ export function VisionView() {
       setNewSetName("");
       setShowNewSetForm(false);
       setActiveSetId(created.id);
+      setActionMsg("");
       // Invalidate the list so the new set appears at the top.
       queryClient.invalidateQueries({ queryKey: ["image-sets", cid] });
     } catch (e) {
-      // Issue 21 fix: surface creation failures (dialog stays open).
-      alert(`Could not create image set: ${(e as Error).message}`);
+      // Issue 21 fix: surface creation failures (dialog stays open) —
+      // inline message + Smart Troubleshooting instead of alert().
+      const msg = reportVisionError(e, `/corpora/${cid}/image-sets`, "Create image set");
+      setActionMsg(`${t(lang, "vision_create_failed")}: ${msg}`);
     }
+  };
+
+  const onDeleteSet = async () => {
+    if (!activeSetId) return;
+    const name = setsQuery.data?.find((s) => s.id === activeSetId)?.name ?? "";
+    if (!window.confirm(`${t(lang, "vision_delete_confirm_set")}\n\n${name}`)) return;
+    try {
+      await api.deleteImageSet(activeSetId);
+      setSelectedImageId(null);
+      setActiveSetId(null);
+      setActionMsg(t(lang, "vision_deleted"));
+      queryClient.invalidateQueries({ queryKey: ["image-sets", cid] });
+    } catch (e) {
+      const msg = reportVisionError(e, `/image-sets/${activeSetId}`, "Delete image set");
+      setActionMsg(`${t(lang, "vision_delete_failed")}: ${msg}`);
+    }
+  };
+
+  const exportSet = async (fmt: string) => {
+    if (!activeSetId) return;
+    const name = setsQuery.data?.find((s) => s.id === activeSetId)?.name ?? "image-set";
+    const slug = name.replace(/[^\w-]+/g, "-").slice(0, 40) || "image-set";
+    await exportWithFeedback(
+      () => api.exportImageSet(activeSetId, fmt as "xlsx"),
+      `image-set-${slug}.${fmt}`,
+      (msg) => setActionMsg(msg),
+    );
   };
 
   return (
     <div className="vision-view">
       <div className="vision-toolbar">
         <label className="vision-set-picker">
-          <span className="vision-set-picker-label">Image set</span>
+          <span className="vision-set-picker-label">{t(lang, "vision_set_label")}</span>
           <select
             value={activeSetId ?? ""}
             onChange={(e) => {
@@ -118,7 +181,7 @@ export function VisionView() {
               setSelectedImageId(null);
             }}
           >
-            <option value="">- Select -</option>
+            <option value="">{t(lang, "vision_select")}</option>
             {setsQuery.data?.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name} ({s.image_count})
@@ -130,9 +193,19 @@ export function VisionView() {
           className="btn-secondary"
           onClick={() => setShowNewSetForm((v) => !v)}
         >
-          {showNewSetForm ? "Cancel" : "+ New set"}
+          {showNewSetForm ? t(lang, "vision_cancel") : t(lang, "vision_new_set")}
         </button>
+        {activeSetId && (
+          <>
+            <ExportButtonVision onExport={exportSet} />
+            <button className="btn-danger" onClick={onDeleteSet}>
+              {t(lang, "vision_delete_set")}
+            </button>
+          </>
+        )}
       </div>
+
+      {actionMsg && <div className="hint vision-action-msg">{actionMsg}</div>}
 
       {showNewSetForm && (
         <div className="vision-new-set-form">
@@ -141,27 +214,25 @@ export function VisionView() {
             value={newSetName}
             onChange={(e) => setNewSetName(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && onCreateSet()}
-            placeholder="Set name (e.g. 'News front pages, July 2026')"
+            placeholder={t(lang, "vision_set_name_placeholder")}
             autoFocus
           />
           <button className="btn-primary" onClick={onCreateSet} disabled={!newSetName.trim()}>
-            Create
+            {t(lang, "vision_create")}
           </button>
         </div>
       )}
 
-      {setsQuery.isLoading && <div className="hint">Loading image sets…</div>}
+      {setsQuery.isLoading && <div className="hint">{t(lang, "vision_loading_sets")}</div>}
       {setsQuery.error && (
         <div className="uploader-status error">
-          Failed to load image sets: {(setsQuery.error as Error).message}
+          {t(lang, "vision_failed_sets")}: {(setsQuery.error as Error).message}
         </div>
       )}
       {setsQuery.data && setsQuery.data.length === 0 && !showNewSetForm && (
         <div className="empty-state">
-          <h2>No image sets yet</h2>
-          <p className="hint">
-            Create one with <strong>+ New set</strong> above, then drag images in.
-          </p>
+          <h2>{t(lang, "vision_no_sets_h")}</h2>
+          <p className="hint">{t(lang, "vision_no_sets_hint")}</p>
         </div>
       )}
 
@@ -174,6 +245,15 @@ export function VisionView() {
       )}
     </div>
   );
+}
+
+
+// ---------------------------------------------------------------------------
+// ExportButtonVision — ExportButton wired to the image-set export endpoint
+// ---------------------------------------------------------------------------
+
+function ExportButtonVision({ onExport }: { onExport: (fmt: string) => void }) {
+  return <ExportButton label="Export" onExport={(fmt) => onExport(fmt)} />;
 }
 
 
@@ -191,6 +271,7 @@ function ImageSetWorkspace({
   onSelectImage: (id: string | null) => void;
 }) {
   const cid = useApp((s) => s.activeCorpusId)!;
+  const lang = useUI((s) => s.lang);
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -226,10 +307,8 @@ function ImageSetWorkspace({
       await uploadMutation.mutateAsync({ files: pendingFiles, caption });
       setPendingFiles([]);
       setCaption("");
-    } catch {
-      // Issue 21 fix: the rejection was previously unhandled — pending files
-      // were silently kept and no feedback was shown. uploadMutation's
-      // onError already surfaces the message; keep state intact for retry.
+    } catch (e) {
+      reportVisionError(e, `/image-sets/${setId}/images`, "Image upload");
     }
   };
 
@@ -270,16 +349,14 @@ function ImageSetWorkspace({
           aria-hidden="true"
         />
         <div className="dropzone-icon">{"\u2191"}</div>
-        <div className="dropzone-label">
-          Drop images here or click to upload (PNG, JPEG, WebP, GIF)
-        </div>
+        <div className="dropzone-label">{t(lang, "vision_drop_label")}</div>
       </div>
 
       {pendingFiles.length > 0 && (
         <div className="vision-pending-upload">
           <div className="vision-pending-header">
-            <strong>{pendingFiles.length} image(s) ready to upload</strong>
-            <button className="btn-small" onClick={() => setPendingFiles([])}>Clear</button>
+            <strong>{pendingFiles.length} {t(lang, "vision_ready_upload")}</strong>
+            <button className="btn-small" onClick={() => setPendingFiles([])}>{t(lang, "vision_clear")}</button>
           </div>
           <ul className="vision-pending-list">
             {pendingFiles.slice(0, 8).map((f, i) => (
@@ -289,16 +366,16 @@ function ImageSetWorkspace({
               </li>
             ))}
             {pendingFiles.length > 8 && (
-              <li className="vision-pending-more">…and {pendingFiles.length - 8} more</li>
+              <li className="vision-pending-more">{tf(lang, "vision_and_more", { n: pendingFiles.length - 8 })}</li>
             )}
           </ul>
           <label className="vision-caption-input">
-            <span>Caption (optional, applies to all images in this upload)</span>
+            <span>{t(lang, "vision_caption_label")}</span>
             <input
               type="text"
               value={caption}
               onChange={(e) => setCaption(e.target.value)}
-              placeholder="e.g. Front page of Al-Ahram, 27 July 2026"
+              placeholder={t(lang, "vision_caption_placeholder")}
             />
           </label>
           <button
@@ -306,25 +383,27 @@ function ImageSetWorkspace({
             onClick={onUpload}
             disabled={uploadMutation.isPending}
           >
-            {uploadMutation.isPending ? "Uploading…" : `Upload ${pendingFiles.length} image(s)`}
+            {uploadMutation.isPending
+              ? t(lang, "vision_uploading")
+              : tf(lang, "vision_upload_btn", { n: pendingFiles.length })}
           </button>
           {uploadMutation.error && (
             <div className="uploader-status error">
-              Upload failed: {(uploadMutation.error as Error).message}
+              {t(lang, "vision_upload_failed")}: {(uploadMutation.error as Error).message}
             </div>
           )}
         </div>
       )}
 
-      <h3 className="vision-section-heading">Images in this set</h3>
-      {imagesQuery.isLoading && <div className="hint">Loading images…</div>}
+      <h3 className="vision-section-heading">{t(lang, "vision_images_in_set")}</h3>
+      {imagesQuery.isLoading && <div className="hint">{t(lang, "vision_loading_images")}</div>}
       {imagesQuery.error && (
         <div className="uploader-status error">
-          Failed to load images: {(imagesQuery.error as Error).message}
+          {t(lang, "vision_failed_images")}: {(imagesQuery.error as Error).message}
         </div>
       )}
       {imagesQuery.data && imagesQuery.data.length === 0 && (
-        <div className="hint">No images yet. Drag some in above.</div>
+        <div className="hint">{t(lang, "vision_no_images")}</div>
       )}
       {imagesQuery.data && imagesQuery.data.length > 0 && (
         <div className="vision-grid" role="list">
@@ -332,8 +411,10 @@ function ImageSetWorkspace({
             <ImageGridItem
               key={img.id}
               image={img}
+              setId={setId}
               selected={img.id === selectedImageId}
               onSelect={() => onSelectImage(img.id === selectedImageId ? null : img.id)}
+              onDeleted={() => onSelectImage(null)}
             />
           ))}
         </div>
@@ -344,9 +425,14 @@ function ImageSetWorkspace({
       )}
 
       {selectedImageId && (
+        <DiscourseLensesPanel imageId={selectedImageId} />
+      )}
+
+      {selectedImageId && (
         <AlignmentPanel imageId={selectedImageId} />
       )}
 
+      <BatchRunnerPanel isetId={setId} />
       <BatchViewPanel isetId={setId} />
     </div>
   );
@@ -359,52 +445,116 @@ function ImageSetWorkspace({
 
 function ImageGridItem({
   image,
+  setId,
   selected,
   onSelect,
+  onDeleted,
 }: {
   image: ImageRecord;
+  setId: string;
   selected: boolean;
   onSelect: () => void;
+  onDeleted: () => void;
 }) {
-  // Issue 19 fix: the engine now serves a scoped, downscaled thumbnail
-  // (GET /images/{id}/thumbnail) — render the actual image with the
-  // placeholder as fallback while loading or on failure.
+  const lang = useUI((s) => s.lang);
+  const cid = useApp((s) => s.activeCorpusId)!;
+  const queryClient = useQueryClient();
   const thumbQuery = useQuery({
     queryKey: ["image-thumbnail", image.id],
     queryFn: () => api.fetchImageThumbnailUrl(image.id),
     staleTime: Infinity,
     retry: false,
   });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => api.deleteImage(image.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["images", setId] });
+      queryClient.invalidateQueries({ queryKey: ["image-sets", cid] });
+      onDeleted();
+    },
+  });
+
+  const onDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!window.confirm(t(lang, "vision_delete_confirm_image"))) return;
+    deleteMutation.mutate();
+  };
+
   return (
-    <button
-      className={clsx("vision-grid-item", { selected })}
-      onClick={onSelect}
-      role="listitem"
-      aria-pressed={selected}
-      title={image.filename}
-    >
-      <div className="vision-grid-thumb" aria-hidden="true">
-        {thumbQuery.data ? (
-          <img
-            src={thumbQuery.data}
-            alt=""
-            className="vision-grid-thumb-img"
-            style={{ width: "100%", height: "100%", objectFit: "cover" }}
-          />
-        ) : (
-          <span className="vision-grid-thumb-icon">{"\u25A3"}</span>
-        )}
-      </div>
-      <div className="vision-grid-meta">
-        <div className="vision-grid-filename" title={image.filename}>{image.filename}</div>
-        <div className="vision-grid-dims">
-          {image.width}×{image.height} · {formatBytes(image.size_bytes)}
+    <div className={clsx("vision-grid-item-wrap", { selected })}>
+      <button
+        className={clsx("vision-grid-item", { selected })}
+        onClick={onSelect}
+        role="listitem"
+        aria-pressed={selected}
+        title={image.filename}
+      >
+        <div className="vision-grid-thumb" aria-hidden="true">
+          {thumbQuery.data ? (
+            <img
+              src={thumbQuery.data}
+              alt=""
+              className="vision-grid-thumb-img"
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            />
+          ) : (
+            <span className="vision-grid-thumb-icon">{"\u25A3"}</span>
+          )}
         </div>
-        {image.caption && (
-          <div className="vision-grid-caption" title={image.caption}>{image.caption}</div>
-        )}
-      </div>
-    </button>
+        <div className="vision-grid-meta">
+          <div className="vision-grid-filename" title={image.filename}>{image.filename}</div>
+          <div className="vision-grid-dims">
+            {image.width}×{image.height} · {formatBytes(image.size_bytes)}
+          </div>
+          {image.caption && (
+            <div className="vision-grid-caption" title={image.caption}>{image.caption}</div>
+          )}
+        </div>
+      </button>
+      <button
+        className="vision-grid-delete"
+        onClick={onDelete}
+        disabled={deleteMutation.isPending}
+        title={t(lang, "vision_delete_image")}
+        aria-label={t(lang, "vision_delete_image")}
+      >
+        ×
+      </button>
+    </div>
+  );
+}
+
+
+// ---------------------------------------------------------------------------
+// Vision model picker — capability-aware auto pick or explicit model
+// ---------------------------------------------------------------------------
+
+function VisionModelSelect({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const lang = useUI((s) => s.lang);
+  const modelsQuery = useQuery({
+    queryKey: ["vision-models"],
+    queryFn: () => api.listModels("ollama"),
+    staleTime: 30_000,
+    retry: false,
+  });
+  const models = modelsQuery.data?.models ?? [];
+  return (
+    <label className="vision-model-select">
+      <span>{t(lang, "vision_vlm_model_label")}</span>
+      <select value={value} onChange={(e) => onChange(e.target.value)}>
+        <option value="">{t(lang, "vision_vlm_auto")}</option>
+        {models.map((m) => (
+          <option key={m} value={m}>{m}</option>
+        ))}
+      </select>
+    </label>
   );
 }
 
@@ -414,27 +564,28 @@ function ImageGridItem({
 // ---------------------------------------------------------------------------
 
 function AnalysisDrawer({ imageId }: { imageId: string }) {
+  const lang = useUI((s) => s.lang);
   const queryClient = useQueryClient();
   const analysisQuery = useQuery({
     queryKey: ["image-analysis", imageId],
     queryFn: () => api.getImageAnalysis(imageId),
   });
 
-  // Issue 16 fix: POST /images/{id}/describe had no frontend surface, so the
-  // "Vision-LM descriptions" column in the batch view could never populate.
   const [describeMsg, setDescribeMsg] = useState("");
+  const [visionModel, setVisionModel] = useState("");
   const describeMutation = useMutation({
-    mutationFn: () => api.describeImage(imageId),
+    mutationFn: () => api.describeImage(imageId, visionModel || undefined),
     onSuccess: (data) => {
-      setDescribeMsg(data.cached ? "Loaded cached description." : "Description generated.");
+      setDescribeMsg(data.cached ? t(lang, "vision_cached_desc") : t(lang, "vision_desc_generated"));
       queryClient.invalidateQueries({ queryKey: ["image-analysis", imageId] });
       queryClient.invalidateQueries({ queryKey: ["batch-analysis"] });
     },
-    onError: (e: Error) => setDescribeMsg(`Error: ${e.message}`),
+    onError: (e: Error) => {
+      const msg = reportVisionError(e, `/images/${imageId}/describe`, "Vision-LM describe");
+      setDescribeMsg(`${t(lang, "vision_failed")}: ${msg}`);
+    },
   });
 
-  // Visual Grammar is a separate POST that runs on demand (it's not
-  // cached at upload time). Lazy-load it only when the user clicks.
   const [showVisualGrammar, setShowVisualGrammar] = useState(false);
   const vgQuery = useQuery({
     queryKey: ["visual-grammar", imageId],
@@ -442,11 +593,11 @@ function AnalysisDrawer({ imageId }: { imageId: string }) {
     enabled: showVisualGrammar,
   });
 
-  if (analysisQuery.isLoading) return <div className="hint">Loading analysis…</div>;
+  if (analysisQuery.isLoading) return <div className="hint">{t(lang, "vision_analysing")}</div>;
   if (analysisQuery.error) {
     return (
       <div className="uploader-status error">
-        Failed to load analysis: {(analysisQuery.error as Error).message}
+        {(analysisQuery.error as Error).message}
       </div>
     );
   }
@@ -456,44 +607,43 @@ function AnalysisDrawer({ imageId }: { imageId: string }) {
   return (
     <div className="vision-analysis-drawer">
       <h3 className="vision-section-heading">
-        Analysis: <code>{a.filename}</code>
+        {t(lang, "vision_analysis_of")} <code>{a.filename}</code>
       </h3>
       <div className="result-meta">
-        Dimensions: <strong>{a.dimensions}</strong>
-        {a.caption && <> · Caption: <strong>{a.caption}</strong></>}
+        {t(lang, "vision_dimensions")}: <strong>{a.dimensions}</strong>
+        {a.caption && <> · {t(lang, "vision_caption")}: <strong>{a.caption}</strong></>}
       </div>
 
-      {/* Issue 16 fix: run /describe so VLM descriptions (and the batch
-          view's descriptions column) can actually be populated. */}
-      <div className="vision-describe-row" style={{ margin: "8px 0", display: "flex", gap: 8, alignItems: "center" }}>
+      <div className="vision-describe-row">
+        <VisionModelSelect value={visionModel} onChange={setVisionModel} />
         <button
           className="btn-secondary"
           onClick={() => describeMutation.mutate()}
           disabled={describeMutation.isPending}
         >
-          {describeMutation.isPending ? "Describing…" : "Run Vision-LM describe"}
+          {describeMutation.isPending ? t(lang, "vision_describing") : t(lang, "vision_describe_btn")}
         </button>
         {describeMsg && <span className="hint">{describeMsg}</span>}
       </div>
 
       <div className="vision-analysis-cols">
-        <AnalysisCol title="OCR text">
+        <AnalysisCol title={t(lang, "vision_col_ocr")}>
           {a.analysis.ocr.text ? (
             <>
               <pre className="vision-ocr-text">{a.analysis.ocr.text}</pre>
               <div className="hint">
-                Engine: <code>{a.analysis.ocr.engine}</code> ·
-                Confidence: {(a.analysis.ocr.confidence * 100).toFixed(0)}% ·
-                Words: {a.analysis.ocr.word_count} ·
-                Language: <code>{a.analysis.ocr.language}</code>
+                {t(lang, "vision_engine")}: <code>{a.analysis.ocr.engine}</code> ·{" "}
+                {t(lang, "vision_confidence")}: {(a.analysis.ocr.confidence * 100).toFixed(0)}% ·{" "}
+                {t(lang, "vision_words")}: {a.analysis.ocr.word_count} ·{" "}
+                {t(lang, "vision_language")}: <code>{a.analysis.ocr.language}</code>
               </div>
             </>
           ) : (
-            <div className="hint">No text detected.</div>
+            <div className="hint">{t(lang, "vision_no_text")}</div>
           )}
         </AnalysisCol>
 
-        <AnalysisCol title="Dominant colours">
+        <AnalysisCol title={t(lang, "vision_col_colours")}>
           <div className="vision-colour-swatches">
             {a.analysis.colours.dominant_colours.slice(0, 8).map((c, i) => (
               <div
@@ -507,10 +657,10 @@ function AnalysisDrawer({ imageId }: { imageId: string }) {
             ))}
           </div>
           <div className="hint">
-            Brightness: {a.analysis.colours.brightness.toFixed(2)} ·
-            Contrast: {a.analysis.colours.contrast.toFixed(2)} ·
-            Saturation: {a.analysis.colours.saturation.toFixed(2)} ·
-            Warm/cold: {a.analysis.colours.warm_cold_balance.toFixed(2)}
+            {t(lang, "vision_brightness")}: {a.analysis.colours.brightness.toFixed(2)} ·{" "}
+            {t(lang, "vision_contrast")}: {a.analysis.colours.contrast.toFixed(2)} ·{" "}
+            {t(lang, "vision_saturation")}: {a.analysis.colours.saturation.toFixed(2)} ·{" "}
+            {t(lang, "vision_warm_cold")}: {a.analysis.colours.warm_cold_balance.toFixed(2)}
           </div>
           {a.analysis.colours.colour_symbolism_notes.length > 0 && (
             <ul className="vision-symbolism-notes">
@@ -521,17 +671,17 @@ function AnalysisDrawer({ imageId }: { imageId: string }) {
           )}
         </AnalysisCol>
 
-        <AnalysisCol title="Composition">
+        <AnalysisCol title={t(lang, "vision_col_composition")}>
           <div className="hint">
-            Visual balance: <strong>{a.analysis.composition.visual_balance.toFixed(2)}</strong> ·
-            Framing balance: <strong>{a.analysis.composition.framing_balance.toFixed(2)}</strong>
+            {t(lang, "vision_visual_balance")}: <strong>{a.analysis.composition.visual_balance.toFixed(2)}</strong> ·{" "}
+            {t(lang, "vision_framing_balance")}: <strong>{a.analysis.composition.framing_balance.toFixed(2)}</strong>
           </div>
           <div className="hint">
-            Salience centre: ({a.analysis.composition.salience_centre[0].toFixed(2)}, {a.analysis.composition.salience_centre[1].toFixed(2)})
+            {t(lang, "vision_salience")}: ({a.analysis.composition.salience_centre[0].toFixed(2)}, {a.analysis.composition.salience_centre[1].toFixed(2)})
           </div>
           {Object.entries(a.analysis.composition.information_value).length > 0 && (
             <div className="vision-info-value">
-              <strong>Information value:</strong>
+              <strong>{t(lang, "vision_info_value")}:</strong>
               <ul>
                 {Object.entries(a.analysis.composition.information_value).map(([k, v]) => (
                   <li key={k}><code>{k}</code>: {(v * 100).toFixed(0)}%</li>
@@ -548,14 +698,14 @@ function AnalysisDrawer({ imageId }: { imageId: string }) {
           onClick={() => setShowVisualGrammar((v) => !v)}
           aria-expanded={showVisualGrammar}
         >
-          {showVisualGrammar ? "Hide Visual Grammar analysis" : "Run Visual Grammar analysis (Kress & van Leeuwen)"}
+          {showVisualGrammar ? t(lang, "vision_vg_hide") : t(lang, "vision_vg_run")}
         </button>
         {showVisualGrammar && (
           <>
-            {vgQuery.isLoading && <div className="hint">Analysing…</div>}
+            {vgQuery.isLoading && <div className="hint">{t(lang, "vision_analysing")}</div>}
             {vgQuery.error && (
               <div className="uploader-status error">
-                Visual Grammar failed: {(vgQuery.error as Error).message}
+                {t(lang, "vision_vg_failed")}: {(vgQuery.error as Error).message}
               </div>
             )}
             {vgQuery.data && (
@@ -584,18 +734,19 @@ function AnalysisCol({ title, children }: { title: string; children: React.React
 // ---------------------------------------------------------------------------
 
 function VisualGrammarPanel({ data }: { data: VisualGrammarResult }) {
+  const lang = useUI((s) => s.lang);
   return (
     <div className="vision-vg-panel">
       <div className="result-meta">
-        Framework: <strong>{data.framework}</strong>
+        {t(lang, "vision_framework")}: <strong>{data.framework}</strong>
       </div>
       <div className="vision-vg-scores">
-        <span>Representational: <strong>{data.scores.representational.claim_count} claims</strong> (avg conf {data.scores.representational.avg_confidence.toFixed(2)})</span>
-        <span>Interactive: <strong>{data.scores.interactive.claim_count} claims</strong> (avg conf {data.scores.interactive.avg_confidence.toFixed(2)})</span>
-        <span>Compositional: <strong>{data.scores.compositional.claim_count} claims</strong> (avg conf {data.scores.compositional.avg_confidence.toFixed(2)})</span>
+        <span>{t(lang, "vision_representational")}: <strong>{data.scores.representational.claim_count} {t(lang, "vision_claims")}</strong> ({t(lang, "vision_avg_conf")} {data.scores.representational.avg_confidence.toFixed(2)})</span>
+        <span>{t(lang, "vision_interactive")}: <strong>{data.scores.interactive.claim_count} {t(lang, "vision_claims")}</strong> ({t(lang, "vision_avg_conf")} {data.scores.interactive.avg_confidence.toFixed(2)})</span>
+        <span>{t(lang, "vision_compositional")}: <strong>{data.scores.compositional.claim_count} {t(lang, "vision_claims")}</strong> ({t(lang, "vision_avg_conf")} {data.scores.compositional.avg_confidence.toFixed(2)})</span>
       </div>
       {data.claims.length === 0 ? (
-        <div className="hint">No claims produced. This is unusual — the image may be too uniform for the heuristic to find features.</div>
+        <div className="hint">{t(lang, "vision_vg_no_claims")}</div>
       ) : (
         <ul className="vision-vg-claims">
           {data.claims.map((c, i) => (
@@ -621,33 +772,170 @@ function VisualGrammarPanel({ data }: { data: VisualGrammarResult }) {
 
 
 // ---------------------------------------------------------------------------
-// AlignmentPanel — image-text alignment inspector (build step 6)
-//
-// Frontend for the /images/{img_id}/align route. Lets the user enter
-// co-occurring text, choose heuristic/llm/both mode, and see the
-// alignments side by side. The "both" mode shows heuristic and LLM
-// alignments together so the user can compare which mode produced
-// what — honest about which path produced the output.
+// DiscourseLensesPanel — the 8 Phase-5 discourse routes, reachable at last
+// (v1.2.0). Heuristic or vision-LM mode, framework dropdown fed by the
+// engine's /frameworks catalogue, provenance badges on every claim.
+// ---------------------------------------------------------------------------
+
+function DiscourseLensesPanel({ imageId }: { imageId: string }) {
+  const lang = useUI((s) => s.lang);
+  const queryClient = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [route, setRoute] = useState<string>("social-semiotic");
+  const [cdaVariant, setCdaVariant] = useState<string>("fairclough");
+  const [mode, setMode] = useState<"heuristic" | "llm">("heuristic");
+  const [visionModel, setVisionModel] = useState("");
+  const [result, setResult] = useState<DiscourseResult | null>(null);
+  const [running, setRunning] = useState(false);
+  const [errMsg, setErrMsg] = useState("");
+
+  const run = async () => {
+    setRunning(true);
+    setErrMsg("");
+    try {
+      const r = await api.runDiscourseLens(imageId, route, {
+        mode,
+        model: visionModel || null,
+        cdaFramework: cdaVariant,
+      });
+      setResult(r);
+      queryClient.invalidateQueries({ queryKey: ["batch-analysis"] });
+    } catch (e) {
+      const msg = reportVisionError(e, `/images/${imageId}/${route}`, `Discourse lens: ${route}`);
+      setErrMsg(`${t(lang, "vision_lens_failed")}: ${msg}`);
+      setResult(null);
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  return (
+    <div className="vision-lenses-panel">
+      <div className="vision-batch-header">
+        <h3 className="vision-section-heading">{t(lang, "vision_lenses_h")}</h3>
+        <button className="btn-secondary" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
+          {open ? t(lang, "vision_hide_batch") : t(lang, "vision_lens_run")}
+        </button>
+      </div>
+      {open && (
+        <>
+          <p className="hint">{t(lang, "vision_lenses_intro")}</p>
+          <div className="vision-lenses-controls">
+            <label className="vision-align-mode">
+              <span>{t(lang, "vision_lens_framework")}</span>
+              <select value={route} onChange={(e) => setRoute(e.target.value)}>
+                {LENS_ROUTES.map((l) => (
+                  <option key={l.route} value={l.route}>
+                    {LENS_NAMES[l.route]?.[lang] ?? l.route}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {route === "cda" && (
+              <label className="vision-align-mode">
+                <span>{t(lang, "vision_lens_cda_variant")}</span>
+                <select value={cdaVariant} onChange={(e) => setCdaVariant(e.target.value)}>
+                  {CDA_VARIANTS.map((v) => <option key={v} value={v}>{v}</option>)}
+                </select>
+              </label>
+            )}
+            <label className="vision-align-mode">
+              <span>{t(lang, "vision_align_mode")}</span>
+              <select value={mode} onChange={(e) => setMode(e.target.value as "heuristic" | "llm")}>
+                <option value="heuristic">{t(lang, "vision_mode_heuristic")}</option>
+                <option value="llm">{t(lang, "vision_mode_llm")}</option>
+              </select>
+            </label>
+            {mode === "llm" && <VisionModelSelect value={visionModel} onChange={setVisionModel} />}
+            <button className="btn-primary" onClick={run} disabled={running}>
+              {running ? t(lang, "vision_lens_running") : t(lang, "vision_lens_run")}
+            </button>
+          </div>
+
+          {errMsg && <div className="uploader-status error">{errMsg}</div>}
+          {result && <LensResult result={result} />}
+          {!result && !running && !errMsg && (
+            <div className="hint">{t(lang, "vision_lenses_disabled")}</div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+
+function LensResult({ result }: { result: DiscourseResult }) {
+  const lang = useUI((s) => s.lang);
+  const mode = result.provenance?.mode ?? "heuristic";
+  const isLlm = mode === "llm";
+  return (
+    <div className="vision-lens-result">
+      <div className="result-meta">
+        <span className={clsx("vision-mode-badge", isLlm ? "llm" : "heuristic")}>
+          {isLlm ? t(lang, "vision_lens_llm_badge") : t(lang, "vision_lens_heuristic_badge")}
+        </span>
+        {" · "}
+        {t(lang, "vision_framework")}: <strong>{result.framework}</strong>
+        {result.provenance?.model && (
+          <> · {t(lang, "vision_model")}: <strong>{result.provenance.model}</strong></>
+        )}
+      </div>
+      {result.fallback_reason && (
+        <div className="hint vision-align-fallback">{t(lang, "vision_lens_fallback")}</div>
+      )}
+      {result.person_descriptive_redacted && (
+        <div className="hint vision-align-redacted">{t(lang, "vision_redacted")}</div>
+      )}
+      {result.summary && <p className="vision-lens-summary">{result.summary}</p>}
+      {(result.claims?.length ?? 0) === 0 ? (
+        <div className="hint">{t(lang, "vision_lens_no_claims")}</div>
+      ) : (
+        <ul className="vision-vg-claims">
+          {result.claims.map((c: DiscourseClaim, i: number) => (
+            <li key={i} className="vision-vg-claim">
+              <div className="vision-vg-claim-meta">
+                <span className="vision-vg-category">{c.category}</span>
+                <span className="vision-vg-confidence">{(c.confidence * 100).toFixed(0)}%</span>
+              </div>
+              <p className="vision-vg-claim-text">{c.claim}</p>
+              {c.evidence.length > 0 && (
+                <ul className="vision-vg-evidence">
+                  {c.evidence.map((e, j) => <li key={j}><code>{e}</code></li>)}
+                </ul>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+
+// ---------------------------------------------------------------------------
+// AlignmentPanel — image-text alignment inspector (with model picker)
 // ---------------------------------------------------------------------------
 
 type AlignMode = "heuristic" | "llm" | "both";
 
 function AlignmentPanel({ imageId }: { imageId: string }) {
+  const lang = useUI((s) => s.lang);
   const [text, setText] = useState("");
   const [mode, setMode] = useState<AlignMode>("heuristic");
+  const [visionModel, setVisionModel] = useState("");
   const [submitted, setSubmitted] = useState<{ text: string; mode: AlignMode } | null>(null);
 
-  // Heuristic alignment query
   const heuristicQuery = useQuery({
     queryKey: ["align", imageId, submitted?.text, "heuristic"],
     queryFn: () => api.alignImageText(imageId, submitted!.text, "heuristic"),
     enabled: !!submitted && (submitted.mode === "heuristic" || submitted.mode === "both"),
   });
 
-  // LLM alignment query
+  // v1.2.0: no hardcoded moondream — empty model = engine-side
+  // capability-aware auto-pick.
   const llmQuery = useQuery({
-    queryKey: ["align", imageId, submitted?.text, "llm"],
-    queryFn: () => api.alignImageText(imageId, submitted!.text, "llm", "moondream"),
+    queryKey: ["align", imageId, submitted?.text, "llm", visionModel],
+    queryFn: () => api.alignImageText(imageId, submitted!.text, "llm", visionModel || undefined),
     enabled: !!submitted && (submitted.mode === "llm" || submitted.mode === "both"),
   });
 
@@ -658,7 +946,7 @@ function AlignmentPanel({ imageId }: { imageId: string }) {
 
   return (
     <div className="vision-alignment-panel">
-      <h3 className="vision-section-heading">Image-text alignment</h3>
+      <h3 className="vision-section-heading">{t(lang, "vision_alignment_h")}</h3>
       <div className="vision-alignment-input">
         <textarea
           value={text}
@@ -666,53 +954,44 @@ function AlignmentPanel({ imageId }: { imageId: string }) {
           onKeyDown={(e) => {
             if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) onAlign();
           }}
-          placeholder="Enter the co-occurring text (caption, article body, etc.) to align with this image..."
+          placeholder={t(lang, "vision_align_placeholder")}
           rows={3}
         />
         <div className="vision-alignment-controls">
           <label className="vision-align-mode">
-            <span>Mode</span>
+            <span>{t(lang, "vision_align_mode")}</span>
             <select value={mode} onChange={(e) => setMode(e.target.value as AlignMode)}>
-              <option value="heuristic">Heuristic (colour/positional)</option>
-              <option value="llm">Vision-LM (looks at image)</option>
-              <option value="both">Both (side by side)</option>
+              <option value="heuristic">{t(lang, "vision_mode_heuristic")}</option>
+              <option value="llm">{t(lang, "vision_mode_llm")}</option>
+              <option value="both">{t(lang, "vision_mode_both")}</option>
             </select>
           </label>
+          {mode !== "heuristic" && (
+            <VisionModelSelect value={visionModel} onChange={setVisionModel} />
+          )}
           <button
             className="btn-primary"
             onClick={onAlign}
             disabled={!text.trim() || heuristicQuery.isFetching || llmQuery.isFetching}
           >
-            {(heuristicQuery.isFetching || llmQuery.isFetching) ? "Aligning..." : "Align"}
+            {(heuristicQuery.isFetching || llmQuery.isFetching) ? t(lang, "vision_aligning") : t(lang, "vision_align_btn")}
           </button>
         </div>
-        <div className="hint">Ctrl+Enter to align</div>
+        <div className="hint">{t(lang, "vision_align_hint")}</div>
       </div>
 
       {submitted && submitted.mode === "heuristic" && (
-        <AlignmentResultView
-          title="Heuristic alignment"
-          query={heuristicQuery}
-        />
+        <AlignmentResultView title={t(lang, "vision_heuristic_result")} query={heuristicQuery} />
       )}
 
       {submitted && submitted.mode === "llm" && (
-        <AlignmentResultView
-          title="Vision-LM alignment"
-          query={llmQuery}
-        />
+        <AlignmentResultView title={t(lang, "vision_llm_result")} query={llmQuery} />
       )}
 
       {submitted && submitted.mode === "both" && (
         <div className="vision-alignment-both">
-          <AlignmentResultView
-            title="Heuristic alignment"
-            query={heuristicQuery}
-          />
-          <AlignmentResultView
-            title="Vision-LM alignment"
-            query={llmQuery}
-          />
+          <AlignmentResultView title={t(lang, "vision_heuristic_result")} query={heuristicQuery} />
+          <AlignmentResultView title={t(lang, "vision_llm_result")} query={llmQuery} />
         </div>
       )}
     </div>
@@ -727,11 +1006,12 @@ function AlignmentResultView({
   title: string;
   query: ReturnType<typeof useQuery<any>>;
 }) {
-  if (query.isLoading) return <div className="hint">Running {title.toLowerCase()}...</div>;
+  const lang = useUI((s) => s.lang);
+  if (query.isLoading) return <div className="hint">{t(lang, "vision_running")} {title.toLowerCase()}…</div>;
   if (query.error) {
     return (
       <div className="uploader-status error">
-        {title} failed: {(query.error as Error).message}
+        {title} {t(lang, "vision_failed")}: {(query.error as Error).message}
       </div>
     );
   }
@@ -742,24 +1022,22 @@ function AlignmentResultView({
     <div className="vision-alignment-result">
       <h4 className="vision-align-result-heading">{title}</h4>
       <div className="result-meta">
-        Method: <strong>{data.method}</strong>
+        {t(lang, "vision_method")}: <strong>{data.method}</strong>
         {data.provenance && (
-          <> · Mode: <strong>{data.provenance.mode}</strong>
-          {data.provenance.model && <> · Model: <strong>{data.provenance.model}</strong></>}
+          <> · {t(lang, "vision_align_mode")}: <strong>{data.provenance.mode}</strong>
+          {data.provenance.model && <> · {t(lang, "vision_model")}: <strong>{data.provenance.model}</strong></>}
           </>
         )}
         {data.fallback_reason && (
           <div className="hint vision-align-fallback">{data.fallback_reason}</div>
         )}
         {data.person_descriptive_redacted && (
-          <div className="hint vision-align-redacted">
-            Person-descriptive content was redacted (enable facial analysis in Settings to view).
-          </div>
+          <div className="hint vision-align-redacted">{t(lang, "vision_redacted")}</div>
         )}
       </div>
 
       {data.alignments.length === 0 ? (
-        <div className="hint">No alignments found.</div>
+        <div className="hint">{t(lang, "vision_no_alignments")}</div>
       ) : (
         <ul className="vision-align-list">
           {data.alignments.map((a: any, i: number) => (
@@ -771,10 +1049,10 @@ function AlignmentResultView({
                 </span>
               </div>
               <div className="vision-align-region">
-                <strong>Region:</strong> {a.region_descriptor}
+                <strong>{t(lang, "vision_region")}:</strong> {a.region_descriptor}
               </div>
               <div className="vision-align-reason">
-                <strong>Reason:</strong> {a.match_reason}
+                <strong>{t(lang, "vision_reason")}:</strong> {a.match_reason}
               </div>
             </li>
           ))}
@@ -786,19 +1064,133 @@ function AlignmentResultView({
 
 
 // ---------------------------------------------------------------------------
+// BatchRunnerPanel — analyse the whole set server-side (v1.2.0)
+// ---------------------------------------------------------------------------
+
+function BatchRunnerPanel({ isetId }: { isetId: string }) {
+  const lang = useUI((s) => s.lang);
+  const queryClient = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [action, setAction] = useState<"describe" | "all">("describe");
+  const [visionModel, setVisionModel] = useState("");
+  const [startErr, setStartErr] = useState("");
+
+  const statusQuery = useQuery({
+    queryKey: ["batch-run", isetId],
+    queryFn: () => api.getBatchStatus(isetId),
+    enabled: open,
+    refetchInterval: (query: any) => (query?.state?.data?.running ? 1000 : false),
+  });
+
+  const startMutation = useMutation({
+    mutationFn: () =>
+      api.runBatch(isetId, { action, model: visionModel || null }),
+    onSuccess: () => {
+      setStartErr("");
+      queryClient.invalidateQueries({ queryKey: ["batch-run", isetId] });
+    },
+    onError: (e: Error) => {
+      const msg = reportVisionError(e, `/image-sets/${isetId}/run-batch`, "Batch runner");
+      setStartErr(msg);
+    },
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: () => api.cancelBatch(isetId),
+  });
+
+  const st = statusQuery.data;
+  const finished = st && !st.running;
+
+  const onOpen = (v: boolean) => {
+    setOpen(v);
+    if (!v) {
+      // Refresh aggregated views when leaving the runner.
+      queryClient.invalidateQueries({ queryKey: ["batch-analysis", isetId] });
+      queryClient.invalidateQueries({ queryKey: ["image-analysis"] });
+    }
+  };
+
+  return (
+    <div className="vision-batchrun-panel">
+      <div className="vision-batch-header">
+        <h3 className="vision-section-heading">{t(lang, "vision_batchrun_h")}</h3>
+        <button className="btn-secondary" onClick={() => onOpen(!open)} aria-expanded={open}>
+          {open ? t(lang, "vision_hide_batch") : t(lang, "vision_batchrun_start")}
+        </button>
+      </div>
+      {open && (
+        <>
+          <p className="hint">{t(lang, "vision_batchrun_intro")}</p>
+          <div className="vision-lenses-controls">
+            <label className="vision-align-mode">
+              <span>{t(lang, "vision_batchrun_action")}</span>
+              <select value={action} onChange={(e) => setAction(e.target.value as "describe" | "all")}>
+                <option value="describe">{t(lang, "vision_batchrun_describe")}</option>
+                <option value="all">{t(lang, "vision_batchrun_all")}</option>
+              </select>
+            </label>
+            <VisionModelSelect value={visionModel} onChange={setVisionModel} />
+            <button
+              className="btn-primary"
+              onClick={() => startMutation.mutate()}
+              disabled={startMutation.isPending || !!st?.running}
+            >
+              {t(lang, "vision_batchrun_start")}
+            </button>
+            {st?.running && (
+              <button className="btn-secondary" onClick={() => cancelMutation.mutate()}>
+                {t(lang, "vision_batchrun_cancel")}
+              </button>
+            )}
+          </div>
+
+          {startErr && <div className="uploader-status error">{startErr}</div>}
+          {statusQuery.isLoading && <div className="hint">{t(lang, "vision_batchrun_progressing")}</div>}
+
+          {st && (
+            <div className="vision-batchrun-status">
+              {st.running ? (
+                <div className="hint">
+                  {tf(lang, "vision_batchrun_running", { done: st.done, total: st.total })}
+                </div>
+              ) : st.status === "done" ? (
+                <div className="hint">
+                  {tf(lang, "vision_batchrun_done", { done: st.done, total: st.total })}
+                </div>
+              ) : st.status === "cancelled" ? (
+                <div className="hint">
+                  {tf(lang, "vision_batchrun_cancelled", { done: st.done, total: st.total })}
+                </div>
+              ) : st.status === "error" ? (
+                <div className="uploader-status error">{String((st as any).error ?? "")}</div>
+              ) : null}
+              {finished && st.errors.length > 0 && (
+                <div className="uploader-status error">
+                  {tf(lang, "vision_batchrun_errors", { n: st.errors.length })}
+                  <ul>
+                    {st.errors.slice(0, 8).map((e: any, i: number) => (
+                      <li key={i}><code>{e.image}</code> ({e.action}): {e.error}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+
+// ---------------------------------------------------------------------------
 // BatchViewPanel — recurring themes + OCR frequency across an image set
-// (build step 7)
-//
-// Surfaces cached vision-LM analysis across all images in the set:
-//   1. Recurring framework themes (grouped by framework, counted by category)
-//   2. OCR-derived frequency list (Python-side Counter over OCR text)
-//   3. Vision-LM description summary (one per image that has a cached desc)
-//
-// This is a READ-ONLY view — it doesn't call any model, just aggregates
-// what's already cached.
+// (read-only aggregation of cached analysis)
 // ---------------------------------------------------------------------------
 
 function BatchViewPanel({ isetId }: { isetId: string }) {
+  const lang = useUI((s) => s.lang);
   const [enabled, setEnabled] = useState(false);
 
   const batchQuery = useQuery({
@@ -810,20 +1202,20 @@ function BatchViewPanel({ isetId }: { isetId: string }) {
   return (
     <div className="vision-batch-panel">
       <div className="vision-batch-header">
-        <h3 className="vision-section-heading">Batch view</h3>
+        <h3 className="vision-section-heading">{t(lang, "vision_batch_h")}</h3>
         <button
           className="btn-secondary"
           onClick={() => setEnabled((v) => !v)}
           aria-expanded={enabled}
         >
-          {enabled ? "Hide" : "Show"} batch analysis
+          {enabled ? t(lang, "vision_hide_batch") : t(lang, "vision_show_batch")}
         </button>
       </div>
 
-      {enabled && batchQuery.isLoading && <div className="hint">Loading batch analysis…</div>}
+      {enabled && batchQuery.isLoading && <div className="hint">{t(lang, "vision_loading_batch")}</div>}
       {enabled && batchQuery.error && (
         <div className="uploader-status error">
-          Failed to load batch analysis: {(batchQuery.error as Error).message}
+          {t(lang, "vision_failed_batch")}: {(batchQuery.error as Error).message}
         </div>
       )}
       {enabled && batchQuery.data && <BatchViewContent data={batchQuery.data} />}
@@ -833,11 +1225,13 @@ function BatchViewPanel({ isetId }: { isetId: string }) {
 
 
 function BatchViewContent({ data }: { data: BatchAnalysisResult }) {
+  const lang = useUI((s) => s.lang);
   return (
     <div className="vision-batch-content">
       <div className="result-meta">
-        {data.image_count} images · {data.images_with_vlm} with VLM descriptions ·{" "}
-        {data.images_with_discourse} with discourse analysis
+        {data.image_count} {t(lang, "vision_batch_images")} · {data.images_with_vlm}{" "}
+        {t(lang, "vision_batch_with_vlm")} · {data.images_with_discourse}{" "}
+        {t(lang, "vision_batch_with_discourse")}
       </div>
 
       {data.note && <div className="hint vision-batch-note">{data.note}</div>}
@@ -845,18 +1239,18 @@ function BatchViewContent({ data }: { data: BatchAnalysisResult }) {
       <div className="vision-batch-cols">
         {/* Recurring themes */}
         <div className="vision-batch-col">
-          <h4 className="vision-col-heading">Recurring framework themes</h4>
+          <h4 className="vision-col-heading">{t(lang, "vision_themes_h")}</h4>
           {data.recurring_themes.length === 0 ? (
-            <div className="hint">No discourse analysis cached yet.</div>
+            <div className="hint">{t(lang, "vision_no_themes")}</div>
           ) : (
-            data.recurring_themes.map((t) => (
-              <div key={t.framework} className="vision-batch-theme">
+            data.recurring_themes.map((th) => (
+              <div key={th.framework} className="vision-batch-theme">
                 <div className="vision-batch-theme-header">
-                  <span className="vision-batch-framework">{t.framework}</span>
-                  <span className="vision-batch-total">{t.total_claims} claims</span>
+                  <span className="vision-batch-framework">{th.framework}</span>
+                  <span className="vision-batch-total">{th.total_claims} {t(lang, "vision_claims")}</span>
                 </div>
                 <ul className="vision-batch-categories">
-                  {t.categories.map((c) => (
+                  {th.categories.map((c) => (
                     <li key={c.category} className="vision-batch-category">
                       <span className="vision-batch-cat-name">{c.category}</span>
                       <span className="vision-batch-cat-count">{c.count}</span>
@@ -873,9 +1267,9 @@ function BatchViewContent({ data }: { data: BatchAnalysisResult }) {
 
         {/* OCR frequency */}
         <div className="vision-batch-col">
-          <h4 className="vision-col-heading">OCR word frequency</h4>
+          <h4 className="vision-col-heading">{t(lang, "vision_ocr_freq_h")}</h4>
           {data.ocr_frequency.length === 0 ? (
-            <div className="hint">No OCR text found in any image.</div>
+            <div className="hint">{t(lang, "vision_no_ocr")}</div>
           ) : (
             <div className="vision-batch-freq-list">
               {data.ocr_frequency.slice(0, 30).map((f) => (
@@ -890,16 +1284,16 @@ function BatchViewContent({ data }: { data: BatchAnalysisResult }) {
 
         {/* VLM descriptions */}
         <div className="vision-batch-col">
-          <h4 className="vision-col-heading">Vision-LM descriptions</h4>
+          <h4 className="vision-col-heading">{t(lang, "vision_desc_h")}</h4>
           {data.descriptions.length === 0 ? (
-            <div className="hint">No VLM descriptions cached yet.</div>
+            <div className="hint">{t(lang, "vision_no_descs")}</div>
           ) : (
             <ul className="vision-batch-desc-list">
               {data.descriptions.map((d) => (
                 <li key={d.image_id} className="vision-batch-desc-item">
                   <div className="vision-batch-desc-filename">{d.filename}</div>
                   <p className="vision-batch-desc-text">{d.description}</p>
-                  <div className="hint">Model: {d.model}</div>
+                  <div className="hint">{t(lang, "vision_model")}: {d.model}</div>
                 </li>
               ))}
             </ul>

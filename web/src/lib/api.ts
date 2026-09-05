@@ -839,6 +839,17 @@ export interface DiscourseResult {
   framework: string;
   claims: DiscourseClaim[];
   summary: string;
+  // v1.2.0: present on LLM-mode responses (and heuristic fallbacks).
+  provenance?: {
+    mode: string;
+    model?: string;
+    provider?: string;
+    prompt_hash?: string;
+    timestamp?: string;
+    cached?: boolean;
+  } | null;
+  fallback_reason?: string | null;
+  person_descriptive_redacted?: boolean;
 }
 
 // ----------------------------------------------------------------------- //
@@ -1248,6 +1259,54 @@ export const api = {
 
   getBatchAnalysis: (isetId: string) =>
     jsonFetch<BatchAnalysisResult>(`/api/v1/image-sets/${isetId}/batch-analysis`),
+
+  // --- v1.2.0 Lens round: batch runner, deletion, export, frameworks ---
+  runBatch: (isetId: string, body: { action: string; cda_framework?: string; provider?: string; model?: string | null; refresh?: boolean; limit?: number }) =>
+    jsonFetch<{ status: string; action: string; total: number; done: number; errors: any[] }>(
+      `/api/v1/image-sets/${isetId}/run-batch`,
+      { method: "POST", body: JSON.stringify(body) },
+    ),
+
+  getBatchStatus: (isetId: string) =>
+    jsonFetch<{ status: string; action: string; total: number; done: number; running: boolean; errors: any[] }>(
+      `/api/v1/image-sets/${isetId}/run-batch/status`,
+    ),
+
+  cancelBatch: (isetId: string) =>
+    jsonFetch<{ cancelling: boolean }>(`/api/v1/image-sets/${isetId}/run-batch/cancel`, { method: "POST" }),
+
+  deleteImage: (imgId: string) =>
+    jsonFetch<{ deleted: boolean; image_id: string }>(`/api/v1/images/${imgId}`, { method: "DELETE" }),
+
+  deleteImageSet: (isetId: string) =>
+    jsonFetch<{ deleted: boolean; image_set_id: string; images_removed: number }>(
+      `/api/v1/image-sets/${isetId}`,
+      { method: "DELETE" },
+    ),
+
+  exportImageSet: (isetId: string, fmt: "xlsx" | "csv" | "tsv" | "txt" | "json" = "xlsx") =>
+    smartFetch(`/api/v1/image-sets/${isetId}/export?format=${fmt}`).then((r) => r.blob()),
+
+  listFrameworks: () =>
+    jsonFetch<{ frameworks: Array<{ key: string; name: string; full_name: string; version: string; family: string; categories: Array<{ id: string; label: string; description: string }> }> }>(
+      "/api/v1/frameworks",
+    ),
+
+  // Run one discourse lens route with mode/model params (v1.2.0: the
+  // existing per-route wrappers below predate LLM mode and take no options).
+  runDiscourseLens: (
+    imgId: string,
+    route: string,
+    opts: { mode?: "heuristic" | "llm"; model?: string | null; provider?: string; cdaFramework?: string } = {},
+  ) => {
+    const params = new URLSearchParams({ mode: opts.mode ?? "heuristic" });
+    if (opts.model) params.set("model", opts.model);
+    if (opts.provider) params.set("provider", opts.provider);
+    return jsonFetch<DiscourseResult>(`/api/v1/images/${imgId}/${route}?${params.toString()}`, {
+      method: "POST",
+      ...(route === "cda" ? { body: JSON.stringify({ framework: opts.cdaFramework ?? "fairclough" }) } : {}),
+    });
+  },
 
   // --- Phase 5 multimodal discourse (9.11–9.18) ---
   socialSemiotic: (imgId: string) =>
