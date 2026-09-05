@@ -64,7 +64,7 @@
         "installerHooks": "./installer-hooks.nsh"
       },
       "webviewInstallMode": {
-        "type": "embedBootstrapper"
+        "type": "downloadBootstrapper"
       }
     }
   },
