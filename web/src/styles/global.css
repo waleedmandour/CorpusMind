@@ -779,6 +779,81 @@ code, pre { font-family: var(--font-mono); }
   color: var(--text);
   margin: 0;
 }
+/* v1.2.0 (Issue 8): interactive network chrome */
+.network-header {
+  inline-size: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.network-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.network-stats {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+}
+.network-stats.warn {
+  color: var(--danger);
+  font-weight: 600;
+}
+.network-canvas {
+  inline-size: 100%;
+  max-inline-size: 680px;
+  block-size: auto;
+  background: var(--bg-subtle);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  cursor: grab;
+  touch-action: none;
+}
+.network-tooltip {
+  position: absolute;
+  z-index: 20;
+  padding: 3px 8px;
+  font-size: 11px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+  pointer-events: none;
+  white-space: nowrap;
+}
+.network-menu {
+  position: absolute;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 200px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  padding: var(--space-1);
+}
+.network-menu button {
+  background: transparent;
+  border: none;
+  text-align: start;
+  padding: var(--space-2) var(--space-3);
+  font-size: 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: var(--text);
+}
+.network-menu button:hover:not(:disabled) {
+  background: var(--bg-subtle);
+}
+.network-menu button:disabled {
+  color: var(--text-subtle);
+  cursor: default;
+}
 .network-hint {
   font-size: 11px;
   color: var(--text-subtle);
