@@ -13,7 +13,12 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ai.providers import Message, ModelProviderError
+from ai.providers import (
+    Message,
+    ModelProviderError,
+    check_vision_capability,
+    resolve_vision_model,
+)
 from app.logging import get_logger
 from app.settings import get_settings
 from multimodal.alignment import (
@@ -31,10 +36,18 @@ from vision.pipeline import (
     detect_image_format,
     get_image_info,
     load_image,
+    read_image_bytes,
+    sniff_image_format,
 )
 
 log = get_logger(__name__)
 router = APIRouter()
+
+# v1.2.0 upload hardening: files were previously read whole into RAM with no
+# size cap and extension-only format checks. 25 MB comfortably covers any
+# scanned page or photo while preventing accidental/abusive memory blowups.
+MAX_IMAGE_BYTES = 25 * 1024 * 1024
+MAX_FILES_PER_UPLOAD = 50
 
 
 # --------------------------------------------------------------------------- #
@@ -111,10 +124,21 @@ async def upload_images(
     session: AsyncSession = Depends(get_session),
 ) -> list[ImageOut]:
     """Upload one or more images into an image set. Each is parsed, analysed
-    (colour, composition, OCR), and the analysis is cached in the DB."""
+    (colour, composition, OCR), and the analysis is cached in the DB.
+
+    v1.2.0 hardening: per-file 25 MB cap (413), max 50 files per request,
+    and magic-byte sniffing — a text file named .png is rejected with a
+    clear 400 instead of crashing deep inside Pillow.
+    """
     iset = await session.get(ImageSet, iset_id)
     if not iset:
         raise HTTPException(404, "Image set not found")
+
+    if len(files) > MAX_FILES_PER_UPLOAD:
+        raise HTTPException(
+            400,
+            f"Too many files in one upload ({len(files)}). Maximum is {MAX_FILES_PER_UPLOAD} — split the batch.",
+        )
 
     caption_list = captions.split("\n") if captions else []
     storage_dir = _image_storage_dir()
@@ -124,8 +148,27 @@ async def upload_images(
         raw = await f.read()
         if not raw:
             continue
+        if len(raw) > MAX_IMAGE_BYTES:
+            raise HTTPException(
+                413,
+                f"'{f.filename}' is {len(raw) / (1024 * 1024):.1f} MB — the per-image limit is "
+                f"{MAX_IMAGE_BYTES / (1024 * 1024):.0f} MB. Downscale or recompress the image and retry.",
+            )
         try:
             fmt = detect_image_format(f.filename or "image.jpg")
+            sniffed = sniff_image_format(raw)
+            if sniffed is None:
+                raise HTTPException(
+                    400,
+                    f"'{f.filename}' does not look like a real image (magic-byte check failed). "
+                    f"Re-export it as PNG or JPEG and retry.",
+                )
+            if sniffed != fmt and not {fmt, sniffed} <= {"jpg", "jpeg", "tif", "tiff"}:
+                raise HTTPException(
+                    400,
+                    f"'{f.filename}' is named .{fmt} but its content is {sniffed.upper()}. "
+                    f"Rename the file to match its real format.",
+                )
             info = get_image_info(raw, f.filename or "image.jpg")
             # Run full analysis
             analysis = analyse_image(raw, f.filename or "image.jpg")
@@ -196,23 +239,19 @@ async def get_image_thumbnail(img_id: str, session: AsyncSession = Depends(get_s
     is set). Requires authentication when the shared-token mode is active,
     like every other /api route.
     """
-    from pathlib import Path as _Path
+    from io import BytesIO as _BytesIO
 
-    from storage.encryption import decrypt_file, is_encryption_enabled
+    from PIL import Image as _PILImage
 
     img = await session.get(ImageModel, img_id)
     if not img:
         raise HTTPException(404, "Image not found")
-    if not img.storage_path or not _Path(img.storage_path).exists():
+    if not img.storage_path or not Path(img.storage_path).exists():
         raise HTTPException(400, "Image file not found on disk. Re-ingest.")
 
-    raw = _Path(img.storage_path).read_bytes()
-    if is_encryption_enabled():
-        raw = decrypt_file(raw)
-
-    from io import BytesIO as _BytesIO
-
-    from PIL import Image as _PILImage
+    # read_image_bytes is decrypt-aware (v1.2.0: single shared helper for
+    # every image-bytes read in the vision subsystem).
+    raw = read_image_bytes(img.storage_path)
 
     pil = _PILImage.open(_BytesIO(raw))
     pil.thumbnail((320, 320))
@@ -411,7 +450,7 @@ async def align_route(
                 log.warning("align_llm_provider_unhealthy", provider=mode_params.provider)
 
     # --- Heuristic mode (default + fallback) ----------------------------
-    pil_img = load_image(Path(img.storage_path).read_bytes())
+    pil_img = load_image(read_image_bytes(img.storage_path))
     result = align_image_text(pil_img, body.text)
     cross_modal = detect_cross_modal_relations(result)
 
@@ -439,8 +478,9 @@ async def align_route(
 # discourse-framework route in api/phase5.py is purely heuristic — they
 # look at colour statistics, composition geometry, and OCR text, never at
 # what the image actually depicts. This route closes that gap: it sends
-# the real image bytes to a vision-LM (default: Ollama with moondream or
-# similar) and returns the model's grounded description.
+# the real image bytes to a vision-LM (default: Ollama with a
+# vision-capable model — qwen3-vl:2b/8b, llava, moondream) and returns
+# the model's grounded description.
 #
 # Provenance: the response includes model, provider, prompt, prompt_hash,
 # and timestamp so a researcher can reproduce a description in a
@@ -473,7 +513,7 @@ class DescribeRequest(BaseModel):
         default="Describe this image.",
         description=(
             "The prompt to send to the vision-LM along with the image. "
-            "Keep it short — small vision models (moondream, etc.) can "
+            "Keep it short — small vision models (qwen3-vl:2b, moondream, etc.) can "
             "return empty output when the prompt is too long or complex. "
             "If you need text transcription, use a dedicated prompt like "
             "'Transcribe all text visible in this image.'"
@@ -631,7 +671,8 @@ async def describe_image_route(
                 detail=(
                     "Ollama is not running or no vision model is loaded. "
                     "Start Ollama and pull a vision model (e.g. "
-                    "`ollama pull moondream` or `ollama pull llama3.2-vision`)."
+                    "`ollama pull qwen3-vl:2b` — small, multilingual OCR incl. Arabic — "
+                    "or `ollama pull qwen3-vl:8b` for higher quality)."
                 ),
             )
         elif provider_name == "lmstudio":
@@ -673,7 +714,7 @@ async def describe_image_route(
         full_prompt = body.prompt + "\n\nContext:\n" + "\n".join(context_parts)
 
     # --- Read image bytes + call the provider ---------------------------
-    image_bytes = Path(img.storage_path).read_bytes()
+    image_bytes = read_image_bytes(img.storage_path)
     messages = [
         Message(
             role="user",
@@ -682,16 +723,13 @@ async def describe_image_route(
         ),
     ]
 
-    model_name = body.model or getattr(provider, "default_model", None)
-    if not model_name:
-        # Fall back to the first available model from the provider.
-        try:
-            available = await provider.list_models()
-            if available:
-                model_name = available[0]
-                log.info("vlm_auto_selected_model", model=model_name, provider=body.provider)
-        except Exception as e:
-            log.warning("vlm_auto_select_failed", error=str(e))
+    # v1.2.0: capability-aware model resolution. Previously this fell back
+    # to provider.default_model (frequently a TEXT-ONLY model like
+    # llama3.2:3b) or the first listed model — the describe call then
+    # failed confusingly. Now: explicit model → provider's vision-capable
+    # pick → legacy fallback, and an auto-picked model that the provider
+    # knows is NOT vision-capable gets an actionable 400.
+    model_name = await resolve_vision_model(provider, body.model)
 
     if not model_name:
         raise HTTPException(
@@ -701,6 +739,19 @@ async def describe_image_route(
                 f"default model. Specify a model name in the request body."
             ),
         )
+
+    if not body.model:
+        vision_ok = await check_vision_capability(provider, model_name)
+        if vision_ok is False:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"The auto-selected model '{model_name}' does not support image input. "
+                    f"Install a vision model — for Ollama: `ollama pull qwen3-vl:2b` "
+                    f"(small, OCR in 32 languages incl. Arabic) or `ollama pull qwen3-vl:8b` "
+                    f"(higher quality) — or specify a model name in the request."
+                ),
+            )
 
     log.info(
         "vlm_describe_request",
@@ -721,6 +772,7 @@ async def describe_image_route(
             model=model_name,
             temperature=0.1,  # low temperature for descriptive accuracy
             timeout=120.0,    # vision models are slower than text
+            max_tokens=2048,  # v1.2.0: rich descriptions were truncated at 512
         )
     except ModelProviderError as e:
         log.warning("vlm_describe_failed", image_id=img.id, error=str(e))

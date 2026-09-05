@@ -40,9 +40,16 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ai.providers import ChatResponse, Message, ModelProvider, ModelProviderError
+from ai.providers import (
+    ChatResponse,
+    Message,
+    ModelProvider,
+    ModelProviderError,
+    resolve_vision_model,
+)
 from app.logging import get_logger
 from vision.consent_gate import filter_person_descriptive
+from vision.pipeline import read_image_bytes
 
 log = get_logger(__name__)
 
@@ -177,26 +184,19 @@ async def run_llm_alignment(
       ModelProviderError: if the provider call fails (caller catches
         and falls back to heuristic).
     """
-    # Resolve model name.
-    model_name = model or getattr(provider, "default_model", None)
-    if not model_name:
-        try:
-            available = await provider.list_models()
-            if available:
-                model_name = available[0]
-        except Exception as e:
-            log.warning("vlm_align_auto_select_failed", error=str(e))
+    # Resolve model name (v1.2.0: capability-aware).
+    model_name = await resolve_vision_model(provider, model)
 
     if not model_name:
         raise ModelProviderError(
             "No model specified and provider has no default model."
         )
 
-    # Read image bytes.
+    # Read image bytes (decrypt-aware — v1.2.0).
     storage_path = getattr(img, "storage_path", None)
     if not storage_path or not Path(storage_path).exists():
         raise ModelProviderError("Image file not found on disk. Re-ingest.")
-    image_bytes = Path(storage_path).read_bytes()
+    image_bytes = read_image_bytes(storage_path)
 
     # Build prompts.
     user_prompt = _build_user_prompt(text)
@@ -220,6 +220,7 @@ async def run_llm_alignment(
         temperature=0.1,
         timeout=120.0,
         json_mode=True,
+        max_tokens=2048,
     )
 
     raw_content = response.content.strip()

@@ -2,7 +2,10 @@
 Vision pipeline (§9.2, §9.3, §9.4) — image ingestion + analysis.
 
 Phase 4 ships:
-  - §9.2  Image ingestion: JPG, PNG, TIFF, WebP, SVG (via Pillow)
+  - §9.2  Image ingestion: JPG, PNG, TIFF, WebP, BMP, GIF (via Pillow).
+          SVG is intentionally NOT supported (it is a vector/XML format —
+          Tesseract OCR and the raster analysis path need pixels; rasterise
+          SVGs before upload).
   - §9.3  OCR: text extraction from images (Tesseract-compatible; falls back
           to a no-OCR mode if Tesseract isn't installed)
   - §9.4.6 Colour analysis: dominant colours, warm/cold balance, brightness,
@@ -21,6 +24,7 @@ from __future__ import annotations
 
 import io
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from app.logging import get_logger
@@ -43,6 +47,46 @@ def detect_image_format(filename: str) -> str:
     if ext not in SUPPORTED_IMAGE_FORMATS:
         raise ValueError(f"Unsupported image format: .{ext} (supported: {sorted(SUPPORTED_IMAGE_FORMATS)})")
     return ext
+
+
+def sniff_image_format(raw: bytes) -> str | None:
+    """Detect the real image format from magic bytes (v1.2.0 hardening).
+
+    Uploads previously trusted the filename extension alone — a text file
+    named .png would crash the analysis pipeline deep inside Pillow with a
+    confusing error. Returns one of the SUPPORTED_IMAGE_FORMATS values, or
+    None when the bytes don't match any known raster image header.
+    """
+    if len(raw) < 12:
+        return None
+    if raw[:3] == b"\xff\xd8\xff":
+        return "jpg"
+    if raw[:8] == b"\x89PNG\r\n\x1a\n":
+        return "png"
+    if raw[:4] == b"GIF8":
+        return "gif"
+    if raw[:4] == b"RIFF" and raw[8:12] == b"WEBP":
+        return "webp"
+    if raw[:4] in (b"II*\x00", b"MM\x00*"):
+        return "tif"
+    if raw[:2] == b"BM":
+        return "bmp"
+    return None
+
+
+def read_image_bytes(storage_path: str | Path) -> bytes:
+    """Read raw image bytes from disk, decrypting when at-rest encryption
+    is enabled (v1.2.0 fix).
+
+    The thumbnail route decrypted; /describe, /align, discourse-LLM and
+    alignment-LLM did NOT — with CORPUSMIND_ENCRYPTION_KEY set they sent
+    AES ciphertext to the vision model (or fed it to PIL, which 500s).
+    Every image-bytes read in the vision subsystem must go through this
+    helper. Lazy import avoids a circular dependency (storage ← vision).
+    """
+    from storage.encryption import decrypt_file
+
+    return decrypt_file(Path(storage_path).read_bytes())
 
 
 def load_image(raw: bytes) -> Any:

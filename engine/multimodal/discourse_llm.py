@@ -55,9 +55,16 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from ai.providers import ChatResponse, Message, ModelProvider, ModelProviderError
+from ai.providers import (
+    ChatResponse,
+    Message,
+    ModelProvider,
+    ModelProviderError,
+    resolve_vision_model,
+)
 from app.logging import get_logger
 from storage.models import Image as ImageModel
+from vision.pipeline import read_image_bytes
 
 log = get_logger(__name__)
 
@@ -474,20 +481,8 @@ async def run_llm_discourse_analysis(
 
     framework_name, _ = _FRAMEWORK_PROMPTS[framework_key]
 
-    # --- Resolve model name ---------------------------------------------
-    model_name = model or getattr(provider, "default_model", None)
-    if not model_name:
-        try:
-            available = await provider.list_models()
-            if available:
-                model_name = available[0]
-                log.info(
-                    "vlm_discourse_auto_selected_model",
-                    model=model_name,
-                    framework=framework_key,
-                )
-        except Exception as e:
-            log.warning("vlm_discourse_auto_select_failed", error=str(e))
+    # --- Resolve model name (v1.2.0: capability-aware) -------------------
+    model_name = await resolve_vision_model(provider, model)
 
     if not model_name:
         raise ModelProviderError(
@@ -532,7 +527,7 @@ async def run_llm_discourse_analysis(
         raise ModelProviderError(
             "Image file not found on disk. Re-ingest the image."
         )
-    image_bytes = Path(img.storage_path).read_bytes()
+    image_bytes = read_image_bytes(img.storage_path)
 
     messages = [
         Message(role="system", content=system_prompt),
@@ -560,6 +555,7 @@ async def run_llm_discourse_analysis(
         temperature=0.2,  # slightly higher than /describe — analysis benefits from some variation
         timeout=120.0,
         json_mode=True,   # request JSON format from the model
+        max_tokens=2048,  # v1.2.0: claim sets were truncated at 512 tokens
     )
 
     raw_content = response.content.strip()

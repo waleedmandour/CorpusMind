@@ -123,6 +123,7 @@ class ModelProvider(abc.ABC):
         tools: list[dict[str, Any]] | None = None,
         timeout: float | None = 60.0,
         json_mode: bool = False,
+        max_tokens: int | None = None,
     ) -> ChatResponse: ...
 
     async def chat_json(
@@ -132,6 +133,7 @@ class ModelProvider(abc.ABC):
         model: str | None = None,
         temperature: float = 0.1,
         timeout: float | None = 60.0,
+        max_tokens: int | None = None,
     ) -> ChatResponse:
         """Convenience wrapper that requests JSON-mode output.
 
@@ -145,7 +147,12 @@ class ModelProvider(abc.ABC):
         implementation just calls chat() with json_mode=True.
         """
         return await self.chat(
-            messages, model=model, temperature=temperature, timeout=timeout, json_mode=True
+            messages,
+            model=model,
+            temperature=temperature,
+            timeout=timeout,
+            json_mode=True,
+            max_tokens=max_tokens,
         )
 
     @abc.abstractmethod
@@ -190,9 +197,130 @@ class ModelProvider(abc.ABC):
         models = await self.list_models()
         return models[0] if models else None
 
+    async def supports_vision(self, model: str | None = None) -> bool:
+        """Whether ``model`` can accept image input (v1.2.0 Lens round).
+
+        Default: False (assume NOT vision-capable). Providers that can
+        answer reliably (Ollama via /api/tags capabilities, LM Studio via
+        model-name heuristics) override this. Callers must treat a False
+        as advisory: an explicit user-picked model is always honored.
+        """
+        return False
+
+    async def pick_vision_model(self) -> str | None:
+        """Vision-capable model to auto-select for image calls.
+
+        Returns None when the provider cannot identify a vision-capable
+        model — callers should then fall back to default resolution (or
+        reject with an actionable message). Ollama/LM Studio override
+        with capability-aware logic.
+        """
+        return None
+
     @abc.abstractmethod
     async def health(self) -> bool:
         """Return True iff the provider responds to a lightweight probe."""
+
+
+# --------------------------------------------------------------------------- #
+# Vision capability helpers (v1.2.0 Lens round)
+# --------------------------------------------------------------------------- #
+
+# Substrings that strongly suggest a model accepts image input. Used as a
+# FALLBACK when a server doesn't expose per-model capabilities (older Ollama,
+# LM Studio /v1/models which lists bare names).
+_VISION_NAME_HINTS = (
+    "vl",          # qwen2-vl, qwen2.5-vl, qwen3-vl
+    "vision",      # llama3.2-vision, *vision*
+    "llava",
+    "moondream",
+    "minicpm",
+    "pixtral",
+    "internvl",
+    "gemma",       # gemma3 4b+ are multimodal
+    "bakllava",
+    "llama3.2-vision",
+)
+
+
+def _name_suggests_vision(name: str) -> bool:
+    """Heuristic: does this model NAME suggest image input support?"""
+    n = (name or "").lower()
+    if not n:
+        return False
+    # gemma3 1b is text-only — exclude the small variant explicitly.
+    if n.startswith("gemma3:1b") or n == "gemma3:1b":
+        return False
+    return any(h in n for h in _VISION_NAME_HINTS)
+
+
+async def resolve_vision_model(provider: Any, explicit: str | None) -> str | None:
+    """Resolve the model to use for a vision-LM call (describe/align/lenses).
+
+    Resolution order:
+      1. ``explicit`` — the user picked a model; always honored (even if the
+         capability check would flag it — the user may know better).
+      2. ``provider.pick_vision_model()`` — capability-aware pick (Ollama
+         reads /api/tags 'vision' capability; LM Studio uses name hints).
+      3. ``provider.default_model`` → first listed model — legacy fallback,
+         kept for providers without a vision picker and for test doubles.
+
+    Returns None when nothing resolvable. The vision-* endpoints turn a None
+    into an actionable 400 rather than silently calling a text-only model.
+    """
+    if explicit:
+        return explicit
+    picker = getattr(provider, "pick_vision_model", None)
+    if picker is not None:
+        try:
+            picked = picker()
+            if hasattr(picked, "__await__"):
+                picked = await picked
+            if isinstance(picked, str) and picked:
+                return picked
+        except TypeError:
+            # MagicMock-style test double whose auto-attribute isn't
+            # awaitable — fall through to legacy resolution.
+            pass
+        except Exception as e:  # pragma: no cover — defensive
+            log.warning("vision_model_pick_failed", error=str(e))
+    model_name = getattr(provider, "default_model", None)
+    if model_name:
+        return model_name
+    try:
+        available = await provider.list_models()
+        if available:
+            return available[0]
+    except Exception as e:
+        log.warning("vision_model_list_failed", error=str(e))
+    return None
+
+
+async def check_vision_capability(provider: Any, model: str) -> bool | None:
+    """Ask the provider whether ``model`` accepts image input.
+
+    Returns True / False from a real capability check, or None when the
+    provider cannot answer (no override, or a MagicMock-style test double
+    whose auto-generated attribute isn't awaitable). Callers treat None as
+    "proceed with legacy behavior".
+    """
+    checker = getattr(provider, "supports_vision", None)
+    if checker is None:
+        return None
+    try:
+        result = checker(model)
+    except TypeError:
+        return None
+    if hasattr(result, "__await__"):
+        try:
+            return bool(await result)
+        except TypeError:
+            return None
+        except Exception as e:  # pragma: no cover — defensive
+            log.warning("vision_capability_check_failed", error=str(e))
+            return None
+    # Sync truthy (real override returned a bool, or a MagicMock placeholder)
+    return bool(result)
 
 
 # --------------------------------------------------------------------------- #
@@ -431,6 +559,7 @@ class _OpenAICompatibleProvider(ModelProvider):
         tools: list[dict[str, Any]] | None = None,
         timeout: float | None = 60.0,
         json_mode: bool = False,
+        max_tokens: int | None = None,
     ) -> ChatResponse:
         payload: dict[str, Any] = {
             "model": model or self.default_model,
@@ -438,6 +567,8 @@ class _OpenAICompatibleProvider(ModelProvider):
             "temperature": temperature,
             "stream": False,
         }
+        if max_tokens:
+            payload["max_tokens"] = max_tokens
         if tools:
             payload["tools"] = tools
         # Issue 2b: OpenAI-compatible JSON mode (supported by LM Studio and
@@ -685,6 +816,7 @@ class OllamaProvider(ModelProvider):
         tools: list[dict[str, Any]] | None = None,
         timeout: float | None = 120.0,
         json_mode: bool = False,
+        max_tokens: int | None = None,
     ) -> ChatResponse:
         model_name = model or self.default_model
         is_qwen3 = self._is_qwen3(model_name)
@@ -697,7 +829,11 @@ class OllamaProvider(ModelProvider):
             "think": False,  # Disable thinking for ALL models (harmless for non-Qwen3)
             "options": {
                 "temperature": temperature,
-                "num_predict": 1024 if is_qwen3 else 512,  # More tokens for Qwen3
+                # v1.2.0 Lens round: vision call sites pass max_tokens=2048 —
+                # rich JSON claim sets (visual grammar, discourse lenses) were
+                # getting truncated at 512, degrading to the single-claim
+                # fallback in the defensive parser.
+                "num_predict": max_tokens or (1024 if is_qwen3 else 512),
             },
         }
 
@@ -724,6 +860,7 @@ class OllamaProvider(ModelProvider):
                 tools=tools,
                 timeout=timeout,
                 json_mode=json_mode,
+                max_tokens=max_tokens,
             )
 
         log.info(
@@ -795,6 +932,7 @@ class OllamaProvider(ModelProvider):
         tools: list[dict[str, Any]],
         timeout: float | None,
         json_mode: bool = False,
+        max_tokens: int | None = None,
     ) -> ChatResponse:
         """Fallback to /v1/chat/completions for tool-calling (Ollama supports both).
 
@@ -812,6 +950,8 @@ class OllamaProvider(ModelProvider):
             "temperature": temperature,
             "stream": False,
         }
+        if max_tokens:
+            payload["max_tokens"] = max_tokens
         # v1.2.0: sanitize schemas for the local server (older Ollama 400s
         # on unknown JSON-Schema keywords like default/minimum/maximum).
         wire_tools = sanitize_tools_for_compat(tools) if tools else None
@@ -1026,6 +1166,45 @@ class OllamaProvider(ModelProvider):
                 return m["name"]
         return models[0].get("name")
 
+    async def supports_vision(self, model: str | None = None) -> bool:
+        """Whether the model advertises the 'vision' capability (v1.2.0).
+
+        Ollama lists per-model ``capabilities`` in /api/tags (e.g.
+        ["vision", "tools", "completion"]). Older Ollama versions omit
+        the field entirely — fall back to a name heuristic (vl/vision/
+        llava/moondream/gemma…) rather than guessing True, because calling
+        a text-only model with image bytes fails in confusing ways.
+        """
+        wanted = model or self.default_model
+        for m in await self._tags_models():
+            name = m.get("name", "")
+            if name == wanted or name.split(":")[0] == wanted.split(":")[0]:
+                caps = m.get("capabilities")
+                if caps:
+                    return "vision" in caps
+                break  # found the model but no capability info → name heuristic
+        return _name_suggests_vision(wanted)
+
+    async def pick_vision_model(self) -> str | None:
+        """First vision-capable model, else first name-hint match, else None.
+
+        Returns None when nothing looks vision-capable — the vision
+        endpoints turn that into an actionable 400 ("ollama pull
+        qwen3-vl:2b") instead of silently calling a text-only model.
+        """
+        models = await self._tags_models()
+        if not models:
+            return None
+        for m in models:
+            caps = m.get("capabilities")
+            if caps and "vision" in caps and m.get("name"):
+                return m["name"]
+        for m in models:
+            name = m.get("name", "")
+            if name and _name_suggests_vision(name):
+                return name
+        return None
+
     # --- health (multi-URL with fallback) ---
     async def health(self) -> bool:
         """
@@ -1069,6 +1248,26 @@ class LMStudioProvider(_OpenAICompatibleProvider):
         self.base_url = settings.lmstudio_base_url
         self.default_model = settings.lmstudio_default_model
         super().__init__(settings)
+
+    async def supports_vision(self, model: str | None = None) -> bool:
+        """LM Studio exposes no per-model capability list — use name hints.
+
+        /v1/models returns bare names; qwen*-vl, gemma3, llava etc. accept
+        images, plain chat models don't. Users can always pass an explicit
+        model name to override the heuristic.
+        """
+        return _name_suggests_vision(model or self.default_model)
+
+    async def pick_vision_model(self) -> str | None:
+        """First installed model whose name suggests vision support."""
+        try:
+            models = await self.list_models()
+        except Exception:
+            return None
+        for name in models:
+            if _name_suggests_vision(name):
+                return name
+        return None
 
 
 class CloudProvider(_OpenAICompatibleProvider):
@@ -1114,6 +1313,14 @@ class CloudProvider(_OpenAICompatibleProvider):
             "openai": "https://api.openai.com/v1",
             "anthropic": "https://api.anthropic.com/v1",
         }.get(provider, "")
+
+    async def pick_vision_model(self) -> str | None:
+        """Cloud models are assumed multimodal-capable when explicitly set.
+
+        The user configured ``cloud_default_model`` deliberately (gpt-4o,
+        claude, gemini… — all accept images). If unset, first listed model.
+        """
+        return self.default_model or None
 
     def _default_headers(self) -> dict[str, str]:
         # Issue 7 fix: Anthropic requires an anthropic-version header on its
