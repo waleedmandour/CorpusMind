@@ -29,6 +29,7 @@ from api import (
     vision,
     wordlists,
 )
+from app import __version__
 from app.logging import configure_logging, get_logger
 from app.settings import get_settings
 from storage.session import dispose_db, init_db
@@ -67,7 +68,7 @@ def create_app() -> FastAPI:
             "polish — saved searches, bookmarks, favorites, project sharing, "
             "at-rest encryption, accessibility hardening."
         ),
-        version="1.1.0",
+        version=__version__,
         license_info={"name": "AGPL-3.0-only", "url": "https://www.gnu.org/licenses/agpl-3.0.html"},
         lifespan=lifespan,
     )
