@@ -246,7 +246,7 @@ Pop-Location
 $sidecarSrcDir = Join-Path $EngineDir "dist\corpusmind-engine"
 $sidecarSrc = Join-Path $sidecarSrcDir "corpusmind-engine.exe"
 if (-not (Test-Path $sidecarSrc)) { DieMsg "sidecar not found at $sidecarSrc (onedir output expected)" }
-$sidecarSize = [m[math]::Round((Get-Item $sidecarSrc).Length / 1MB, 1)
+$sidecarSize = [math]::Round((Get-Item $sidecarSrc).Length / 1MB, 1)
 OkMsg "sidecar built: $sidecarSrc ($sidecarSize MB)"
 Write-Host ""
 
@@ -315,8 +315,8 @@ $msiFile = Get-ChildItem (Join-Path $BundleDir "msi\*.msi") -ErrorAction Silentl
 if (-not $nsisExe) { DieMsg "NSIS .exe not found" }
 if (-not $msiFile) { DieMsg "MSI not found" }
 
-$nsisSize = [m[math]::Round($nsisExe.Length / 1MB, 1)
-$msiSize = [m[math]::Round($msiFile.Length / 1MB, 1)
+$nsisSize = [math]::Round($nsisExe.Length / 1MB, 1)
+$msiSize = [math]::Round($msiFile.Length / 1MB, 1)
 OkMsg "NSIS installer: $($nsisExe.FullName) ($nsisSize MB)"
 OkMsg "MSI installer:  $($msiFile.FullName) ($msiSize MB)"
 Write-Host ""
@@ -325,7 +325,7 @@ Write-Host ""
 Log "verifying sidecar was embedded in installer..."
 $stagedSidecar = Join-Path $BinariesDir "corpusmind-engine\corpusmind-engine.exe"
 if (Test-Path $stagedSidecar) {
-    $sidecarSize = [m[math]::Round((Get-Item $stagedSidecar).Length / 1MB, 1)
+    $sidecarSize = [math]::Round((Get-Item $stagedSidecar).Length / 1MB, 1)
     OkMsg "sidecar staged: $stagedSidecar ($sidecarSize MB)"
     if ($sidecarSize -lt 10) {
         WarnMsg "sidecar is suspiciously small ($sidecarSize MB) - PyInstaller may have failed."
