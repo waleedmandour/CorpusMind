@@ -1,0 +1,574 @@
+# Coxhead (2000) Academic Word List — 570 word families in 10 sublists
+# Machine-readable source: github.com/lpmi-13/machine_readable_wordlists (MIT),
+# Academic/AWL/AWL.json (retrieved 2026-09-05).
+# Format: headword<TAB>sublist<TAB>family members (space-separated)
+analyse	1	analysed analyser analysing analysis analyst analytic analytical analytically analyze analyzed analyzing
+approach	1	approachable approached approaches approaching unapproachable
+area	1	areas
+assess	1	assessable assessed assesses assessing assessment assessments reassess reassessed reassessing reassessment unassessed
+assume	1	assumed assumes assuming assumption assumptions
+authority	1	authoritative authorities
+available	1	availability unavailable
+benefit	1	beneficial beneficiaries beneficiary benefited benefiting benefits
+concept	1	conception concepts conceptual conceptualisation conceptualise conceptualised conceptualises conceptualising conceptually
+consist	1	consisted consistency consistent consistently consisting consists inconsistencies inconsistency inconsistent
+constitute	1	constituencies constituency constituent constituents constituted constitutes constituting constitution constitutional constitutionally constitutions constitutive unconstitutional
+context	1	contexts contextual contextualise contextualised contextualising contextualize contextualized contextualizing uncontextualised uncontextualized
+contract	1	contracted contracting contractor contractors contracts
+create	1	created creates creating creation creations creative creatively creativity creator creators recreate recreated recreates recreating
+data	1	data
+define	1	definable defined defines defining definition definitions redefine redefined redefines redefining undefined
+derive	1	derivation derivations derivative derivatives derived derives deriving
+distribute	1	distributed distributing distribution distributional distributions distributive distributor distributors redistribute redistributed redistributes redistributing redistribution
+economy	1	economic economical economically economics economies economist economists uneconomical
+environment	1	environmental environmentalist environmentalists environmentally environments
+establish	1	disestablish disestablished disestablishes disestablishing disestablishment established establishes establishing establishment establishments
+estimate	1	estimated estimates estimating estimation estimations overestimate overestimated overestimates overestimating over‑estimate underestimate underestimated underestimates underestimating
+evident	1	evidence evidenced evidential evidently
+export	1	exported exporter exporters exporting exports
+factor	1	factored factoring factors
+finance	1	financed finances financial financially financier financiers financing
+formula	1	formulae formulas formulate formulated formulating formulation formulations reformulate reformulated reformulating reformulation reformulations
+function	1	functional functionally functioned functioning functions
+identify	1	identifiable identification identified identifies identifying identities identity unidentifiable
+income	1	incomes
+indicate	1	indicated indicates indicating indication indications indicative indicator indicators
+individual	1	individualised individualism individualist individualistic individualists individuality individually individuals
+interpret	1	interpretation interpretations interpretative interpreted interpreting interpretive interprets misinterpret misinterpretation misinterpretations misinterpreted misinterpreting misinterprets reinterpret reinterpretation reinterpretations reinterpreted reinterpreting reinterprets
+involve	1	involved involvement involves involving uninvolved
+issue	1	issued issues issuing
+labour	1	labor labored labors laboured labouring labours
+legal	1	illegal illegality illegally legality legally
+legislate	1	legislated legislates legislating legislation legislative legislator legislators legislature
+major	1	majorities majority
+method	1	methodical methodological methodologies methodology methods
+occur	1	occurred occurrence occurrences occurring occurs reoccur reoccurred reoccurring reoccurs
+percent	1	percentage percentages
+period	1	periodic periodical periodically periodicals periods
+policy	1	policies
+principle	1	principled principles unprincipled
+proceed	1	procedural procedure procedures proceeded proceeding proceedings proceeds
+process	1	processed processes processing
+require	1	required requirement requirements requires requiring
+research	1	researched researcher researchers researches researching
+respond	1	responded respondent respondents responding responds response responses responsive responsiveness unresponsive
+role	1	roles
+section	1	sectioned sectioning sections
+sector	1	sectors
+significant	1	insignificant insignificantly significance significantly signified signifies signify signifying
+similar	1	dissimilar similarities similarity similarly
+source	1	sourced sources sourcing
+specific	1	specifically specification specifications specificity specifics
+structure	1	restructure restructured restructures restructuring structural structurally structured structures structuring unstructured
+theory	1	theoretical theoretically theories theorist theorists
+vary	1	invariable invariably variability variable variables variably variance variant variants variation variations varied varies varying
+achieve	2	achievable achieved achievement achievements achieves achieving
+acquire	2	acquired acquires acquiring acquisition acquisitions
+administrate	2	administrates administration administrations administrative administratively administrator administrators
+affect	2	affected affecting affective affectively affects unaffected
+appropriate	2	appropriacy appropriately appropriateness inappropriacy inappropriate inappropriately
+aspect	2	aspects
+assist	2	assistance assistant assistants assisted assisting assists unassisted
+category	2	categories categorisation categorise categorised categorises categorising categorization categorized categorizes categorizing
+chapter	2	chapters
+commission	2	commissioned commissioner commissioners commissioning commissions
+community	2	communities
+complex	2	complexities complexity
+compute	2	computable computation computational computations computed computer computerised computers computing
+conclude	2	concluded concludes concluding conclusion conclusions conclusive conclusively inconclusive inconclusively
+conduct	2	conducted conducting conducts
+consequent	2	consequence consequences consequently
+construct	2	constructed constructing construction constructions constructive constructs reconstruct reconstructed reconstructing reconstruction reconstructs
+consume	2	consumed consumer consumers consumes consuming consumption
+credit	2	credited crediting creditor creditors credits
+culture	2	cultural culturally cultured cultures uncultured
+design	2	designed designer designers designing designs
+distinct	2	distinction distinctions distinctive distinctively distinctly indistinct indistinctly
+element	2	elements
+equate	2	equated equates equating equation equations
+evaluate	2	evaluated evaluates evaluating evaluation evaluations evaluative re-evaluate re-evaluated re-evaluates re-evaluating re-evaluation
+feature	2	featured features featuring
+final	2	finalise finalised finalises finalising finality finalize finalized finalizes finalizing finally finals
+focus	2	focused focuses focusing focussed focussing refocus refocused refocuses refocusing refocussed refocusses refocussing
+impact	2	impacted impacting impacts
+injure	2	injured injures injuries injuring injury uninjured
+institute	2	instituted institutes instituting institution institutional institutionalise institutionalised institutionalises institutionalising institutionalized institutionalizes institutionalizing institutionally institutions
+invest	2	invested investing investment investments investor investors invests reinvest reinvested reinvesting reinvestment reinvests
+item	2	itemisation itemise itemised itemises itemising items
+journal	2	journals
+maintain	2	maintained maintaining maintains maintenance
+normal	2	abnormal abnormally normalisation normalise normalised normalises normalising normality normalization normalize normalized normalizes normalizing normally
+obtain	2	obtainable obtained obtaining obtains unobtainable
+participate	2	participant participants participated participates participating participation participatory
+perceive	2	perceived perceives perceiving perception perceptions
+positive	2	positively
+potential	2	potentially
+previous	2	previously
+primary	2	primarily
+purchase	2	purchased purchaser purchasers purchases purchasing
+range	2	ranged ranges ranging
+region	2	regional regionally regions
+regulate	2	deregulated deregulates deregulating deregulation regulated regulates regulating regulation regulations regulator regulators regulatory unregulated
+relevant	2	irrelevance irrelevant relevance
+reside	2	resided residence resident residential residents resides residing
+resource	2	resourced resourceful resources resourcing under-resourced unresourceful
+restrict	2	restricted restricting restriction restrictions restrictive restrictively restricts unrestricted unrestrictive
+secure	2	insecure insecurities insecurity secured securely secures securing securities security
+seek	2	seeking seeks sought
+select	2	selected selecting selection selections selective selectively selector selectors selects
+site	2	sites
+strategy	2	strategic strategically strategies strategist strategists
+survey	2	surveyed surveying surveys
+text	2	texts textual
+tradition	2	non-traditional traditional traditionalist traditionally traditions
+transfer	2	transferable transference transferred transferring transfers
+alternative	3	alternatively alternatives
+circumstance	3	circumstances
+comment	3	commentaries commentary commentator commentators commented commenting comments
+compensate	3	compensated compensates compensating compensation compensations compensatory
+component	3	componentry components
+consent	3	consensus consented consenting consents
+considerable	3	considerably
+constant	3	constancy constantly constants inconstancy inconstantly
+constrain	3	constrained constraining constrains constraint constraints unconstrained
+contribute	3	contributed contributes contributing contribution contributions contributor contributors
+convene	3	convened convenes convening convention conventional conventionally conventions unconventional
+coordinate	3	co-ordinate coordinated coordinates coordinating coordination coordinator coordinators co‑ordinated co‑ordinates co‑ordinating co‑ordination co‑ordinator co‑ordinators
+core	3	cored cores coring
+corporate	3	corporates corporation corporations
+correspond	3	corresponded correspondence corresponding correspondingly corresponds
+criteria	3	criterion
+deduce	3	deduced deduces deducing deduction deductions
+demonstrate	3	demonstrable demonstrably demonstrated demonstrates demonstrating demonstration demonstrations demonstrative demonstratively demonstrator demonstrators
+document	3	documentation documented documenting documents
+dominate	3	dominance dominant dominated dominates dominating domination
+emphasis	3	emphasise emphasised emphasising emphasize emphasized emphasizes emphasizing emphatic emphatically
+ensure	3	ensured ensures ensuring
+exclude	3	excluded excludes excluding exclusion exclusionary exclusionist exclusions exclusive exclusively
+framework	3	frameworks
+fund	3	funded funder funders funding funds
+illustrate	3	illustrated illustrates illustrating illustration illustrations illustrative
+immigrate	3	immigrant immigrants immigrated immigrates immigrating immigration
+imply	3	implied implies implying
+initial	3	initially
+instance	3	instances
+interact	3	interacted interacting interaction interactions interactive interactively interacts
+justify	3	justifiable justifiably justification justifications justified justifies justifying unjustified
+layer	3	layered layering layers
+link	3	linkage linkages linked linking links
+locate	3	located locating location locations relocate relocated relocates relocating relocation
+maximise	3	max maximisation maximised maximises maximising maximization maximize maximized maximizes maximizing maximum
+minor	3	minorities minority minors
+negate	3	negated negates negating negative negatively negatives
+outcome	3	outcomes
+partner	3	partners partnership partnerships
+philosophy	3	philosopher philosophers philosophical philosophically philosophies philosophise philosophised philosophises philosophising philosophize philosophized philosophizes philosophizing
+physical	3	physically
+proportion	3	disproportion disproportionate disproportionately proportional proportionally proportionate proportionately proportions
+publish	3	published publisher publishers publishes publishing unpublished
+react	3	reacted reacting reaction reactionaries reactionary reactions reactivate reactivation reactive reactor reactors reacts
+register	3	deregister deregistered deregistering deregisters deregistration registered registering registers registration
+rely	3	reliability reliable reliably reliance reliant relied relies relying unreliable
+remove	3	removable removal removals removed removes removing
+scheme	3	schematic schematically schemed schemes scheming
+sequence	3	sequenced sequences sequencing sequential sequentially
+sex	3	sexes sexism sexual sexuality sexually
+shift	3	shifted shifting shifts
+specify	3	specifiable specified specifies specifying unspecified
+sufficient	3	insufficient insufficiently sufficiency sufficiently
+task	3	tasks
+technical	3	technically
+technique	3	techniques
+technology	3	technological technologically
+valid	3	invalidate invalidity validate validated validating validation validity validly
+volume	3	vol volumes
+access	4	accessed accesses accessibility accessible accessing inaccessible
+adequate	4	adequacy adequately inadequacies inadequacy inadequate inadequately
+annual	4	annually
+apparent	4	apparently
+approximate	4	approximated approximately approximates approximating approximation approximations
+attitude	4	attitudes
+attribute	4	attributable attributed attributes attributing attribution
+civil	4	
+code	4	coded codes coding
+commit	4	commitment commitments commits committed committing
+communicate	4	communicable communicated communicates communicating communication communications communicative communicatively uncommunicative
+concentrate	4	concentrated concentrates concentrating concentration
+confer	4	conference conferences conferred conferring confers
+contrast	4	contrasted contrasting contrastive contrasts
+cycle	4	cycled cycles cyclic cyclical cycling
+debate	4	debatable debated debates debating
+despite	4	
+dimension	4	dimensional dimensions multidimensional
+domestic	4	domestically domesticate domesticated domesticating domestics
+emerge	4	emerged emergence emergent emerges emerging
+error	4	erroneous erroneously errors
+ethnic	4	ethnicity
+goal	4	goals
+grant	4	granted granting grants
+hence	4	
+hypothesis	4	hypotheses hypothesise hypothesised hypothesises hypothesising hypothesize hypothesized hypothesizes hypothesizing hypothetical hypothetically
+implement	4	implementation implemented implementing implements
+implicate	4	implicated implicates implicating implication implications
+impose	4	imposed imposes imposing imposition
+integrate	4	integrated integrates integrating integration
+internal	4	internalise internalised internalises internalising internalize internalized internalizes internalizing internally
+investigate	4	investigated investigates investigating investigation investigations investigative investigator investigators
+job	4	jobs
+label	4	labeled labeling labelled labelling labels
+mechanism	4	mechanisms
+obvious	4	obviously
+occupy	4	occupancy occupant occupants occupation occupational occupations occupied occupier occupiers occupies occupying
+option	4	optional options
+output	4	outputs
+overall	4	
+parallel	4	paralleled parallelled parallelling parallels unparalleled
+parameter	4	parameters
+phase	4	phased phases phasing
+predict	4	predictability predictable predictably predicted predicting prediction predictions predicts unpredictability unpredictable
+principal	4	principally
+prior	4	
+professional	4	professionalism professionally professionals
+project	4	projected projecting projection projections projects
+promote	4	promoted promoter promoters promotes promoting promotion promotions
+regime	4	regimes
+resolve	4	resolution resolved resolves resolving unresolved
+retain	4	retained retainer retainers retaining retains retention retentive
+series	4	
+statistic	4	statistical statistically statistician statisticians statistics
+status	4	
+stress	4	stressed stresses stressful stressing unstressed
+subsequent	4	subsequently
+sum	4	summation summed summing sums
+summary	4	summaries summarisation summarisations summarise summarised summarises summarising summarization summarizations summarize summarized summarizes summarizing
+undertake	4	undertaken undertakes undertaking undertook
+academy	5	academia academic academically academics academies
+adjust	5	adjusted adjusting adjustment adjustments adjusts readjust readjusted readjusting readjustment readjustments readjusts
+alter	5	alterable alteration alterations altered altering alternate alternating alters unalterable unaltered
+amend	5	amended amending amendment amendments amends
+aware	5	awareness unaware
+capacity	5	capacities incapacitate incapacitated
+challenge	5	challenged challenger challengers challenges challenging
+clause	5	clauses
+compound	5	compounded compounding compounds
+conflict	5	conflicted conflicting conflicts
+consult	5	consultancy consultant consultants consultation consultations consultative consulted consulting consults
+contact	5	contactable contacted contacting contacts
+decline	5	declined declines declining
+discrete	5	discretely discretion discretionary indiscrete indiscretion
+draft	5	drafted drafting drafts redraft redrafted redrafting redrafts
+enable	5	enabled enables enabling
+energy	5	energetic energetically energies
+enforce	5	enforced enforcement enforces enforcing
+entity	5	entities
+equivalent	5	equivalence
+evolve	5	evolution evolutionary evolutionist evolutionists evolved evolves evolving
+expand	5	expanded expanding expands expansion expansionism expansive
+expose	5	exposed exposes exposing exposure exposures
+external	5	externalisation externalise externalised externalises externalising externality externalization externalize externalized externalizes externalizing externally
+facilitate	5	facilitated facilitates facilitating facilitation facilitator facilitators facilities facility
+fundamental	5	fundamentally
+generate	5	generated generates generating
+generation	5	generations
+image	5	imagery images
+liberal	5	liberalisation liberalise liberalised liberalises liberalising liberalism liberalization liberalize liberalized liberalizes liberalizing liberally liberals liberate liberated liberates liberating liberation liberations liberator liberators
+licence	5	licences license licensed licenses licensing unlicensed
+logic	5	illogical illogically logical logically logician logicians
+margin	5	marginal marginally margins
+medical	5	medically
+mental	5	mentality mentally
+modify	5	modification modifications modified modifies modifying unmodified
+monitor	5	monitored monitoring monitors unmonitored
+network	5	networked networking networks
+notion	5	notions
+objective	5	objectively objectivity
+orient	5	orientate orientated orientates orientating orientation oriented orienting orients reorient reorientation
+perspective	5	perspectives
+precise	5	imprecise precisely precision
+prime	5	primacy
+psychology	5	psychological psychologically psychologist psychologists
+pursue	5	pursued pursues pursuing pursuit pursuits
+ratio	5	ratios
+reject	5	rejected rejecting rejection rejections rejects
+revenue	5	revenues
+stable	5	instability stabilisation stabilise stabilised stabilises stabilising stability stabilization stabilize stabilized stabilizes stabilizing unstable
+style	5	styled styles styling stylise stylised stylises stylish stylising stylize stylized stylizes stylizing
+substitute	5	substituted substitutes substituting substitution
+sustain	5	sustainability sustainable sustained sustaining sustains sustenance unsustainable
+symbol	5	symbolic symbolically symbolise symbolised symbolises symbolising symbolism symbolize symbolized symbolizes symbolizing symbols
+target	5	targeted targeting targets
+transit	5	transited transiting transition transitional transitions transitory transits
+trend	5	trends
+version	5	versions
+welfare	5	
+whereas	5	
+abstract	6	abstraction abstractions abstractly abstracts
+accurate	6	accuracy accurately inaccuracies inaccuracy inaccurate
+acknowledge	6	acknowledged acknowledgemens acknowledgement acknowledges acknowledging
+aggregate	6	aggregated aggregates aggregating aggregation
+allocate	6	allocated allocates allocating allocation allocations
+assign	6	assigned assigning assignment assignments assigns reassign reassigned reassigning reassigns unassigned
+attach	6	attached attaches attaching attachment attachments unattached
+author	6	authored authoring authors authorship
+bond	6	bonded bonding bonds
+brief	6	brevity briefed briefing briefly briefs
+capable	6	capabilities capability incapable
+cite	6	citation citations cited cites citing
+cooperate	6	co-operate cooperated cooperates cooperating cooperation cooperative cooperatively co‑operated co‑operates co‑operation co‑operative co‑operatively
+discriminate	6	discriminated discriminates discriminating discrimination
+display	6	displayed displaying displays
+diverse	6	diversely diversification diversified diversifies diversify diversifying diversity
+domain	6	domains
+edit	6	edited editing edition editions editor editorial editorials editors edits
+enhance	6	enhanced enhancement enhances enhancing
+estate	6	estates
+exceed	6	exceeded exceeding exceeds
+expert	6	expertise expertly experts
+explicit	6	explicitly
+federal	6	federation federations
+fee	6	fees
+flexible	6	flexibility inflexibility inflexible
+furthermore	6	
+gender	6	genders
+ignorant	6	ignorance ignore ignored ignores ignoring
+incentive	6	incentives
+incidence	6	incident incidentally incidents
+incorporate	6	incorporated incorporates incorporating incorporation
+index	6	indexed indexes indexing
+inhibit	6	inhibited inhibiting inhibition inhibitions inhibits
+initiate	6	initiated initiates initiating initiation initiations initiative initiatives initiator initiators
+input	6	inputs
+instruct	6	instructed instructing instruction instructions instructive instructor instructors instructs
+intelligent	6	intelligence intelligently unintelligent
+interval	6	intervals
+lecture	6	lectured lecturer lecturers lectures lecturing
+migrate	6	migrant migrants migrated migrates migrating migration migrations migratory
+minimum	6	
+ministry	6	ministered ministerial ministering ministries
+motive	6	motivate motivated motivates motivating motivation motivations motives unmotivated
+neutral	6	neutralisation neutralise neutralised neutralises neutralising neutrality neutralization neutralize neutralized neutralizes neutralizing
+nevertheless	6	
+overseas	6	
+precede	6	preceded precedence precedent precedes preceding unprecedented
+presume	6	presumably presumed presumes presuming presumption presumptions presumptuous
+rational	6	irrational rationalisation rationalisations rationalise rationalised rationalises rationalising rationalism rationality rationalization rationalizations rationalize rationalized rationalizes rationally
+recover	6	recoverable recovered recovering recovers recovery
+reveal	6	revealed revealing reveals revelation revelations
+scope	6	
+subsidy	6	subsidiary subsidies subsidise subsidised subsidises subsidising subsidize subsidized subsidizes subsidizing
+tape	6	taped tapes taping
+trace	6	traceable traced traces tracing
+transform	6	transformation transformations transformed transforming transforms
+transport	6	transportation transported transporter transporters transporting transports
+underlie	6	underlay underlies underlying
+utilise	6	utilisation utilised utiliser utilisers utilises utilising utilities utility utilization utilize utilized utilizes utilizing
+adapt	7	adaptability adaptable adaptation adaptations adapted adapting adaptive adapts
+adult	7	adulthood adults
+advocate	7	advocacy advocated advocates advocating
+aid	7	aided aiding aids unaided
+channel	7	channelled channelling channels
+chemical	7	chemically chemicals
+classic	7	classical classics
+comprehensive	7	comprehensively
+comprise	7	comprised comprises comprising
+confirm	7	confirmation confirmed confirming confirms
+contrary	7	contrarily
+convert	7	conversion conversions converted convertible converting converts
+couple	7	coupled couples coupling
+decade	7	decades
+definite	7	definitely definitive indefinite indefinitely
+deny	7	deniable denial denials denied denies denying undeniable
+differentiate	7	differentiated differentiates differentiating differentiation
+dispose	7	disposable disposal disposed disposes disposing
+dynamic	7	dynamically dynamics
+eliminate	7	eliminated eliminates eliminating elimination
+empirical	7	empirically empiricism
+equip	7	equipment equipped equipping equips
+extract	7	extracted extracting extraction extracts
+file	7	filed files filing
+finite	7	infinite infinitely
+foundation	7	foundations
+globe	7	global globalisation globalization globally
+grade	7	graded grades grading
+guarantee	7	guaranteed guaranteeing guarantees
+hierarchy	7	hierarchical hierarchies
+identical	7	identically
+ideology	7	ideological ideologically ideologies
+infer	7	inference inferences inferred inferring infers
+innovate	7	innovated innovates innovating innovation innovations innovative innovator innovators
+insert	7	inserted inserting insertion inserts
+intervene	7	intervened intervenes intervening intervention interventions
+isolate	7	isolated isolates isolating isolation isolationism
+media	7	
+mode	7	modes
+paradigm	7	paradigms
+phenomenon	7	phenomena phenomenal
+priority	7	priorities prioritisation prioritise prioritised prioritises prioritising prioritization prioritize prioritized prioritizes prioritizing
+prohibit	7	prohibited prohibiting prohibition prohibitions prohibitive prohibits
+publication	7	publications
+quote	7	quotation quotations quoted quotes quoting
+release	7	released releases releasing
+reverse	7	irreversible reversal reversals reversed reverses reversible reversing
+simulate	7	simulated simulates simulating simulation
+sole	7	solely
+somewhat	7	
+submit	7	submission submissions submits submitted submitting
+successor	7	succession successions successive successively successors
+survive	7	survival survived survives surviving survivor survivors
+thesis	7	theses
+topic	7	topical topics
+transmit	7	transmission transmissions transmits transmitted transmitting
+ultimate	7	ultimately
+unique	7	uniquely uniqueness
+visible	7	invisibility invisible visibility visibly
+voluntary	7	voluntarily volunteer volunteered volunteering volunteers
+abandon	8	abandoned abandoning abandonment abandons
+accompany	8	accompanied accompanies accompaniment accompanying unaccompanied
+accumulate	8	accumulated accumulates accumulating accumulation
+ambiguous	8	ambiguities ambiguity unambiguous unambiguously
+append	8	appended appendices appending appendix appendixes appends
+appreciate	8	appreciable appreciably appreciated appreciates appreciating appreciation unappreciated
+arbitrary	8	arbitrarily arbitrariness
+automate	8	automated automates automatic automatically automating automation
+bias	8	biased biases biasing unbiased
+chart	8	charted charting charts uncharted
+clarify	8	clarification clarified clarifies clarifying clarity
+commodity	8	commodities
+complement	8	complementary complemented complementing complements
+conform	8	conformability conformable conformance conformation conformed conforming conformist conformists conformity conforms non-conformist non-conformists non-conformity nonconformist nonconformists nonconformity
+contemporary	8	contemporaries
+contradict	8	contradicted contradicting contradiction contradictions contradictory contradicts
+crucial	8	crucially
+currency	8	currencies
+denote	8	denotation denotations denoted denotes denoting
+detect	8	detectable detected detecting detection detective detectives detector detectors detects
+deviate	8	deviated deviates deviating deviation deviations
+displace	8	displaced displacement displaces displacing
+drama	8	dramas dramatic dramatically dramatisation dramatisations dramatise dramatised dramatises dramatising dramatist dramatists dramatization dramatizations dramatize dramatized dramatizes dramatizing
+eventual	8	eventuality eventually
+exhibit	8	exhibited exhibiting exhibition exhibitions exhibits
+exploit	8	exploitation exploited exploiting exploits
+fluctuate	8	fluctuated fluctuates fluctuating fluctuation fluctuations
+guideline	8	guidelines
+highlight	8	highlighted highlighting highlights
+implicit	8	implicitly
+induce	8	induced induces inducing induction
+inevitable	8	inevitability inevitably
+infrastructure	8	infrastructures
+inspect	8	inspected inspecting inspection inspections inspector inspectors inspects
+intense	8	intensely intenseness intensification intensified intensifies intensify intensifying intension intensity intensive intensively
+manipulate	8	manipulated manipulates manipulating manipulation manipulations manipulative
+minimise	8	minimised minimises minimising minimize minimized minimizes minimizing
+nuclear	8	
+offset	8	offsets offsetting
+paragraph	8	paragraphing paragraphs
+plus	8	pluses
+practitioner	8	practitioners
+predominant	8	predominance predominantly predominate predominated predominates predominating
+prospect	8	prospective prospects
+radical	8	radically radicals
+random	8	randomly randomness
+reinforce	8	reinforced reinforcement reinforcements reinforces reinforcing
+restore	8	restoration restored restores restoring
+revise	8	revised revises revising revision revisions
+schedule	8	reschedule rescheduled reschedules rescheduling scheduled schedules scheduling unscheduled
+tense	8	tensely tenser tensest tension tensions
+terminate	8	terminal terminals terminated terminates terminating termination terminations
+theme	8	thematic thematically themes
+thereby	8	
+uniform	8	uniformity uniformly
+vehicle	8	vehicles
+via	8	
+virtual	8	virtually
+visual	8	visualisation visualise visualised visualising visualization visualize visualized visualizing visually
+widespread	8	
+accommodate	9	accommodated accommodates accommodating accommodation
+analogy	9	analogies analogous
+anticipate	9	anticipated anticipates anticipating anticipation unanticipated
+assure	9	assurance assurances assured assuredly assures assuring
+attain	9	attainable attained attaining attainment attainments attains unattainable
+behalf	9	
+bulk	9	bulky
+cease	9	ceased ceaseless ceases ceasing
+coherent	9	coherence coherently incoherent incoherently
+coincide	9	coincided coincidence coincidences coincident coincidental coincides coinciding
+commence	9	commenced commencement commences commencing recommenced recommences recommencing
+compatible	9	compatibility incompatibility incompatible
+concurrent	9	concurrently
+confine	9	confined confines confining unconfined
+controversy	9	controversial controversially controversies uncontroversial
+converse	9	conversely
+device	9	devices
+devote	9	devoted devotedly devotes devoting devotion devotions
+diminish	9	diminished diminishes diminishing diminution undiminished
+distort	9	distorted distorting distortion distortions distorts
+duration	9	
+erode	9	eroded erodes eroding erosion
+ethic	9	ethical ethically ethics unethical
+format	9	formats formatted formatting
+found	9	founded founder founders founding unfounded
+inherent	9	inherently
+insight	9	insightful insights
+integral	9	
+intermediate	9	
+manual	9	manually manuals
+mature	9	immature immaturity maturation maturational matured matures maturing maturity
+mediate	9	mediated mediates mediating mediation
+medium	9	
+military	9	
+minimal	9	minimalisation minimalise minimalised minimalises minimalising minimalist minimalistic minimalists minimalization minimalize minimalized minimalizes minimalizing minimally
+mutual	9	mutually
+norm	9	norms
+overlap	9	overlapped overlapping overlaps
+passive	9	passively passivity
+portion	9	portions
+preliminary	9	preliminaries
+protocol	9	protocols
+qualitative	9	qualitatively
+refine	9	refined refinement refinements refines refining
+relax	9	relaxation relaxed relaxes relaxing
+restrain	9	restrained restraining restrains restraint restraints unrestrained
+revolution	9	revolutionaries revolutionary revolutionise revolutionised revolutionises revolutionising revolutionist revolutionists revolutionize revolutionized revolutionizes revolutionizing revolutions
+rigid	9	rigidities rigidity rigidly
+route	9	routed routes routing
+scenario	9	scenarios
+sphere	9	spheres spherical spherically
+subordinate	9	subordinates subordination
+supplement	9	supplementary supplemented supplementing supplements
+suspend	9	suspended suspending suspends suspension
+team	9	teamed teaming teams
+temporary	9	temporarily
+trigger	9	triggered triggering triggers
+unify	9	unification unified unifies unifying
+violate	9	violated violates violating violation violations
+vision	9	visions
+adjacent	10	
+albeit	10	
+assemble	10	assembled assembles assemblies assembling assembly
+collapse	10	collapsed collapses collapsible collapsing
+colleague	10	colleagues
+compile	10	compilation compilations compiled compiles compiling
+conceive	10	conceivable conceivably conceived conceives conceiving inconceivable inconceivably
+convince	10	convinced convinces convincing convincingly unconvinced
+depress	10	depressed depresses depressing depression
+encounter	10	encountered encountering encounters
+enormous	10	enormity enormously
+forthcoming	10	
+incline	10	inclination inclinations inclined inclines inclining
+integrity	10	
+intrinsic	10	intrinsically
+invoke	10	invoked invokes invoking
+levy	10	levies
+likewise	10	
+nonetheless	10	
+notwithstanding	10	
+odd	10	odds
+ongoing	10	
+panel	10	panelled panelling panels
+persist	10	persisted persistence persistent persistently persisting persists
+pose	10	posed poses posing
+reluctance	10	reluctant reluctantly
+so‑called	10	
+straightforward	10	
+undergo	10	undergoes undergoing undergone underwent
+whereby	10	
