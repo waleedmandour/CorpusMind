@@ -13,6 +13,7 @@ import { t } from "@/lib/i18n";
 import { useDownloadProgress } from "@/store/downloadProgress";
 import { Sidebar } from "@/components/Sidebar";
 import { CommandPalette } from "@/components/CommandPalette";
+import { FloatingAssistant } from "@/components/FloatingAssistant";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { OnboardingModal } from "@/components/OnboardingModal";
 import { TroubleshootingBar } from "@/components/TroubleshootingBar";
@@ -182,6 +183,7 @@ export default function App() {
         <TroubleshootingBar />
       </footer>
 
+      <FloatingAssistant />
       <CommandPalette />
       <OnboardingModal />
     </div>

@@ -151,6 +151,19 @@ export const translations = {
     ai_you: "You",
     ai_assistant: "Assistant",
 
+    // --- v1.2.0: floating AI assistant (Issue 7b) ---
+    ai_fab_label: "AI Assistant",
+    ai_drawer_title: "AI Assistant",
+    ai_close: "Close chat",
+    ai_context_viewing: "Viewing",
+    ai_corpus_attached: "corpus attached",
+    ai_corpus_none: "no corpus selected",
+    ai_drawer_empty: "Ask about your corpus or the analysis you are looking at.",
+    ai_thinking: "Thinking…",
+    ai_grounded: "grounded",
+    ai_ungrounded: "ungrounded",
+    ai_input_placeholder: "Ask about this analysis…",
+
     // Settings
     settings_title: "Settings",
     settings_subtitle: "Engine status, model providers, and system configuration for CorpusMind.",
@@ -459,6 +472,19 @@ export const translations = {
     ai_send: "إرسال",
     ai_you: "أنت",
     ai_assistant: "المساعد",
+
+    // --- v1.2.0: floating AI assistant (Issue 7b) ---
+    ai_fab_label: "المساعد الذكي",
+    ai_drawer_title: "المساعد الذكي",
+    ai_close: "إغلاق المحادثة",
+    ai_context_viewing: "تشاهد الآن",
+    ai_corpus_attached: "الدخيرة مرفقة",
+    ai_corpus_none: "لا توجد دخيرة محددة",
+    ai_drawer_empty: "اسأل عن دخيرتك أو عن التحليل الذي تعرضه.",
+    ai_thinking: "يفكّر…",
+    ai_grounded: "موثّق",
+    ai_ungrounded: "غير موثّق",
+    ai_input_placeholder: "اسأل عن هذا التحليل…",
 
     // Settings
     settings_title: "الإعدادات",

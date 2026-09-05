@@ -24,6 +24,7 @@ class ChatRequest(BaseModel):
     model: str | None = Field(None)
     conversation_id: str | None = Field(None)
     corpus_id: str | None = Field(None)
+    context: str | None = Field(None, description="v1.2.0: short UI context, prepended to the system prompt")
 
 
 class ChatResponse(BaseModel):
@@ -135,7 +136,7 @@ async def chat(
 
     assistant = Assistant(provider, model=req.model, corpus_id=req.corpus_id)
     try:
-        turn = await assistant.answer(convo_id, req.message)
+        turn = await assistant.answer(convo_id, req.message, context=req.context)
     except Exception as e:
         error_msg = str(e)
         log.error("chat_failed", error=error_msg)

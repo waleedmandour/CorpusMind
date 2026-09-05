@@ -2065,6 +2065,181 @@ code, pre { font-family: var(--font-mono); }
     }
 }
 
+/* =========================================================================
+   v1.2.0 (Issue 7b): Floating AI Assistant — FAB + chat drawer
+   z-index between CommandPalette (1000) and OnboardingModal (2000)
+   ========================================================================= */
+.ai-fab {
+  position: fixed;
+  inset-block-end: 64px;
+  inset-inline-end: 22px;
+  z-index: 1500;
+  inline-size: 52px;
+  block-size: 52px;
+  border-radius: 50%;
+  border: 1px solid var(--border-strong);
+  background: linear-gradient(135deg, var(--brand-500), var(--brand-600));
+  color: var(--text-on-brand);
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.ai-fab:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3);
+}
+.ai-fab.open {
+  background: var(--bg-elevated);
+  color: var(--text);
+}
+.ai-drawer {
+  position: fixed;
+  inset-block-end: 128px;
+  inset-inline-end: 22px;
+  z-index: 1500;
+  inline-size: min(390px, calc(100vw - 32px));
+  block-size: min(62vh, 620px);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.28);
+  overflow: hidden;
+}
+.ai-drawer-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-block-end: 1px solid var(--border);
+  background: var(--bg-subtle);
+}
+.ai-drawer-header strong { font-size: 13px; }
+.ai-drawer-model {
+  margin-inline-start: auto;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-subtle);
+}
+.ai-drawer-close {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 13px;
+}
+.ai-drawer-context {
+  padding: var(--space-1) var(--space-3);
+  font-size: 11px;
+  color: var(--text-subtle);
+  border-block-end: 1px solid var(--border);
+}
+.ai-drawer-thread {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.ai-drawer-empty {
+  font-size: 12px;
+  color: var(--text-subtle);
+  text-align: center;
+  margin-block-start: var(--space-4);
+}
+.ai-drawer-msg {
+  max-inline-size: 92%;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.ai-drawer-msg.user {
+  align-self: flex-end;
+  background: var(--brand-500);
+  color: var(--text-on-brand);
+}
+.ai-drawer-msg.assistant {
+  align-self: flex-start;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+}
+.ai-drawer-msg.error {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+.ai-drawer-msg-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-block-end: 2px;
+  font-size: 10px;
+}
+.ai-drawer-msg-head strong { text-transform: uppercase; letter-spacing: 0.04em; }
+.ai-badge {
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 600;
+}
+.ai-badge.grounded {
+  background: var(--success);
+  color: #fff;
+}
+.ai-badge.ungrounded {
+  background: var(--warning);
+  color: #fff;
+}
+.ai-drawer-thinking {
+  font-size: 12px;
+  color: var(--text-subtle);
+  font-style: italic;
+}
+.ai-drawer-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: var(--space-2) var(--space-3);
+  border-block-start: 1px solid var(--border);
+  max-block-size: 86px;
+  overflow-y: auto;
+}
+.ai-chip {
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 11px;
+  color: var(--text);
+  cursor: pointer;
+}
+.ai-chip:hover {
+  border-color: var(--brand-400);
+  color: var(--brand-500);
+}
+.ai-drawer-composer {
+  display: flex;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-block-start: 1px solid var(--border);
+  align-items: flex-end;
+}
+.ai-drawer-composer textarea {
+  flex: 1;
+  resize: none;
+  min-block-size: 44px;
+  font-size: 12.5px;
+}
+.ai-send {
+  white-space: nowrap;
+}
+
 /* Ensure minimum touch target size (WCAG 2.5.5) */
 button, .ribbon-item, .tool-tab, .tab, .item {
     min-height: 44px;

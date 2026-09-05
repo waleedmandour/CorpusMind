@@ -113,7 +113,7 @@ class Assistant:
         self.model = model
         self.corpus_id = corpus_id
 
-    async def answer(self, convo_id: str, user_text: str) -> AssistantTurn:
+    async def answer(self, convo_id: str, user_text: str, context: str | None = None) -> AssistantTurn:
         """One grounded chat round-trip. Uses its own session_scope() for ALL
         database operations — no external session is passed in. This eliminates
         the greenlet conflict that occurs when two async sessions (the request's

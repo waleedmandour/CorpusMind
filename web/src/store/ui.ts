@@ -24,6 +24,8 @@ interface UIState {
   dir: Dir;
   lang: Lang;
   commandPaletteOpen: boolean;
+  /** v1.2.0: floating AI assistant drawer (Issue 7b) */
+  floatingAssistantOpen: boolean;
   activeNav: NavTarget;
   /** Whether we're running inside the CorpusMind Lens shell (vs the
    * main CorpusMind app). Detected from the ?shell=lens URL query param
@@ -48,6 +50,7 @@ interface UIState {
   setLang: (l: Lang) => void;
   toggleLang: () => void;
   setCommandPaletteOpen: (open: boolean) => void;
+  setFloatingAssistantOpen: (open: boolean) => void;
   setActiveNav: (nav: NavTarget) => void;
   setOnboardingComplete: (done: boolean) => void;
   setOnboardingOpen: (open: boolean) => void;
@@ -75,6 +78,7 @@ export const useUI = create<UIState>()(
       dir: "ltr",
       lang: "en",
       commandPaletteOpen: false,
+      floatingAssistantOpen: false,
       // In Lens mode, default to the Vision view instead of Home.
       activeNav: detectLensMode() ? "vision" : "home",
       isLensMode: detectLensMode(),
@@ -108,6 +112,7 @@ export const useUI = create<UIState>()(
         set({ lang: newLang, dir: newLang === "ar" ? "rtl" : "ltr" });
       },
       setCommandPaletteOpen: (open) => set({ commandPaletteOpen: open }),
+      setFloatingAssistantOpen: (open) => set({ floatingAssistantOpen: open }),
       setActiveNav: (activeNav) => set({ activeNav }),
       setOnboardingComplete: (onboardingComplete) => set({ onboardingComplete }),
       setOnboardingOpen: (onboardingOpen) => set({ onboardingOpen }),

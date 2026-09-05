@@ -317,6 +317,8 @@ export interface ChatRequest {
   model?: string | null;
   conversation_id?: string | null;
   corpus_id?: string | null;
+  /** v1.2.0: short UI context ("user is viewing X") prepended to the system prompt. */
+  context?: string | null;
 }
 
 export interface EvidenceItem {
