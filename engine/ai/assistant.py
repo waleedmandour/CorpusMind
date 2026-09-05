@@ -103,10 +103,13 @@ class Assistant:
         "keywords, and phrase cross-modal claims as hypotheses (rule 3 "
         "applies with full force to visual interpretations).\n\n"
         "## Rules\n"
-        "1. Every empirical claim MUST come from a tool call. Do not make "
-        "claims without tool evidence.\n"
-        "2. If you cannot ground a claim, say: 'I cannot ground this in corpus "
-        "evidence — answering from parametric memory only.'\n"
+        "1. Ground empirical claims in tool results, never in memory. To get "
+        "corpus data, CALL A TOOL first — e.g. get_corpus_overview (corpus "
+        "summary), get_frequency (top words), search_concordance (examples of "
+        "a word in context), compute_collocations (co-occurrence statistics), "
+        "get_dispersion (distribution across documents).\n"
+        "2. NEVER invent counts, statistics, or concordance lines. If you need "
+        "a number you do not have, run the relevant tool before answering.\n"
         "3. Interpretive claims (CDA, ideology, metaphor) MUST be phrased as "
         "framework-lensed hypotheses, never as settled fact.\n"
         "4. Cite evidence IDs verbatim (e.g. 'line doc-abc:5:12').\n"
@@ -114,6 +117,9 @@ class Assistant:
         "plain language for a linguist who may not be a statistician.\n"
         "6. If tool results are large (>50 rows), summarize the top findings "
         "rather than listing every row.\n"
+        "7. If the 'Current corpus snapshot' section below already contains "
+        "the data you need for a simple claim, cite it directly — it IS live "
+        "tool evidence gathered just before this turn.\n"
     )
 
     def __init__(
@@ -183,6 +189,39 @@ class Assistant:
         # === LLM calls happen OUTSIDE any DB session ===
         # This is the key fix: no async session is open during the LLM call,
         # so there's no greenlet conflict when execute_tool() opens its own session.
+        #
+        # v1.2.1 fix ("assistant fails to reply — I cannot ground this in
+        # corpus evidence"): two changes make grounded replies the DEFAULT
+        # rather than the exception.
+        #
+        # 1) LIVE CORPUS SNAPSHOT — when a corpus is selected, run
+        #    get_corpus_overview BEFORE the first LLM call and inject a
+        #    compact summary into the system prompt. The model then has real
+        #    numbers in context even on turns where no tool-call happens
+        #    (small local models frequently fail to emit tool_calls and used
+        #    to fall back to the old canned refusal line).
+        # 2) UI CONTEXT IS FINALLY WIRED — ChatRequest.context was accepted
+        #    by the API but never used; it now reaches the system prompt.
+        snapshot = await _corpus_snapshot(self.corpus_id)
+        if snapshot:
+            messages[0] = Message(
+                role="system",
+                content=(
+                    messages[0].content
+                    + "\n\n## Current corpus snapshot (live tool evidence)\n"
+                    + snapshot
+                ),
+            )
+        if context:
+            messages[0] = Message(
+                role="system",
+                content=(
+                    messages[0].content
+                    + "\n\n## UI context (the view the user is currently looking at)\n"
+                    + context
+                ),
+            )
+
         started = time.perf_counter()
         tool_calls: list[dict[str, Any]] = []
         evidence: list[Evidence] = []
@@ -203,6 +242,11 @@ class Assistant:
         # ("thanks", "what can you do?", "explain X") go through the
         # reliable native path with no tool surface.
         needs_tools = _user_message_needs_tools(user_text)
+        # v1.2.1: remember the ORIGINAL intent. The capability gate below may
+        # flip `needs_tools` off (model can't drive the tool protocol), but
+        # auto-grounding can still run the tools deterministically on the
+        # user's behalf — that's exactly the case it exists for.
+        empirical_intent = needs_tools
 
         # v1.2.0: skip the tool surface entirely when the selected model
         # can't do tool calling (Ollama /api/tags capabilities). Sending a
@@ -222,11 +266,12 @@ class Assistant:
                     Message(
                         role="system",
                         content=(
-                            "NOTE: The currently selected model does not support "
-                            "tool calling, so corpus tools cannot be run this turn. "
-                            "Answer from the conversation, and tell the user they "
-                            "can pick a tool-capable model (e.g. llama3.1, qwen2.5) "
-                            "in Settings to restore grounded answers."
+                            "NOTE: The currently selected model cannot call tools itself. "
+                            "Corpus tools may still be run automatically on the user's "
+                            "behalf — if tool results appear in this conversation, base "
+                            "your answer on them and say they were computed for the user. "
+                            "Also mention they can pick a tool-capable model (e.g. llama3.1, "
+                            "qwen2.5) in Settings for fully interactive tool use."
                         ),
                     )
                 )
@@ -259,6 +304,38 @@ class Assistant:
             # Try native /api/chat format
             native_msg = first.raw.get("message", {})
             tool_call_reqs = native_msg.get("tool_calls", [])
+
+        # v1.2.1 auto-ground fallback: the model was OFFERED tools but
+        # emitted none (the classic small-model failure that produced the
+        # "I cannot ground this in corpus evidence" dead-end). Instead of
+        # letting the refusal through, infer the most relevant corpus tools
+        # from the message, run them deterministically, feed the results
+        # back, and re-ask. The final answer is then genuinely grounded.
+        if empirical_intent and not tool_call_reqs:
+            if self.corpus_id:
+                auto_calls = await self._auto_ground(messages, user_text, evidence)
+                if auto_calls:
+                    tool_calls.extend(auto_calls)
+                    final = await self.provider.chat(messages, model=self.model, temperature=0.2)
+                    content = final.content
+            else:
+                # Empirical-looking question but no corpus selected — guide
+                # the user instead of refusing.
+                messages.append(
+                    Message(
+                        role="system",
+                        content=(
+                            "NOTE: The user's message looks like an empirical question, but "
+                            "NO corpus is currently selected, so no corpus tools can run. "
+                            "Answer helpfully in general terms, clearly say that nothing is "
+                            "grounded yet, and tell the user to select a corpus in the sidebar "
+                            "(then re-ask) to get tool-backed answers with real numbers. "
+                            "Do NOT invent any corpus statistics."
+                        ),
+                    )
+                )
+                final = await self.provider.chat(messages, model=self.model, temperature=0.2)
+                content = final.content
 
         if tool_call_reqs:
             messages.append(Message(role="assistant", content=content or "(tool call)"))
@@ -397,6 +474,198 @@ class Assistant:
             mcqs=mcqs,
             turn_id=persisted_turn_id,
         )
+
+
+    async def _auto_ground(
+        self,
+        messages: list[Message],
+        user_text: str,
+        evidence: list[Evidence],
+    ) -> list[dict[str, Any]]:
+        """Deterministic auto-grounding fallback (v1.2.1).
+
+        Small local models (1.5B–3B) frequently answer empirical questions
+        without emitting any tool_calls, which used to leave the user with
+        the canned refusal. When that happens we infer the most relevant
+        corpus tools from the message, run them deterministically, append
+        the results as tool messages, and let the caller re-ask the model.
+        The reply is then genuinely grounded even for models that cannot
+        drive the tool-calling protocol themselves.
+        """
+        plans = _plan_auto_tools(user_text)
+        executed: list[dict[str, Any]] = []
+        seen: set[str] = set()
+        for name, args in plans:
+            if len(executed) >= 3 or name in seen:
+                continue
+            seen.add(name)
+            call_args = {"corpus_id": self.corpus_id, **args}
+            try:
+                result = await execute_tool(name, call_args)
+                result_str = _summarize_tool_result(name, result)
+                executed.append({"name": name, "args": call_args, "ok": True, "auto": True})
+                evidence.append(
+                    Evidence(
+                        kind="tool_result",
+                        ref=f"auto:{name}:{len(executed)}",
+                        snippet=result_str[:500],
+                    )
+                )
+                messages.append(Message(role="tool", content=result_str, name=name))
+            except Exception as e:
+                executed.append(
+                    {"name": name, "args": call_args, "ok": False, "error": str(e), "auto": True}
+                )
+                messages.append(Message(role="tool", content=f"ERROR: {e}", name=name))
+        if executed:
+            messages.append(
+                Message(
+                    role="system",
+                    content=(
+                        "The tool results above were produced automatically because the "
+                        "model did not call the tools itself. Base your answer on these "
+                        "real results, name the tools you are citing, and report the "
+                        "actual numbers they returned. Do not add statistics from memory."
+                    ),
+                )
+            )
+        return executed
+
+
+# --------------------------------------------------------------------------- #
+# v1.2.1 auto-grounding helpers
+# --------------------------------------------------------------------------- #
+
+# Words that never make good corpus query terms. Deliberately broad: the
+# goal is to strip the question scaffolding and keep content words.
+_TERM_STOPWORDS = frozenset(
+    """
+    a an the this that these those there here it its is are was were be been
+    being am do does did done can could would should will shall may might must
+    have has had i me my mine we us our you your he him his she her they them
+    their what which who whom whose why how when where whether if then than
+    and or but nor not no yes so as at by in into of for to from with about
+    above below over under between within without during after before
+    please thanks thank show tell give find list help me need want like look
+    corpus corpora text texts document documents word words lemma lemmas
+    token tokens analysis analyse analyze data set sets using use used
+    something anything everything nothing some any all most more less many
+    much few lot lots kind sort type top frequent frequency frequencies
+    common commonly often appear appears appearing occurrence occurrences
+    occur occurs example examples context contexts collocation collocates
+    collocations statistic statistics number numbers count counts
+    """.split()
+)
+
+
+def _salient_terms(user_text: str, max_terms: int = 3) -> list[str]:
+    """Extract candidate query terms from the user's message.
+
+    Quoted spans always win ("the word 'elephant'"); otherwise fall back to
+    content words in original order, longest-first within equal priority.
+    """
+    import re
+
+    quoted = re.findall(r"['\"“”'']([^'\"“”'']{2,40})['\"“”'']", user_text)
+    if quoted:
+        return [q.strip() for q in quoted[:max_terms]]
+    words = re.findall(r"[^\W\d_][\w'-]*", user_text, re.UNICODE)
+    kept: list[str] = []
+    seen: set[str] = set()
+    for w in words:
+        lw = w.lower()
+        if lw in _TERM_STOPWORDS or len(w) < 2 or lw in seen:
+            continue
+        seen.add(lw)
+        kept.append(w)
+        if len(kept) >= max_terms:
+            break
+    return kept
+
+
+def _plan_auto_tools(user_text: str) -> list[tuple[str, dict[str, Any]]]:
+    """Map a user message onto (tool_name, args) pairs to auto-execute.
+
+    Uses only tools that (a) need just the active corpus_id and (b) do not
+    require a reference corpus (keyness is excluded for that reason).
+    Args match the TOOL_SCHEMAS parameter names exactly.
+    """
+    text = user_text.lower()
+    terms = _salient_terms(user_text)
+    term = terms[0] if terms else None
+    plans: list[tuple[str, dict[str, Any]]] = []
+
+    if "collocat" in text and term:
+        plans.append(("compute_collocations", {"node": term, "window": 5, "min_freq": 2}))
+
+    if term and any(
+        k in text
+        for k in (
+            "concordance", "kwic", "appear", "occurrence", "context", "example",
+            "usage", "find", "search", "where does", "instances", "hits",
+        )
+    ):
+        plans.append(("search_concordance", {"query": term}))
+
+    if any(
+        k in text
+        for k in (
+            "frequen", "common", "top", "vocabulary", "lexical", "divers",
+            "sttr", "type-token", "word list",
+        )
+    ):
+        plans.append(("get_frequency", {}))
+
+    if term and any(k in text for k in ("dispers", "distribut", "spread", "throughout")):
+        plans.append(("get_dispersion", {"term": term}))
+
+    if any(k in text for k in ("n-gram", "ngram", "bigram", "trigram", "lexical bundle", "phrase")):
+        plans.append(("get_ngrams", {}))
+
+    if any(k in text for k in ("pos", "part of speech", "grammatical", "tag")):
+        plans.append(("get_pos_analysis", {}))
+
+    if any(k in text for k in ("overview", "summary", "what is in", "describe the corpus", "about the corpus")):
+        plans.append(("get_corpus_overview", {}))
+
+    # Fallback: empirical-looking message with no matched intent — give the
+    # model the corpus summary and the top words so it can say something
+    # genuinely grounded instead of refusing.
+    if not plans:
+        plans.append(("get_corpus_overview", {}))
+        plans.append(("get_frequency", {}))
+
+    return plans
+
+
+_SNAPSHOT_TTL_SECONDS = 300.0
+_snapshot_cache: dict[str, tuple[float, str]] = {}
+
+
+async def _corpus_snapshot(corpus_id: str | None) -> str:
+    """Compact get_corpus_overview digest injected into the system prompt.
+
+    Cached for 5 minutes per corpus so rapid-fire chat turns don't re-run
+    the aggregation on every message. Returns "" when unavailable.
+    """
+    if not corpus_id:
+        return ""
+    now = time.monotonic()
+    cached = _snapshot_cache.get(corpus_id)
+    if cached and now - cached[0] < _SNAPSHOT_TTL_SECONDS:
+        return cached[1]
+    try:
+        result = await execute_tool("get_corpus_overview", {"corpus_id": corpus_id})
+    except Exception as e:
+        log.warning("corpus_snapshot_failed", corpus_id=corpus_id, error=str(e))
+        return ""
+    if not isinstance(result, dict) or not result or "error" in result:
+        # Unknown/empty corpus — an error payload would only confuse the
+        # prompt; return nothing so the answer falls back to conversation.
+        return ""
+    text = json.dumps(result, ensure_ascii=False, default=str)[:1500]
+    _snapshot_cache[corpus_id] = (now, text)
+    return text
 
 
 def _tool_param_names(tool_name: str) -> set[str]:
