@@ -8,10 +8,10 @@
  * The internal tab bar also allows switching between analyses.
  */
 import { useState, useEffect, useRef } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
 
-import { api, exportWithFeedback, type ExportFormat, type ReferenceCorpusEntry } from "@/lib/api";
+import { api, exportWithFeedback, type ExportFormat, type ReferenceCorpusEntry, type POSAnalysisResult, type SemanticAnalysisResult } from "@/lib/api";
 import { useApp } from "@/store/app";
 import { useUI } from "@/store/ui";
 import { ExportButton } from "@/components/ExportButton";
@@ -932,47 +932,120 @@ function NGramsPanel({ cid }: { cid: string }) {
 }
 
 
+// v1.2.0 (Issue 4): tagset labels for the POS panel selector
+const TAGSET_LABELS: Record<string, string> = {
+  upos: "UD UPOS (universal)",
+  ptb: "Penn Treebank",
+  claws7: "CLAWS-7 (BNC standard)",
+  calima: "CAMeL / Calima (native)",
+  usas: "USAS semantic (experimental)",
+};
+const TAGSETS_EN = ["upos", "ptb", "claws7", "usas"];
+const TAGSETS_AR = ["upos", "calima", "usas"];
+
 function POSPanel({ cid }: { cid: string }) {
   const [n, setN] = useState(1);
-  const result = useQuery({
-    queryKey: ["pos", cid, n],
-    queryFn: () => api.posAnalysis(cid, n, 2, 100),
+  const [tagsetOverride, setTagsetOverride] = useState<string | null>(null);
+  const corpusQ = useQuery({
+    queryKey: ["corpus", cid],
+    queryFn: () => api.getCorpus(cid),
+  });
+  const language = corpusQ.data?.language || "en";
+  // Default = the per-corpus choice saved in Your Corpus (pipeline_recipe)
+  const effectiveTagset =
+    tagsetOverride ??
+    (corpusQ.data as unknown as { pipeline_recipe?: { tagset?: string } } | undefined)
+      ?.pipeline_recipe?.tagset ??
+    "upos";
+  const qc = useQueryClient();
+
+  // Persist the choice so Your Corpus + future sessions default to it.
+  const saveTagset = useMutation({
+    mutationFn: (t: string) => api.setCorpusTagset(cid, t),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["corpus", cid] }),
+  });
+
+  const isSemantic = effectiveTagset === "usas";
+  const result = useQuery<POSAnalysisResult | SemanticAnalysisResult>({
+    queryKey: ["pos", cid, n, effectiveTagset],
+    queryFn: () =>
+      isSemantic
+        ? api.semanticAnalysis(cid, 100)
+        : api.posAnalysis(cid, n, 2, 100, effectiveTagset),
   });
   const exportStatus = useExportStatus();
+  const tagsetOptions = language === "ar" ? TAGSETS_AR : TAGSETS_EN;
 
   return (
     <div className="panel-content">
       <div className="toolbar">
-        <label>N
-          <select value={n} onChange={(e) => setN(Number(e.target.value))}>
-            <option value={1}>1 (distribution)</option>
-            <option value={2}>2 (bigrams)</option>
-            <option value={3}>3 (trigrams)</option>
-            <option value={4}>4</option>
-            <option value={5}>5</option>
+        <label>Tagset
+          <select
+            value={effectiveTagset}
+            onChange={(e) => {
+              setTagsetOverride(e.target.value);
+              saveTagset.mutate(e.target.value);
+            }}
+            title="Choose the grammatical or semantic tagset used for this analysis"
+          >
+            {tagsetOptions.map((t) => (
+              <option key={t} value={t}>{TAGSET_LABELS[t] ?? t}</option>
+            ))}
           </select>
         </label>
+
+        {!isSemantic && (
+          <label>N
+            <select value={n} onChange={(e) => setN(Number(e.target.value))}>
+              <option value={1}>1 (distribution)</option>
+              <option value={2}>2 (bigrams)</option>
+              <option value={3}>3 (trigrams)</option>
+              <option value={4}>4</option>
+              <option value={5}>5</option>
+            </select>
+          </label>
+        )}
 
         <ExportButton onExport={(fmt) => { if (result.data) { downloadJsonResult(result.data, `pos.${fmt}`, exportStatus.set); } } } disabled={!result.data} /></div>
       {exportStatus.el}
 
-      {result.data && n === 1 && (
+      {isSemantic && result.data && (
         <>
-          <div className="result-meta"><strong>{result.data.total_tokens.toLocaleString()}</strong> tokens</div>
-          <h3>POS distribution</h3>
+          <div className="result-meta">
+            <strong>{(result.data as SemanticAnalysisResult).matched_tokens.toLocaleString()}</strong> of{" "}
+            <strong>{(result.data as SemanticAnalysisResult).total_tokens.toLocaleString()}</strong> tokens matched ·{" "}
+            {(result.data as SemanticAnalysisResult).unmatched_percent}% unmatched
+          </div>
+          <div className="grounding-notice">
+            <strong>Note:</strong> USAS top-level semantic categories via the bundled
+            Multilingual-USAS lexicon (CC BY-NC-SA; see reference-data/tagsets). Lexicon-based
+            approximation — cite the USAS taxonomy in publications.
+          </div>
+          <h3>Semantic distribution (USAS top-level)</h3>
           <DataTable
-            headers={["POS", "Frequency", "%"]}
-            rows={result.data.distribution.map((r) => [r.pos, r.freq, r.percent])}
+            headers={["Category", "Description", "Frequency", "% (matched)"]}
+            rows={(result.data as SemanticAnalysisResult).distribution.map((r) => [r.tag, r.label, r.freq, r.percent])}
           />
         </>
       )}
-      {result.data && n >= 2 && (
+
+      {!isSemantic && result.data && n === 1 && (
         <>
-          <div className="result-meta"><strong>{result.data.total_tokens.toLocaleString()}</strong> tokens</div>
+          <div className="result-meta"><strong>{(result.data as POSAnalysisResult).total_tokens.toLocaleString()}</strong> tokens · tagset: {TAGSET_LABELS[effectiveTagset] ?? effectiveTagset}</div>
+          <h3>POS distribution</h3>
+          <DataTable
+            headers={["POS", "Frequency", "%"]}
+            rows={(result.data as POSAnalysisResult).distribution.map((r) => [r.pos, r.freq, r.percent])}
+          />
+        </>
+      )}
+      {!isSemantic && result.data && n >= 2 && (
+        <>
+          <div className="result-meta"><strong>{(result.data as POSAnalysisResult).total_tokens.toLocaleString()}</strong> tokens · tagset: {TAGSET_LABELS[effectiveTagset] ?? effectiveTagset}</div>
           <h3>Top POS {n}-grams</h3>
           <DataTable
             headers={["Pattern", "Frequency"]}
-            rows={result.data.pos_ngrams.map((r) => [r.pattern, r.freq])}
+            rows={(result.data as POSAnalysisResult).pos_ngrams.map((r) => [r.pattern, r.freq])}
           />
         </>
       )}

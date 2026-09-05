@@ -1,4 +1,5 @@
 """Phase 2 analysis API routes: n-grams, POS, grammar, dependency, discourse, vocabulary, sentiment, metaphor."""
+
 from __future__ import annotations
 
 from dataclasses import asdict
@@ -38,12 +39,21 @@ class NGramRequest(BaseModel):
 
 
 @router.post("/corpora/{cid}/ngrams")
-async def ngrams(cid: str, body: NGramRequest, session: AsyncSession = Depends(get_session)) -> dict:
+async def ngrams(
+    cid: str, body: NGramRequest, session: AsyncSession = Depends(get_session)
+) -> dict:
     if not await session.get(Corpus, cid):
         raise HTTPException(404, "Corpus not found")
-    r = await compute_ngrams(session, cid, n=body.n, min_freq=body.min_freq,
-                              min_range=body.min_range, limit=body.limit,
-                              skip_punct=body.skip_punct, skip_stop=body.skip_stop)
+    r = await compute_ngrams(
+        session,
+        cid,
+        n=body.n,
+        min_freq=body.min_freq,
+        min_range=body.min_range,
+        limit=body.limit,
+        skip_punct=body.skip_punct,
+        skip_stop=body.skip_stop,
+    )
     return asdict(r)
 
 
@@ -56,13 +66,61 @@ class POSRequest(BaseModel):
     n: int = Field(2, ge=1, le=5, description="POS n-gram size (1=distribution, 2=bigrams, etc.)")
     min_freq: int = Field(2, ge=1)
     limit: int = Field(100, ge=1, le=1000)
+    tagset: str = Field("upos", description="upos | ptb | claws7 (en) | calima (ar) — v1.2.0")
 
 
 @router.post("/corpora/{cid}/pos-analysis")
-async def pos_analysis(cid: str, body: POSRequest, session: AsyncSession = Depends(get_session)) -> dict:
-    if not await session.get(Corpus, cid):
+async def pos_analysis(
+    cid: str, body: POSRequest, session: AsyncSession = Depends(get_session)
+) -> dict:
+    corpus = await session.get(Corpus, cid)
+    if not corpus:
         raise HTTPException(404, "Corpus not found")
-    r = await compute_pos_analysis(session, cid, n=body.n, min_freq=body.min_freq, limit=body.limit)
+    # v1.2.0: validate the tagset against the corpus language.
+    from nlp.tagsets import is_valid_tagset
+
+    if not is_valid_tagset(body.tagset, corpus.language or "en"):
+        from nlp.tagsets import valid_tagsets_for_language
+
+        raise HTTPException(
+            422,
+            f"Tagset '{body.tagset}' is not valid for a '{corpus.language}' corpus. "
+            f"Valid tagsets: {', '.join(valid_tagsets_for_language(corpus.language or 'en'))}.",
+        )
+    r = await compute_pos_analysis(
+        session, cid, n=body.n, min_freq=body.min_freq, limit=body.limit, tagset=body.tagset
+    )
+    return asdict(r)
+
+
+# --------------------------------------------------------------------------- #
+# §8.11b Semantic analysis — USAS top-level (v1.2.0, Issue 4)
+# --------------------------------------------------------------------------- #
+
+
+class SemanticRequest(BaseModel):
+    limit: int = Field(100, ge=1, le=100)
+
+
+@router.post("/corpora/{cid}/semantic-analysis")
+async def semantic_analysis(
+    cid: str, body: SemanticRequest, session: AsyncSession = Depends(get_session)
+) -> dict:
+    """USAS top-level semantic distribution (lexicon-based, experimental)."""
+    from discourse.service import compute_semantic_analysis
+
+    corpus = await session.get(Corpus, cid)
+    if not corpus:
+        raise HTTPException(404, "Corpus not found")
+    from nlp.tagsets import load_semantic_lexicon
+
+    if not load_semantic_lexicon(corpus.language or "en"):
+        raise HTTPException(
+            503,
+            "The USAS semantic lexicon for this language is not installed. "
+            "See reference-data/tagsets/ in the repository.",
+        )
+    r = await compute_semantic_analysis(session, cid, limit=body.limit)
     return asdict(r)
 
 
@@ -77,7 +135,9 @@ class GrammarRequest(BaseModel):
 
 
 @router.post("/corpora/{cid}/grammar")
-async def grammar(cid: str, body: GrammarRequest, session: AsyncSession = Depends(get_session)) -> dict:
+async def grammar(
+    cid: str, body: GrammarRequest, session: AsyncSession = Depends(get_session)
+) -> dict:
     if not await session.get(Corpus, cid):
         raise HTTPException(404, "Corpus not found")
     r = await compute_grammar_analysis(session, cid, patterns=body.patterns, limit=body.limit)
@@ -88,6 +148,7 @@ async def grammar(cid: str, body: GrammarRequest, session: AsyncSession = Depend
 async def grammar_patterns(cid: str) -> dict:
     """List the available grammar pattern detectors."""
     from discourse.service import GRAMMAR_DETECTORS
+
     return {"patterns": list(GRAMMAR_DETECTORS.keys())}
 
 
@@ -102,7 +163,9 @@ class DependencyRequest(BaseModel):
 
 
 @router.post("/corpora/{cid}/dependencies")
-async def dependencies(cid: str, body: DependencyRequest, session: AsyncSession = Depends(get_session)) -> dict:
+async def dependencies(
+    cid: str, body: DependencyRequest, session: AsyncSession = Depends(get_session)
+) -> dict:
     if not await session.get(Corpus, cid):
         raise HTTPException(404, "Corpus not found")
     r = await compute_dependency_analysis(session, cid, relation=body.relation, limit=body.limit)
@@ -129,15 +192,21 @@ async def discourse(cid: str, session: AsyncSession = Depends(get_session)) -> d
 
 
 class VocabProfileRequest(BaseModel):
-    rare_threshold: int = Field(1, ge=1, description="Words appearing <= this many times are 'rare'")
+    rare_threshold: int = Field(
+        1, ge=1, description="Words appearing <= this many times are 'rare'"
+    )
     limit: int = Field(100, ge=1, le=500)
 
 
 @router.post("/corpora/{cid}/vocab-profile")
-async def vocab_profile(cid: str, body: VocabProfileRequest, session: AsyncSession = Depends(get_session)) -> dict:
+async def vocab_profile(
+    cid: str, body: VocabProfileRequest, session: AsyncSession = Depends(get_session)
+) -> dict:
     if not await session.get(Corpus, cid):
         raise HTTPException(404, "Corpus not found")
-    r = await compute_vocab_profile(session, cid, rare_threshold=body.rare_threshold, limit=body.limit)
+    r = await compute_vocab_profile(
+        session, cid, rare_threshold=body.rare_threshold, limit=body.limit
+    )
     return asdict(r)
 
 
@@ -164,7 +233,9 @@ class MetaphorRequest(BaseModel):
 
 
 @router.post("/corpora/{cid}/metaphor-candidates")
-async def metaphor_candidates(cid: str, body: MetaphorRequest, session: AsyncSession = Depends(get_session)) -> dict:
+async def metaphor_candidates(
+    cid: str, body: MetaphorRequest, session: AsyncSession = Depends(get_session)
+) -> dict:
     """Find metaphor candidates (§8.17). The LLM triages these via the
     metaphor_triage tool, and the human must verify before any candidate
     counts as a confirmed metaphor in export/statistics."""

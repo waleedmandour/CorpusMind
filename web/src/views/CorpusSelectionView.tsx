@@ -29,6 +29,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
 
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { TagsetSelector } from "@/components/TagsetSelector";
 import { useDownloadProgress } from "@/store/downloadProgress";
 import {
   api,
@@ -364,6 +365,7 @@ function CorpusActionsPanel({ mode }: { mode: CorpusMode }) {
             <DocumentUploader cid={activeCorpusId} />
             <DocumentList cid={activeCorpusId} />
             <CleanCorpusButton cid={activeCorpusId} />
+            <TagsetSelector cid={activeCorpusId} />
           </>
         ) : (
           <div className="corpus-empty">

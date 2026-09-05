@@ -1,4 +1,5 @@
 """Phase 3 Arabic API routes (§8.21, §8.22)."""
+
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -39,6 +40,10 @@ class AnalyzeArabicRequest(BaseModel):
     backend: str = Field("camel", description="camel | farasa | sinatools")
     dialect: str = Field("msa", description="msa | egy | glf | lev")
     dediacritize: bool = False
+    tagset: str = Field(
+        "calima",
+        description="v1.2.0: 'calima' (native CAMeL tags, default) or 'upos' (Universal Dependencies)",
+    )
 
 
 @router.post("/arabic/analyze")
@@ -48,13 +53,31 @@ async def analyze_arabic_route(body: AnalyzeArabicRequest) -> dict:
     transliteration + dediacritization."""
     try:
         analysis = analyze_arabic(
-            body.text, backend=body.backend, dialect=body.dialect,
+            body.text,
+            backend=body.backend,
+            dialect=body.dialect,
             dediacritize=body.dediacritize,
         )
+        # v1.2.0 (Issue 4): tagset selection — 'calima' returns the native
+        # CAMeL tags (default, unchanged behavior); 'upos' maps them to
+        # Universal Dependencies for cross-language comparability.
+        if body.tagset not in ("calima", "upos"):
+            raise HTTPException(
+                422,
+                f"Unknown tagset '{body.tagset}' — valid: calima, upos.",
+            )
+        from nlp.arabic.pipeline import ArabicPipeline
+
+        def _display_pos(raw: str) -> str:
+            if body.tagset == "upos":
+                return ArabicPipeline._map_pos(raw)
+            return raw
+
         return {
             "text": analysis.text,
             "backend": analysis.backend,
             "detected_dialect": analysis.detected_dialect,
+            "tagset": body.tagset,
             "token_count": len(analysis.tokens),
             "tokens": [
                 {
@@ -62,7 +85,7 @@ async def analyze_arabic_route(body: AnalyzeArabicRequest) -> dict:
                     "lemma": t.lemma,
                     "root": t.root,
                     "pattern": t.pattern,
-                    "pos": t.pos,
+                    "pos": _display_pos(t.pos),
                     "stem": t.stem,
                     "buckwalter": t.buckwalter,
                     "dediacritized": t.dediacritized,
@@ -128,7 +151,9 @@ async def normalize_route(body: TranslitRequest) -> dict:
 
 class DialectRequest(BaseModel):
     text: str = Field(..., min_length=1)
-    include_cities: bool = Field(False, description="Include raw city-level scores (Beirut, Cairo, Doha, MSA, Rabat, Tunis)")
+    include_cities: bool = Field(
+        False, description="Include raw city-level scores (Beirut, Cairo, Doha, MSA, Rabat, Tunis)"
+    )
 
 
 @router.post("/arabic/dialect")
@@ -171,11 +196,13 @@ async def list_backends() -> dict:
         if available:
             try:
                 bi = get_arabic_backend(name).info()
-                info.update({
-                    "version": bi.version,
-                    "model": bi.model,
-                    "dialects_supported": bi.dialects_supported,
-                })
+                info.update(
+                    {
+                        "version": bi.version,
+                        "model": bi.model,
+                        "dialects_supported": bi.dialects_supported,
+                    }
+                )
             except Exception as e:
                 # A backend that can't actually load isn't available,
                 # regardless of whether the package is nominally installed.
@@ -232,13 +259,19 @@ class ParallelConcordanceRequest(BaseModel):
 
 
 @router.post("/bilingual/parallel-concordance")
-async def parallel_concordance_route(body: ParallelConcordanceRequest,
-                                      session: AsyncSession = Depends(get_session)) -> dict:
+async def parallel_concordance_route(
+    body: ParallelConcordanceRequest, session: AsyncSession = Depends(get_session)
+) -> dict:
     """Parallel concordance: search Arabic, return each hit paired with its
     English translation (per the sentence alignment)."""
     result = await parallel_concordance(
-        session, body.ar_corpus_id, body.en_corpus_id, body.query,
-        level=body.level, window=body.window, limit=body.limit,
+        session,
+        body.ar_corpus_id,
+        body.en_corpus_id,
+        body.query,
+        level=body.level,
+        window=body.window,
+        limit=body.limit,
     )
     return {
         "query": result.query,

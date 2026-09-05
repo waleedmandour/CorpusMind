@@ -6,6 +6,7 @@ sentiment.
 All functions take an async SQLAlchemy session and return plain Python data
 structures. Every result includes reproducibility info (parameters used).
 """
+
 from __future__ import annotations
 
 from collections import Counter, defaultdict
@@ -30,9 +31,9 @@ log = get_logger(__name__)
 class NGramResult:
     n: int
     total_tokens: int
-    rows: list[dict]   # [{ngram, freq, per_million, range (distinct docs), range_percent}]
+    rows: list[dict]  # [{ngram, freq, per_million, range (distinct docs), range_percent}]
     min_freq: int
-    min_range: int     # minimum distinct documents required (§8.8 lexical bundles)
+    min_range: int  # minimum distinct documents required (§8.8 lexical bundles)
 
 
 async def compute_ngrams(
@@ -41,7 +42,7 @@ async def compute_ngrams(
     *,
     n: int = 2,
     min_freq: int = 5,
-    min_range: int = 1,    # §8.8: lexical bundles require min distinct docs
+    min_range: int = 1,  # §8.8: lexical bundles require min distinct docs
     limit: int = 200,
     skip_punct: bool = True,
     skip_stop: bool = False,
@@ -62,7 +63,15 @@ async def compute_ngrams(
 
     # Load ordered tokens per document
     stmt = (
-        select(Token.document_id, Token.sentence_idx, Token.token_idx, Token.text, Token.is_punct, Token.is_stop, Token.pos)
+        select(
+            Token.document_id,
+            Token.sentence_idx,
+            Token.token_idx,
+            Token.text,
+            Token.is_punct,
+            Token.is_stop,
+            Token.pos,
+        )
         .where(Token.version_id == version_id)
         .order_by(Token.document_id, Token.sentence_idx, Token.token_idx)
     )
@@ -118,13 +127,15 @@ async def compute_ngrams(
         if range_count < min_range:
             continue
         per_million = (freq / total_tokens * 1_000_000) if total_tokens else 0.0
-        rows.append({
-            "ngram": ngram,
-            "freq": freq,
-            "per_million": round(per_million, 2),
-            "range": range_count,
-            "range_percent": round((range_count / total_docs * 100) if total_docs else 0.0, 2),
-        })
+        rows.append(
+            {
+                "ngram": ngram,
+                "freq": freq,
+                "per_million": round(per_million, 2),
+                "range": range_count,
+                "range_percent": round((range_count / total_docs * 100) if total_docs else 0.0, 2),
+            }
+        )
         if len(rows) >= limit:
             break
 
@@ -145,49 +156,79 @@ async def compute_ngrams(
 @dataclass
 class POSResult:
     total_tokens: int
-    distribution: list[dict]      # [{pos, freq, percent}]
-    pos_ngrams: list[dict]        # [{pattern, freq}] — top POS n-grams
+    distribution: list[dict]  # [{pos, freq, percent}]
+    pos_ngrams: list[dict]  # [{pattern, freq}] — top POS n-grams
     n: int
+    tagset: str = "upos"  # v1.2.0: which tagset the tags belong to
 
 
 async def compute_pos_analysis(
     session: AsyncSession,
     corpus_id: str,
     *,
-    n: int = 2,                   # POS n-gram size (1=distribution, 2=bigrams, etc.)
+    n: int = 2,  # POS n-gram size (1=distribution, 2=bigrams, etc.)
     min_freq: int = 2,
     limit: int = 100,
+    tagset: str = "upos",  # v1.2.0: upos | ptb | claws7 | calima
 ) -> POSResult:
     version_id = await _latest_version_id(session, corpus_id)
     if not version_id:
-        return POSResult(total_tokens=0, distribution=[], pos_ngrams=[], n=n)
+        return POSResult(total_tokens=0, distribution=[], pos_ngrams=[], n=n, tagset=tagset)
 
-    # Distribution
+    # v1.2.0: resolve the corpus language once for language-aware mapping.
+    from storage.models import Corpus as CorpusModel
+
+    language = "en"
+    corpus_row = await session.get(CorpusModel, corpus_id)
+    if corpus_row and corpus_row.language:
+        language = corpus_row.language
+
+    # Import here to keep the module import graph lean.
+    from nlp.tagsets import map_tag
+
+    def _tag(pos: str, pos_fine: str) -> str:
+        return map_tag(tagset, pos=pos, pos_fine=pos_fine, language=language)
+
+    # Distribution — grouped over the layers the tagset needs, then mapped
+    # in Python (mapping is pure string logic, so grouping on the raw
+    # layers first keeps the SQL identical for every tagset).
     dist_stmt = (
-        select(Token.pos, func.count(Token.id))
+        select(Token.pos, Token.pos_fine, func.count(Token.id))
         .where(Token.version_id == version_id, _is_real_token())
-        .group_by(Token.pos)
+        .group_by(Token.pos, Token.pos_fine)
         .order_by(func.count(Token.id).desc())
     )
     dist_rows = (await session.execute(dist_stmt)).all()
-    total = sum(c for _, c in dist_rows)
-    distribution = [{"pos": p, "freq": c, "percent": round(c / total * 100, 3) if total else 0}
-                    for p, c in dist_rows]
+    tag_counter: Counter = Counter()
+    for pos, pos_fine, cnt in dist_rows:
+        tag_counter[_tag(pos or "", pos_fine or "")] += cnt
+    total = sum(tag_counter.values())
+    distribution = [
+        {"pos": p, "freq": c, "percent": round(c / total * 100, 3) if total else 0}
+        for p, c in tag_counter.most_common()
+    ]
 
     # POS n-grams
     stmt = (
-        select(Token.document_id, Token.sentence_idx, Token.token_idx, Token.pos, Token.is_punct)
+        select(
+            Token.document_id,
+            Token.sentence_idx,
+            Token.token_idx,
+            Token.pos,
+            Token.pos_fine,
+            Token.is_punct,
+        )
         .where(Token.version_id == version_id)
         .order_by(Token.document_id, Token.sentence_idx, Token.token_idx)
     )
     rows_raw = (await session.execute(stmt)).all()
 
-    # Build per-sentence POS sequences
+    # Build per-sentence POS sequences (mapped to the requested tagset)
     sentences: dict[tuple[str, int], list[str]] = defaultdict(list)
-    for doc_id, sent_idx, _, pos, is_punct in rows_raw:
+    for doc_id, sent_idx, _, pos, pos_fine, is_punct in rows_raw:
         if is_punct or pos == "SPACE":
             continue
-        sentences[(doc_id, sent_idx)].append(pos)
+        sentences[(doc_id, sent_idx)].append(_tag(pos or "", pos_fine or ""))
 
     pos_ngram_counter: Counter = Counter()
     for sent_pos in sentences.values():
@@ -195,10 +236,89 @@ async def compute_pos_analysis(
             pattern = " ".join(sent_pos[i : i + n])
             pos_ngram_counter[pattern] += 1
 
-    pos_ngrams = [{"pattern": p, "freq": c}
-                  for p, c in pos_ngram_counter.most_common(limit) if c >= min_freq]
+    pos_ngrams = [
+        {"pattern": p, "freq": c} for p, c in pos_ngram_counter.most_common(limit) if c >= min_freq
+    ]
 
-    return POSResult(total_tokens=total, distribution=distribution, pos_ngrams=pos_ngrams, n=n)
+    return POSResult(
+        total_tokens=total, distribution=distribution, pos_ngrams=pos_ngrams, n=n, tagset=tagset
+    )
+
+
+# --------------------------------------------------------------------------- #
+# §8.11b Semantic analysis — USAS top-level (v1.2.0, Issue 4)
+# --------------------------------------------------------------------------- #
+
+
+@dataclass
+class SemanticResult:
+    total_tokens: int
+    matched_tokens: int
+    distribution: list[dict]  # [{tag, label, freq, percent}]
+    unmatched_percent: float
+    tagset: str = "usas"
+
+
+async def compute_semantic_analysis(
+    session: AsyncSession,
+    corpus_id: str,
+    *,
+    limit: int = 100,
+) -> SemanticResult:
+    """USAS top-level semantic distribution (lexicon-based, experimental).
+
+    Each content token's lemma is looked up in the bundled USAS top-level
+    lexicon (reference-data/tagsets/); matched tokens are grouped by the
+    24 letter categories. Lexicon misses are reported honestly as
+    ``unmatched_percent`` — this is NOT the licensed CLAWS/USAS tagger.
+    """
+    from nlp.tagsets import USAS_TOP_LABELS, semantic_lookup
+    from storage.models import Corpus as CorpusModel
+
+    version_id = await _latest_version_id(session, corpus_id)
+    if not version_id:
+        return SemanticResult(
+            total_tokens=0, matched_tokens=0, distribution=[], unmatched_percent=100.0
+        )
+
+    corpus_row = await session.get(CorpusModel, corpus_id)
+    language = corpus_row.language if corpus_row and corpus_row.language else "en"
+
+    stmt = (
+        select(Token.lemma, Token.text, Token.is_punct, Token.pos)
+        .where(Token.version_id == version_id)
+        .order_by(Token.document_id, Token.sentence_idx, Token.token_idx)
+    )
+    rows_raw = (await session.execute(stmt)).all()
+
+    tag_counter: Counter = Counter()
+    total = 0
+    matched = 0
+    for lemma, text, is_punct, pos in rows_raw:
+        if is_punct or (pos or "") == "SPACE":
+            continue
+        total += 1
+        tag = semantic_lookup(lemma or "", text or "", language)
+        if tag:
+            matched += 1
+            tag_counter[tag] += 1
+
+    distribution = [
+        {
+            "tag": t,
+            "label": USAS_TOP_LABELS.get(t, "Unknown"),
+            "freq": c,
+            "percent": round(c / matched * 100, 3) if matched else 0,
+        }
+        for t, c in tag_counter.most_common(limit)
+    ]
+    unmatched_percent = round((total - matched) / total * 100, 2) if total else 0.0
+    return SemanticResult(
+        total_tokens=total,
+        matched_tokens=matched,
+        distribution=distribution,
+        unmatched_percent=unmatched_percent,
+    )
 
 
 # --------------------------------------------------------------------------- #
@@ -208,7 +328,7 @@ async def compute_pos_analysis(
 
 @dataclass
 class GrammarResult:
-    patterns: dict[str, list[dict]]   # {pattern_name: [{doc, sent, text, ...}]}
+    patterns: dict[str, list[dict]]  # {pattern_name: [{doc, sent, text, ...}]}
     counts: dict[str, int]
 
 
@@ -220,8 +340,15 @@ async def _load_parses(session: AsyncSession, version_id: str) -> list[dict]:
     """Load tokens with their dep head/rel, grouped by sentence."""
     stmt = (
         select(
-            Token.document_id, Token.sentence_idx, Token.token_idx,
-            Token.text, Token.lemma, Token.pos, Token.dep_head, Token.dep_rel, Token.morph,
+            Token.document_id,
+            Token.sentence_idx,
+            Token.token_idx,
+            Token.text,
+            Token.lemma,
+            Token.pos,
+            Token.dep_head,
+            Token.dep_rel,
+            Token.morph,
         )
         .where(Token.version_id == version_id)
         .order_by(Token.document_id, Token.sentence_idx, Token.token_idx)
@@ -229,11 +356,19 @@ async def _load_parses(session: AsyncSession, version_id: str) -> list[dict]:
     rows = (await session.execute(stmt)).all()
     sentences: dict[tuple[str, int], list[dict]] = defaultdict(list)
     for doc_id, sent_idx, tok_idx, text, lemma, pos, dep_head, dep_rel, morph in rows:
-        sentences[(doc_id, sent_idx)].append({
-            "idx": tok_idx, "text": text, "lemma": lemma, "pos": pos,
-            "head": dep_head, "rel": dep_rel, "morph": morph,
-            "doc": doc_id, "sent": sent_idx,
-        })
+        sentences[(doc_id, sent_idx)].append(
+            {
+                "idx": tok_idx,
+                "text": text,
+                "lemma": lemma,
+                "pos": pos,
+                "head": dep_head,
+                "rel": dep_rel,
+                "morph": morph,
+                "doc": doc_id,
+                "sent": sent_idx,
+            }
+        )
     return list(sentences.values())
 
 
@@ -249,13 +384,17 @@ def _detect_passives(sentence: list[dict]) -> list[dict]:
             head_idx = tok["head"] - 1  # convert 1-indexed to 0-indexed
             if 0 <= head_idx < len(sentence):
                 head = sentence[head_idx]
-                matches.append({
-                    "pattern": "passive_voice",
-                    "doc": tok["doc"], "sent": tok["sent"],
-                    "verb": head["text"], "verb_lemma": head["lemma"],
-                    "aux": tok["text"],
-                    "evidence_id": f"{tok['doc']}:{tok['sent']}:{tok['idx']}",
-                })
+                matches.append(
+                    {
+                        "pattern": "passive_voice",
+                        "doc": tok["doc"],
+                        "sent": tok["sent"],
+                        "verb": head["text"],
+                        "verb_lemma": head["lemma"],
+                        "aux": tok["text"],
+                        "evidence_id": f"{tok['doc']}:{tok['sent']}:{tok['idx']}",
+                    }
+                )
     return matches
 
 
@@ -268,12 +407,17 @@ def _detect_modals(sentence: list[dict]) -> list[dict]:
             head_idx = tok["head"] - 1
             if 0 <= head_idx < len(sentence):
                 head = sentence[head_idx]
-                matches.append({
-                    "pattern": "modal",
-                    "doc": tok["doc"], "sent": tok["sent"],
-                    "modal": tok["text"], "verb": head["text"], "verb_lemma": head["lemma"],
-                    "evidence_id": f"{tok['doc']}:{tok['sent']}:{tok['idx']}",
-                })
+                matches.append(
+                    {
+                        "pattern": "modal",
+                        "doc": tok["doc"],
+                        "sent": tok["sent"],
+                        "modal": tok["text"],
+                        "verb": head["text"],
+                        "verb_lemma": head["lemma"],
+                        "evidence_id": f"{tok['doc']}:{tok['sent']}:{tok['idx']}",
+                    }
+                )
     return matches
 
 
@@ -282,12 +426,15 @@ def _detect_negation(sentence: list[dict]) -> list[dict]:
     matches = []
     for tok in sentence:
         if tok["rel"] == "neg" or (tok["pos"] == "PART" and "Neg" in (tok["morph"] or "")):
-            matches.append({
-                "pattern": "negation",
-                "doc": tok["doc"], "sent": tok["sent"],
-                "negator": tok["text"],
-                "evidence_id": f"{tok['doc']}:{tok['sent']}:{tok['idx']}",
-            })
+            matches.append(
+                {
+                    "pattern": "negation",
+                    "doc": tok["doc"],
+                    "sent": tok["sent"],
+                    "negator": tok["text"],
+                    "evidence_id": f"{tok['doc']}:{tok['sent']}:{tok['idx']}",
+                }
+            )
     return matches
 
 
@@ -296,12 +443,15 @@ def _detect_relative_clauses(sentence: list[dict]) -> list[dict]:
     matches = []
     for tok in sentence:
         if tok["rel"] in ("acl:relc", "relcl"):
-            matches.append({
-                "pattern": "relative_clause",
-                "doc": tok["doc"], "sent": tok["sent"],
-                "marker": tok["text"],
-                "evidence_id": f"{tok['doc']}:{tok['sent']}:{tok['idx']}",
-            })
+            matches.append(
+                {
+                    "pattern": "relative_clause",
+                    "doc": tok["doc"],
+                    "sent": tok["sent"],
+                    "marker": tok["text"],
+                    "evidence_id": f"{tok['doc']}:{tok['sent']}:{tok['idx']}",
+                }
+            )
     return matches
 
 
@@ -317,12 +467,16 @@ def _detect_complex_np(sentence: list[dict]) -> list[dict]:
     for head_idx, mods in np_heads.items():
         if len(mods) >= 2:
             head = sentence[head_idx]
-            matches.append({
-                "pattern": "complex_np",
-                "doc": head["doc"], "sent": head["sent"],
-                "head": head["text"], "modifiers": [m["text"] for m in mods],
-                "evidence_id": f"{head['doc']}:{head['sent']}:{head['idx']}",
-            })
+            matches.append(
+                {
+                    "pattern": "complex_np",
+                    "doc": head["doc"],
+                    "sent": head["sent"],
+                    "head": head["text"],
+                    "modifiers": [m["text"] for m in mods],
+                    "evidence_id": f"{head['doc']}:{head['sent']}:{head['idx']}",
+                }
+            )
     return matches
 
 
@@ -341,12 +495,16 @@ def _detect_tense(sentence: list[dict]) -> list[dict]:
         elif "Tense=Fut" in morph:
             tense = "future"
         if tense:
-            matches.append({
-                "pattern": f"tense_{tense}",
-                "doc": tok["doc"], "sent": tok["sent"],
-                "verb": tok["text"], "lemma": tok["lemma"],
-                "evidence_id": f"{tok['doc']}:{tok['sent']}:{tok['idx']}",
-            })
+            matches.append(
+                {
+                    "pattern": f"tense_{tense}",
+                    "doc": tok["doc"],
+                    "sent": tok["sent"],
+                    "verb": tok["text"],
+                    "lemma": tok["lemma"],
+                    "evidence_id": f"{tok['doc']}:{tok['sent']}:{tok['idx']}",
+                }
+            )
     return matches
 
 
@@ -400,8 +558,8 @@ async def compute_grammar_analysis(
 
 @dataclass
 class DependencyResult:
-    relation: str            # nsubj / obj / iobj / etc.
-    rows: list[dict]         # [{governor, dependent, relation, freq, examples}]
+    relation: str  # nsubj / obj / iobj / etc.
+    rows: list[dict]  # [{governor, dependent, relation, freq, examples}]
 
 
 async def compute_dependency_analysis(
@@ -433,11 +591,17 @@ async def compute_dependency_analysis(
                 if len(examples[pair]) < 3:
                     examples[pair].append(f"{tok['doc']}:{tok['sent']}:{tok['idx']}")
 
-    rows = [{
-        "governor": gov, "dependent": dep, "relation": relation,
-        "freq": freq,
-        "examples": ex,
-    } for (gov, dep), freq in pair_counter.most_common(limit) for ex in [examples[(gov, dep)]]]
+    rows = [
+        {
+            "governor": gov,
+            "dependent": dep,
+            "relation": relation,
+            "freq": freq,
+            "examples": ex,
+        }
+        for (gov, dep), freq in pair_counter.most_common(limit)
+        for ex in [examples[(gov, dep)]]
+    ]
 
     return DependencyResult(relation=relation, rows=rows)
 
@@ -454,59 +618,142 @@ async def compute_dependency_analysis(
 
 HYLAND_INTERACTIVE = {
     "transitions": {  # logical relations between propositions
-        "moreover", "however", "therefore", "thus", "furthermore", "in addition",
-        "consequently", "nevertheless", "nonetheless", "instead", "rather",
-        "in contrast", "similarly", "likewise", "accordingly", "hence",
+        "moreover",
+        "however",
+        "therefore",
+        "thus",
+        "furthermore",
+        "in addition",
+        "consequently",
+        "nevertheless",
+        "nonetheless",
+        "instead",
+        "rather",
+        "in contrast",
+        "similarly",
+        "likewise",
+        "accordingly",
+        "hence",
     },
     "frame_markers": {  # sequence, topic, discourse-stage
-        "first", "second", "third", "finally", "to begin", "in conclusion",
-        "to summarize", "in short", "turning to", "with regard to",
+        "first",
+        "second",
+        "third",
+        "finally",
+        "to begin",
+        "in conclusion",
+        "to summarize",
+        "in short",
+        "turning to",
+        "with regard to",
     },
     "endophoric_markers": {  # reference to other parts of the text
-        "see figure", "see table", "as noted above", "as discussed below",
-        "as mentioned earlier", "as shown in",
+        "see figure",
+        "see table",
+        "as noted above",
+        "as discussed below",
+        "as mentioned earlier",
+        "as shown in",
     },
     "evidentials": {  # attribution to other sources
-        "according to", "cited in", "quoted in", "as X argues", "as X claims",
-        "X suggests", "X states", "X found that",
+        "according to",
+        "cited in",
+        "quoted in",
+        "as X argues",
+        "as X claims",
+        "X suggests",
+        "X states",
+        "X found that",
     },
     "code_glosses": {  # reformulation / explanation
-        "namely", "in other words", "that is", "for example", "for instance",
-        "such as", "e.g.", "i.e.", "to put it differently",
+        "namely",
+        "in other words",
+        "that is",
+        "for example",
+        "for instance",
+        "such as",
+        "e.g.",
+        "i.e.",
+        "to put it differently",
     },
 }
 
 HYLAND_INTERACTIONAL = {
     "hedges": {  # withhold full commitment to a proposition
-        "perhaps", "possibly", "probably", "likely", "may", "might", "could",
-        "would", "appear to", "seem to", "tend to", "suggest", "indicate",
-        "in general", "in most cases", "to some extent",
+        "perhaps",
+        "possibly",
+        "probably",
+        "likely",
+        "may",
+        "might",
+        "could",
+        "would",
+        "appear to",
+        "seem to",
+        "tend to",
+        "suggest",
+        "indicate",
+        "in general",
+        "in most cases",
+        "to some extent",
     },
     "boosters": {  # emphasize certainty
-        "clearly", "obviously", "evidently", "demonstrably", "of course",
-        "undoubtedly", "certainly", "definitely", "indeed", "in fact",
-        "necessarily", "undeniably",
+        "clearly",
+        "obviously",
+        "evidently",
+        "demonstrably",
+        "of course",
+        "undoubtedly",
+        "certainly",
+        "definitely",
+        "indeed",
+        "in fact",
+        "necessarily",
+        "undeniably",
     },
     "attitude_markers": {  # express writer's attitude
-        "surprisingly", "interestingly", "importantly", "remarkably",
-        "unfortunately", "fortunately", "strikingly", "notably", "significantly",
-        "I believe", "I argue", "I contend",
+        "surprisingly",
+        "interestingly",
+        "importantly",
+        "remarkably",
+        "unfortunately",
+        "fortunately",
+        "strikingly",
+        "notably",
+        "significantly",
+        "I believe",
+        "I argue",
+        "I contend",
     },
     "self_mentions": {  # first-person pronouns referring to the writer
-        "I", "me", "my", "mine", "we", "us", "our", "ours",
+        "I",
+        "me",
+        "my",
+        "mine",
+        "we",
+        "us",
+        "our",
+        "ours",
     },
     "engagement_markers": {  # explicitly address the reader
-        "you", "your", "yours", "consider", "note that", "recall that",
-        "imagine", "let us", "as you can see",
+        "you",
+        "your",
+        "yours",
+        "consider",
+        "note that",
+        "recall that",
+        "imagine",
+        "let us",
+        "as you can see",
     },
 }
 
 
 @dataclass
 class DiscourseResult:
-    categories: dict[str, dict]    # {category: {freq, per_million, examples}}
+    categories: dict[str, dict]  # {category: {freq, per_million, examples}}
     total_tokens: int
-    taxonomy: str                  # always "Hyland 2005"
+    taxonomy: str  # always "Hyland 2005"
 
 
 async def compute_discourse_analysis(
@@ -540,22 +787,26 @@ async def compute_discourse_analysis(
                 if " " in cue:
                     if cue in sent_lower:
                         if len(category_examples[cat_name]) < limit_examples:
-                            category_examples[cat_name].append({
-                                "cue": cue,
-                                "evidence_id": f"{sent[0]['doc']}:{sent[0]['sent']}:0",
-                                "sentence_preview": sent_lower[:120],
-                            })
+                            category_examples[cat_name].append(
+                                {
+                                    "cue": cue,
+                                    "evidence_id": f"{sent[0]['doc']}:{sent[0]['sent']}:0",
+                                    "sentence_preview": sent_lower[:120],
+                                }
+                            )
                         category_counts[cat_name] += 1
                 else:
                     # Single-word: match against individual tokens
                     for tok in sent:
                         if tok["text"].lower() == cue:
                             if len(category_examples[cat_name]) < limit_examples:
-                                category_examples[cat_name].append({
-                                    "cue": cue,
-                                    "evidence_id": f"{tok['doc']}:{tok['sent']}:{tok['idx']}",
-                                    "sentence_preview": sent_lower[:120],
-                                })
+                                category_examples[cat_name].append(
+                                    {
+                                        "cue": cue,
+                                        "evidence_id": f"{tok['doc']}:{tok['sent']}:{tok['idx']}",
+                                        "sentence_preview": sent_lower[:120],
+                                    }
+                                )
                             category_counts[cat_name] += 1
 
     categories = {}
@@ -583,23 +834,73 @@ async def compute_discourse_analysis(
 class VocabProfileResult:
     total_tokens: int
     total_types: int
-    bands: list[dict]               # [{band, freq, percent, examples}]
-    rare_words: list[dict]          # off the open frequency list
-    academic_words: list[dict]      # in the academic word list
+    bands: list[dict]  # [{band, freq, percent, examples}]
+    rare_words: list[dict]  # off the open frequency list
+    academic_words: list[dict]  # in the academic word list
 
 
 # A small starter Academic Word List (AWL) — Phase 3 will expand.
 # This is a subset of Coxhead's AWL (2000), which is open for research use.
 STARTER_AWL = {
-    "analyze", "approach", "area", "assess", "assume", "authority", "available",
-    "benefit", "concept", "consistent", "constitute", "context", "contract",
-    "create", "data", "define", "derive", "distribute", "economy", "environment",
-    "establish", "estimate", "evident", "export", "factor", "finance", "formula",
-    "function", "identify", "income", "indicate", "individual", "interpret",
-    "involve", "issue", "labour", "legal", "legislate", "major", "method",
-    "occur", "percent", "period", "policy", "principle", "proceed", "process",
-    "require", "research", "respond", "section", "sector", "significant",
-    "similar", "source", "specific", "structure", "theory", "vary",
+    "analyze",
+    "approach",
+    "area",
+    "assess",
+    "assume",
+    "authority",
+    "available",
+    "benefit",
+    "concept",
+    "consistent",
+    "constitute",
+    "context",
+    "contract",
+    "create",
+    "data",
+    "define",
+    "derive",
+    "distribute",
+    "economy",
+    "environment",
+    "establish",
+    "estimate",
+    "evident",
+    "export",
+    "factor",
+    "finance",
+    "formula",
+    "function",
+    "identify",
+    "income",
+    "indicate",
+    "individual",
+    "interpret",
+    "involve",
+    "issue",
+    "labour",
+    "legal",
+    "legislate",
+    "major",
+    "method",
+    "occur",
+    "percent",
+    "period",
+    "policy",
+    "principle",
+    "proceed",
+    "process",
+    "require",
+    "research",
+    "respond",
+    "section",
+    "sector",
+    "significant",
+    "similar",
+    "source",
+    "specific",
+    "structure",
+    "theory",
+    "vary",
 }
 
 
@@ -607,7 +908,7 @@ async def compute_vocab_profile(
     session: AsyncSession,
     corpus_id: str,
     *,
-    rare_threshold: int = 1,    # appears <= this many times in the corpus
+    rare_threshold: int = 1,  # appears <= this many times in the corpus
     limit: int = 100,
 ) -> VocabProfileResult:
     """Profile vocabulary into frequency bands (K1, K2, K3-9, AWL, off-list).
@@ -617,11 +918,20 @@ async def compute_vocab_profile(
     """
     version_id = await _latest_version_id(session, corpus_id)
     if not version_id:
-        return VocabProfileResult(total_tokens=0, total_types=0, bands=[], rare_words=[], academic_words=[])
+        return VocabProfileResult(
+            total_tokens=0, total_types=0, bands=[], rare_words=[], academic_words=[]
+        )
 
     # Load bundled K1 wordlist
     from pathlib import Path
-    k1_path = Path(__file__).resolve().parent.parent.parent / "reference-data" / "wordlists" / "en" / "top200.tsv"
+
+    k1_path = (
+        Path(__file__).resolve().parent.parent.parent
+        / "reference-data"
+        / "wordlists"
+        / "en"
+        / "top200.tsv"
+    )
     k1_set: set[str] = set()
     if k1_path.exists():
         for line in k1_path.read_text().splitlines():
@@ -658,10 +968,14 @@ async def compute_vocab_profile(
             if freq <= rare_threshold and len(rare_words) < limit:
                 rare_words.append({"word": lemma_lower, "freq": freq})
 
-    band_rows = [{
-        "band": name, "freq": freq,
-        "percent": round(freq / total_tokens * 100, 2) if total_tokens else 0,
-    } for name, freq in bands.items()]
+    band_rows = [
+        {
+            "band": name,
+            "freq": freq,
+            "percent": round(freq / total_tokens * 100, 2) if total_tokens else 0,
+        }
+        for name, freq in bands.items()
+    ]
 
     return VocabProfileResult(
         total_tokens=total_tokens,
@@ -680,20 +994,90 @@ async def compute_vocab_profile(
 # A small starter sentiment lexicon. Phase 3 will swap in VADER or a
 # transformers-based sentiment model behind the same interface.
 STARTER_POSITIVE = {
-    "good", "great", "excellent", "wonderful", "amazing", "fantastic", "best",
-    "better", "love", "like", "enjoy", "happy", "pleased", "delighted",
-    "beautiful", "perfect", "brilliant", "superb", "outstanding", "remarkable",
-    "success", "successful", "win", "victory", "triumph", "achieve", "benefit",
-    "improve", "progress", "advance", "innovative", "positive", "strong",
-    "powerful", "effective", "efficient", "valuable", "important", "significant",
+    "good",
+    "great",
+    "excellent",
+    "wonderful",
+    "amazing",
+    "fantastic",
+    "best",
+    "better",
+    "love",
+    "like",
+    "enjoy",
+    "happy",
+    "pleased",
+    "delighted",
+    "beautiful",
+    "perfect",
+    "brilliant",
+    "superb",
+    "outstanding",
+    "remarkable",
+    "success",
+    "successful",
+    "win",
+    "victory",
+    "triumph",
+    "achieve",
+    "benefit",
+    "improve",
+    "progress",
+    "advance",
+    "innovative",
+    "positive",
+    "strong",
+    "powerful",
+    "effective",
+    "efficient",
+    "valuable",
+    "important",
+    "significant",
 }
 STARTER_NEGATIVE = {
-    "bad", "terrible", "awful", "horrible", "worst", "worse", "hate", "dislike",
-    "sad", "unhappy", "angry", "furious", "disappointed", "frustrated",
-    "ugly", "broken", "fail", "failure", "lose", "loss", "defeat", "decline",
-    "weak", "poor", "negative", "wrong", "mistake", "error", "problem",
-    "difficult", "hard", "painful", "suffering", "danger", "threat", "risk",
-    "fear", "worry", "anxiety", "concern", "criticism", "attack", "damage",
+    "bad",
+    "terrible",
+    "awful",
+    "horrible",
+    "worst",
+    "worse",
+    "hate",
+    "dislike",
+    "sad",
+    "unhappy",
+    "angry",
+    "furious",
+    "disappointed",
+    "frustrated",
+    "ugly",
+    "broken",
+    "fail",
+    "failure",
+    "lose",
+    "loss",
+    "defeat",
+    "decline",
+    "weak",
+    "poor",
+    "negative",
+    "wrong",
+    "mistake",
+    "error",
+    "problem",
+    "difficult",
+    "hard",
+    "painful",
+    "suffering",
+    "danger",
+    "threat",
+    "risk",
+    "fear",
+    "worry",
+    "anxiety",
+    "concern",
+    "criticism",
+    "attack",
+    "damage",
 }
 
 
@@ -703,8 +1087,8 @@ class SentimentResult:
     positive: int
     negative: int
     neutral: int
-    avg_score: float           # -1 (very negative) to +1 (very positive)
-    timeline: list[dict]       # [{doc, sent, score}] — for diachronic/narrative corpora
+    avg_score: float  # -1 (very negative) to +1 (very positive)
+    timeline: list[dict]  # [{doc, sent, score}] — for diachronic/narrative corpora
 
 
 async def compute_sentiment(
@@ -718,7 +1102,9 @@ async def compute_sentiment(
     """
     version_id = await _latest_version_id(session, corpus_id)
     if not version_id:
-        return SentimentResult(total_sentences=0, positive=0, negative=0, neutral=0, avg_score=0.0, timeline=[])
+        return SentimentResult(
+            total_sentences=0, positive=0, negative=0, neutral=0, avg_score=0.0, timeline=[]
+        )
 
     sentences = await _load_parses(session, version_id)
     pos_count = neg_count = neu_count = 0
@@ -736,13 +1122,15 @@ async def compute_sentiment(
             neg_count += 1
         else:
             neu_count += 1
-        timeline.append({
-            "doc": sent[0]["doc"] if sent else "",
-            "sent": sent[0]["sent"] if sent else 0,
-            "score": round(score, 3),
-            "pos_hits": p,
-            "neg_hits": n,
-        })
+        timeline.append(
+            {
+                "doc": sent[0]["doc"] if sent else "",
+                "sent": sent[0]["sent"] if sent else 0,
+                "score": round(score, 3),
+                "pos_hits": p,
+                "neg_hits": n,
+            }
+        )
 
     total = len(sentences)
     avg = total_score / total if total else 0.0
@@ -767,9 +1155,9 @@ async def compute_sentiment(
 
 @dataclass
 class MetaphorCandidatesResult:
-    candidates: list[dict]   # [{word, lemma, pos, sentence, evidence_id, reason}]
-    pipeline: str            # "MIPVU-inspired, LLM-triaged, human-verified"
-    verified_count: int      # always 0 here; only the human can mark verified
+    candidates: list[dict]  # [{word, lemma, pos, sentence, evidence_id, reason}]
+    pipeline: str  # "MIPVU-inspired, LLM-triaged, human-verified"
+    verified_count: int  # always 0 here; only the human can mark verified
 
 
 async def compute_metaphor_candidates(
@@ -787,15 +1175,32 @@ async def compute_metaphor_candidates(
     """
     version_id = await _latest_version_id(session, corpus_id)
     if not version_id:
-        return MetaphorCandidatesResult(candidates=[], pipeline="MIPVU-inspired, LLM-triaged, human-verified", verified_count=0)
+        return MetaphorCandidatesResult(
+            candidates=[], pipeline="MIPVU-inspired, LLM-triaged, human-verified", verified_count=0
+        )
 
     sentences = await _load_parses(session, version_id)
     candidates: list[dict] = []
 
     # Heuristic: verbs with abstract subjects (not concrete nouns like "person"/"thing")
     # Phase 3+ will replace this with a proper embedding-based comparison.
-    CONCRETE_NOUNS = {"person", "man", "woman", "child", "people", "thing", "object",
-                      "animal", "dog", "cat", "car", "house", "table", "chair", "book"}
+    CONCRETE_NOUNS = {
+        "person",
+        "man",
+        "woman",
+        "child",
+        "people",
+        "thing",
+        "object",
+        "animal",
+        "dog",
+        "cat",
+        "car",
+        "house",
+        "table",
+        "chair",
+        "book",
+    }
 
     for sent in sentences:
         for tok in sent:
@@ -813,16 +1218,18 @@ async def compute_metaphor_candidates(
                     break
             if subj and subj["pos"] == "NOUN" and subj["lemma"].lower() not in CONCRETE_NOUNS:
                 # Candidate: verb with abstract subject — likely metaphorical
-                candidates.append({
-                    "word": tok["text"],
-                    "lemma": lemma,
-                    "pos": tok["pos"],
-                    "subject": subj["text"],
-                    "subject_lemma": subj["lemma"],
-                    "sentence": " ".join(t["text"] for t in sent),
-                    "evidence_id": f"{tok['doc']}:{tok['sent']}:{tok['idx']}",
-                    "reason": f"Verb '{lemma}' with abstract subject '{subj['lemma']}' — possible personification/metaphor",
-                })
+                candidates.append(
+                    {
+                        "word": tok["text"],
+                        "lemma": lemma,
+                        "pos": tok["pos"],
+                        "subject": subj["text"],
+                        "subject_lemma": subj["lemma"],
+                        "sentence": " ".join(t["text"] for t in sent),
+                        "evidence_id": f"{tok['doc']}:{tok['sent']}:{tok['idx']}",
+                        "reason": f"Verb '{lemma}' with abstract subject '{subj['lemma']}' — possible personification/metaphor",
+                    }
+                )
                 if len(candidates) >= limit:
                     return MetaphorCandidatesResult(
                         candidates=candidates,

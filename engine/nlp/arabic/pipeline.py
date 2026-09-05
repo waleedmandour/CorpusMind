@@ -22,6 +22,7 @@ Arabic-specific features exposed (§8.21):
   - Clitic segmentation
   - Dialect identification (Gulf, Egyptian, Levantine, MSA, Classical)
 """
+
 from __future__ import annotations
 
 import functools
@@ -41,17 +42,18 @@ log = get_logger(__name__)
 @dataclass(frozen=True, slots=True)
 class ArabicToken:
     """One Arabic token with morphological annotations."""
-    text: str                 # surface form
-    lemma: str                # lemma (with diacritics if available)
-    root: str                 # triliteral root, e.g. "ك.ت.ب"
-    pattern: str              # morphological pattern, e.g. "يُ1ْ2ِ3"
-    pos: str                  # POS tag (verb, noun, adj, prep, etc.)
-    stem: str                 # stem
-    buckwalter: str           # Buckwalter transliteration
-    dediacritized: str        # diacritics removed
-    dialect: str = "msa"      # detected dialect (msa, egy, glf, lev, classical)
-    number: str = ""          # s=singular, d=dual, p=plural
-    gender: str = ""          # m=masculine, f=feminine
+
+    text: str  # surface form
+    lemma: str  # lemma (with diacritics if available)
+    root: str  # triliteral root, e.g. "ك.ت.ب"
+    pattern: str  # morphological pattern, e.g. "يُ1ْ2ِ3"
+    pos: str  # POS tag (verb, noun, adj, prep, etc.)
+    stem: str  # stem
+    buckwalter: str  # Buckwalter transliteration
+    dediacritized: str  # diacritics removed
+    dialect: str = "msa"  # detected dialect (msa, egy, glf, lev, classical)
+    number: str = ""  # s=singular, d=dual, p=plural
+    gender: str = ""  # m=masculine, f=feminine
     is_broken_plural: bool = False  # جمع تكسير (broken plural)
 
 
@@ -158,17 +160,19 @@ class CamelBackend:
             analyses = analyzer.analyze(tok_text)
             if not analyses:
                 # Out-of-vocabulary — fall back to surface form as lemma
-                arabic_tokens.append(ArabicToken(
-                    text=tok_text,
-                    lemma=tok_text,
-                    root="",
-                    pattern="",
-                    pos="x",
-                    stem=tok_text,
-                    buckwalter=self._bw_mapper.map_string(tok_text),
-                    dediacritized=dediac_ar(tok_text),
-                    dialect=self._default_dialect,
-                ))
+                arabic_tokens.append(
+                    ArabicToken(
+                        text=tok_text,
+                        lemma=tok_text,
+                        root="",
+                        pattern="",
+                        pos="x",
+                        stem=tok_text,
+                        buckwalter=self._bw_mapper.map_string(tok_text),
+                        dediacritized=dediac_ar(tok_text),
+                        dialect=self._default_dialect,
+                    )
+                )
                 continue
 
             # Take the first analysis (CAMeL returns analyses ranked by frequency)
@@ -189,20 +193,22 @@ class CamelBackend:
                     if not (text.endswith("ون") or text.endswith("ين") or text.endswith("ات")):
                         is_broken_plural = True
 
-            arabic_tokens.append(ArabicToken(
-                text=tok_text,
-                lemma=a.get("lex", tok_text),
-                root=a.get("root", ""),
-                pattern=a.get("pattern", ""),
-                pos=a.get("pos", "x"),
-                stem=a.get("stem", tok_text),
-                buckwalter=self._bw_mapper.map_string(tok_text),
-                dediacritized=dediac_ar(tok_text),
-                dialect=self._default_dialect,
-                number=number,
-                gender=gender,
-                is_broken_plural=is_broken_plural,
-            ))
+            arabic_tokens.append(
+                ArabicToken(
+                    text=tok_text,
+                    lemma=a.get("lex", tok_text),
+                    root=a.get("root", ""),
+                    pattern=a.get("pattern", ""),
+                    pos=a.get("pos", "x"),
+                    stem=a.get("stem", tok_text),
+                    buckwalter=self._bw_mapper.map_string(tok_text),
+                    dediacritized=dediac_ar(tok_text),
+                    dialect=self._default_dialect,
+                    number=number,
+                    gender=gender,
+                    is_broken_plural=is_broken_plural,
+                )
+            )
 
         return ArabicAnalysis(
             text=text,
@@ -229,7 +235,8 @@ class CamelBackend:
             # Map city codes → CorpusMind dialect buckets
             buckets = {"msa": 0.0, "egy": 0.0, "glf": 0.0, "lev": 0.0}
             city_map = {
-                "MSA": "msa", "CAI": "egy",
+                "MSA": "msa",
+                "CAI": "egy",
                 "DOH": "glf",  # Doha = Gulf
                 "BEI": "lev",  # Beirut = Levantine
                 "RAB": "msa",  # Rabat = Maghrebi → fall back to MSA bucket
@@ -247,6 +254,7 @@ class CamelBackend:
         """Lazily load the DIDModel6 (cached on the backend instance)."""
         if not hasattr(self, "_did_model"):
             from camel_tools.dialectid.model6 import DIDModel6
+
             self._did_model = DIDModel6.pretrained()
         return self._did_model
 
@@ -273,6 +281,7 @@ class FarasaBackend:
     Use case: fast segmentation when speed matters more than tagset
     granularity. Smaller tagset than CAMeL but very fast.
     """
+
     name = "farasa"
 
     def __init__(self) -> None:
@@ -294,6 +303,7 @@ class SinaToolsBackend:
     Per §3.3, SinaTools led on both speed and accuracy in independent
     benchmarking on two tasks.
     """
+
     name = "sinatools"
 
     def __init__(self) -> None:
@@ -334,16 +344,18 @@ def get_arabic_backend(backend: str = "camel", dialect: str = "msa") -> ArabicBa
 # --------------------------------------------------------------------------- #
 
 
-def analyze_arabic(text: str, *, backend: str = "camel", dialect: str = "msa",
-                   dediacritize: bool = False) -> ArabicAnalysis:
+def analyze_arabic(
+    text: str, *, backend: str = "camel", dialect: str = "msa", dediacritize: bool = False
+) -> ArabicAnalysis:
     """Analyze Arabic text — tokenize + morphology (root, pattern, lemma, pos)
     + Buckwalter transliteration + dialect detection."""
     b = get_arabic_backend(backend, dialect)
     return b.analyze(text, dediacritize=dediacritize)
 
 
-def identify_arabic_dialect(text: str, *, backend: str = "camel",
-                            include_cities: bool = False) -> dict:
+def identify_arabic_dialect(
+    text: str, *, backend: str = "camel", include_cities: bool = False
+) -> dict:
     """Identify the Arabic dialect of a text.
 
     Returns a probability distribution over {msa, egy, glf, lev} by default.
@@ -368,8 +380,7 @@ def identify_arabic_dialect(text: str, *, backend: str = "camel",
                     "TUN": "Tunis (Maghrebi)",
                 }
                 result["city_scores"] = {
-                    city_names.get(k, k): float(v)
-                    for k, v in preds[0].scores.items()
+                    city_names.get(k, k): float(v) for k, v in preds[0].scores.items()
                 }
                 result["top_city"] = preds[0].top
         except Exception as e:
@@ -381,14 +392,18 @@ def extract_arabic_roots(text: str) -> list[dict]:
     """Extract roots (الجذر) from Arabic text. Returns one dict per token:
     {token, root, pattern, lemma}."""
     analysis = analyze_arabic(text)
-    return [{
-        "token": t.text,
-        "root": t.root,
-        "pattern": t.pattern,
-        "lemma": t.lemma,
-        "pos": t.pos,
-        "buckwalter": t.buckwalter,
-    } for t in analysis.tokens if t.root]
+    return [
+        {
+            "token": t.text,
+            "root": t.root,
+            "pattern": t.pattern,
+            "lemma": t.lemma,
+            "pos": t.pos,
+            "buckwalter": t.buckwalter,
+        }
+        for t in analysis.tokens
+        if t.root
+    ]
 
 
 def segment_arabic_clitics(text: str) -> list[dict]:
@@ -397,16 +412,20 @@ def segment_arabic_clitics(text: str) -> list[dict]:
     first-pass segmentation. Phase 4 will swap in a proper clitic segmenter
     (CAMeL's `MorphologyDB` with `clitic` segmentation enabled)."""
     analysis = analyze_arabic(text)
-    return [{
-        "surface": t.text,
-        "stem": t.stem,
-        "pos": t.pos,
-    } for t in analysis.tokens]
+    return [
+        {
+            "surface": t.text,
+            "stem": t.stem,
+            "pos": t.pos,
+        }
+        for t in analysis.tokens
+    ]
 
 
 def transliterate_buckwalter(text: str) -> str:
     """Transliterate Arabic text to Buckwalter encoding (Latin)."""
     from camel_tools.utils.charmap import CharMapper
+
     bw = CharMapper.builtin_mapper("ar2bw")
     return bw.map_string(text)
 
@@ -414,6 +433,7 @@ def transliterate_buckwalter(text: str) -> str:
 def dediacritize_arabic(text: str) -> str:
     """Remove Arabic diacritics (التشكيل) from text."""
     from camel_tools.utils.dediac import dediac_ar
+
     return dediac_ar(text)
 
 
@@ -424,6 +444,7 @@ def normalize_arabic(text: str) -> str:
         normalize_alef_maksura_ar,
         normalize_teh_marbuta_ar,
     )
+
     text = normalize_alef_ar(text)
     text = normalize_alef_maksura_ar(text)
     text = normalize_teh_marbuta_ar(text)
@@ -466,8 +487,10 @@ class ArabicPipeline:
       text      → text
       lemma     → lemma (or dediacritized if lemma is empty)
       pos       → pos (mapped to UD-style if possible)
-      stem      → pos_fine
-      root      → morph (stored as "root=ك.ت.ب|pattern=يُ1ْ2ِ3")
+      pos_fine  → the RAW CAMeL/Calima tag (v1.2.0 — the language's
+                  XPOS layer; previously the stem was stored here, which
+                  made the 'calima' tagset impossible to serve)
+      morph     → root + stem + pattern ("root=ك.ت.ب|stem=...|pattern=...")
       is_punct  → True if pos == "punct"
     """
 
@@ -507,25 +530,32 @@ class ArabicPipeline:
         for at in analysis.tokens:
             # Map Arabic POS to a UD-compatible tag (best effort)
             pos = self._map_pos(at.pos)
-            # Store root + pattern in the morph field
+            # Store root + stem + pattern in the morph field
             morph_parts = []
             if at.root:
                 morph_parts.append(f"root={at.root}")
+            if at.stem:
+                morph_parts.append(f"stem={at.stem}")
             if at.pattern:
                 morph_parts.append(f"pattern={at.pattern}")
             morph = "|".join(morph_parts) if morph_parts else ""
 
-            tokens.append(ParsedToken(
-                text=at.text,
-                lemma=at.lemma or at.dediacritized or at.text,
-                pos=pos,
-                pos_fine=at.stem or at.pos,
-                morph=morph,
-                dep_head=0,  # Arabic backend doesn't produce dependency parse
-                dep_rel="dep",
-                is_punct=at.pos.lower() == "punct",
-                is_stop=False,  # CAMeL doesn't have a stopword list built-in
-            ))
+            tokens.append(
+                ParsedToken(
+                    text=at.text,
+                    lemma=at.lemma or at.dediacritized or at.text,
+                    pos=pos,
+                    # v1.2.0: pos_fine is the language's fine/XPOS layer — for
+                    # Arabic that is the RAW CAMeL tag (noun, verb, adj, ...),
+                    # so the 'calima' tagset can be served from storage.
+                    pos_fine=at.pos or "",
+                    morph=morph,
+                    dep_head=0,  # Arabic backend doesn't produce dependency parse
+                    dep_rel="dep",
+                    is_punct=at.pos.lower() == "punct",
+                    is_stop=False,  # CAMeL doesn't have a stopword list built-in
+                )
+            )
 
         yield ParsedSentence(tokens=tokens)
 

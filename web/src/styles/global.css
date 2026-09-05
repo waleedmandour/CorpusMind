@@ -5279,6 +5279,29 @@ html[dir="rtl"] .toggle-switch input:checked + .toggle-slider::before {
   color: var(--text);
   font-weight: 500;
 }
+/* v1.2.0 (Issue 4): tagset selector card in Your Corpus */
+.tagset-card {
+  margin-block-start: var(--space-3);
+  padding: var(--space-3);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.tagset-card h3 {
+  margin: 0 0 var(--space-1);
+  font-size: 13px;
+}
+.tagset-select {
+  min-inline-size: 260px;
+  margin-block: var(--space-2);
+}
+.tagset-hint {
+  font-size: 11px;
+  color: var(--text-subtle);
+  line-height: 1.5;
+  margin: 0;
+}
+
 .project-selector-select {
   min-inline-size: 200px;
 }

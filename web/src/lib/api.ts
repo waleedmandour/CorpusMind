@@ -518,6 +518,23 @@ export interface POSAnalysisResult {
   distribution: POSDistributionRow[];
   pos_ngrams: POSNGramRow[];
   n: number;
+  tagset?: string;
+}
+
+// v1.2.0 (Issue 4): USAS top-level semantic distribution
+export interface SemanticDistributionRow {
+  tag: string;
+  label: string;
+  freq: number;
+  percent: number;
+}
+
+export interface SemanticAnalysisResult {
+  total_tokens: number;
+  matched_tokens: number;
+  distribution: SemanticDistributionRow[];
+  unmatched_percent: number;
+  tagset: string;
 }
 
 export interface GrammarMatch {
@@ -1049,10 +1066,22 @@ export const api = {
       body: JSON.stringify({ n, min_freq, min_range, limit }),
     }),
 
-  posAnalysis: (cid: string, n = 2, min_freq = 2, limit = 100) =>
+  posAnalysis: (cid: string, n = 2, min_freq = 2, limit = 100, tagset = "upos") =>
     jsonFetch<POSAnalysisResult>(`/api/v1/corpora/${cid}/pos-analysis`, {
       method: "POST",
-      body: JSON.stringify({ n, min_freq, limit }),
+      body: JSON.stringify({ n, min_freq, limit, tagset }),
+    }),
+  // v1.2.0 (Issue 4): USAS top-level semantic distribution (experimental)
+  semanticAnalysis: (cid: string, limit = 100) =>
+    jsonFetch<SemanticAnalysisResult>(`/api/v1/corpora/${cid}/semantic-analysis`, {
+      method: "POST",
+      body: JSON.stringify({ limit }),
+    }),
+  // v1.2.0 (Issue 4): persist the user's per-corpus tagset choice
+  setCorpusTagset: (cid: string, tagset: string) =>
+    jsonFetch<{ ok: boolean; corpus_id: string; tagset: string }>(`/api/v1/corpora/${cid}/tagset`, {
+      method: "PATCH",
+      body: JSON.stringify({ tagset }),
     }),
 
   grammar: (cid: string, patterns?: string[], limit = 50) =>
@@ -1086,10 +1115,10 @@ export const api = {
     }),
 
   // --- Phase 3 Arabic (8.21) ---
-  arabicAnalyze: (text: string, dialect = "msa") =>
+  arabicAnalyze: (text: string, dialect = "msa", tagset: "calima" | "upos" = "calima") =>
     jsonFetch<ArabicAnalysisResult>(`/api/v1/arabic/analyze`, {
       method: "POST",
-      body: JSON.stringify({ text, dialect }),
+      body: JSON.stringify({ text, dialect, tagset }),
     }),
 
   arabicRoots: (text: string) =>

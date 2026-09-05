@@ -39,11 +39,45 @@ const SAMPLE_TEXTS = [
   "قال المعلم للطلاب إن الاجتهاد طريق النجاح",
 ];
 
+// v1.2.0 (Issue 4): color-code POS tags instead of the grey 'pos-other'
+// fallback. Handles both native CAMeL tags (noun, verb, adj, prep, ...) and
+// UD UPOS tags (NOUN, VERB, ADP, ...) via one lookup.
+const POS_CLASS_BY_TAG: Record<string, string> = {
+  // CAMeL / Calima native
+  noun: "pos-noun", noun_prop: "pos-noun", prop: "pos-noun",
+  verb: "pos-verb", pseudo_verb: "pos-verb",
+  adj: "pos-adj", adj_num: "pos-adj",
+  adv: "pos-adv",
+  prep: "pos-adp", prep_comp: "pos-adp",
+  pron: "pos-pron", pron_dem: "pos-pron", pron_rel: "pos-pron", pron_inter: "pos-pron",
+  conj: "pos-cconj", conj_sub: "pos-sconj",
+  part: "pos-det", part_neg: "pos-det", part_focus: "pos-det", part_inter: "pos-det", part_voc: "pos-det",
+  det: "pos-det",
+  punct: "pos-punct",
+  // UD UPOS
+  NOUN: "pos-noun", PROPN: "pos-noun",
+  VERB: "pos-verb", AUX: "pos-aux",
+  ADJ: "pos-adj",
+  ADV: "pos-adv",
+  ADP: "pos-adp",
+  PRON: "pos-pron",
+  DET: "pos-det",
+  CCONJ: "pos-cconj", SCONJ: "pos-sconj",
+  PUNCT: "pos-punct",
+};
+
+function posClass(tag: string): string {
+  return clsx("pos-tag", POS_CLASS_BY_TAG[tag] ?? "pos-other");
+}
+
 export function ArabicView() {
   const [text, setText] = useState(SAMPLE_TEXTS[0]);
   const [tool, setTool] = useState<Tool>("morphology");
   const [dialect, setDialect] = useState<"msa" | "egy" | "glf" | "lev">("msa");
-  const [submitted, setSubmitted] = useState<{ text: string; tool: Tool; dialect: string } | null>(null);
+  // v1.2.0 (Issue 4): tagset selection for the morphology output —
+  // native CAMeL/Calima tags or Universal Dependencies.
+  const [tagset, setTagset] = useState<"calima" | "upos">("calima");
+  const [submitted, setSubmitted] = useState<{ text: string; tool: Tool; dialect: string; tagset: string } | null>(null);
 
   const backends = useQuery({ queryKey: ["arabic-backends"], queryFn: api.arabicBackends });
 
@@ -54,7 +88,7 @@ export function ArabicView() {
       const t = submitted.text;
       switch (submitted.tool) {
         case "morphology":
-          return { kind: "morphology" as const, data: await api.arabicAnalyze(t, submitted.dialect) };
+          return { kind: "morphology" as const, data: await api.arabicAnalyze(t, submitted.dialect, (submitted.tagset as "calima" | "upos")) };
         case "roots":
           return { kind: "roots" as const, data: await api.arabicRoots(t) };
         case "clitics":
@@ -79,7 +113,7 @@ export function ArabicView() {
 
   const onRun = () => {
     if (!text.trim()) return;
-    setSubmitted({ text: text.trim(), tool, dialect });
+    setSubmitted({ text: text.trim(), tool, dialect, tagset });
   };
 
   return (
@@ -117,17 +151,26 @@ export function ArabicView() {
           ))}
         </div>
 
-        {/* Dialect picker for morphology tool */}
+        {/* Dialect + tagset pickers for morphology tool */}
         {(tool === "morphology") && (
-          <label className="dialect-picker">
-            Dialect DB:
-            <select value={dialect} onChange={(e) => setDialect(e.target.value as typeof dialect)}>
-              <option value="msa">MSA (calima-msa-r13)</option>
-              <option value="egy">Egyptian (calima-egy-r13)</option>
-              <option value="glf">Gulf (calima-glf-01)</option>
-              <option value="lev">Levantine (calima-lev-01)</option>
-            </select>
-          </label>
+          <>
+            <label className="dialect-picker">
+              Dialect DB:
+              <select value={dialect} onChange={(e) => setDialect(e.target.value as typeof dialect)}>
+                <option value="msa">MSA (calima-msa-r13)</option>
+                <option value="egy">Egyptian (calima-egy-r13)</option>
+                <option value="glf">Gulf (calima-glf-01)</option>
+                <option value="lev">Levantine (calima-lev-01)</option>
+              </select>
+            </label>
+            <label className="dialect-picker">
+              Tagset:
+              <select value={tagset} onChange={(e) => setTagset(e.target.value as typeof tagset)} title="Tagset used for the POS column">
+                <option value="calima">CAMeL native (calima)</option>
+                <option value="upos">UD UPOS (universal)</option>
+              </select>
+            </label>
+          </>
         )}
       </div>
 
@@ -193,7 +236,7 @@ function ArabicResult({ result }: { result: any }) {
                   <td dir="rtl" lang="ar" className="arabic-cell root-cell">{t.root || "—"}</td>
                   <td dir="rtl" lang="ar" className="arabic-cell pattern-cell">{t.pattern || "—"}</td>
                   <td dir="rtl" lang="ar" className="arabic-cell">{t.lemma || "—"}</td>
-                  <td><span className="pos-tag pos-other">{t.pos}</span></td>
+                  <td><span className={posClass(t.pos)}>{t.pos}</span></td>
                   <td dir="rtl" lang="ar" className="arabic-cell">{t.stem || "—"}</td>
                   <td className="buckwalter-cell">{t.buckwalter}</td>
                 </tr>

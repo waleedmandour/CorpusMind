@@ -1,4 +1,5 @@
 """Corpus management API routes (§8.1, §8.2)."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -15,6 +16,10 @@ from storage.session import get_session
 
 log = get_logger(__name__)
 router = APIRouter()
+
+
+class TagsetRequest(BaseModel):
+    tagset: str = Field(..., min_length=2, max_length=32)
 
 
 # --------------------------------------------------------------------------- #
@@ -40,13 +45,25 @@ class ProjectOut(BaseModel):
 
 
 @router.post("/projects", response_model=ProjectOut)
-async def create_project(body: ProjectCreate, session: AsyncSession = Depends(get_session)) -> ProjectOut:
-    p = Project(name=body.name, description=body.description, language=body.language, visibility=body.visibility)
+async def create_project(
+    body: ProjectCreate, session: AsyncSession = Depends(get_session)
+) -> ProjectOut:
+    p = Project(
+        name=body.name,
+        description=body.description,
+        language=body.language,
+        visibility=body.visibility,
+    )
     session.add(p)
     await session.flush()
     return ProjectOut(
-        id=p.id, name=p.name, description=p.description, language=p.language,
-        visibility=p.visibility, created_at=p.created_at, corpus_count=0,
+        id=p.id,
+        name=p.name,
+        description=p.description,
+        language=p.language,
+        visibility=p.visibility,
+        created_at=p.created_at,
+        corpus_count=0,
     )
 
 
@@ -56,11 +73,21 @@ async def list_projects(session: AsyncSession = Depends(get_session)) -> list[Pr
     projects = (await session.execute(stmt)).scalars().all()
     out = []
     for p in projects:
-        n = await session.scalar(select(func.count(Corpus.id)).where(Corpus.project_id == p.id)) or 0
-        out.append(ProjectOut(
-            id=p.id, name=p.name, description=p.description, language=p.language,
-            visibility=p.visibility, created_at=p.created_at, corpus_count=n,
-        ))
+        n = (
+            await session.scalar(select(func.count(Corpus.id)).where(Corpus.project_id == p.id))
+            or 0
+        )
+        out.append(
+            ProjectOut(
+                id=p.id,
+                name=p.name,
+                description=p.description,
+                language=p.language,
+                visibility=p.visibility,
+                created_at=p.created_at,
+                corpus_count=n,
+            )
+        )
     return out
 
 
@@ -71,8 +98,13 @@ async def get_project(pid: str, session: AsyncSession = Depends(get_session)) ->
         raise HTTPException(404, "Project not found")
     n = await session.scalar(select(func.count(Corpus.id)).where(Corpus.project_id == pid)) or 0
     return ProjectOut(
-        id=p.id, name=p.name, description=p.description, language=p.language,
-        visibility=p.visibility, created_at=p.created_at, corpus_count=n,
+        id=p.id,
+        name=p.name,
+        description=p.description,
+        language=p.language,
+        visibility=p.visibility,
+        created_at=p.created_at,
+        corpus_count=n,
     )
 
 
@@ -109,17 +141,27 @@ class CorpusOut(BaseModel):
 
 
 @router.post("/projects/{pid}/corpora", response_model=CorpusOut)
-async def create_corpus(pid: str, body: CorpusCreate, session: AsyncSession = Depends(get_session)) -> CorpusOut:
+async def create_corpus(
+    pid: str, body: CorpusCreate, session: AsyncSession = Depends(get_session)
+) -> CorpusOut:
     p = await session.get(Project, pid)
     if not p:
         raise HTTPException(404, "Project not found")
-    c = Corpus(project_id=pid, name=body.name, language=body.language or p.language, genre=body.genre)
+    c = Corpus(
+        project_id=pid, name=body.name, language=body.language or p.language, genre=body.genre
+    )
     session.add(c)
     await session.flush()
     return CorpusOut(
-        id=c.id, project_id=c.project_id, name=c.name, language=c.language,
-        genre=c.genre, pipeline_recipe=c.pipeline_recipe, stats=c.stats,
-        created_at=c.created_at, document_count=0,
+        id=c.id,
+        project_id=c.project_id,
+        name=c.name,
+        language=c.language,
+        genre=c.genre,
+        pipeline_recipe=c.pipeline_recipe,
+        stats=c.stats,
+        created_at=c.created_at,
+        document_count=0,
     )
 
 
@@ -129,12 +171,23 @@ async def list_corpora(pid: str, session: AsyncSession = Depends(get_session)) -
     corpora = (await session.execute(stmt)).scalars().all()
     out = []
     for c in corpora:
-        n = await session.scalar(select(func.count(Document.id)).where(Document.corpus_id == c.id)) or 0
-        out.append(CorpusOut(
-            id=c.id, project_id=c.project_id, name=c.name, language=c.language,
-            genre=c.genre, pipeline_recipe=c.pipeline_recipe, stats=c.stats,
-            created_at=c.created_at, document_count=n,
-        ))
+        n = (
+            await session.scalar(select(func.count(Document.id)).where(Document.corpus_id == c.id))
+            or 0
+        )
+        out.append(
+            CorpusOut(
+                id=c.id,
+                project_id=c.project_id,
+                name=c.name,
+                language=c.language,
+                genre=c.genre,
+                pipeline_recipe=c.pipeline_recipe,
+                stats=c.stats,
+                created_at=c.created_at,
+                document_count=n,
+            )
+        )
     return out
 
 
@@ -145,9 +198,15 @@ async def get_corpus(cid: str, session: AsyncSession = Depends(get_session)) -> 
         raise HTTPException(404, "Corpus not found")
     n = await session.scalar(select(func.count(Document.id)).where(Document.corpus_id == cid)) or 0
     return CorpusOut(
-        id=c.id, project_id=c.project_id, name=c.name, language=c.language,
-        genre=c.genre, pipeline_recipe=c.pipeline_recipe, stats=c.stats,
-        created_at=c.created_at, document_count=n,
+        id=c.id,
+        project_id=c.project_id,
+        name=c.name,
+        language=c.language,
+        genre=c.genre,
+        pipeline_recipe=c.pipeline_recipe,
+        stats=c.stats,
+        created_at=c.created_at,
+        document_count=n,
     )
 
 
@@ -202,19 +261,27 @@ async def upload_documents(
             raise HTTPException(
                 413,
                 f"File '{f.filename}' is {len(raw) // 1024 // 1024} MB. "
-                f"Maximum upload size is {MAX_UPLOAD_SIZE // 1024 // 1024} MB."
+                f"Maximum upload size is {MAX_UPLOAD_SIZE // 1024 // 1024} MB.",
             )
         # Fix #7: Sanitize filename to prevent path traversal and log injection
         import os
+
         safe_filename = os.path.basename(f.filename or "untitled.txt")
         try:
             doc = await ingest_document(session, c, safe_filename, raw, language=language)
-            out.append(DocumentOut(
-                id=doc.id, corpus_id=doc.corpus_id, filename=doc.filename,
-                format=doc.format, encoding=doc.encoding,
-                detected_language=doc.detected_language, raw_size_bytes=doc.raw_size_bytes,
-                meta=doc.meta, created_at=doc.created_at,
-            ))
+            out.append(
+                DocumentOut(
+                    id=doc.id,
+                    corpus_id=doc.corpus_id,
+                    filename=doc.filename,
+                    format=doc.format,
+                    encoding=doc.encoding,
+                    detected_language=doc.detected_language,
+                    raw_size_bytes=doc.raw_size_bytes,
+                    meta=doc.meta,
+                    created_at=doc.created_at,
+                )
+            )
         except Exception as e:
             log.error("ingest_failed", filename=safe_filename, error=str(e))
             raise HTTPException(400, f"Failed to ingest '{safe_filename}': {e}") from e
@@ -222,14 +289,25 @@ async def upload_documents(
 
 
 @router.get("/corpora/{cid}/documents", response_model=list[DocumentOut])
-async def list_documents(cid: str, session: AsyncSession = Depends(get_session)) -> list[DocumentOut]:
+async def list_documents(
+    cid: str, session: AsyncSession = Depends(get_session)
+) -> list[DocumentOut]:
     stmt = select(Document).where(Document.corpus_id == cid).order_by(Document.created_at.desc())
     docs = (await session.execute(stmt)).scalars().all()
-    return [DocumentOut(
-        id=d.id, corpus_id=d.corpus_id, filename=d.filename, format=d.format,
-        encoding=d.encoding, detected_language=d.detected_language,
-        raw_size_bytes=d.raw_size_bytes, meta=d.meta, created_at=d.created_at,
-    ) for d in docs]
+    return [
+        DocumentOut(
+            id=d.id,
+            corpus_id=d.corpus_id,
+            filename=d.filename,
+            format=d.format,
+            encoding=d.encoding,
+            detected_language=d.detected_language,
+            raw_size_bytes=d.raw_size_bytes,
+            meta=d.meta,
+            created_at=d.created_at,
+        )
+        for d in docs
+    ]
 
 
 @router.delete("/corpora/{cid}/documents/{did}")
@@ -255,6 +333,7 @@ async def delete_document(cid: str, did: str, session: AsyncSession = Depends(ge
 
     # Recompute corpus stats
     from storage.models import AnnotationVersion, Token
+
     latest_version = await session.scalar(
         select(AnnotationVersion)
         .where(AnnotationVersion.corpus_id == cid)
@@ -264,30 +343,72 @@ async def delete_document(cid: str, did: str, session: AsyncSession = Depends(ge
     token_count = 0
     type_count = 0
     if latest_version:
-        token_count = await session.scalar(
-            select(func.count(Token.id)).where(Token.version_id == latest_version.id)
-        ) or 0
-        type_count = await session.scalar(
-            select(func.count(Token.text.distinct())).where(Token.version_id == latest_version.id)
-        ) or 0
+        token_count = (
+            await session.scalar(
+                select(func.count(Token.id)).where(Token.version_id == latest_version.id)
+            )
+            or 0
+        )
+        type_count = (
+            await session.scalar(
+                select(func.count(Token.text.distinct())).where(
+                    Token.version_id == latest_version.id
+                )
+            )
+            or 0
+        )
 
-    doc_count = await session.scalar(
-        select(func.count(Document.id)).where(Document.corpus_id == cid)
-    ) or 0
+    doc_count = (
+        await session.scalar(select(func.count(Document.id)).where(Document.corpus_id == cid)) or 0
+    )
 
     # Fix: SQLAlchemy JSON columns don't detect in-place mutations. Must
     # reassign the dict to trigger the UPDATE.
     new_stats = dict(corpus.stats or {})
-    new_stats.update({
-        "document_count": doc_count,
-        "token_count": token_count,
-        "type_count": type_count,
-    })
+    new_stats.update(
+        {
+            "document_count": doc_count,
+            "token_count": token_count,
+            "type_count": type_count,
+        }
+    )
     corpus.stats = new_stats  # reassign triggers SQLAlchemy change detection
 
     await session.commit()
     log.info("document_deleted", cid=cid, did=did, filename=filename, remaining_docs=doc_count)
     return {"deleted": did, "filename": filename, "remaining_documents": doc_count}
+
+
+@router.patch("/corpora/{cid}/tagset")
+async def set_corpus_tagset(
+    cid: str, body: TagsetRequest, session: AsyncSession = Depends(get_session)
+) -> dict:
+    """v1.2.0 (Issue 4): persist the user's tagset choice per corpus.
+
+    Stored inside ``corpus.pipeline_recipe`` (JSON) under ``tagset`` so no
+    schema migration is needed. The POS panel reads this as the default
+    tagset for the corpus.
+    """
+    corpus = await session.get(Corpus, cid)
+    if not corpus:
+        raise HTTPException(404, "Corpus not found")
+
+    from nlp.tagsets import is_valid_tagset, valid_tagsets_for_language
+
+    language = corpus.language or "en"
+    if not is_valid_tagset(body.tagset, language):
+        raise HTTPException(
+            422,
+            f"Tagset '{body.tagset}' is not valid for a '{language}' corpus. "
+            f"Valid tagsets: {', '.join(valid_tagsets_for_language(language))}.",
+        )
+
+    new_recipe = dict(corpus.pipeline_recipe or {})
+    new_recipe["tagset"] = body.tagset
+    corpus.pipeline_recipe = new_recipe  # reassign triggers SQLAlchemy change detection
+    await session.commit()
+    log.info("corpus_tagset_set", cid=cid, tagset=body.tagset)
+    return {"ok": True, "corpus_id": cid, "tagset": body.tagset}
 
 
 @router.post("/corpora/{cid}/recompile")
@@ -363,16 +484,26 @@ async def recompile_corpus(cid: str, session: AsyncSession = Depends(get_session
             parsed = pipeline.parse_document(doc.cleaned_text)
             for sent_idx, sent in enumerate(parsed.sentences):
                 for tok_idx, tok in enumerate(sent.tokens):
-                    session.add(Token(
-                        version_id=av.id,
-                        document_id=doc.id,
-                        sentence_idx=sent_idx,
-                        token_idx=tok_idx,
-                        text=tok.text,
-                        lemma=tok.lemma,
-                        pos=tok.pos,
-                        is_punct=tok.is_punct,
-                    ))
+                    session.add(
+                        Token(
+                            version_id=av.id,
+                            document_id=doc.id,
+                            sentence_idx=sent_idx,
+                            token_idx=tok_idx,
+                            text=tok.text,
+                            lemma=tok.lemma,
+                            pos=tok.pos,
+                            # v1.2.0: persist the FULL annotation — recompile
+                            # previously dropped pos_fine/morph/dep_*, which
+                            # silently broke the PTB/CLAWS-7/Calima tagsets
+                            # for any corpus the user re-tagged.
+                            pos_fine=tok.pos_fine,
+                            morph=tok.morph,
+                            dep_head=tok.dep_head,
+                            dep_rel=tok.dep_rel,
+                            is_punct=tok.is_punct,
+                        )
+                    )
                     all_texts.add(tok.text)
                     total_tokens += 1
             recompiled += 1
@@ -388,21 +519,25 @@ async def recompile_corpus(cid: str, session: AsyncSession = Depends(get_session
     latest = av
     if latest:
         new_stats = dict(corpus.stats or {})
-        new_stats.update({
-            "token_count": latest.token_count,
-            "type_count": latest.type_count,
-            "document_count": len(docs),
-        })
+        new_stats.update(
+            {
+                "token_count": latest.token_count,
+                "type_count": latest.type_count,
+                "document_count": len(docs),
+            }
+        )
         corpus.stats = new_stats  # reassign triggers SQLAlchemy change detection
 
     # Update pipeline recipe — same pattern
     new_recipe = dict(corpus.pipeline_recipe or {})
-    new_recipe.update({
-        "backend": info.backend,
-        "model_name": info.model_name,
-        "model_version": info.model_version,
-        "spacy_version": info.spacy_version,
-    })
+    new_recipe.update(
+        {
+            "backend": info.backend,
+            "model_name": info.model_name,
+            "model_version": info.model_version,
+            "spacy_version": info.spacy_version,
+        }
+    )
     corpus.pipeline_recipe = new_recipe  # reassign triggers SQLAlchemy change detection
 
     await session.commit()
@@ -424,6 +559,7 @@ async def recompile_corpus(cid: str, session: AsyncSession = Depends(get_session
 
 class DocumentMetadataUpdate(BaseModel):
     """Update a document's metadata (genre, register, year, etc.)."""
+
     meta: dict = Field(default_factory=dict)
 
 
@@ -485,26 +621,39 @@ async def create_subcorpus(
     session.add(sc)
     await session.flush()
     return SubcorpusOut(
-        id=sc.id, corpus_id=sc.corpus_id, name=sc.name,
-        description=sc.description, filter_criteria=sc.filter_criteria,
+        id=sc.id,
+        corpus_id=sc.corpus_id,
+        name=sc.name,
+        description=sc.description,
+        filter_criteria=sc.filter_criteria,
         created_at=sc.created_at,
     )
 
 
 @router.get("/corpora/{cid}/subcorpora", response_model=list[SubcorpusOut])
-async def list_subcorpora(cid: str, session: AsyncSession = Depends(get_session)) -> list[SubcorpusOut]:
+async def list_subcorpora(
+    cid: str, session: AsyncSession = Depends(get_session)
+) -> list[SubcorpusOut]:
     """List all subcorpora (saved filters) for a corpus."""
     stmt = select(Subcorpus).where(Subcorpus.corpus_id == cid).order_by(Subcorpus.created_at.desc())
     subs = (await session.execute(stmt)).scalars().all()
-    return [SubcorpusOut(
-        id=s.id, corpus_id=s.corpus_id, name=s.name,
-        description=s.description, filter_criteria=s.filter_criteria,
-        created_at=s.created_at,
-    ) for s in subs]
+    return [
+        SubcorpusOut(
+            id=s.id,
+            corpus_id=s.corpus_id,
+            name=s.name,
+            description=s.description,
+            filter_criteria=s.filter_criteria,
+            created_at=s.created_at,
+        )
+        for s in subs
+    ]
 
 
 @router.delete("/corpora/{cid}/subcorpora/{sid}")
-async def delete_subcorpus(cid: str, sid: str, session: AsyncSession = Depends(get_session)) -> dict:
+async def delete_subcorpus(
+    cid: str, sid: str, session: AsyncSession = Depends(get_session)
+) -> dict:
     """Delete a subcorpus (saved filter). Does NOT delete documents."""
     sc = await session.get(Subcorpus, sid)
     if not sc or sc.corpus_id != cid:
