@@ -418,6 +418,188 @@ def _framing(*, ocr: dict, caption: str = "") -> dict:
 # more it gets wrong.
 
 
+# --------------------------------------------------------------------------- #
+# Vision / cross-modal tools (v1.2.0 Lens round) — DB-backed, read cached
+# image analysis so the assistant can reason over BOTH text corpora and
+# image sets. This is what lets Lens's assistant interpret collective data
+# from textual and visual material in one conversation.
+# --------------------------------------------------------------------------- #
+
+
+async def _list_image_sets(session: AsyncSession, *, corpus_id: str) -> dict:
+    """List the image sets inside a corpus (with per-set image counts)."""
+    from sqlalchemy import func, select
+
+    from storage.models import Corpus, Image, ImageSet
+
+    corpus = await session.get(Corpus, corpus_id)
+    if not corpus:
+        return {"error": f"Corpus '{corpus_id}' not found."}
+    rows = (
+        await session.execute(
+            select(ImageSet.id, ImageSet.name, func.count(Image.id))
+            .outerjoin(Image, Image.image_set_id == ImageSet.id)
+            .where(ImageSet.corpus_id == corpus_id)
+            .group_by(ImageSet.id)
+            .order_by(ImageSet.created_at)
+        )
+    ).all()
+    return {
+        "corpus_id": corpus_id,
+        "corpus_name": corpus.name,
+        "image_set_count": len(rows),
+        "image_sets": [
+            {"image_set_id": sid, "name": name, "image_count": n}
+            for sid, name, n in rows
+        ],
+    }
+
+
+async def _get_image_set_summary(session: AsyncSession, *, image_set_id: str) -> dict:
+    """Digest of an image set's CACHED vision analysis (no model calls).
+
+    Aggregates: VLM description coverage, recurring discourse themes,
+    OCR-derived word list, and sample descriptions. Run the batch runner
+    in the Lens UI first to populate more.
+    """
+    from collections import Counter
+
+    from sqlalchemy import select
+
+    from storage.models import Image, ImageSet
+
+    iset = await session.get(ImageSet, image_set_id)
+    if not iset:
+        return {"error": f"Image set '{image_set_id}' not found."}
+    images = (
+        await session.execute(
+            select(Image).where(Image.image_set_id == image_set_id).order_by(Image.created_at)
+        )
+    ).scalars().all()
+
+    with_vlm = 0
+    with_discourse = 0
+    word_counter: Counter = Counter()
+    theme_counts: dict[str, Counter] = {}
+    description_samples: list[dict] = []
+
+    for img in images:
+        a = img.analysis or {}
+        ocr_text = (a.get("ocr") or {}).get("text", "")
+        if ocr_text:
+            for w in ocr_text.lower().split():
+                w = "".join(ch for ch in w if ch.isalpha())
+                if len(w) > 2:
+                    word_counter[w] += 1
+        vlm = a.get("vision_llm") or {}
+        if vlm:
+            with_vlm += 1
+            if len(description_samples) < 3:
+                latest = max(vlm.values(), key=lambda d: d.get("timestamp", ""))
+                description_samples.append(
+                    {"filename": img.filename, "description": latest.get("description", "")[:400]}
+                )
+        discourse = a.get("vision_llm_discourse") or {}
+        if discourse:
+            with_discourse += 1
+        for key, payload in discourse.items():
+            framework = str(key).split(":")[0]
+            bucket = theme_counts.setdefault(framework, Counter())
+            for claim in payload.get("claims", []):
+                bucket[claim.get("category", "?")] += 1
+
+    recurring = [
+        {
+            "framework": fw,
+            "total_claims": sum(c.values()),
+            "categories": [{"category": cat, "count": n} for cat, n in c.most_common(5)],
+        }
+        for fw, c in sorted(theme_counts.items())
+    ]
+
+    return {
+        "image_set_id": image_set_id,
+        "name": iset.name,
+        "image_count": len(images),
+        "images_with_vlm": with_vlm,
+        "images_with_discourse": with_discourse,
+        "recurring_themes": recurring,
+        "top_ocr_words": [{"word": w, "count": n} for w, n in word_counter.most_common(15)],
+        "description_samples": description_samples,
+        "note": (
+            "Only CACHED analysis is shown. Run the batch runner "
+            "(Vision view > Analyse set) to populate descriptions and "
+            "discourse themes first."
+        ) if with_vlm == 0 and with_discourse == 0 else "",
+    }
+
+
+async def _get_corpus_overview(session: AsyncSession, *, corpus_id: str) -> dict:
+    """Cross-modal overview of a corpus: TEXT side (documents, tokens) +
+    VISION side (image sets, images) in one result — the entry point for
+    interpreting textual and visual data together."""
+    from sqlalchemy import func, select
+
+    from storage.models import AnnotationVersion, Corpus, Document, Image, ImageSet
+
+    corpus = await session.get(Corpus, corpus_id)
+    if not corpus:
+        return {"error": f"Corpus '{corpus_id}' not found."}
+
+    doc_count = (
+        await session.execute(
+            select(func.count(Document.id)).where(Document.corpus_id == corpus_id)
+        )
+    ).scalar_one()
+
+    latest_version = (
+        await session.execute(
+            select(AnnotationVersion)
+            .where(AnnotationVersion.corpus_id == corpus_id)
+            .order_by(AnnotationVersion.created_at.desc())
+            .limit(1)
+        )
+    ).scalars().first()
+
+    set_rows = (
+        await session.execute(
+            select(ImageSet.id, ImageSet.name, func.count(Image.id))
+            .outerjoin(Image, Image.image_set_id == ImageSet.id)
+            .where(ImageSet.corpus_id == corpus_id)
+            .group_by(ImageSet.id)
+        )
+    ).all()
+
+    total_images = sum(n for _, _, n in set_rows)
+    stats = corpus.stats or {}
+
+    return {
+        "corpus_id": corpus_id,
+        "name": corpus.name,
+        "language": corpus.language,
+        "genre": corpus.genre,
+        "text_side": {
+            "document_count": doc_count,
+            "token_count": (latest_version.token_count if latest_version else stats.get("token_count", 0)),
+            "type_count": (latest_version.type_count if latest_version else stats.get("type_count", 0)),
+            "sentence_count": (latest_version.sentence_count if latest_version else stats.get("sentence_count", 0)),
+        },
+        "vision_side": {
+            "image_set_count": len(set_rows),
+            "image_count": total_images,
+            "image_sets": [
+                {"image_set_id": sid, "name": name, "image_count": n}
+                for sid, name, n in set_rows
+            ],
+        },
+        "note": (
+            "This corpus contains BOTH text documents and image sets. When "
+            "interpreting them together, compare OCR vocabulary / visual themes "
+            "with text-side keywords and phrase cross-modal claims as hypotheses."
+        ) if doc_count > 0 and total_images > 0 else "",
+    }
+
+
 TOOL_SCHEMAS: list[dict] = [
     {
         "type": "function",
@@ -874,6 +1056,62 @@ TOOL_SCHEMAS: list[dict] = [
             "parameters": {"type": "object", "properties": {}},
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "list_image_sets",
+            "description": (
+                "List the image sets inside a corpus (id, name, image count). "
+                "Use this first when the user asks about images or visual material — "
+                "then feed an image_set_id into get_image_set_summary."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "corpus_id": {"type": "string", "description": "The active corpus ID"},
+                },
+                "required": ["corpus_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_image_set_summary",
+            "description": (
+                "Aggregate CACHED vision analysis for one image set: how many images have "
+                "vision-LM descriptions, recurring discourse themes by framework, the most "
+                "common OCR words, and sample descriptions. No model is called. If coverage "
+                "is zero, tell the user to run 'Analyse set' in the Vision view first."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "image_set_id": {"type": "string", "description": "Image set ID from list_image_sets"},
+                },
+                "required": ["image_set_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_corpus_overview",
+            "description": (
+                "Cross-modal overview of a corpus in ONE call: text side (document count, "
+                "token/type/sentence totals) AND vision side (image sets, image counts). "
+                "Use it to decide what to analyse next, or when the user asks what a corpus "
+                "contains or wants text and images interpreted together."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "corpus_id": {"type": "string", "description": "The active corpus ID"},
+                },
+                "required": ["corpus_id"],
+            },
+        },
+    },
 ]
 
 
@@ -908,6 +1146,10 @@ TOOL_IMPLS = {
     "cda": _cda,
     "persuasion": _persuasion,
     "framing": _framing,
+    # v1.2.0 Lens round — vision / cross-modal (corpus-backed, async)
+    "list_image_sets": _list_image_sets,
+    "get_image_set_summary": _get_image_set_summary,
+    "get_corpus_overview": _get_corpus_overview,
     # Utility — stateless, sync
     "ping": lambda **_: {"ok": True, "engine": "corpusmind-engine", "ts": time.time()},
 }
