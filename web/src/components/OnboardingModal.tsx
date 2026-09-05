@@ -16,11 +16,15 @@ export function OnboardingModal() {
   const onboardingComplete = useUI((s) => s.onboardingComplete);
   const setOnboardingOpen = useUI((s) => s.setOnboardingOpen);
   const setOnboardingComplete = useUI((s) => s.setOnboardingComplete);
+  const isLensMode = useUI((s) => s.isLensMode);
   const [page, setPage] = useState(0);
 
   if (!onboardingOpen && onboardingComplete) return null;
 
-  const pages = [
+  // v1.2.0: Lens gets its own welcome + steps — the main-app steps used
+  // to tell Lens users to click a "Projects" item that doesn't exist in
+  // the Lens sidebar.
+  const mainAppPages = [
     {
       title: "Welcome to CorpusMind",
       subtitle: "Local-first, AI-native research environment for corpus linguistics and multimodal discourse analysis.",
@@ -136,6 +140,120 @@ export function OnboardingModal() {
       ),
     },
   ];
+
+  // v1.2.0 — CorpusMind Lens onboarding: mirrors what the Lens sidebar
+  // actually contains (no Projects / analysis-tool steps).
+  const lensPages = [
+    {
+      title: "Welcome to CorpusMind Lens",
+      subtitle: "Vision-LM-powered multimodal discourse analysis — image sets, OCR, Visual Grammar, and the grounded AI assistant.",
+      content: (
+        <div className="onboarding-content">
+          <p>Lens reads the SAME engine and data directory as the main CorpusMind app: any text corpus you ingested there is already available here, and the AI assistant can interpret textual and visual data together.</p>
+          <div className="onboarding-features">
+            <div className="onboarding-feature">
+              <div className="feature-badge">1</div>
+              <div>
+                <strong>Image Sets</strong>
+                <p>Group images (front pages, posters, photos) inside a corpus; OCR, colour and composition are analysed on upload.</p>
+              </div>
+            </div>
+            <div className="onboarding-feature">
+              <div className="feature-badge">2</div>
+              <div>
+                <strong>Vision-LM Analysis</strong>
+                <p>Descriptions, Visual Grammar (Kress and van Leeuwen), 8 discourse lenses, image-text alignment — all via a local vision model.</p>
+              </div>
+            </div>
+            <div className="onboarding-feature">
+              <div className="feature-badge">3</div>
+              <div>
+                <strong>Cross-modal AI</strong>
+                <p>Ask the assistant about text corpora AND image sets — it grounds answers on both.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      ),
+    },
+    {
+      title: "Getting Started in 3 Steps",
+      subtitle: "From images to analysis in minutes.",
+      content: (
+        <div className="onboarding-content">
+          <div className="onboarding-steps">
+            <div className="onboarding-step">
+              <div className="step-number">1</div>
+              <div className="step-body">
+                <strong>Create or Open a Corpus</strong>
+                <p>Click <strong>Your Corpus</strong> in the sidebar and create a corpus. If you already use the main CorpusMind app, its corpora are already here — pick one.</p>
+              </div>
+            </div>
+            <div className="onboarding-step">
+              <div className="step-number">2</div>
+              <div className="step-body">
+                <strong>Create an Image Set and Drop Images</strong>
+                <p>In the <strong>Vision</strong> view, click <strong>+ New set</strong>, then drag images in (PNG, JPEG, WebP, GIF). Use <strong>Analyse set</strong> to run the vision model over everything at once.</p>
+              </div>
+            </div>
+            <div className="onboarding-step">
+              <div className="step-number">3</div>
+              <div className="step-body">
+                <strong>Install a Vision Model</strong>
+                <p>Run <code>ollama pull qwen3-vl:2b</code> in a terminal — small and multilingual (OCR in 32 languages incl. Arabic). For higher quality: <code>qwen3-vl:8b</code>. Then ask the AI Assistant anything about your images and texts.</p>
+              </div>
+            </div>
+          </div>
+          <div className="onboarding-tip">
+            <strong>Tip:</strong> Press <kbd>Ctrl</kbd>+<kbd>K</kbd> (or <kbd>Cmd</kbd>+<kbd>K</kbd>) to open the command palette and jump to any action.
+          </div>
+        </div>
+      ),
+    },
+    {
+      title: "Privacy and Ethics by Design",
+      subtitle: "Your images and texts stay on your machine. Always.",
+      content: (
+        <div className="onboarding-content">
+          <div className="onboarding-privacy">
+            <div className="privacy-item">
+              <div className="privacy-check-mark">Yes</div>
+              <div>
+                <strong>Local-first by default.</strong>
+                <p>Images and AI queries never leave your machine unless you explicitly opt in to a cloud provider.</p>
+              </div>
+            </div>
+            <div className="privacy-item">
+              <div className="privacy-check-mark">Yes</div>
+              <div>
+                <strong>Real deletion.</strong>
+                <p>Deleting an image or image set removes the files from disk — privacy remediation is a first-class feature.</p>
+              </div>
+            </div>
+            <div className="privacy-item">
+              <div className="privacy-check-mark">Yes</div>
+              <div>
+                <strong>Framework-lensed hypotheses.</strong>
+                <p>Every interpretive claim is phrased as "Under a [Framework] reading, X may indicate Y." Never as a bare assertion of fact.</p>
+              </div>
+            </div>
+            <div className="privacy-item">
+              <div className="privacy-check-mark">Yes</div>
+              <div>
+                <strong>Facial analysis is opt-in.</strong>
+                <p>Off by default. Never performs identity recognition or re-identification of real individuals.</p>
+              </div>
+            </div>
+          </div>
+          <div className="onboarding-cta">
+            <p>Ready to start? Create an image set and drop some images in.</p>
+          </div>
+        </div>
+      ),
+    },
+  ];
+
+  const pages = isLensMode ? lensPages : mainAppPages;
 
   const currentPage = pages[page];
   const isLast = page === pages.length - 1;

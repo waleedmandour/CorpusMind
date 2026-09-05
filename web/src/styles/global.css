@@ -6263,3 +6263,10 @@ html[dir="rtl"] .toggle-switch input:checked + .toggle-slider::before {
   margin: var(--space-1) 0 0;
   padding-inline-start: var(--space-5);
 }
+
+/* Lens cross-modal card (HomeView in Lens mode) */
+.lens-crossmodal .lens-crossmodal-actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-block-start: var(--space-2);
+}

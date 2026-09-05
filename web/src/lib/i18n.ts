@@ -460,6 +460,11 @@ export const translations = {
     vision_batchrun_cancelled: "Cancelled after {done}/{total} images.",
     vision_batchrun_errors: "{n} image(s) reported errors",
     vision_batchrun_progressing: "Starting…",
+    home_crossmodal_h: "Text + images together",
+    home_crossmodal_docs: "documents",
+    home_crossmodal_sets: "image sets",
+    home_crossmodal_images: "images",
+    home_crossmodal_hint: "Corpora ingested in the main CorpusMind app are already available here (same engine, same data). The AI Assistant can interpret texts and images together."
   },
 
   ar: {
@@ -913,6 +918,11 @@ export const translations = {
     vision_batchrun_cancelled: "أُلغي بعد {done}/{total} صورة.",
     vision_batchrun_errors: "{n} صورة/صور أبلغت عن أخطاء",
     vision_batchrun_progressing: "جارٍ البدء…",
+    home_crossmodal_h: "النصوص والصور معاً",
+    home_crossmodal_docs: "مستنداً",
+    home_crossmodal_sets: "مجموعات صور",
+    home_crossmodal_images: "صورة",
+    home_crossmodal_hint: "الدخائر اللغوية المُدخلة في تطبيق CorpusMind الرئيسي متاحة هنا بالفعل (نفس المحرك ونفس البيانات). يستطيع مساعد الذكاء الاصطناعي تفسير النصوص والصور معاً."
   },
 } as const;
 

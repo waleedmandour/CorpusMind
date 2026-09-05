@@ -118,13 +118,19 @@ export function Sidebar() {
   const versionDisplay = useEngineVersionDisplay();
 
   // In Lens mode, only show vision-relevant nav groups:
-  // Overview (Home), Corpora (target only — needed to select which
-  // corpus's images to analyse), Vision, AI Assistant, System.
-  // Hide: Analysis Tools (text-only), Arabic.
+  // Overview (Home), Corpora (target only — vision sets live in target
+  // corpora, and the reference corpus is a text-only concept), Vision,
+  // AI Assistant, System. Hide: Analysis Tools (text-only), Arabic.
+  // v1.2.0: corpus-reference is now actually filtered (it used to stay
+  // visible here while the command palette hid it — inconsistent).
+  const LENS_GROUP_IDS = ["overview", "corpora", "vision", "ai", "system"];
   const visibleGroups = isLensMode
-    ? NAV_GROUPS.filter(g =>
-        ["overview", "corpora", "vision", "ai", "system"].includes(g.id)
-      )
+    ? NAV_GROUPS.filter(g => LENS_GROUP_IDS.includes(g.id))
+        .map(g =>
+          g.id === "corpora"
+            ? { ...g, items: g.items.filter((i) => i.id !== "corpus-reference") }
+            : g,
+        )
     : NAV_GROUPS;
 
   const activeCorpus = useQuery({

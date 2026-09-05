@@ -382,10 +382,61 @@ camel_data -i morphology-db-msa-r13`}</pre>
           Go to <strong>Settings → Model Providers</strong> to download vision models:
         </p>
         <ul>
-          <li><strong>moondream</strong> (1.7 GB, 1.8B) — runs on any machine, good for basic image description.</li>
-          <li><strong>llama3.2-vision:11b</strong> (7.9 GB, 11B) — higher quality, needs 8 GB+ RAM.</li>
+          <li><strong>qwen3-vl:2b</strong> (1.9 GB, 2B) — recommended for Lens: small, multilingual, OCR in 32 languages including Arabic; robust to blur, tilt and low light.</li>
+          <li><strong>qwen3-vl:8b</strong> (6.1 GB, 8B) — higher quality for visual discourse analysis, needs 12 GB+ RAM.</li>
           <li><strong>gemma3:4b</strong> (3.3 GB, 4B) — also supports vision, multilingual including Arabic.</li>
+          <li><strong>moondream</strong> (1.7 GB, 1.8B) — runs on any machine, but English-only (weak Arabic OCR).</li>
         </ul>
+      </>
+    ),
+  },
+  {
+    id: "lens",
+    title: "CorpusMind Lens and the Main App",
+    icon: "\u25B6",
+    body: (
+      <>
+        <p>
+          <strong>CorpusMind Lens</strong> is a separate installable desktop app focused on
+          vision-LM-powered multimodal discourse analysis. It ships its own window, branding, and
+          onboarding, but under the hood it connects to the <strong>same engine</strong> and the{" "}
+          <strong>same data directory</strong> as the main CorpusMind app. Nothing is synced or
+          copied — there is only one database, one engine, one port (8765).
+        </p>
+        <h4>Reading the main app's data from Lens</h4>
+        <p>
+          If the main CorpusMind app is installed on the same device, every text corpus you
+          ingested there is <strong>already visible in Lens</strong> — open{" "}
+          <strong>Your Corpus</strong> in the sidebar and pick it. If both apps are launched, they
+          share a single engine instance automatically (the second app connects instead of
+          spawning a duplicate). This means you can ingest texts in the main app, analyse images
+          in Lens, and the two sides meet inside the same corpus.
+        </p>
+        <h4>Interpreting text and images together</h4>
+        <p>
+          Image sets live <em>inside</em> a corpus, next to its text documents. The AI Assistant
+          can see both sides: it has tools to read your text corpora (concordance, frequency,
+          keyness, and so on) <em>and</em> tools to summarise image sets (cached vision-LM
+          descriptions, recurring discourse themes, OCR vocabulary). Ask questions like{" "}
+          <em>"compare the OCR vocabulary of this image set with the keywords of the corpus
+          text"</em> and it will ground its answer on both — with every cross-modal claim phrased
+          as a framework-lensed hypothesis, never as settled fact.
+        </p>
+        <h4>What Lens shows, and what it doesn't</h4>
+        <p>
+          Lens deliberately hides the text-analysis toolbars: its sidebar keeps Home, Your Corpus
+          (target corpora only — reference corpora are a text-only concept), Vision, AI Assistant,
+          and System. To run full text analysis (concordance, collocation, keyness, Arabic
+          pipelines), open the same corpus in the main CorpusMind app — the corpus, its documents
+          and its image sets are identical in both.
+        </p>
+        <h4>Installing a vision model for Lens</h4>
+        <p>
+          Lens needs a vision-capable model for describe, alignment and the discourse lenses. The
+          recommended default is <code>ollama pull qwen3-vl:2b</code> (1.9 GB, multilingual OCR
+          including Arabic). Lens picks a vision-capable model automatically; you can always
+          choose a specific model from the <strong>Vision model</strong> dropdown in each panel.
+        </p>
       </>
     ),
   },

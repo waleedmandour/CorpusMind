@@ -20,6 +20,7 @@ import { t } from "@/lib/i18n";
 export function HomeView() {
   const setActiveNav = useUI((s) => s.setActiveNav);
   const lang = useUI((s) => s.lang);
+  const isLensMode = useUI((s) => s.isLensMode);
   const versionDisplay = useEngineVersionDisplay();
   const activeProjectId = useApp((s) => s.activeProjectId);
   const activeCorpusId = useApp((s) => s.activeCorpusId);
@@ -138,9 +139,13 @@ export function HomeView() {
         </div>
       )}
 
+      {/* v1.2.0 Lens: cross-modal overview — the main app's text corpora
+          share the same engine, so show BOTH sides of the active corpus. */}
+      {isLensMode && activeCorpusId && <LensCrossModalCard corpusId={activeCorpusId} />}
+
       <div className="home-stats">
         <div className="home-stat">
-          <span className="home-stat-num">25</span>
+          <span className="home-stat-num">28</span>
           <span className="home-stat-label">AI Tools</span>
         </div>
         <div className="home-stat">
@@ -155,6 +160,58 @@ export function HomeView() {
           <span className="home-stat-num">97</span>
           <span className="home-stat-label">Tests</span>
         </div>
+      </div>
+    </div>
+  );
+}
+
+
+// ---------------------------------------------------------------------------
+// LensCrossModalCard — v1.2.0: shows the text side (documents ingested in
+// the MAIN CorpusMind app — same engine, same data dir) next to the vision
+// side (image sets), so the user sees what the assistant can interpret
+// together. Zero new endpoints: composes getCorpus + listImageSets.
+// ---------------------------------------------------------------------------
+
+function LensCrossModalCard({ corpusId }: { corpusId: string }) {
+  const lang = useUI((s) => s.lang);
+  const setActiveNav = useUI((s) => s.setActiveNav);
+  const corpusQuery = useQuery({
+    queryKey: ["corpus", corpusId],
+    queryFn: () => api.getCorpus(corpusId),
+    retry: 1,
+  });
+  const setsQuery = useQuery({
+    queryKey: ["image-sets", corpusId],
+    queryFn: () => api.listImageSets(corpusId),
+    retry: 1,
+  });
+
+  const corpus = corpusQuery.data;
+  const sets = setsQuery.data ?? [];
+  const totalImages = sets.reduce((n, s) => n + (s.image_count ?? 0), 0);
+
+  return (
+    <div className="home-callout lens-crossmodal">
+      <h3>{t(lang, "home_crossmodal_h")}</h3>
+      {corpus && (
+        <p>
+          <strong>{corpus.name}</strong> ({corpus.language}) —{" "}
+          {corpus.document_count} {t(lang, "home_crossmodal_docs")}
+        </p>
+      )}
+      <p>
+        {sets.length} {t(lang, "home_crossmodal_sets")} · {totalImages}{" "}
+        {t(lang, "home_crossmodal_images")}
+      </p>
+      <p className="hint">{t(lang, "home_crossmodal_hint")}</p>
+      <div className="lens-crossmodal-actions">
+        <button className="btn-secondary" onClick={() => setActiveNav("vision")}>
+          {t(lang, "nav_vision")}
+        </button>
+        <button className="btn-secondary" onClick={() => setActiveNav("assistant")}>
+          {t(lang, "nav_ai")}
+        </button>
       </div>
     </div>
   );

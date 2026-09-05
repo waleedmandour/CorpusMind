@@ -36,6 +36,7 @@ export default function App() {
   const theme = useUI((s) => s.theme);
   const lang = useUI((s) => s.lang);
   const dir = useUI((s) => s.dir);
+  const isLensMode = useUI((s) => s.isLensMode);
   const toggleLang = useUI((s) => s.toggleLang);
   const setCommandPaletteOpen = useUI((s) => s.setCommandPaletteOpen);
   const onboardingComplete = useUI((s) => s.onboardingComplete);
@@ -102,7 +103,8 @@ export default function App() {
       <header className="app-topbar" role="banner">
         <div className="app-brand">
           <img src="/icon-32.png" alt="CorpusMind" width="28" height="28" className="app-brand-icon" />
-          <span className="app-name">CorpusMind</span>
+          {/* v1.2.0: show the real app name in Lens (was hardcoded CorpusMind) */}
+          <span className="app-name">{isLensMode ? "CorpusMind Lens" : "CorpusMind"}</span>
         </div>
         {activeCorpusId && (
           <div
@@ -172,13 +174,13 @@ export default function App() {
         <DownloadProgressBar />
         <QueryStatusIndicator />
         <span className="status-sep">|</span>
-        <span>CorpusMind {versionDisplay}</span>
+        <span>{isLensMode ? "CorpusMind Lens" : "CorpusMind"} {versionDisplay}</span>
         <span className="status-sep">|</span>
         <span>AGPL-3.0</span>
         <span className="status-sep">|</span>
         <span>Press Ctrl/Cmd+K for commands</span>
         <span className="status-sep">|</span>
-        <span>Local Desktop App</span>
+        <span>{isLensMode ? "Lens · Local Desktop App" : "Local Desktop App"}</span>
         <div className="statusbar-spacer" />
         <TroubleshootingBar />
       </footer>
