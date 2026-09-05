@@ -39,7 +39,7 @@ permissions:
 jobs:
   # ─── Linux (deb + AppImage) ──────────────────────────────────────
   build-linux:
-    if: inputs.only_lens != 'true'
+    if: inputs.only_lens != true
     runs-on: ubuntu-22.04
     timeout-minutes: 60
     steps:
@@ -113,7 +113,7 @@ jobs:
 
   # ─── macOS (DMG, arm64) ──────────────────────────────────────────
   build-macos:
-    if: inputs.only_lens != 'true'
+    if: inputs.only_lens != true
     runs-on: macos-14
     timeout-minutes: 60
     steps:
@@ -176,7 +176,7 @@ jobs:
 
   # ─── Windows (NSIS + MSI) ────────────────────────────────────────
   build-windows:
-    if: inputs.only_lens != 'true'
+    if: inputs.only_lens != true
     runs-on: windows-2022
     timeout-minutes: 90
     steps:
@@ -448,7 +448,7 @@ jobs:
 
   # ─── Web PWA (zip) ───────────────────────────────────────────────
   build-web:
-    if: inputs.only_lens != 'true'
+    if: inputs.only_lens != true
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
