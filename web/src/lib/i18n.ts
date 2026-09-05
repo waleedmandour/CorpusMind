@@ -280,6 +280,9 @@ export const translations = {
     notification_error: "Error",
     notification_dismiss: "Dismiss",
 
+    // --- v1.2.0: top-bar status pill (Issue 1) ---
+    status_corpus_ready: "Corpus ready",
+
     // --- v1.2.0: Smart Troubleshooting panel ---
     trouble_title: "Smart Troubleshooting",
     trouble_badge_issue: "issue detected",
@@ -585,6 +588,9 @@ export const translations = {
     notification_warning: "تحذير",
     notification_error: "خطأ",
     notification_dismiss: "إغلاق",
+
+    // --- v1.2.0: top-bar status pill (Issue 1) ---
+    status_corpus_ready: "الدخيرة اللغوية جاهزة",
 
     // --- v1.2.0: Smart Troubleshooting panel ---
     trouble_title: "استكشاف الأخطاء الذكي",

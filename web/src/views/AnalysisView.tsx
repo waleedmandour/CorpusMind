@@ -203,9 +203,8 @@ export function AnalysisView() {
             key={t.id}
             className={clsx("tab", { active: tab === t.id, "phase-2": t.phase === 2 })}
             onClick={() => setTab(t.id)}
-            title={t.phase === 2 ? "Phase 2 feature" : undefined}
           >
-            {t.label}{t.phase === 2 ? " 2" : ""}
+            {t.label}
           </button>
         ))}
       </div>
@@ -905,6 +904,8 @@ function NGramsPanel({ cid }: { cid: string }) {
         <label>Min range (distinct docs)
           <input type="number" min={1} value={minRange} onChange={(e) => setMinRange(Number(e.target.value))} />
         </label>
+
+        <ExportButton onExport={(fmt) => { if (result.data) { downloadJsonResult(result.data, `ngrams.${fmt}`, exportStatus.set); } } } disabled={!result.data} />
       </div>
       {exportStatus.el}
 
@@ -912,8 +913,7 @@ function NGramsPanel({ cid }: { cid: string }) {
         <strong>Note:</strong> Lexical bundles require BOTH a minimum frequency per million words
         AND a minimum number of distinct texts - raw frequency alone is not enough to
         distinguish genuine bundles from single-text artifacts (Biber et al.).
-
-        <ExportButton onExport={(fmt) => { if (result.data) { downloadJsonResult(result.data, `ngrams.${fmt}`, exportStatus.set); } } } disabled={!result.data} /></div>
+      </div>
 
       {result.data && (
         <>
@@ -1006,14 +1006,15 @@ function GrammarPanel({ cid }: { cid: string }) {
             {p}
           </label>
         ))}
+
+        <ExportButton onExport={(fmt) => { if (result.data) { downloadJsonResult(result.data, `grammar.${fmt}`, exportStatus.set); } } } disabled={!result.data} />
       </div>
       {exportStatus.el}
 
       <div className="grounding-notice">
         <strong>Note:</strong> Grammar pattern detectors are <em>dependency-parse-driven</em>,
         not regex over surface text - so they generalize across genres.
-
-        <ExportButton onExport={(fmt) => { if (result.data) { downloadJsonResult(result.data, `grammar.${fmt}`, exportStatus.set); } } } disabled={!result.data} /></div>
+      </div>
 
       {result.data && (
         <>
@@ -1075,14 +1076,15 @@ function DependencyPanel({ cid }: { cid: string }) {
             <option value="compound">compound</option>
           </select>
         </label>
+
+        <ExportButton onExport={(fmt) => { if (result.data) { downloadJsonResult(result.data, `dependency.${fmt}`, exportStatus.set); } } } disabled={!result.data} />
       </div>
       {exportStatus.el}
 
       <div className="grounding-notice">
         <strong>Note:</strong> Built as thin queries over the same dependency parses already
         produced in 8.1 - not a separate pipeline.
-
-        <ExportButton onExport={(fmt) => { if (result.data) { downloadJsonResult(result.data, `dependency.${fmt}`, exportStatus.set); } } } disabled={!result.data} /></div>
+      </div>
 
       {result.data && (
         <>
@@ -1108,11 +1110,13 @@ function DiscoursePanel({ cid }: { cid: string }) {
   return (
     <div className="panel-content">
       {exportStatus.el}
+      <div className="toolbar">
+        <ExportButton onExport={(fmt) => { if (result.data) { downloadJsonResult(result.data, `discourse.${fmt}`, exportStatus.set); } } } disabled={!result.data} />
+      </div>
       <div className="grounding-notice">
         <strong>Note:</strong> Metadiscourse categories follow Hyland's interactive/interactional
         taxonomy (Hyland 2005) - this makes results citable and comparable across studies.
-
-        <ExportButton onExport={(fmt) => { if (result.data) { downloadJsonResult(result.data, `discourse.${fmt}`, exportStatus.set); } } } disabled={!result.data} /></div>
+      </div>
 
       {result.data && (
         <>
@@ -1151,12 +1155,14 @@ function VocabPanel({ cid }: { cid: string }) {
   return (
     <div className="panel-content">
       {exportStatus.el}
+      <div className="toolbar">
+        <ExportButton onExport={(fmt) => { if (result.data) { downloadJsonResult(result.data, `vocab.${fmt}`, exportStatus.set); } } } disabled={!result.data} />
+      </div>
       <div className="grounding-notice">
         <strong>Note:</strong> Vocabulary profiling uses an open frequency-band approximation
         (CC-0 wordlist). EVP-style CEFR wordlists carry redistribution restrictions and are
         not bundled without confirmed rights.
-
-        <ExportButton onExport={(fmt) => { if (result.data) { downloadJsonResult(result.data, `vocab.${fmt}`, exportStatus.set); } } } disabled={!result.data} /></div>
+      </div>
 
       {result.data && (
         <>
@@ -1204,12 +1210,14 @@ function SentimentPanel({ cid }: { cid: string }) {
   return (
     <div className="panel-content">
       {exportStatus.el}
+      <div className="toolbar">
+        <ExportButton onExport={(fmt) => { if (result.data) { downloadJsonResult(result.data, `sentiment.${fmt}`, exportStatus.set); } } } disabled={!result.data} />
+      </div>
       <div className="grounding-notice">
         <strong>Note:</strong> Phase 2 uses a lexicon-based sentiment scorer. Phase 3 will swap
         in VADER or a transformers-based model behind the same interface - results stay comparable
         because the model + version is pinned per project (4 Principle 8).
-
-        <ExportButton onExport={(fmt) => { if (result.data) { downloadJsonResult(result.data, `sentiment.${fmt}`, exportStatus.set); } } } disabled={!result.data} /></div>
+      </div>
 
       {result.data && (
         <>
@@ -1261,6 +1269,9 @@ function MetaphorPanel({ cid }: { cid: string }) {
   return (
     <div className="panel-content">
       {exportStatus.el}
+      <div className="toolbar">
+        <ExportButton onExport={(fmt) => { if (result.data) { downloadJsonResult(result.data, `metaphor.${fmt}`, exportStatus.set); } } } disabled={!result.data} />
+      </div>
       <div className="grounding-notice">
         <strong>Note:</strong> These are <em>candidates only</em>.
         The LLM triages them via MIPVU decision steps (contextual vs. basic meaning,
@@ -1269,8 +1280,7 @@ function MetaphorPanel({ cid }: { cid: string }) {
         or statistics. Current evidence shows LLMs alone under-perform supervised
         detectors and especially struggle to filter literal false positives - the
         verification gate is not optional UI polish, it is load-bearing for validity.
-
-        <ExportButton onExport={(fmt) => { if (result.data) { downloadJsonResult(result.data, `metaphor.${fmt}`, exportStatus.set); } } } disabled={!result.data} /></div>
+      </div>
 
       {result.data && (
         <>

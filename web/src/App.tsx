@@ -5,10 +5,11 @@
  * left sidebar for navigation. The top bar holds the brand, active
  * corpus indicator, theme toggle, RTL toggle, and command palette button.
  */
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { api, waitForEngine } from "@/lib/api";
+import { t } from "@/lib/i18n";
 import { useDownloadProgress } from "@/store/downloadProgress";
 import { Sidebar } from "@/components/Sidebar";
 import { CommandPalette } from "@/components/CommandPalette";
@@ -40,6 +41,21 @@ export default function App() {
   const setOnboardingOpen = useUI((s) => s.setOnboardingOpen);
   const activeCorpusId = useApp((s) => s.activeCorpusId);
   const versionDisplay = useEngineVersionDisplay();
+
+  // Issue 1 (v1.2.0): fetch the ACTIVE CORPUS NAME so the top-bar pill can
+  // show "{corpus name} · Corpus ready" instead of a bare "Corpus ready".
+  const [activeCorpusName, setActiveCorpusName] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    if (!activeCorpusId) {
+      setActiveCorpusName(null);
+      return;
+    }
+    api.getCorpus(activeCorpusId)
+      .then((c) => { if (!cancelled) setActiveCorpusName(c.name); })
+      .catch(() => { if (!cancelled) setActiveCorpusName(null); });
+    return () => { cancelled = true; };
+  }, [activeCorpusId]);
 
   useEffect(() => {
     applyHtmlAttrs();
@@ -88,8 +104,16 @@ export default function App() {
           <span className="app-name">CorpusMind</span>
         </div>
         {activeCorpusId && (
-          <div className="app-active-corpus" title="Corpus is loaded and ready">
-            <span className="dot" /> Corpus ready
+          <div
+            className="app-active-corpus"
+            title={activeCorpusName ? `${activeCorpusName} — ${t(lang, "status_corpus_ready")}` : t(lang, "status_corpus_ready")}
+          >
+            <span className="dot" />
+            {activeCorpusName ? (
+              <span className="app-active-corpus-name">{activeCorpusName}</span>
+            ) : null}
+            {" "}
+            {t(lang, "status_corpus_ready")}
           </div>
         )}
         <div className="app-topbar-actions">
