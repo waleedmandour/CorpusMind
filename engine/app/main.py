@@ -17,6 +17,7 @@ from api import (
     export,
     health,
     hub,
+    network,
     open_access,
     phase2,
     phase5,
@@ -143,6 +144,7 @@ def create_app() -> FastAPI:
     app.include_router(ai_provider_config.router, prefix="/api/v1", tags=["ai-config"])
     app.include_router(corpora.router, prefix="/api/v1", tags=["corpora"])
     app.include_router(analysis.router, prefix="/api/v1", tags=["analysis"])
+    app.include_router(network.router, prefix="/api/v1", tags=["network"])
     app.include_router(phase2.router, prefix="/api/v1", tags=["phase2"])
     app.include_router(arabic.router, prefix="/api/v1", tags=["arabic"])
     app.include_router(vision.router, prefix="/api/v1", tags=["vision"])

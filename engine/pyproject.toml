@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "corpusmind-engine"
-version = "1.2.0"
+version = "1.0.0"
 description = "CorpusMind engine — local-first, AI-native research environment for corpus linguistics and multimodal discourse analysis."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -42,6 +42,8 @@ dependencies = [
     "spacy>=3.7.5",
     # Stats
     "numpy>=1.26",
+    # Collocation-network graph assembly (engine/api/network.py)
+    "networkx>=3.2",
     "scipy>=1.13",
     # NOTE: statsmodels and pingouin were removed — they were declared as deps
     # and force-bundled as PyInstaller hidden imports, but a repo-wide grep
