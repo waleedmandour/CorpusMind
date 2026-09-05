@@ -455,6 +455,56 @@ export interface CollocationResult {
   rows: CollocationRow[];
 }
 
+// ── Collocation network (NetworkX graph assembly, v1.0.0) ────────────────
+
+export interface CollocationNetworkNode {
+  id: string;
+  freq: number;
+  degree: number;
+  strength: number;
+  is_center: boolean;
+}
+
+export interface CollocationNetworkEdge {
+  source: string;
+  target: string;
+  O: number;
+  fx: number;
+  fy: number;
+  N: number;
+  mi?: number;
+  t_score?: number;
+  log_likelihood?: number;
+  dice?: number;
+  log_dice?: number;
+  chi_square?: number;
+  delta_p?: number;
+}
+
+export type CollocationMeasure =
+  | "mi" | "t_score" | "log_likelihood"
+  | "dice" | "log_dice" | "chi_square" | "delta_p";
+
+export interface CollocationNetworkRequest {
+  node: string;
+  level: "word" | "lemma";
+  window: number;
+  min_freq: number;
+  measure: CollocationMeasure;
+  top_n?: number;
+  depth?: 1 | 2;
+  max_nodes?: number;
+  known_nodes?: string[];
+}
+
+export interface CollocationNetworkResult {
+  params: Record<string, unknown>;
+  nodes: CollocationNetworkNode[];
+  edges: CollocationNetworkEdge[];
+  new_nodes?: string[];
+  stats: { nodes: number; edges: number; density: number };
+}
+
 export interface KeynessRow {
   term: string;
   f1: number;
@@ -1060,6 +1110,21 @@ export const api = {
       body: JSON.stringify({ node, level, window, min_freq, measures, limit }),
     }),
 
+  // Collocation network — NetworkX-backed graph for the Sigma.js view.
+  // Both endpoints echo the query params and carry ALL association measures
+  // per edge, so the frontend can re-weight without a refetch.
+  collocationNetwork: (cid: string, req: CollocationNetworkRequest) =>
+    jsonFetch<CollocationNetworkResult>(`/api/v1/corpora/${cid}/collocations/network`, {
+      method: "POST",
+      body: JSON.stringify(req),
+    }),
+
+  collocationNetworkExpand: (cid: string, req: CollocationNetworkRequest) =>
+    jsonFetch<CollocationNetworkResult>(`/api/v1/corpora/${cid}/collocations/network/expand`, {
+      method: "POST",
+      body: JSON.stringify(req),
+    }),
+
   keyness: (cid: string, reference_corpus_id: string, min_freq = 5, limit = 100) =>
     jsonFetch<KeynessResult>(`/api/v1/corpora/${cid}/keyness`, {
       method: "POST",
@@ -1501,7 +1566,7 @@ export const api = {
   // --- Cloud AI provider config (opt-in) ---
   getCloudConfig: () =>
     jsonFetch<{ configured: boolean; provider: string; model: string; source: string; hard_disabled: boolean }>("/api/v1/ai/cloud-config"),
-  setCloudConfig: (req: { provider: "anthropic" | "openai"; api_key: string; model?: string; base_url?: string; acknowledge_data_leaves_device: boolean }) =>
+  setCloudConfig: (req: { provider: "anthropic" | "openai" | "gemini" | "custom"; api_key: string; model?: string; base_url?: string; acknowledge_data_leaves_device: boolean }) =>
     jsonFetch<{ configured: boolean; provider: string; model: string }>("/api/v1/ai/cloud-config", {
       method: "POST",
       body: JSON.stringify(req),

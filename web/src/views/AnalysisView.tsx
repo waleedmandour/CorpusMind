@@ -388,8 +388,6 @@ function CollocationPanel({ cid }: { cid: string }) {
               <CollocationNetwork
                 cid={cid}
                 centerNode={result.data.node}
-                rows={result.data.rows}
-                measureKeys={measureKeys}
                 level={submitted!.l as "word" | "lemma"}
                 window={submitted!.w}
                 minFreq={submitted!.mf}

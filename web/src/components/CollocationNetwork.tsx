@@ -1,509 +1,575 @@
 /**
- * CollocationNetwork (v1.2.0, Issue 8) — interactive animated 3D network.
+ * CollocationNetwork (v1.0.0) — interactive WebGL collocation network.
  *
- * Redesign goals (user-reported: "clicking the desired collocate to expand
- * and find out other related collocates"):
- *   - Click a collocate → its collocates spawn on a local orbit around it
- *     (progressive expansion, powered by the same collocation endpoint —
- *     zero engine changes; each pivot query is cached by React Query).
- *   - Click an expanded node again → collapse its subtree.
- *   - Hover → pauses rotation + tooltip (word, co-occurrence, score).
- *   - Drag → orbit; wheel → zoom; Pause/Play → auto-rotation.
- *   - Right-click a node → "Set as center" (re-runs the main query).
- *   - Node budget (~100) with oldest-subtree pruning protection, reverse-
- *     edge dedupe (canonical pair key), honest pivot-relative scores.
+ * Graphology + Sigma.js rewrite (user-reported: the previous canvas version
+ * "appears small and not interactive"). Built on the NetworkX backend
+ * (engine/api/network.py):
  *
- * Rendering: hand-rolled 2D-canvas with 3D projection (no graph libraries —
- * keeps the Tauri bundle small), devicePixelRatio-aware (no more blur),
- * labels drawn on every node, O(n) per-frame hot loop.
+ *   - Nodes = node word + its top collocates; size ∝ corpus frequency.
+ *   - Edges = ±window co-occurrence; thickness ∝ the SELECTED association
+ *     measure (all measures ship per edge, so switching measure never
+ *     refetches — the reducer just re-reads precomputed normalized scores).
+ *   - 7 measures: MI, T-score, log-likelihood, Dice, Log-Dice, χ², ΔP.
+ *   - Click a collocate → its collocates are fetched server-side and merged
+ *     in (progressive second-order expansion, no page refresh).
+ *   - Click an expanded collocate again → collapse its branch.
+ *   - Right-click a node → set as center (re-runs the query).
+ *   - Hover → highlight ring + tooltip with the exact statistics.
+ *   - Drag nodes to rearrange; wheel to zoom; drag the stage to pan.
+ *   - ForceAtlas2 layout (graphology-layout-forceatlas2) re-run lazily
+ *     after each expansion so clusters settle.
+ *   - Export the network as PNG (composited WebGL layers) or JSON
+ *     (full graph with positions + all statistics).
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import Graph from "graphology";
+import Sigma from "sigma";
+import type { Attributes } from "graphology-types";
+import forceAtlas2, { inferSettings } from "graphology-layout-forceatlas2";
 
-import { api, downloadBlob, type CollocationRow } from "@/lib/api";
+import {
+  api,
+  downloadBlob,
+  type CollocationMeasure,
+  type CollocationNetworkEdge,
+  type CollocationNetworkResult,
+} from "@/lib/api";
 
-const MAX_NODES = 100;
-const FIRST_RING = 130;   // radius of depth-1 orbit
-const CHILD_RING = 62;    // radius of each expanded node's local orbit
-const EXPAND_TOP_K = 8;   // collocates added per expansion
+// ─── Design tokens (match the CorpusMind dark-green system) ───────────────
+const BRAND = "#1b4d3e";
+const BRAND_NODE = "#2f7d5f";
+const BRAND_EDGE = "rgba(27, 77, 62, 0.55)";
+const HIGHLIGHT = "#e68c1e";
 
-interface NetNode {
-  id: string;
-  x: number; y: number; z: number;   // base position (unit: px at zoom 1)
-  depth: number;
-  freq: number;
-  mi: number;
-  parent: string | null;
-  expanded: boolean;
-  loading: boolean;
-}
+const MEASURES: Array<{ key: CollocationMeasure; label: string }> = [
+  { key: "mi", label: "Mutual Information" },
+  { key: "t_score", label: "T-score" },
+  { key: "log_likelihood", label: "Log-likelihood" },
+  { key: "dice", label: "Dice" },
+  { key: "log_dice", label: "Log-Dice" },
+  { key: "chi_square", label: "Chi-square" },
+  { key: "delta_p", label: "ΔP (x→y)" },
+];
+
+const MAX_NODES = 120;
+const INITIAL_TOP_N = 14;
+const EXPAND_TOP_N = 8;
 
 export interface CollocationNetworkProps {
   cid: string;
   centerNode: string;
-  rows: CollocationRow[];
-  measureKeys: string[];
   level: "word" | "lemma";
   window: number;
   minFreq: number;
   onSetCenter?: (word: string) => void;
 }
 
-/** Fibonacci sphere distribution for n points → deterministic, even. */
-function fibonacciSphere(i: number, n: number, radius: number): { x: number; y: number; z: number } {
-  const phi = Math.acos(1 - (2 * (i + 0.5)) / n);
-  const theta = Math.PI * (1 + Math.sqrt(5)) * i;
-  return {
-    x: radius * Math.cos(theta) * Math.sin(phi),
-    y: radius * Math.sin(theta) * Math.sin(phi),
-    z: radius * Math.cos(phi),
-  };
+/** Deterministic circle seed — FA2 refines from here. */
+function seedPositions(graph: Graph) {
+  const n = Math.max(graph.order, 1);
+  let i = 0;
+  graph.forEachNode((node) => {
+    const angle = (2 * Math.PI * i) / n;
+    graph.setNodeAttribute(node, "x", Math.cos(angle) * (1 + (i % 3) * 0.1));
+    graph.setNodeAttribute(node, "y", Math.sin(angle) * (1 + (i % 3) * 0.1));
+    i += 1;
+  });
+}
+
+function runLayout(graph: Graph, iterations: number) {
+  if (graph.order < 3) return;
+  forceAtlas2.assign(graph, {
+    iterations,
+    settings: {
+      ...inferSettings(graph),
+      gravity: 1.2,
+      scalingRatio: 8,
+      barnesHutOptimize: false,
+      adjustSizes: true,
+    },
+  });
 }
 
 export function CollocationNetwork({
-  cid, centerNode, rows, measureKeys, level, window: win, minFreq, onSetCenter,
+  cid,
+  centerNode,
+  level,
+  window: win,
+  minFreq,
+  onSetCenter,
 }: CollocationNetworkProps) {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const wrapRef = useRef<HTMLDivElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const graphRef = useRef<Graph | null>(null);
+  const sigmaRef = useRef<Sigma | null>(null);
+  const draggingRef = useRef<string | null>(null);
+  const hoverRef = useRef<string | null>(null);
+  const measureRef = useRef<CollocationMeasure>("mi");
 
-  // Mutable scene graph — the rAF loop reads these; no React churn.
-  const nodesRef = useRef<Map<string, NetNode>>(new Map());
-  const edgesRef = useRef<Array<{ from: string; to: string; freq: number; depth: number }>>([]);
-  const projectedRef = useRef<Map<string, { px: number; py: number; r: number }>>(new Map());
-  const rotationRef = useRef(0);
-  const pitchRef = useRef(0.25);
-  const zoomRef = useRef(1);
-  const pausedRef = useRef(false);
-  const draggingRef = useRef<{ x: number; y: number } | null>(null);
-  const hoveredRef = useRef<string | null>(null);
-  const framesRef = useRef(0);
-
-  const [paused, setPaused] = useState(false);
-  const [stats, setStats] = useState({ hops: 1, nodes: 0 });
-  const [budgetFlash, setBudgetFlash] = useState(false);
-  const [tooltip, setTooltip] = useState<{ id: string; x: number; y: number; label: string } | null>(null);
-  const [menu, setMenu] = useState<{ id: string; x: number; y: number } | null>(null);
+  const [measure, setMeasure] = useState<CollocationMeasure>("mi");
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [stats, setStats] = useState({ nodes: 0, edges: 0, density: 0 });
+  const [tooltip, setTooltip] = useState<{ x: number; y: number; text: string } | null>(null);
+  const [flash, setFlash] = useState("");
+  const [empty, setEmpty] = useState(false);
 
   const qc = useQueryClient();
 
-  // Strongest available association measure for sizing/coloring.
-  const miKey = useMemo(
-    () => measureKeys.find((k) => k.toLowerCase().includes("mi")) || measureKeys[0] || "O",
-    [measureKeys],
+  const flashMsg = useCallback((msg: string) => {
+    setFlash(msg);
+    setTimeout(() => setFlash(""), 2600);
+  }, []);
+
+  // ── Build the graphology graph from a network response ──────────────────
+  const buildGraph = useCallback((res: CollocationNetworkResult): Graph => {
+    const graph = new Graph();
+    const maxFreq = Math.max(...res.nodes.map((n) => n.freq), 1);
+    for (const node of res.nodes) {
+      graph.addNode(node.id, {
+        freq: node.freq,
+        degree: node.degree,
+        strength: node.strength,
+        isCenter: node.is_center,
+        size: node.is_center ? 16 : 5 + 9 * Math.sqrt(node.freq / maxFreq),
+        label: node.id,
+        x: 0,
+        y: 0,
+      });
+    }
+    for (const edge of res.edges) {
+      if (!graph.hasNode(edge.source) || !graph.hasNode(edge.target)) continue;
+      if (graph.hasEdge(edge.source, edge.target)) continue;
+      graph.addEdge(edge.source, edge.target, {
+        ...edge,
+        norms: normalizeEdge(edge, res.edges),
+      });
+    }
+    seedPositions(graph);
+    runLayout(graph, 140);
+    return graph;
+  }, []);
+
+  // ── Initial load ────────────────────────────────────────────────────────
+  useEffect(() => {
+    let cancelled = false;
+    setEmpty(false);
+    (async () => {
+      try {
+        const res = await api.collocationNetwork(cid, {
+          node: centerNode,
+          level,
+          window: win,
+          min_freq: minFreq,
+          measure: "mi",
+          top_n: INITIAL_TOP_N,
+          depth: 2,
+          max_nodes: MAX_NODES,
+        });
+        if (cancelled) return;
+        if (res.nodes.length === 0) {
+          flashMsg(`No collocates found for “${centerNode}” at ±${win} / min freq ${minFreq}.`);
+          graphRef.current = null;
+          sigmaRef.current?.setGraph(new Graph());
+          sigmaRef.current?.refresh();
+          setStats({ nodes: 0, edges: 0, density: 0 });
+          setEmpty(true);
+          return;
+        }
+        graphRef.current = buildGraph(res);
+        setStats(res.stats);
+        setExpanded(new Set());
+        sigmaRef.current?.setGraph(graphRef.current);
+        sigmaRef.current?.refresh();
+      } catch (e) {
+        if (!cancelled) flashMsg(`Network failed: ${(e as Error).message}`);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [cid, centerNode, level, win, minFreq, buildGraph, flashMsg]);
+
+  // ── Sigma lifecycle (created once per mount) ────────────────────────────
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const graph = graphRef.current ?? new Graph();
+    graphRef.current = graph;
+
+    const renderer = new Sigma(graph, container, {
+      allowInvalidContainer: true,
+      renderEdgeLabels: false,
+      labelRenderedSizeThreshold: 0.1,
+      labelColor: { color: "#1f2d28" },
+      labelSize: 12,
+      labelWeight: "500",
+      defaultEdgeColor: BRAND_EDGE,
+      minCameraRatio: 0.08,
+      maxCameraRatio: 12,
+    });
+    sigmaRef.current = renderer;
+
+    // Node reducer — color by role, hover ring, drag highlight.
+    renderer.setSetting("nodeReducer", (node, data: Attributes) => {
+      const res: Attributes = { ...data, forceLabel: true };
+      if (data.isCenter) {
+        res.color = BRAND;
+        res.zIndex = 10;
+      } else {
+        res.color = BRAND_NODE;
+      }
+      if (hoverRef.current === node || draggingRef.current === node) {
+        res.color = HIGHLIGHT;
+        res.size = (data.size ?? 6) + 2.5;
+        res.zIndex = 20;
+      }
+      return res;
+    });
+
+    // Edge reducer — thickness ∝ selected measure, hover emphasis.
+    renderer.setSetting("edgeReducer", (edge, data: Attributes) => {
+      const res: Attributes = { ...data };
+      const norms = (data.norms ?? {}) as Record<string, number>;
+      const norm = norms[measureRef.current] ?? 0;
+      res.size = 0.4 + 3.2 * norm;
+      res.color = BRAND_EDGE;
+      const [s, t] = graph.extremities(edge);
+      if (hoverRef.current && (hoverRef.current === s || hoverRef.current === t)) {
+        res.color = HIGHLIGHT;
+        res.size += 1.2;
+        res.zIndex = 5;
+      }
+      return res;
+    });
+
+    // ── Drag nodes (sigma v3 pattern) ──
+    renderer.on("downNode", (e) => {
+      draggingRef.current = e.node;
+      renderer.getGraph().setNodeAttribute(e.node, "highlighted", true);
+    });
+    renderer.getMouseCaptor().on("mousemovebody", (e) => {
+      if (!draggingRef.current) return;
+      const pos = renderer.viewportToGraph(e);
+      const g = renderer.getGraph();
+      g.setNodeAttribute(draggingRef.current, "x", pos.x);
+      g.setNodeAttribute(draggingRef.current, "y", pos.y);
+      e.preventSigmaDefault?.();
+      (e.original as unknown as { preventDefault?: () => void })?.preventDefault?.();
+      (e.original as unknown as { stopPropagation?: () => void })?.stopPropagation?.();
+    });
+    renderer.getMouseCaptor().on("mouseup", () => {
+      if (draggingRef.current) {
+        renderer.getGraph().setNodeAttribute(draggingRef.current, "highlighted", false);
+        draggingRef.current = null;
+      }
+    });
+
+    // ── Hover tooltip with exact statistics ──
+    renderer.on("enterNode", (e) => {
+      hoverRef.current = e.node;
+      const g = renderer.getGraph();
+      const attrs = g.getNodeAttributes(e.node);
+      const parts = [
+        `${e.node}${attrs.isCenter ? " — center" : ""}`,
+        `corpus freq: ${attrs.freq ?? "—"}`,
+        `collocates in graph: ${g.degree(e.node)}`,
+      ];
+      // Strongest incident edge, with the exact numbers for every measure.
+      let bestEdge: CollocationNetworkEdge | null = null;
+      g.forEachEdge(e.node, (_e, attr, _s, _t) => {
+        const edge = attr as CollocationNetworkEdge & { norms?: Record<string, number> };
+        const v = Math.abs(Number(edge[measureRef.current] ?? 0));
+        if (!bestEdge || v > Math.abs(Number(bestEdge[measureRef.current] ?? 0))) {
+          bestEdge = edge;
+        }
+      });
+      if (bestEdge) {
+        const edge = bestEdge as CollocationNetworkEdge;
+        parts.push(
+          `with “${edge.source === e.node ? edge.target : edge.source}”: O=${edge.O}, f(x)=${edge.fx}, f(y)=${edge.fy}`,
+        );
+        for (const m of MEASURES) {
+          const v = edge[m.key];
+          if (typeof v === "number") parts.push(`${m.label}: ${v}`);
+        }
+      }
+      const p = renderer.graphToViewport({ x: attrs.x, y: attrs.y });
+      const rect = container.getBoundingClientRect();
+      setTooltip({ x: p.x + rect.left + 14, y: p.y + rect.top - 8, text: parts.join("\n") });
+    });
+    renderer.on("leaveNode", () => {
+      hoverRef.current = null;
+      setTooltip(null);
+    });
+
+    // Right-click anywhere in the container → custom menu, no browser menu.
+    const blockMenu = (e: MouseEvent) => e.preventDefault();
+    container.addEventListener("contextmenu", blockMenu);
+
+    return () => {
+      container.removeEventListener("contextmenu", blockMenu);
+      renderer.kill();
+      sigmaRef.current = null;
+    };
+  }, []);
+
+  // Keep measure changes in sync without refetching.
+  useEffect(() => {
+    measureRef.current = measure;
+    sigmaRef.current?.refresh();
+  }, [measure]);
+
+  // ── Expand / collapse ───────────────────────────────────────────────────
+  const expandNode = useCallback(
+    async (node: string) => {
+      const graph = graphRef.current;
+      if (!graph || graph.order >= MAX_NODES) {
+        flashMsg(`Node budget reached (${MAX_NODES}). Right-click a word to re-center instead.`);
+        return;
+      }
+      try {
+        const res = await api.collocationNetworkExpand(cid, {
+          node,
+          level,
+          window: win,
+          min_freq: minFreq,
+          measure: "mi",
+          top_n: EXPAND_TOP_N,
+          depth: 2,
+          known_nodes: graph.nodes(),
+        });
+        const added: string[] = [];
+        const maxFreq = Math.max(...res.nodes.map((n) => n.freq), 1);
+        const px = graph.getNodeAttribute(node, "x");
+        const py = graph.getNodeAttribute(node, "y");
+        res.nodes.forEach((n, i) => {
+          if (graph.hasNode(n.id) || n.id === node) return;
+          const angle = (2 * Math.PI * i) / Math.max(res.nodes.length, 3);
+          graph.addNode(n.id, {
+            freq: n.freq,
+            degree: n.degree,
+            strength: n.strength,
+            isCenter: false,
+            size: 5 + 9 * Math.sqrt(n.freq / maxFreq),
+            label: n.id,
+            parent: node,
+            x: px + Math.cos(angle) * 0.35,
+            y: py + Math.sin(angle) * 0.35,
+          });
+          added.push(n.id);
+        });
+        for (const edge of res.edges) {
+          if (!graph.hasNode(edge.source) || !graph.hasNode(edge.target)) continue;
+          if (graph.hasEdge(edge.source, edge.target)) continue;
+          graph.addEdge(edge.source, edge.target, {
+            ...edge,
+            norms: normalizeEdge(edge, res.edges),
+          });
+        }
+        runLayout(graph, 60);
+        sigmaRef.current?.refresh();
+        setExpanded((prev) => new Set(prev).add(node));
+        setStats((s) => ({ ...s, nodes: graph.order, edges: graph.size }));
+        if (added.length === 0) flashMsg(`“${node}” has no new collocates to add.`);
+        void qc; // query client reserved for caching expansions later
+      } catch (e) {
+        flashMsg(`Expansion failed: ${(e as Error).message}`);
+      }
+    },
+    [cid, level, win, minFreq, flashMsg, qc],
   );
 
-  // ------------------------------------------------------------------ //
-  // Build / reset the graph from the center query
-  // ------------------------------------------------------------------ //
-  const resetGraph = useCallback(() => {
-    const nodes = new Map<string, NetNode>();
-    const edges: Array<{ from: string; to: string; freq: number; depth: number }> = [];
-    nodes.set(centerNode, {
-      id: centerNode, x: 0, y: 0, z: 0, depth: 0,
-      freq: 0, mi: 0, parent: null, expanded: true, loading: false,
-    });
-    const maxMi = Math.max(...rows.map((r) => Math.abs(Number((r as unknown as Record<string, unknown>)[miKey]) || 0)), 1);
-    rows.slice(0, 30).forEach((r, i) => {
-      if (nodes.has(r.collocate)) return;
-      const pos = fibonacciSphere(i, Math.min(rows.length, 30), FIRST_RING);
-      nodes.set(r.collocate, {
-        id: r.collocate,
-        x: pos.x, y: pos.y, z: pos.z,
-        depth: 1, freq: r.O, mi: Math.abs(Number((r as unknown as Record<string, unknown>)[miKey]) || 0) / maxMi,
-        parent: centerNode, expanded: false, loading: false,
-      });
-      edges.push({ from: centerNode, to: r.collocate, freq: r.O, depth: 1 });
-    });
-    nodesRef.current = nodes;
-    edgesRef.current = edges;
-    setStats({ hops: 1, nodes: nodes.size });
-  }, [centerNode, rows, miKey]);
-
-  useEffect(() => {
-    resetGraph();
-  }, [resetGraph]);
-
-  // ------------------------------------------------------------------ //
-  // Expansion / collapse
-  // ------------------------------------------------------------------ //
-  const expandNode = useCallback(async (id: string) => {
-    const nodes = nodesRef.current;
-    const node = nodes.get(id);
-    if (!node || node.loading) return;
-    if (nodes.size >= MAX_NODES) {
-      setBudgetFlash(true);
-      setTimeout(() => setBudgetFlash(false), 2500);
-      return;
-    }
-    node.loading = true;
-    try {
-      const res = await qc.fetchQuery({
-        queryKey: ["collocations", cid, { n: id, l: level, w: win, mf: minFreq }],
-        queryFn: () => api.collocations(cid, id, level, win, minFreq, undefined, 30),
-        staleTime: 60_000,
-      });
-      if (nodesRef.current.get(id) !== node) return; // graph was reset mid-flight
-      const maxMi = Math.max(
-        ...res.rows.map((r) => Math.abs(Number((r as unknown as Record<string, unknown>)[miKey]) || 0)), 1,
-      );
-      const taken = res.rows
-        .filter((r) => !nodes.has(r.collocate) && r.collocate !== centerNode)
-        .slice(0, Math.min(EXPAND_TOP_K, MAX_NODES - nodes.size));
-      taken.forEach((r, i) => {
-        const local = fibonacciSphere(i, Math.max(taken.length, 3), CHILD_RING);
-        // De-duplicate reverse edges implicitly: tree structure keeps one
-        // parent per node; a pair never gets two edges.
-        nodes.set(r.collocate, {
-          id: r.collocate,
-          x: node.x + local.x,
-          y: node.y + local.y,
-          z: node.z + local.z,
-          depth: node.depth + 1,
-          freq: r.O,
-          mi: Math.abs(Number((r as unknown as Record<string, unknown>)[miKey]) || 0) / maxMi,
-          parent: id,
-          expanded: false,
-          loading: false,
+  const collapseNode = useCallback(
+    (node: string) => {
+      const graph = graphRef.current;
+      if (!graph) return;
+      // Remove the whole subtree below `node` (parent links), keeping the
+      // pivot itself. Nodes the user manually dragged stay — they are still
+      // parented, so they go too; re-expanding is one click away.
+      const doomed = new Set<string>();
+      let frontier = [node];
+      while (frontier.length) {
+        const next: string[] = [];
+        graph.forEachNode((n, attrs) => {
+          if (attrs.isCenter || doomed.has(n)) return;
+          if (attrs.parent && frontier.includes(attrs.parent as string)) {
+            doomed.add(n);
+            next.push(n);
+          }
         });
-        edgesRef.current.push({ from: id, to: r.collocate, freq: r.O, depth: node.depth + 1 });
+        frontier = next;
+      }
+      for (const n of doomed) graph.dropNode(n);
+      sigmaRef.current?.refresh();
+      setExpanded((prev) => {
+        const next = new Set(prev);
+        for (const n of doomed) next.delete(n);
+        next.delete(node);
+        return next;
       });
-      node.expanded = true;
-      const maxDepth = Math.max(...[...nodes.values()].map((n) => n.depth));
-      setStats({ hops: maxDepth, nodes: nodes.size });
-    } finally {
-      node.loading = false;
-    }
-  }, [cid, level, win, minFreq, miKey, centerNode, qc]);
+      setStats((s) => ({ ...s, nodes: graph.order, edges: graph.size }));
+    },
+    [],
+  );
 
-  const collapseNode = useCallback((id: string) => {
-    const nodes = nodesRef.current;
-    const node = nodes.get(id);
-    if (!node) return;
-    // Remove all descendants (BFS over parent links)
-    const doomed = new Set<string>();
-    let frontier = [id];
-    while (frontier.length) {
-      const next: string[] = [];
-      for (const n of nodes.values()) {
-        if (n.parent && frontier.includes(n.parent) && !doomed.has(n.id)) {
-          doomed.add(n.id);
-          next.push(n.id);
-        }
-      }
-      frontier = next;
-    }
-    for (const d of doomed) nodes.delete(d);
-    edgesRef.current = edgesRef.current.filter((e) => !doomed.has(e.to));
-    node.expanded = false;
-    const maxDepth = Math.max(1, ...[...nodes.values()].map((n) => n.depth));
-    setStats({ hops: maxDepth, nodes: nodes.size });
-  }, []);
+  const handleNodeClick = useCallback(
+    (node: string) => {
+      const graph = graphRef.current;
+      if (!graph) return;
+      if (graph.getNodeAttribute(node, "isCenter")) return;
+      if (expanded.has(node)) collapseNode(node);
+      else void expandNode(node);
+    },
+    [expanded, expandNode, collapseNode],
+  );
 
-  const handleNodeClick = useCallback((id: string) => {
-    const node = nodesRef.current.get(id);
-    if (!node || node.depth === 0) return;
-    if (node.expanded) collapseNode(id);
-    else void expandNode(id);
-  }, [collapseNode, expandNode]);
-
-  // ------------------------------------------------------------------ //
-  // Render loop
-  // ------------------------------------------------------------------ //
+  // Click wiring (kept outside the one-time Sigma effect so `expanded`
+  // state stays fresh without re-creating the renderer).
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    let animId = 0;
-    const draw = () => {
-      const wrap = wrapRef.current;
-      const cssW = wrap?.clientWidth || 600;
-      const cssH = 420;
-      const dpr = window.devicePixelRatio || 1;
-      const targetW = Math.round(cssW * dpr);
-      const targetH = Math.round(cssH * dpr);
-      if (canvas.width !== targetW || canvas.height !== targetH) {
-        canvas.width = targetW;
-        canvas.height = targetH;
+    const renderer = sigmaRef.current;
+    if (!renderer) return;
+    const onClick = (e: { node: string }) => handleNodeClick(e.node);
+    const onRightClick = (e: { node: string }) => {
+      if (!graphRef.current?.getNodeAttribute(e.node, "isCenter")) {
+        onSetCenter?.(e.node);
       }
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.clearRect(0, 0, cssW, cssH);
-
-      const cx = cssW / 2;
-      const cy = cssH / 2;
-      const zoom = zoomRef.current;
-      const rot = rotationRef.current;
-      const pitch = pitchRef.current;
-      const cosR = Math.cos(rot), sinR = Math.sin(rot);
-      const cosP = Math.cos(pitch), sinP = Math.sin(pitch);
-
-      if (!pausedRef.current && !draggingRef.current && !hoveredRef.current) {
-        rotationRef.current += 0.005;
-      }
-
-      // Project all nodes (O(n)); rotate around Y then X, perspective scale.
-      const projected: Array<{ node: NetNode; px: number; py: number; pz: number; r: number }> = [];
-      for (const node of nodesRef.current.values()) {
-        const x1 = node.x * cosR - node.z * sinR;
-        const z1 = node.x * sinR + node.z * cosR;
-        const y1 = node.y * cosP - z1 * sinP;
-        const z2 = node.y * sinP + z1 * cosP;
-        const persp = (z2 + 340) / 620;          // ~0=near, 1=far
-        const px = cx + x1 * zoom * (1 + persp * 0.25);
-        const py = cy + y1 * zoom * (1 + persp * 0.25);
-        const r = node.depth === 0
-          ? 15
-          : (5 + node.mi * 10) * (1 + persp * 0.2) * (0.85 + zoom * 0.15);
-        projected.push({ node, px, py, pz: persp, r });
-      }
-      projected.sort((a, b) => b.pz - a.pz);       // far → near
-
-      projectedRef.current.clear();
-      for (const p of projected) projectedRef.current.set(p.node.id, { px: p.px, py: p.py, r: p.r });
-
-      // Edges (parent → child), O(E)
-      ctx.lineCap = "round";
-      for (const e of edgesRef.current) {
-        const a = projectedRef.current.get(e.from);
-        const b = projectedRef.current.get(e.to);
-        if (!a || !b) continue;
-        ctx.strokeStyle = `rgba(11, 110, 79, ${0.14 + (1 - Math.min(e.depth, 4) / 4) * 0.4})`;
-        ctx.lineWidth = Math.max(0.6, Math.min(3.2, e.freq / 40));
-        ctx.beginPath();
-        ctx.moveTo(a.px, a.py);
-        ctx.lineTo(b.px, b.py);
-        ctx.stroke();
-      }
-
-      // Nodes
-      for (const p of projected) {
-        const { node, px, py, pz, r } = p;
-        const heat = node.depth === 0 ? 1 : Math.min(node.mi, 1);
-        const cr = Math.round(11 + heat * 200);
-        const cg = Math.round(110 - heat * 50);
-        const cb = Math.round(79 - heat * 60);
-        ctx.beginPath();
-        ctx.arc(px, py, r, 0, Math.PI * 2);
-        ctx.fillStyle = node.depth === 0 ? "#0b6e4f" : `rgb(${cr},${cg},${cb})`;
-        ctx.globalAlpha = 0.35 + (1 - pz) * 0.65;
-        ctx.fill();
-        ctx.globalAlpha = 1;
-
-        if (hoveredRef.current === node.id) {
-          ctx.beginPath();
-          ctx.arc(px, py, r + 4, 0, Math.PI * 2);
-          ctx.strokeStyle = "rgba(230, 140, 30, 0.9)";
-          ctx.lineWidth = 2;
-          ctx.stroke();
-        }
-        if (node.loading) {
-          const t = framesRef.current * 0.15;
-          ctx.beginPath();
-          ctx.arc(px, py, r + 6, t, t + Math.PI * 1.2);
-          ctx.strokeStyle = "rgba(11, 110, 79, 0.9)";
-          ctx.lineWidth = 2;
-          ctx.stroke();
-        }
-        if (node.expanded && node.depth > 0) {
-          ctx.beginPath();
-          ctx.arc(px, py, r + 3, 0, Math.PI * 2);
-          ctx.strokeStyle = "rgba(11, 110, 79, 0.45)";
-          ctx.lineWidth = 1.4;
-          ctx.stroke();
-        }
-
-        // Labels on every node (the old design hid small ones)
-        ctx.font = `${node.depth === 0 ? "600 " : ""}${Math.round(10 + (1 - pz) * 1.5)}px system-ui, sans-serif`;
-        ctx.fillStyle = `rgba(30, 30, 30, ${0.5 + (1 - pz) * 0.5})`;
-        ctx.textAlign = "center";
-        ctx.fillText(node.id, px, py - r - 4);
-      }
-
-      framesRef.current += 1;
-      animId = requestAnimationFrame(draw);
     };
+    renderer.on("clickNode", onClick);
+    renderer.on("rightClickNode", onRightClick);
+    return () => {
+      renderer.off("clickNode", onClick);
+      renderer.off("rightClickNode", onRightClick);
+    };
+  }, [handleNodeClick, onSetCenter]);
 
-    draw();
-    return () => cancelAnimationFrame(animId);
-  }, []);
-
-  // ------------------------------------------------------------------ //
-  // Pointer interactions
-  // ------------------------------------------------------------------ //
-  const pickNode = useCallback((mx: number, my: number): string | null => {
-    let best: string | null = null;
-    let bestD = Infinity;
-    for (const [id, p] of projectedRef.current) {
-      const d = (p.px - mx) ** 2 + (p.py - my) ** 2;
-      const reach = (p.r + 6) ** 2;
-      if (d < reach && d < bestD) {
-        best = id;
-        bestD = d;
-      }
-    }
-    return best;
-  }, []);
-
-  const toLocal = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  // ── Toolbar actions ─────────────────────────────────────────────────────
+  const resetLayout = () => {
+    const graph = graphRef.current;
+    if (!graph) return;
+    runLayout(graph, 140);
+    sigmaRef.current?.refresh();
   };
 
-  const onMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    const { x, y } = toLocal(e);
-    if (draggingRef.current) {
-      const dx = x - draggingRef.current.x;
-      const dy = y - draggingRef.current.y;
-      draggingRef.current = { x, y };
-      rotationRef.current += dx * 0.01;
-      pitchRef.current = Math.max(-1.1, Math.min(1.1, pitchRef.current + dy * 0.01));
-      setTooltip(null);
-      return;
-    }
-    const id = pickNode(x, y);
-    if (id !== hoveredRef.current) hoveredRef.current = id;
-    if (id) {
-      const n = nodesRef.current.get(id);
-      if (n) {
-        setTooltip({
-          id, x, y,
-          label: n.depth === 0
-            ? `${id} (center)`
-            : `${id} · O=${n.freq} · ${miKey}=${n.mi.toFixed(3)} (within ±${win} of pivot)`,
-        });
-      }
-      e.currentTarget.style.cursor = "pointer";
-    } else {
-      setTooltip(null);
-      e.currentTarget.style.cursor = draggingRef.current ? "grabbing" : "grab";
-    }
-  };
-
-  const onMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    const { x, y } = toLocal(e);
-    draggingRef.current = { x, y };
-    setMenu(null);
-  };
-
-  const onMouseUp = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    const wasDragging = draggingRef.current !== null;
-    draggingRef.current = null;
-    if (!wasDragging) return;
-    const { x, y } = toLocal(e);
-    const id = pickNode(x, y);
-    if (id) handleNodeClick(id);
-  };
-
-  const onContextMenu = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    e.preventDefault();
-    const { x, y } = toLocal(e);
-    const id = pickNode(x, y);
-    if (id && id !== centerNode) setMenu({ id, x, y });
-    else setMenu(null);
+  const recenterView = () => {
+    sigmaRef.current?.getCamera().animatedReset({ duration: 300 });
   };
 
   const exportPng = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    canvas.toBlob(async (blob) => {
-      if (!blob) return;
-      await downloadBlob(blob, `collocation-network-${centerNode}.png`);
+    const container = containerRef.current;
+    const renderer = sigmaRef.current;
+    if (!container || !renderer) return;
+    renderer.refresh();
+    const canvases = Array.from(container.querySelectorAll("canvas"));
+    if (canvases.length === 0) return;
+    const out = document.createElement("canvas");
+    out.width = canvases[0].width;
+    out.height = canvases[0].height;
+    const ctx = out.getContext("2d");
+    if (!ctx) return;
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, out.width, out.height);
+    for (const c of canvases) ctx.drawImage(c, 0, 0);
+    out.toBlob((blob) => {
+      if (blob) void downloadBlob(blob, `collocation_network_${centerNode}.png`);
     }, "image/png");
   };
 
-  const menuNode = menu ? nodesRef.current.get(menu.id) : null;
+  const exportJson = () => {
+    const graph = graphRef.current;
+    if (!graph) return;
+    const payload = {
+      params: { corpus_id: cid, node: centerNode, level, window: win, min_freq: minFreq },
+      measure: measure,
+      stats,
+      nodes: graph.mapNodes((id, attrs) => ({ id, ...attrs })),
+      edges: graph.mapEdges((_e, attrs, s, t) => ({ source: s, target: t, ...attrs })),
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    void downloadBlob(blob, `collocation_network_${centerNode}.json`);
+  };
+
+  const total = useMemo(() => stats, [stats]);
 
   return (
-    <div className="collocation-3d-network" ref={wrapRef}>
+    <div className="collocation-3d-network">
       <div className="network-header">
-        <h4 className="network-title">Collocation Network (3D)</h4>
+        <h4 className="network-title">Collocation Network</h4>
         <div className="network-controls">
-          <span className={clsxSafe("network-stats", { warn: budgetFlash })}>
-            {stats.hops} hop{stats.hops === 1 ? "" : "s"} · {stats.nodes}/{MAX_NODES} nodes
+          <label className="network-measure-label">
+            Measure
+            <select
+              value={measure}
+              onChange={(e) => setMeasure(e.target.value as CollocationMeasure)}
+              className="network-measure-select"
+            >
+              {MEASURES.map((m) => (
+                <option key={m.key} value={m.key}>
+                  {m.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <span className={total.nodes >= MAX_NODES ? "network-stats warn" : "network-stats"}>
+            {total.nodes} nodes · {total.edges} edges · density {total.density.toFixed(3)}
           </span>
-          <button
-            className="btn-small"
-            onClick={() => { setPaused(!paused); pausedRef.current = !paused; }}
-            title={paused ? "Resume rotation" : "Pause rotation"}
-            aria-label={paused ? "Resume rotation" : "Pause rotation"}
-          >
-            {paused ? "\u25B6" : "\u23F8"}
+          <button className="btn-small" onClick={resetLayout} title="Re-run the ForceAtlas2 layout">
+            Re-layout
           </button>
-          <button
-            className="btn-small"
-            onClick={() => { resetGraph(); rotationRef.current = 0; pitchRef.current = 0.25; zoomRef.current = 1; }}
-            title="Reset to the original collocates"
-          >
-            Reset
+          <button className="btn-small" onClick={recenterView} title="Reset the camera">
+            Fit view
           </button>
           <button className="btn-small" onClick={exportPng} title="Save the current view as PNG">
-            Export view (PNG)
+            Export PNG
+          </button>
+          <button className="btn-small" onClick={exportJson} title="Save the full graph (positions + all statistics) as JSON">
+            Export JSON
           </button>
         </div>
       </div>
 
-      <canvas
-        ref={canvasRef}
+      <div
+        ref={containerRef}
         className="network-canvas"
         role="application"
-        aria-label={`Interactive 3D collocation network for '${centerNode}'. Click a collocate to expand its collocates. The table above shows the same data in text form.`}
-        onMouseMove={onMouseMove}
-        onMouseDown={onMouseDown}
-        onMouseUp={onMouseUp}
-        onMouseLeave={() => { draggingRef.current = null; hoveredRef.current = null; setTooltip(null); }}
-        onContextMenu={onContextMenu}
-        onWheel={(e) => {
-          e.preventDefault();
-          zoomRef.current = Math.max(0.55, Math.min(2.2, zoomRef.current * (e.deltaY < 0 ? 1.1 : 0.9)));
-        }}
+        aria-label={`Interactive collocation network for '${centerNode}'. Click a collocate to expand its collocates. The table above shows the same data in text form.`}
       />
 
-      {tooltip && (
-        <div
-          className="network-tooltip"
-          style={{ left: tooltip.x + 12, top: tooltip.y - 28 }}
-        >
-          {tooltip.label}
-        </div>
+      {flash && <div className="network-flash">{flash}</div>}
+
+      {empty && !flash && (
+        <div className="network-flash">No collocates met the thresholds — try a lower min frequency.</div>
       )}
 
-      {menu && menuNode && (
-        <div className="network-menu" style={{ left: menu.x, top: menu.y }} role="menu">
-          <button
-            role="menuitem"
-            onClick={() => { void expandNode(menu.id); setMenu(null); }}
-            disabled={menuNode.expanded || menuNode.loading}
-          >
-            {menuNode.loading ? "Expanding…" : menuNode.expanded ? "Already expanded" : `Expand collocates of “${menu.id}”`}
-          </button>
-          <button
-            role="menuitem"
-            onClick={() => { collapseNode(menu.id); setMenu(null); }}
-            disabled={!menuNode.expanded || menuNode.depth === 0}
-          >
-            Collapse
-          </button>
-          <button
-            role="menuitem"
-            onClick={() => { onSetCenter?.(menu.id); setMenu(null); }}
-          >
-            Set as center (re-run query)
-          </button>
+      {tooltip && (
+        <div className="network-tooltip" style={{ left: tooltip.x, top: tooltip.y }}>
+          {tooltip.text.split("\n").map((line, i) => (
+            <div key={i}>{line}</div>
+          ))}
         </div>
       )}
 
       <p className="network-hint">
-        Click a collocate to expand its collocates · click again to collapse ·
-        drag to orbit · scroll to zoom · hover pauses rotation. Edge width = co-occurrence
-        frequency; node size/color = association score — scores are relative to each
-        pivot (within ±{win} words).
+        Click a collocate to expand its collocates · click again to collapse · right-click to set
+        as center · drag nodes to rearrange · scroll to zoom. Edge thickness = the selected measure;
+        node size = corpus frequency. Switching the measure re-weights every edge instantly (no
+        refetch, ±{win} words, min freq {minFreq}).
       </p>
     </div>
   );
 }
 
-// tiny local clsx-like helper (avoids importing clsx here)
-function clsxSafe(base: string, mods: Record<string, boolean>): string {
-  return base + Object.entries(mods).filter(([, v]) => v).map(([k]) => ` ${k}`).join("");
+/**
+ * Precompute per-measure normalized scores (0..1) for one edge against the
+ * whole edge set, so the edge reducer can re-weight instantly when the user
+ * switches measures.
+ */
+function normalizeEdge(edge: CollocationNetworkEdge, all: CollocationNetworkEdge[]): Record<string, number> {
+  const norms: Record<string, number> = {};
+  for (const m of MEASURES) {
+    const v = Math.abs(Number(edge[m.key] ?? 0));
+    const max = Math.max(...all.map((e) => Math.abs(Number(e[m.key] ?? 0))), 1e-12);
+    norms[m.key] = max > 0 ? v / max : 0;
+  }
+  return norms;
 }
