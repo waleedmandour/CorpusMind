@@ -62,7 +62,7 @@ preferred-citation:
       given-names: Wesam
   title: "CorpusMind: Local-first, AI-native research environment for corpus linguistics and multimodal discourse analysis"
   year: 2026
-  version: 1.1.0
+  version: 1.2.0
   doi: "10.5281/zenodo.21226650"
   publisher:
     name: "Zenodo"

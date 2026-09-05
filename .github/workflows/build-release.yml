@@ -27,6 +27,11 @@ on:
         description: 'Release tag (e.g. v1.0.0)'
         required: true
         default: 'v1.0.0'
+      only_lens:
+        description: 'Build ONLY the Lens installers (skip main app + web jobs) — used to backfill Lens assets onto an existing release page without touching its main-app files'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write  # needed to upload assets to the release
@@ -34,6 +39,7 @@ permissions:
 jobs:
   # ─── Linux (deb + AppImage) ──────────────────────────────────────
   build-linux:
+    if: ${ inputs.only_lens != 'true' }
     runs-on: ubuntu-22.04
     timeout-minutes: 60
     steps:
@@ -107,6 +113,7 @@ jobs:
 
   # ─── macOS (DMG, arm64) ──────────────────────────────────────────
   build-macos:
+    if: ${ inputs.only_lens != 'true' }
     runs-on: macos-14
     timeout-minutes: 60
     steps:
@@ -169,6 +176,7 @@ jobs:
 
   # ─── Windows (NSIS + MSI) ────────────────────────────────────────
   build-windows:
+    if: ${ inputs.only_lens != 'true' }
     runs-on: windows-2022
     timeout-minutes: 90
     steps:
@@ -440,6 +448,7 @@ jobs:
 
   # ─── Web PWA (zip) ───────────────────────────────────────────────
   build-web:
+    if: ${{ inputs.only_lens != 'true' }}
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4

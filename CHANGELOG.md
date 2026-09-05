@@ -11,6 +11,72 @@ once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 Eight user-reported issues fixed end-to-end (code-level root causes verified
 before implementation; engine suite 254 green; web build clean).
 
+### Lens round (same release page — CorpusMind Lens installers restored)
+
+A second pass focused on **CorpusMind Lens**, the vision-LM desktop shell.
+Lens installers had been silently missing from every tag-gated release since
+v1.0.0 (the lens build jobs lived only in the dispatch-only workflow) — they
+are now first-class `release.yml` jobs and are back on this release page.
+Engine suite 291 green (+37 new Lens-round tests); web build clean.
+
+#### Lens — Added
+- **Vision model intelligence** — capability-aware model selection
+  (`supports_vision` / `pick_vision_model` via Ollama `/api/tags`, name
+  heuristics for older servers and LM Studio): auto-picking a text-only
+  model now yields an actionable 400 (`ollama pull qwen3-vl:2b`) instead of
+  a confusing provider error. Model catalogue adds **qwen3-vl:2b/8b**
+  (32-language OCR incl. Arabic) and marks gemma3 4b+ as vision-capable;
+  moondream / llama3.2-vision demoted to English-only notes.
+- **Batch runner** — `POST /image-sets/{id}/run-batch` (+ status/cancel):
+  describe and/or all 8 discourse lenses over a whole image set with
+  per-image error isolation, skip-if-cached and consent-gate enforcement.
+- **Discourse lenses UI** — the 8 Phase-5 routes (social semiotics, CDA,
+  persuasion, framing, narrative, visual metaphor, emotion, cultural) are
+  finally reachable: lens dropdown, CDA sub-framework variant, LLM/heuristic
+  mode, provenance badges (mode/model/confidence), fallback + redaction
+  notices.
+- **Export** — `GET /image-sets/{id}/export?format=xlsx|csv|tsv|txt|json`:
+  one row per image (metadata, OCR, colour/composition stats, latest VLM
+  description, discourse summary); wired to the ExportButton in VisionView.
+- **Deletion** — `DELETE /images/{id}` and `DELETE /image-sets/{id}` remove
+  DB rows AND on-disk bytes (privacy remediation for photos), with
+  confirm-dialog UI.
+- **`GET /frameworks`** — the 12 reference-data framework YAMLs (shipped but
+  unread since v1.0.0) are now served as a catalogue.
+- **Cross-modal assistant tools** — `list_image_sets`,
+  `get_image_set_summary`, `get_corpus_overview` (text side + vision side in
+  one grounded call). Lens's assistant can now interpret the main app's text
+  corpora and image sets together.
+- **Lens app identity** — top bar / status bar / onboarding are Lens-branded
+  and Lens-scoped (the onboarding no longer tells users to click a sidebar
+  item that only exists in the main app); the sidebar genuinely filters out
+  reference corpora; the command-palette mismatch is gone.
+- **User guide** — new "CorpusMind Lens and the Main App" section: shared
+  engine/data dir, cross-modal interpretation, vision-model install.
+- **Home (Lens)** — cross-modal overview card: text documents beside image
+  sets, with Vision/Assistant shortcuts.
+
+#### Lens — Fixed
+- **Vision installers** — release pipeline builds Lens for Linux/macOS/
+  Windows on every tag (fail_on_unmatched_files), and SHA256SUMS covers them.
+- **Versions** — Lens `tauri.conf.json` 1.1.0 and both `Cargo.toml` 1.0.0
+  bumps aligned at 1.2.0.
+- **Encryption blind spot** — `/describe`, `/align`, discourse-LLM and
+  alignment-LLM read image bytes through one decrypt-aware helper; with
+  at-rest encryption enabled they previously sent ciphertext to the model.
+- **Upload hardening** — 25 MB per-file cap (413), 50-file batch cap,
+  magic-byte sniffing + extension-mismatch rejection (a text file named
+  .png now fails clearly instead of crashing Pillow); docstring no longer
+  claims SVG support.
+- **Truncation** — vision call sites pass `max_tokens=2048` (rich claim
+  sets were cut at 512 and degraded to the single-claim fallback).
+- **i18n** — VisionView was 100% hardcoded English; it is now fully
+  en/ar (≈150 keys) with RTL-safe logical CSS.
+- **Error paths** — `alert()` replaced with inline messages routed into
+  Smart Troubleshooting; 6 new vision-specific Fix: rules.
+- **CSS** — 4 used-but-undefined selectors defined; dead
+  `.vision-coming-soon` block retired.
+
 ### Fixed
 - **Top-bar status pill (1)** — shows the active corpus's name
   ("{name} · Corpus ready", i18n en/ar) instead of a bare "Corpus ready".
