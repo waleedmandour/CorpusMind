@@ -6,6 +6,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
+## [1.0.6] — 2026-09-05 — Complete release asset matrix
+
+Every tag-gated release since v1.0.1 silently shipped without the parent
+Linux AppImage and the web PWA zip. The Linux build job produced both files
+on every run but its upload globs referenced only the .deb, so the AppImage
+was built and then discarded, and no PWA archive was ever attached.
+
+### Added
+
+- **Parent Linux AppImage restored as a release asset**: `CorpusMind_<ver>_amd64.AppImage`
+  is now uploaded to the workflow artifacts and attached to the GitHub
+  release (it was already being built every run). Linux users again get a
+  no-sudo install option, matching what the CorpusMind Lens job has always
+  shipped.
+- **Web PWA zip is now built by CI**: `corpusmind-web-<tag>.zip` (the
+  installable PWA archive) is packaged from the Linux job's PWA build and
+  attached to every release. v1.0.0 carried a manually-uploaded copy; the
+  asset is now reproducible on every tag.
+
+### Fixed
+
+- Release asset matrix: a release now carries the full intended set —
+  CorpusMind (NSIS .exe, .msi, arm64 .dmg, .deb, .AppImage, PWA zip),
+  CorpusMind Lens (NSIS .exe, .msi, universal .dmg, .deb, .AppImage) and
+  SHA256SUMS.txt — enforced by `fail_on_unmatched_files` on every job.
+
 ## [1.0.5] — 2026-09-05 — Windows installer hardening
 
 The v1.0.1 Windows packages could fail to install or appear broken on real

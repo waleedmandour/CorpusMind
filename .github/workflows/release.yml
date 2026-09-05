@@ -489,18 +489,32 @@ jobs:
           APPIMAGE_EXTRACT_AND_RUN: "1"
         run: cargo tauri build
 
+      - name: Package web PWA zip
+        working-directory: web
+        run: |
+          # Ship the installable PWA as a release asset (v1.0.0 carried a
+          # manually-uploaded copy; it is now produced by CI for every tag).
+          cd dist
+          zip -rq ../corpusmind-web-${GITHUB_REF_NAME}.zip .
+          cd ..
+          ls -lh corpusmind-web-*.zip
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: linux-x64
           path: |
             desktop/src-tauri/target/release/bundle/deb/*.deb
+            desktop/src-tauri/target/release/bundle/appimage/*.AppImage
+            web/corpusmind-web-*.zip
 
       - name: Attach to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
             desktop/src-tauri/target/release/bundle/deb/*.deb
+            desktop/src-tauri/target/release/bundle/appimage/*.AppImage
+            web/corpusmind-web-*.zip
           fail_on_unmatched_files: true  # Issue 14: a silently-empty release must fail
 
 
