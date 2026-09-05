@@ -9,6 +9,7 @@ Differences from Phase 0:
     see the request-scoped one).
   - Evidence is structured: {kind, ref, snippet} per tool result.
 """
+
 from __future__ import annotations
 
 import json
@@ -105,8 +106,9 @@ class Assistant:
         "rather than listing every row.\n"
     )
 
-    def __init__(self, provider: ModelProvider, *, model: str | None = None,
-                 corpus_id: str | None = None) -> None:
+    def __init__(
+        self, provider: ModelProvider, *, model: str | None = None, corpus_id: str | None = None
+    ) -> None:
         self.provider = provider
         self.model = model
         self.corpus_id = corpus_id
@@ -154,9 +156,12 @@ class Assistant:
             corpus_hint = (
                 f"\n\nThe user is currently working with corpus_id={self.corpus_id}. "
                 f"Pass this corpus_id to tools that need it."
-                if self.corpus_id else ""
+                if self.corpus_id
+                else ""
             )
-            messages: list[Message] = [Message(role="system", content=self.SYSTEM_PROMPT + corpus_hint)]
+            messages: list[Message] = [
+                Message(role="system", content=self.SYSTEM_PROMPT + corpus_hint)
+            ]
             # Replay prior turns
             for t in convo.turns:
                 if t.role == "user":
@@ -189,6 +194,34 @@ class Assistant:
         # reliable native path with no tool surface.
         needs_tools = _user_message_needs_tools(user_text)
 
+        # v1.2.0: skip the tool surface entirely when the selected model
+        # can't do tool calling (Ollama /api/tags capabilities). Sending a
+        # tool payload to a non-tool model (embedding models are common in
+        # /api/tags) made every grounded turn fail with HTTP 502/400.
+        if needs_tools:
+            try:
+                model_supports_tools = await self.provider.supports_tools(self.model)
+            except Exception:
+                model_supports_tools = True  # gate is best-effort
+            if not model_supports_tools:
+                log.info(
+                    "assistant_tools_skipped_model_capability",
+                    model=self.model,
+                )
+                messages.append(
+                    Message(
+                        role="system",
+                        content=(
+                            "NOTE: The currently selected model does not support "
+                            "tool calling, so corpus tools cannot be run this turn. "
+                            "Answer from the conversation, and tell the user they "
+                            "can pick a tool-capable model (e.g. llama3.1, qwen2.5) "
+                            "in Settings to restore grounded answers."
+                        ),
+                    )
+                )
+                needs_tools = False
+
         # Pass 1: ask the model
         if needs_tools:
             first = await self.provider.chat(
@@ -211,11 +244,7 @@ class Assistant:
         #   - OpenAI-compat: raw["choices"][0]["message"]["tool_calls"]
         #   - Native /api/chat: raw["message"]["tool_calls"] (Ollama 0.4+)
         # We check both paths.
-        tool_call_reqs = (
-            first.raw.get("choices", [{}])[0]
-            .get("message", {})
-            .get("tool_calls", [])
-        )
+        tool_call_reqs = first.raw.get("choices", [{}])[0].get("message", {}).get("tool_calls", [])
         if not tool_call_reqs:
             # Try native /api/chat format
             native_msg = first.raw.get("message", {})
@@ -242,17 +271,21 @@ class Assistant:
                     tool_calls.append({"name": name, "args": args, "ok": True})
                     if name == "search_concordance" and "lines" in result:
                         for line in result["lines"][:5]:
-                            evidence.append(Evidence(
-                                kind="concordance_line",
-                                ref=f"line:{line['line_id']}",
-                                snippet=f"{line['left']} [{line['node']}] {line['right']}",
-                            ))
+                            evidence.append(
+                                Evidence(
+                                    kind="concordance_line",
+                                    ref=f"line:{line['line_id']}",
+                                    snippet=f"{line['left']} [{line['node']}] {line['right']}",
+                                )
+                            )
                     else:
-                        evidence.append(Evidence(
-                            kind="tool_result",
-                            ref=f"tool:{name}:{len(tool_calls)}",
-                            snippet=json.dumps(result)[:500],
-                        ))
+                        evidence.append(
+                            Evidence(
+                                kind="tool_result",
+                                ref=f"tool:{name}:{len(tool_calls)}",
+                                snippet=json.dumps(result)[:500],
+                            )
+                        )
                     # Task 4: Summarize large tool results before sending to LLM
                     # to avoid token-limit truncation and hallucination.
                     result_str = _summarize_tool_result(name, result)
@@ -280,17 +313,27 @@ class Assistant:
         if tool_calls and evidence:
             try:
                 from ai.confidence import assess_confidence, generate_mcqs, needs_user_validation
-                evidence_dicts = [{"kind": e.kind, "ref": e.ref, "snippet": e.snippet} for e in evidence]
+
+                evidence_dicts = [
+                    {"kind": e.kind, "ref": e.ref, "snippet": e.snippet} for e in evidence
+                ]
                 conf_result = await assess_confidence(
-                    self.provider, self.model, user_text, evidence_dicts, content,
+                    self.provider,
+                    self.model,
+                    user_text,
+                    evidence_dicts,
+                    content,
                 )
                 confidence = conf_result.get("confidence", 0.5)
                 confidence_reasoning = conf_result.get("reasoning", "")
                 if needs_user_validation(confidence):
                     needs_validation = True
                     mcqs = await generate_mcqs(
-                        self.provider, self.model, user_text,
-                        evidence_dicts, content,
+                        self.provider,
+                        self.model,
+                        user_text,
+                        evidence_dicts,
+                        content,
                         conf_result.get("unsupported_claims", []),
                     )
             except Exception as e:
@@ -315,18 +358,22 @@ class Assistant:
                     content=content,
                     grounded=bool(tool_calls),
                     tool_calls=tool_calls,
-                    evidence=[{"kind": e.kind, "ref": e.ref, "snippet": e.snippet} for e in evidence],
+                    evidence=[
+                        {"kind": e.kind, "ref": e.ref, "snippet": e.snippet} for e in evidence
+                    ],
                     elapsed_ms=elapsed,
                 )
                 session.add(at)
                 await session.flush()  # Issue 5 fix: populate the autoincrement id
                 persisted_turn_id = at.id
 
-        log.info("assistant_turn",
-                 conversation=convo_id,
-                 grounded=bool(tool_calls),
-                 tools=[t["name"] for t in tool_calls],
-                 ms=elapsed)
+        log.info(
+            "assistant_turn",
+            conversation=convo_id,
+            grounded=bool(tool_calls),
+            tools=[t["name"] for t in tool_calls],
+            ms=elapsed,
+        )
 
         return AssistantTurn(
             content=content,
@@ -345,6 +392,7 @@ class Assistant:
 def _tool_param_names(tool_name: str) -> set[str]:
     """Helper — return the parameter names of a tool, for corpus_id auto-injection."""
     from ai.tools import TOOL_SCHEMAS
+
     for s in TOOL_SCHEMAS:
         if s["function"]["name"] == tool_name:
             return set(s["function"]["parameters"].get("properties", {}).keys())
@@ -361,27 +409,77 @@ def _tool_param_names(tool_name: str) -> set[str]:
 # turns, not to be clever about edge cases.
 _TOOL_FREE_PATTERNS = (
     # Greetings / pleasantries
-    "hello", "hi ", "hey", "thanks", "thank you", "please", "ok", "okay",
+    "hello",
+    "hi ",
+    "hey",
+    "thanks",
+    "thank you",
+    "please",
+    "ok",
+    "okay",
     # Meta questions about the assistant itself
-    "what can you do", "who are you", "help me", "how do you work",
+    "what can you do",
+    "who are you",
+    "help me",
+    "how do you work",
     # Pure methodology / theory questions (no corpus data needed)
-    "what is log-likelihood", "what is mutual information", "what is keyness",
-    "explain", "define", "what does", "what's the difference",
-    "how do i", "how should i", "methodology",
+    "what is log-likelihood",
+    "what is mutual information",
+    "what is keyness",
+    "explain",
+    "define",
+    "what does",
+    "what's the difference",
+    "how do i",
+    "how should i",
+    "methodology",
 )
 
 _GROUNDING_PATTERNS = (
     # Direct tool names
-    "frequency", "frequent", "concordance", "collocat", "keyness", "keyword",
-    "dispersion", "n-gram", "ngram", "bigram", "trigram", "pos tag", "pos-tag",
+    "frequency",
+    "frequent",
+    "concordance",
+    "collocat",
+    "keyness",
+    "keyword",
+    "dispersion",
+    "n-gram",
+    "ngram",
+    "bigram",
+    "trigram",
+    "pos tag",
+    "pos-tag",
     # Analysis verbs
-    "find all", "show me", "search for", "compare", "how many", "how often",
-    "top 10", "top 20", "top 5", "most common", "most frequent", "strongest",
-    "distribution", "patterns", "occurrences", "contexts",
+    "find all",
+    "show me",
+    "search for",
+    "compare",
+    "how many",
+    "how often",
+    "top 10",
+    "top 20",
+    "top 5",
+    "most common",
+    "most frequent",
+    "strongest",
+    "distribution",
+    "patterns",
+    "occurrences",
+    "contexts",
     # Corpus references
-    "this corpus", "the corpus", "my corpus", "in the text", "in this",
+    "this corpus",
+    "the corpus",
+    "my corpus",
+    "in the text",
+    "in this",
     # Specific word lookups (quoted or not)
-    "word '", 'word "', "of '", 'of "', "for '", 'for "',
+    "word '",
+    'word "',
+    "of '",
+    'of "',
+    "for '",
+    'for "',
 )
 
 
@@ -497,7 +595,9 @@ def _summarize_tool_result(tool_name: str, result: dict) -> str:
             "measures": result.get("measures"),
             "showing": f"Top {MAX_ROWS} of {len(rows)} collocates",
             "rows": rows[:MAX_ROWS],
-            "note": f"{len(rows) - MAX_ROWS} more collocates omitted." if len(rows) > MAX_ROWS else "",
+            "note": f"{len(rows) - MAX_ROWS} more collocates omitted."
+            if len(rows) > MAX_ROWS
+            else "",
         }
         return json.dumps(summary, ensure_ascii=False)
 

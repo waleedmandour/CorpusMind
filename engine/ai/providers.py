@@ -19,11 +19,13 @@ because they don't have native alternatives.
 All providers bypass proxies for loopback traffic (no_proxy=True) to
 prevent corporate VPNs from silently intercepting localhost requests.
 """
+
 from __future__ import annotations
 
 import abc
 import base64
 import json
+import time
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from typing import Any, Literal
@@ -142,7 +144,9 @@ class ModelProvider(abc.ABC):
         Subclasses override chat() to honor the json_mode flag. The default
         implementation just calls chat() with json_mode=True.
         """
-        return await self.chat(messages, model=model, temperature=temperature, timeout=timeout, json_mode=True)
+        return await self.chat(
+            messages, model=model, temperature=temperature, timeout=timeout, json_mode=True
+        )
 
     @abc.abstractmethod
     async def stream(
@@ -167,6 +171,25 @@ class ModelProvider(abc.ABC):
     async def list_models(self) -> list[str]:
         """Return models currently available on this provider (best-effort)."""
 
+    async def supports_tools(self, model: str | None = None) -> bool:
+        """Whether ``model`` can do OpenAI-style tool calling.
+
+        Default: assume yes. OllamaProvider overrides this using the
+        ``capabilities`` list exposed by /api/tags so that embedding- or
+        vision-only models never receive a tool payload (they 400 on it).
+        """
+        return True
+
+    async def pick_default_model(self) -> str | None:
+        """Model to auto-select when the caller didn't pick one.
+
+        Default: first listed model. OllamaProvider prefers a model with
+        the 'tools' capability so auto-selection doesn't silently disable
+        grounding.
+        """
+        models = await self.list_models()
+        return models[0] if models else None
+
     @abc.abstractmethod
     async def health(self) -> bool:
         """Return True iff the provider responds to a lightweight probe."""
@@ -175,6 +198,7 @@ class ModelProvider(abc.ABC):
 # --------------------------------------------------------------------------- #
 # Helper: Normalize Ollama base URL
 # --------------------------------------------------------------------------- #
+
 
 def _normalize_ollama_url(raw: str) -> str:
     """
@@ -197,6 +221,7 @@ def _normalize_ollama_url(raw: str) -> str:
 # Helper: Strip thinking text from Qwen3 responses
 # --------------------------------------------------------------------------- #
 
+
 def _strip_thinking(text: str) -> str:
     """
     Strip Qwen3 thinking/reasoning text that leaks into the content field.
@@ -216,6 +241,7 @@ def _strip_thinking(text: str) -> str:
     # Strip <think>...</think> tags if present
     if "<think>" in trimmed:
         import re
+
         trimmed = re.sub(r"<think>.*?</think>", "", trimmed, flags=re.DOTALL).strip()
 
     if not trimmed:
@@ -223,9 +249,18 @@ def _strip_thinking(text: str) -> str:
 
     # Common thinking patterns to strip from the beginning
     thinking_patterns = [
-        "Okay, let's", "Let me", "The user wants", "I need to",
-        "First, let's", "Alright,", "So,", "Now,", "Hmm,",
-        "I should", "Let's think", "To answer",
+        "Okay, let's",
+        "Let me",
+        "The user wants",
+        "I need to",
+        "First, let's",
+        "Alright,",
+        "So,",
+        "Now,",
+        "Hmm,",
+        "I should",
+        "Let's think",
+        "To answer",
     ]
 
     lines = trimmed.split("\n")
@@ -241,7 +276,10 @@ def _strip_thinking(text: str) -> str:
             # Check if this line looks like reasoning (starts with English
             # and contains thinking-like words)
             if stripped and stripped[0].isalpha() and stripped[0].isupper():
-                if any(w in stripped.lower() for w in ["let's", "should", "need to", "going to", "first", "now i"]):
+                if any(
+                    w in stripped.lower()
+                    for w in ["let's", "should", "need to", "going to", "first", "now i"]
+                ):
                     continue
             # This line doesn't look like thinking
             in_thinking = False
@@ -302,10 +340,12 @@ def _build_openai_message(m: Message) -> dict[str, Any]:
         # most OpenAI-compatible servers sniff the actual format from the
         # bytes rather than the MIME label, and the few that don't (real
         # OpenAI) accept either label for either format.
-        parts.append({
-            "type": "image_url",
-            "image_url": {"url": f"data:image/png;base64,{b64}"},
-        })
+        parts.append(
+            {
+                "type": "image_url",
+                "image_url": {"url": f"data:image/png;base64,{b64}"},
+            }
+        )
     msg = {"role": m.role, "content": parts}
     if m.name:
         msg["name"] = m.name
@@ -415,8 +455,12 @@ class _OpenAICompatibleProvider(ModelProvider):
         try:
             content = data["choices"][0]["message"]["content"]
         except (KeyError, IndexError) as e:
-            raise ModelProviderError(f"[{self.name}] unexpected response shape: {_debug_raw(data)}") from e
-        return ChatResponse(content=content, model=data.get("model", payload["model"]), provider=self.name, raw=data)
+            raise ModelProviderError(
+                f"[{self.name}] unexpected response shape: {_debug_raw(data)}"
+            ) from e
+        return ChatResponse(
+            content=content, model=data.get("model", payload["model"]), provider=self.name, raw=data
+        )
 
     # --- stream ---
     async def stream(
@@ -434,7 +478,9 @@ class _OpenAICompatibleProvider(ModelProvider):
             "stream": True,
         }
         try:
-            async with self._client.stream("POST", "/v1/chat/completions", json=payload, timeout=timeout) as r:
+            async with self._client.stream(
+                "POST", "/v1/chat/completions", json=payload, timeout=timeout
+            ) as r:
                 r.raise_for_status()
                 async for line in r.aiter_lines():
                     if not line or not line.startswith("data: "):
@@ -472,7 +518,9 @@ class _OpenAICompatibleProvider(ModelProvider):
             vec = data["data"][0]["embedding"]
         except (KeyError, IndexError) as e:
             raise ModelProviderError(f"[{self.name}] unexpected embedding shape: {data}") from e
-        return EmbeddingResponse(vector=vec, model=data.get("model", payload["model"]), provider=self.name)
+        return EmbeddingResponse(
+            vector=vec, model=data.get("model", payload["model"]), provider=self.name
+        )
 
     # --- list models ---
     async def list_models(self) -> list[str]:
@@ -498,6 +546,82 @@ class _OpenAICompatibleProvider(ModelProvider):
 # --------------------------------------------------------------------------- #
 # OllamaProvider — uses NATIVE /api/chat (not /v1/chat/completions)
 # --------------------------------------------------------------------------- #
+
+
+# --------------------------------------------------------------------------- #
+# Tool-schema sanitization for OpenAI-compatible LOCAL servers
+# --------------------------------------------------------------------------- #
+# v1.2.0 (user-reported HTTP 502 "[ollama] tool-call request failed: 400").
+# Older Ollama releases unmarshal tool parameters into a fixed Go struct
+# that only knows {type, description, items, enum, properties, required} —
+# any other JSON-Schema keyword (default/minimum/maximum/…) made the ENTIRE
+# request fail with 400 Bad Request. Newer releases accept more keywords,
+# but keep the payload conservative: these schemas go to LOCAL model
+# servers (Ollama /v1, LM Studio) we don't control.
+
+_COMPAT_SCHEMA_KEYS = frozenset(
+    {
+        "type",
+        "description",
+        "enum",
+        "items",
+        "properties",
+        "required",
+    }
+)
+
+# System hint injected when a server rejects the tool payload and we retry
+# without tools, so the model explains itself instead of hallucinating runs.
+_TOOL_FALLBACK_HINT = (
+    "Tool calling was rejected by the local model server for this turn. "
+    "Answer the user's question directly from the conversation so far, and "
+    "briefly note that corpus tools could not be run for this answer."
+)
+
+
+def _sanitize_schema_node(node: Any) -> Any:
+    """Recursively strip non-portable JSON-Schema keywords."""
+    if isinstance(node, list):
+        return [_sanitize_schema_node(item) for item in node]
+    if not isinstance(node, dict):
+        return node
+    clean: dict[str, Any] = {}
+    for key, value in node.items():
+        if key not in _COMPAT_SCHEMA_KEYS:
+            continue
+        if key in ("items", "properties"):
+            clean[key] = _sanitize_schema_node(value)
+        else:
+            clean[key] = value
+    return clean
+
+
+def sanitize_tools_for_compat(tools: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Make OpenAI function-tool schemas safe for local /v1 servers.
+
+    - keeps only function-type tools,
+    - recursively strips non-portable schema keywords,
+    - guarantees a ``required`` array exists (some servers dislike its
+      absence).
+    """
+    sanitized: list[dict[str, Any]] = []
+    for tool in tools:
+        if tool.get("type") != "function":
+            continue
+        fn = dict(tool.get("function") or {})
+        params = fn.get("parameters")
+        if isinstance(params, dict):
+            params = dict(params)
+            props = params.get("properties")
+            if isinstance(props, dict):
+                params["properties"] = {
+                    name: _sanitize_schema_node(schema) for name, schema in props.items()
+                }
+            if not isinstance(params.get("required"), list):
+                params["required"] = []
+            fn["parameters"] = params
+        sanitized.append({"type": "function", "function": fn})
+    return sanitized
 
 
 class OllamaProvider(ModelProvider):
@@ -526,6 +650,10 @@ class OllamaProvider(ModelProvider):
         self.settings = settings
         self.base_url = _normalize_ollama_url(settings.ollama_base_url)
         self.default_model = settings.ollama_default_model
+
+        # v1.2.0: short-lived /api/tags cache for capability lookups.
+        self._tags_cache: list[dict[str, Any]] | None = None
+        self._tags_cache_at: float = 0.0
 
         # httpx client with proxy bypass for loopback traffic
         self._client = httpx.AsyncClient(
@@ -589,11 +717,22 @@ class OllamaProvider(ModelProvider):
         if tools:
             # Use OpenAI-compatible endpoint for tool calls
             # Issue 8: pass json_mode through so chat_json() works with tools
-            return await self._chat_openai_compat(messages, model=model_name,
-                                                   temperature=temperature, tools=tools,
-                                                   timeout=timeout, json_mode=json_mode)
+            return await self._chat_openai_compat(
+                messages,
+                model=model_name,
+                temperature=temperature,
+                tools=tools,
+                timeout=timeout,
+                json_mode=json_mode,
+            )
 
-        log.info("ollama_chat_request", model=model_name, messages=len(messages), qwen3=is_qwen3, json_mode=json_mode)
+        log.info(
+            "ollama_chat_request",
+            model=model_name,
+            messages=len(messages),
+            qwen3=is_qwen3,
+            json_mode=json_mode,
+        )
 
         try:
             r = await self._client.post("/api/chat", json=payload, timeout=timeout)
@@ -673,22 +812,72 @@ class OllamaProvider(ModelProvider):
             "temperature": temperature,
             "stream": False,
         }
-        if tools:
-            payload["tools"] = tools
+        # v1.2.0: sanitize schemas for the local server (older Ollama 400s
+        # on unknown JSON-Schema keywords like default/minimum/maximum).
+        wire_tools = sanitize_tools_for_compat(tools) if tools else None
+        if wire_tools:
+            payload["tools"] = wire_tools
         # Issue 8: pass json_mode through so chat_json() works with tool calls
         if json_mode:
             payload["response_format"] = {"type": "json_object"}
 
-        log.info("ollama_openai_compat_request", model=model, messages=len(messages),
-                 has_tools=bool(tools), json_mode=json_mode)
+        log.info(
+            "ollama_openai_compat_request",
+            model=model,
+            messages=len(messages),
+            has_tools=bool(wire_tools),
+            json_mode=json_mode,
+        )
 
+        tools_fallback_used = False
         try:
             r = await self._client.post("/v1/chat/completions", json=payload, timeout=timeout)
+            if r.status_code == 400 and wire_tools:
+                # v1.2.0 no-tools fallback: some models (or older servers)
+                # reject ANY tool payload with 400 — e.g. models whose
+                # template lacks tool support. Retry ONCE without tools so
+                # the user gets an answer instead of "HTTP 502: Model call
+                # failed". The turn is then un-grounded by design; the hint
+                # tells the model to say so instead of hallucinating runs.
+                server_body = r.text[:300]
+                log.warning(
+                    "ollama_tools_rejected_retrying_without_tools",
+                    model=model,
+                    server_body=server_body,
+                )
+                tools_fallback_used = True
+                fallback_messages = [
+                    *messages,
+                    Message(role="system", content=_TOOL_FALLBACK_HINT),
+                ]
+                retry_payload = {
+                    **payload,
+                    "messages": [_build_openai_message(m) for m in fallback_messages],
+                }
+                retry_payload.pop("tools", None)
+                retry_payload.pop("response_format", None)
+                r = await self._client.post(
+                    "/v1/chat/completions", json=retry_payload, timeout=timeout
+                )
             r.raise_for_status()
         except httpx.HTTPError as e:
-            raise ModelProviderError(f"[ollama] tool-call request failed: {e}") from e
+            server_body = ""
+            resp = getattr(e, "response", None)
+            if resp is not None:
+                try:
+                    server_body = resp.text[:300]
+                except Exception:
+                    server_body = ""
+            raise ModelProviderError(
+                f"[ollama] tool-call request failed: {e}"
+                + (f" — server said: {server_body}" if server_body else "")
+            ) from e
 
         data = r.json()
+        if tools_fallback_used:
+            # Marker so callers (assistant) can tell the user grounding was
+            # skipped for this turn.
+            data["_tools_fallback"] = True
         try:
             choice = data["choices"][0]
             msg = choice["message"]
@@ -707,7 +896,9 @@ class OllamaProvider(ModelProvider):
         if not content and not msg.get("tool_calls"):
             log.warning("ollama_openai_compat_empty_content", model=model, raw=_debug_raw(data))
 
-        return ChatResponse(content=content, model=data.get("model", model), provider=self.name, raw=data)
+        return ChatResponse(
+            content=content, model=data.get("model", model), provider=self.name, raw=data
+        )
 
     # --- stream (native /api/chat with stream=true) ---
     async def stream(
@@ -769,7 +960,9 @@ class OllamaProvider(ModelProvider):
             vec = data["embedding"]
         except KeyError as e:
             raise ModelProviderError(f"[ollama] unexpected embedding shape: {data}") from e
-        return EmbeddingResponse(vector=vec, model=data.get("model", payload["model"]), provider=self.name)
+        return EmbeddingResponse(
+            vector=vec, model=data.get("model", payload["model"]), provider=self.name
+        )
 
     # --- list models (native /api/tags) ---
     async def list_models(self) -> list[str]:
@@ -782,6 +975,56 @@ class OllamaProvider(ModelProvider):
         data = r.json()
         models = data.get("models", [])
         return [m.get("name", "") for m in models if m.get("name")]
+
+    # --- v1.2.0: model capability lookups (tool support) ---
+    async def _tags_models(self) -> list[dict[str, Any]]:
+        """Raw /api/tags model entries, cached for 30 s (best-effort)."""
+        now = time.monotonic()
+        if self._tags_cache is not None and (now - self._tags_cache_at) < 30.0:
+            return self._tags_cache
+        try:
+            r = await self._client.get("/api/tags", timeout=10.0)
+            r.raise_for_status()
+            self._tags_cache = r.json().get("models", [])
+            self._tags_cache_at = now
+        except httpx.HTTPError as e:
+            log.debug("ollama_tags_lookup_failed", error=str(e))
+        return self._tags_cache or []
+
+    async def supports_tools(self, model: str | None = None) -> bool:
+        """Whether the model advertises the 'tools' capability.
+
+        Ollama ≥ 0.5 lists per-model ``capabilities`` in /api/tags;
+        embedding/vision-only models 400 on tool payloads, so the caller
+        should skip tools for them. Older Ollama (no capability info)
+        returns True — the no-tools fallback in ``_chat_openai_compat``
+        covers whatever that version still rejects.
+        """
+        wanted = model or self.default_model
+        for m in await self._tags_models():
+            name = m.get("name", "")
+            if name == wanted or name.split(":")[0] == wanted.split(":")[0]:
+                caps = m.get("capabilities")
+                if not caps:
+                    return True  # older Ollama — no capability info
+                return "tools" in caps
+        return True
+
+    async def pick_default_model(self) -> str | None:
+        """First tool-capable model, else first model, else None.
+
+        Auto-selection used to take the FIRST installed model, which is
+        frequently an embedding model (e.g. nomic-embed-text) — every
+        grounded turn then died with a 400.
+        """
+        models = await self._tags_models()
+        if not models:
+            return None
+        for m in models:
+            caps = m.get("capabilities")
+            if caps and "tools" in caps and m.get("name"):
+                return m["name"]
+        return models[0].get("name")
 
     # --- health (multi-URL with fallback) ---
     async def health(self) -> bool:
@@ -850,10 +1093,14 @@ class CloudProvider(_OpenAICompatibleProvider):
             return
 
         if settings.cloud_disabled_hard:
-            raise CloudDisabledError("Cloud provider is hard-disabled in settings (CORPUSMIND_CLOUD_DISABLED_HARD=1).")
+            raise CloudDisabledError(
+                "Cloud provider is hard-disabled in settings (CORPUSMIND_CLOUD_DISABLED_HARD=1)."
+            )
 
         if not settings.cloud_api_key:
-            raise CloudDisabledError("Cloud provider selected but CORPUSMIND_CLOUD_API_KEY is empty.")
+            raise CloudDisabledError(
+                "Cloud provider selected but CORPUSMIND_CLOUD_API_KEY is empty."
+            )
 
         self.base_url = settings.cloud_base_url or self._default_base_url(settings.cloud_provider)
         self.default_model = settings.cloud_default_model

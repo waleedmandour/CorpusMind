@@ -1,4 +1,5 @@
 """AI Assistant endpoints — grounded chat (§11)."""
+
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -45,7 +46,9 @@ class ChatResponse(BaseModel):
 
 
 @router.post("/chat", response_model=ChatResponse)
-async def chat(req: ChatRequest, request: Request, session: AsyncSession = Depends(get_session)) -> ChatResponse:
+async def chat(
+    req: ChatRequest, request: Request, session: AsyncSession = Depends(get_session)
+) -> ChatResponse:
     try:
         provider = request.app.state.providers.get(req.provider)
     except Exception as e:
@@ -55,15 +58,21 @@ async def chat(req: ChatRequest, request: Request, session: AsyncSession = Depen
         raise HTTPException(
             status_code=400,
             detail=f"AI provider '{req.provider}' is not available. "
-                   f"Make sure Ollama or LM Studio is running, or configure a cloud provider in Settings."
+            f"Make sure Ollama or LM Studio is running, or configure a cloud provider in Settings.",
         )
 
-    # If no model is specified, auto-detect the first available model from the provider.
+    # If no model is specified, auto-detect one. v1.2.0: prefer a model
+    # with the 'tools' capability (OllamaProvider.pick_default_model) —
+    # the first model in /api/tags is often an embedding model, which made
+    # every grounded turn fail with a 400.
     if not req.model:
         try:
-            available_models = await provider.list_models()
-            if available_models:
-                req.model = available_models[0]
+            if hasattr(provider, "pick_default_model"):
+                req.model = await provider.pick_default_model()
+            else:
+                available_models = await provider.list_models()
+                req.model = available_models[0] if available_models else None
+            if req.model:
                 log.info("auto_selected_model", model=req.model, provider=req.provider)
         except Exception as e:
             log.warning("auto_select_model_failed", error=str(e))
@@ -79,21 +88,21 @@ async def chat(req: ChatRequest, request: Request, session: AsyncSession = Depen
             raise HTTPException(
                 status_code=503,
                 detail="Ollama is not running or no model is loaded. "
-                       "Please start Ollama and pull a model (e.g. llama3.2:3b) "
-                       "via Settings > Model Providers > Download models."
+                "Please start Ollama and pull a model (e.g. llama3.2:3b) "
+                "via Settings > Model Providers > Download models.",
             )
         elif provider_name == "lmstudio":
             raise HTTPException(
                 status_code=503,
                 detail="LM Studio is not running or no model is loaded. "
-                       "Please start LM Studio and enable the local server "
-                       "(Developer > Start Local Server)."
+                "Please start LM Studio and enable the local server "
+                "(Developer > Start Local Server).",
             )
         else:
             raise HTTPException(
                 status_code=503,
                 detail=f"The {provider_name} provider is not available. "
-                       f"Please check Settings > Model Providers."
+                f"Please check Settings > Model Providers.",
             )
 
     # CRITICAL GREENLET FIX: Don't pass the request's session to answer().
@@ -134,7 +143,7 @@ async def chat(req: ChatRequest, request: Request, session: AsyncSession = Depen
             raise HTTPException(
                 status_code=502,
                 detail="Could not connect to the AI model. Please make sure "
-                       "Ollama or LM Studio is running and a model is loaded."
+                "Ollama or LM Studio is running and a model is loaded.",
             ) from e
         else:
             raise HTTPException(status_code=502, detail=f"Model call failed: {error_msg}") from e
@@ -165,17 +174,23 @@ async def list_conversations(session: AsyncSession = Depends(get_session)) -> li
         .limit(50)
     )
     convos = (await session.execute(stmt)).scalars().all()
-    return [{"id": c.id, "provider": c.provider, "model": c.model,
-             "created_at": c.created_at.isoformat(), "updated_at": c.updated_at.isoformat(),
-             "turn_count": len(c.turns)} for c in convos]
+    return [
+        {
+            "id": c.id,
+            "provider": c.provider,
+            "model": c.model,
+            "created_at": c.created_at.isoformat(),
+            "updated_at": c.updated_at.isoformat(),
+            "turn_count": len(c.turns),
+        }
+        for c in convos
+    ]
 
 
 @router.get("/conversations/{cid}")
 async def get_conversation(cid: str, session: AsyncSession = Depends(get_session)) -> dict:
     stmt = (
-        select(Conversation)
-        .options(selectinload(Conversation.turns))
-        .where(Conversation.id == cid)
+        select(Conversation).options(selectinload(Conversation.turns)).where(Conversation.id == cid)
     )
     result = await session.execute(stmt)
     convo = result.scalar_one_or_none()
@@ -229,7 +244,10 @@ class DynamicSuggestionsRequest(BaseModel):
     model: str | None = Field(None)
     corpus_id: str | None = Field(None)
     language: str = Field("en", pattern="^(en|ar)$")
-    recent_analysis: dict | None = Field(None, description="Optional: the user's most recent analysis result, for context-aware suggestions")
+    recent_analysis: dict | None = Field(
+        None,
+        description="Optional: the user's most recent analysis result, for context-aware suggestions",
+    )
 
 
 @router.get("/query-suggestions")
@@ -324,17 +342,19 @@ async def get_dynamic_suggestions(
                     language=req.language,
                 )
                 for s in suggestions:
-                    dynamic.append({
-                        "id": f"dyn_{abs(hash(s.query)) % 100000}",
-                        "category": s.category,
-                        "label": s.query[:80] + ("…" if len(s.query) > 80 else ""),
-                        "query": s.query,
-                        "rationale": s.rationale,
-                        "requires_corpus": True,
-                        "requires_reference": False,
-                        "available": True,
-                        "source": "dynamic",
-                    })
+                    dynamic.append(
+                        {
+                            "id": f"dyn_{abs(hash(s.query)) % 100000}",
+                            "category": s.category,
+                            "label": s.query[:80] + ("…" if len(s.query) > 80 else ""),
+                            "query": s.query,
+                            "rationale": s.rationale,
+                            "requires_corpus": True,
+                            "requires_reference": False,
+                            "available": True,
+                            "source": "dynamic",
+                        }
+                    )
     except Exception as e:
         log.warning("dynamic_suggestions_endpoint_failed", error=str(e))
 
@@ -351,5 +371,6 @@ async def get_dynamic_suggestions(
 async def session_get_corpus(corpus_id: str):
     from storage.models import Corpus
     from storage.session import session_scope
+
     async with session_scope() as s:
         return await s.get(Corpus, corpus_id)
