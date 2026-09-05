@@ -204,26 +204,27 @@ BUNDLED_REFERENCES: list[ReferenceCorpusSpec] = [
     ),
     ReferenceCorpusSpec(
         name="camel-arabic",
-        display_name="CAMeL Arabic Frequency List — top 1000",
+        display_name="Arabic MSA Frequency List — top 1000",
         language="ar",
         description=(
-            "Top-1000 Arabic word-frequency list from CAMeL Lab, derived "
-            "from CAMeLBERT pretraining data (OSCAR + Wikipedia + Gumar + "
-            "OSIAN). Suitable as a Modern Standard Arabic reference for "
-            "keyness analysis."
+            "Top-1000 Modern Standard Arabic word-frequency list derived "
+            "from the Leipzig Corpora Collection 'ara_news_2022_10K' news "
+            "corpus (v1.0.1 rebuild — the original committed file was a "
+            "corrupted download). Tokens: Arabic script only, diacritics "
+            "and tatweel removed, orthographic variants folded. Suitable "
+            "as a broad MSA reference for keyness analysis."
         ),
         source_url=(
-            "https://raw.githubusercontent.com/waleedmandour/CorpusMind/main/"
-            "reference-data/reference-corpora/ar/camel-arabic-top1000.tsv"
+            "https://downloads.wortschatz-leipzig.de/corpora/ara_news_2022_10K.tar.gz"
         ),
-        sha256="d5558cd419c8d46bdc958064cb97f963d1ea793866414c025906ec15033512ed",
+        sha256="005e054a4978d8643637dbc412cce12bae53a2975e9b3d1daed8af115202de0b",
         format="tsv_freq",
-        size_hint="~15 KB",
-        license="CC-BY-SA-4.0",
+        size_hint="~20 KB",
+        license="CC-BY-4.0",
         citation=(
-            "Inoue, G., Alhafni, B., Baimukan, N., Bouamor, H., Habash, N., "
-            "& Bouzoubaa, K. (2021). CAMeL Tools: An Open Source Python "
-            "Toolkit for Arabic NLP. arXiv."
+            "Goldhahn, D., Eckart, T., & Quasthoff, U. (2012). Building "
+            "Large Monolingual Dictionaries at the Leipzig Corpora "
+            "Collection: From 100 to 200 Languages. LREC 2012."
         ),
         genre="mixed",
         min_corpus_tokens=500,

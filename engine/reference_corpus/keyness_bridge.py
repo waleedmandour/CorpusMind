@@ -210,10 +210,33 @@ async def compute_keyness_with_reference_list(
     ref_freqs = load_frequency_list(reference_name)
     N2 = sum(ref_freqs.values())
 
+    # v1.0.1 methodological fix: a bundled *top-N* list is not a full corpus.
+    # A target word absent from the list is NOT absent from the reference
+    # corpus — treating f2=0 as a real zero produced floods of spurious
+    # infinite-effect keywords (Log Ratio / %DIFF = ±inf). Default now:
+    # exclude target words that the list doesn't cover, and say so.
+    warnings: list[str] = []
+    ref_types = len(ref_freqs)
+    if ref_types < 5000:
+        warnings.append(
+            f"The reference list '{reference_name}' covers only {ref_types} types — "
+            f"it is a top-N frequency list, not a full corpus. Words absent from "
+            f"the list are excluded from this ranking; for publishable keyness, "
+            f"install and use a full bundled reference corpus (e.g. BNC Baby, "
+            f"BAWE, Leipzig) instead."
+        )
+    covered = set(ref_freqs)
+    skipped = sum(1 for term in target_freqs if term not in covered)
+    if skipped:
+        warnings.append(
+            f"{skipped} target type(s) absent from the reference list were excluded "
+            f"from the ranking (f2=0 against a top-N list is not a true zero)."
+        )
+
     # 3) Compute per-row keyness using the shared formula.
     # ``compute_keyness_row`` always computes the full §12 battery; the
     # ``measures`` argument above just controls which keys the API returns.
-    all_terms = set(target_freqs) | set(ref_freqs)
+    all_terms = set(target_freqs) & set(ref_freqs)
     results = []
     for term in all_terms:
         f1 = target_freqs.get(term, 0)
@@ -241,4 +264,5 @@ async def compute_keyness_with_reference_list(
         positive_keywords=[{"term": r.term, "f1": r.f1, "f2": r.f2, **r.measures} for r in positive],
         negative_keywords=[{"term": r.term, "f1": r.f1, "f2": r.f2, **r.measures} for r in negative],
         N1=N1, N2=N2,
+        warnings=warnings,
     )

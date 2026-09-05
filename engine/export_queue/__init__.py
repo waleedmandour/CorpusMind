@@ -304,8 +304,9 @@ def _register_builtin_producers() -> None:
         from stats.service import compute_frequency
         r = await compute_frequency(session, corpus_id, unit=unit,
                                     min_freq=min_freq, limit=limit)
-        headers = [unit.capitalize(), "Frequency", "Per Million", "Percent"]
-        rows = [[row["item"], row["freq"], row["per_million"], row["percent"]] for row in r.rows]
+        headers = [unit.capitalize(), "Frequency", "Per Million", "Percent", "Range", "Range %"]
+        rows = [[row["item"], row["freq"], row["per_million"], row["percent"],
+                 row.get("range"), row.get("range_percent")] for row in r.rows]
         return headers, rows
 
     async def collocations(session, *, corpus_id: str, node: str, level: str = "word",
@@ -376,6 +377,95 @@ def _register_builtin_producers() -> None:
         "collocations": collocations,
         "keyness": keyness,
         "keyness_with_reference": keyness_with_reference,
+    })
+
+    # ---- v1.0.1 producers: the analyses that previously only exported
+    # client-side now export server-side through the same queue. ----
+
+
+    async def ngrams(session, *, corpus_id: str, n: int = 3, min_freq: int = 3,
+                     min_range: int = 1, limit: int = 500) -> tuple[list[str], list[list]]:
+        from discourse.service import compute_ngrams
+        r = await compute_ngrams(session, corpus_id, n=n, min_freq=min_freq,
+                                 min_range=min_range, limit=limit)
+        headers = ["N-gram", "Frequency", "Per Million", "Range", "Range %"]
+        rows = [[row["ngram"], row["freq"], row.get("per_million"),
+                 row.get("range"), row.get("range_percent")] for row in r.rows]
+        return headers, rows
+
+    async def pos_analysis(session, *, corpus_id: str, n: int = 1,
+                           tagset: str = "upos", limit: int = 200) -> tuple[list[str], list[list]]:
+        from discourse.service import compute_pos_analysis
+        r = await compute_pos_analysis(session, corpus_id, n=n, tagset=tagset, limit=limit)
+        headers = ["POS", "Frequency", "Percent"]
+        rows = [[row["pos"], row["freq"], row.get("percent")] for row in r.rows]
+        return headers, rows
+
+    async def dispersion(session, *, corpus_id: str, term: str,
+                         level: str = "word") -> tuple[list[str], list[list]]:
+        from stats.service import compute_dispersion
+        r = await compute_dispersion(session, corpus_id, term, level=level)
+        headers = ["Part", "Frequency", "Part Size (tokens)"]
+        rows = [[i + 1, f, s] for i, (f, s) in enumerate(zip(r.per_part_freqs, r.part_sizes, strict=False))]
+        rows.insert(0, [f"Juilland's D = {r.juillands_d}", f"DP = {r.gries_dp}",
+                        f"DP-norm = {r.gries_dp_norm}", f"Range = {r.range} ({r.range_percent}%)"])
+        return headers, rows
+
+    async def vocab_profile(session, *, corpus_id: str,
+                            limit: int = 500) -> tuple[list[str], list[list]]:
+        from discourse.service import compute_vocab_profile
+        r = await compute_vocab_profile(session, corpus_id, limit=limit)
+        headers = ["Band", "Frequency", "Percent"]
+        rows = [[b["band"], b["freq"], b["percent"]] for b in r.bands]
+        rows.append([])
+        rows.append(["AWL words", "Frequency"])
+        rows.extend([[w["word"], w["freq"]] for w in r.academic_words])
+        return headers, rows
+
+    async def readability(session, *, corpus_id: str) -> tuple[list[str], list[list]]:
+        from stats.service import compute_corpus_readability
+        r = await compute_corpus_readability(session, corpus_id)
+        headers = ["Measure", "Value"]
+        rows = [[k, v] for k, v in r.items()]
+        return headers, rows
+
+    async def document_stats(session, *, corpus_id: str) -> tuple[list[str], list[list]]:
+        from stats.service import compute_document_stats
+        rows_data = await compute_document_stats(session, corpus_id)
+        headers = ["Document", "Language", "Tokens", "Types", "Sentences", "TTR",
+                   "Avg Sentence Length", "LIX", "RIX"]
+        rows = [[d["filename"], d.get("language"), d["tokens"], d["types"],
+                 d["sentences"], d["ttr"], d.get("avg_sentence_length"),
+                 d.get("lix"), d.get("rix")] for d in rows_data]
+        return headers, rows
+
+    async def group_frequency(session, *, corpus_id: str, meta_field: str,
+                              unit: str = "word", min_freq: int = 1,
+                              limit: int = 200) -> tuple[list[str], list[list]]:
+        from stats.service import compute_group_frequency
+        r = await compute_group_frequency(session, corpus_id, meta_field,
+                                          unit=unit, min_freq=min_freq, limit=limit)
+        group_names = [g["name"] for g in r["groups"]]
+        headers = [unit.capitalize(), "Total"]
+        for g in group_names:
+            headers.extend([f"{g} (freq)", f"{g} (per M)"])
+        rows = []
+        for row in r["rows"]:
+            out = [row["item"], row["total"]]
+            for g in group_names:
+                cell = row["groups"].get(g, {})
+                out.extend([cell.get("freq", 0), cell.get("per_million", 0.0)])
+            rows.append(out)
+        return headers, rows
+
+    _PRODUCERS.update({
+        "ngrams": ngrams,
+        "pos_analysis": pos_analysis,
+        "dispersion": dispersion,
+        "vocab_profile": vocab_profile,
+        "readability": readability,
+        "document_stats": document_stats,
+        "group_frequency": group_frequency,
     })
 
 

@@ -39,10 +39,12 @@ log = get_logger(__name__)
 router = APIRouter()
 
 MEASURES = Literal[
-    "mi", "t_score", "log_likelihood", "dice", "log_dice", "chi_square", "delta_p"
+    "mi", "t_score", "log_likelihood", "dice", "log_dice", "chi_square", "delta_p",
+    "fisher",
 ]
 _ALL_MEASURE_KEYS = [
     "mi", "t_score", "log_likelihood", "dice", "log_dice", "chi_square", "delta_p",
+    "fisher",
 ]
 
 # stats.service spells delta-p as two directed keys; expose the x→y one as

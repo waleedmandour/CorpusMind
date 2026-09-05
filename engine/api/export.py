@@ -618,7 +618,7 @@ class EnqueueExportRequest(BaseModel):
     passed as keyword args to that producer. The shape mirrors the existing
     synchronous endpoints so the frontend can swap with minimal changes.
     """
-    producer: str = _Field(..., description="One of: concordance, frequency, collocations, keyness, keyness_with_reference")
+    producer: str = _Field(..., description="One of: concordance, frequency, collocations, keyness, keyness_with_reference, ngrams, pos_analysis, dispersion, vocab_profile, readability, document_stats, group_frequency")
     fmt: ExportFormat = _Field("xlsx", pattern="^(xlsx|csv|tsv|txt|json)$")
     sheet_name: str = _Field("Sheet1", max_length=31)
     excel_compatible: bool = True

@@ -27,6 +27,7 @@ from api import (
     system,
     troubleshoot,
     vision,
+    wordlists,
 )
 from app.logging import configure_logging, get_logger
 from app.settings import get_settings
@@ -157,6 +158,7 @@ def create_app() -> FastAPI:
     app.include_router(research.router, prefix="/api/v1", tags=["research"])
     app.include_router(reference_corpus.router, prefix="/api/v1", tags=["reference-corpus"])
     app.include_router(open_access.router, prefix="/api/v1", tags=["open-access"])
+    app.include_router(wordlists.router, prefix="/api/v1", tags=["wordlists"])
     return app
 
 
