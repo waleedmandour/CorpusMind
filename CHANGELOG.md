@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
-## [1.0.4] — 2026-09-05 — Windows installer hardening
+## [1.0.5] — 2026-09-05 — Windows installer hardening
 
 The v1.0.1 Windows packages could fail to install or appear broken on real
 machines. This release fixes every identified install-time defect for both
@@ -27,6 +27,10 @@ desktop apps.
 - **Publisher metadata**: Windows "Apps & features" and the MSI now show the
   authors ("Dr. Waleed Mandour (Sultan Qaboos University) & Prof. Wesam
   Ibrahim (PNU)") instead of the identifier fallback "corpusmind".
+- **Publisher metadata broke the MSI build**: the earlier publisher string
+  contained a raw ampersand which, embedded unescaped into the generated
+  WiX source, made candle abort on every Windows MSI bundle ("failed to
+  run ...candle.exe"). The publisher now uses "and".
 - **CI verification steps**: the Windows jobs' size/model verification steps
   called a broken `ath]::Round` (a corrupted `[math]::Round`) which crashed
   the steps with a PowerShell ParserError; syntax restored.
