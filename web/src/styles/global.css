@@ -772,6 +772,7 @@ code, pre { font-family: var(--font-mono); }
   flex-direction: column;
   align-items: center;
   gap: var(--space-2);
+  position: relative;
 }
 .network-title {
   font-size: 14px;
@@ -779,7 +780,7 @@ code, pre { font-family: var(--font-mono); }
   color: var(--text);
   margin: 0;
 }
-/* v1.2.0 (Issue 8): interactive network chrome */
+/* v1.0.0: Sigma.js WebGL network chrome */
 .network-header {
   inline-size: 100%;
   display: flex;
@@ -794,6 +795,22 @@ code, pre { font-family: var(--font-mono); }
   gap: var(--space-2);
   flex-wrap: wrap;
 }
+.network-measure-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.network-measure-select {
+  font-size: 12px;
+  padding: 3px 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  color: var(--text);
+}
 .network-stats {
   font-size: 11px;
   font-family: var(--font-mono);
@@ -803,27 +820,49 @@ code, pre { font-family: var(--font-mono); }
   color: var(--danger);
   font-weight: 600;
 }
+/* Sigma needs an explicitly sized, positioned container. */
 .network-canvas {
   inline-size: 100%;
-  max-inline-size: 680px;
-  block-size: auto;
-  background: var(--bg-subtle);
+  max-inline-size: 920px;
+  block-size: 560px;
+  background: linear-gradient(160deg, #f4f8f6 0%, #eaf2ee 100%);
   border-radius: var(--radius-md);
   border: 1px solid var(--border);
   cursor: grab;
   touch-action: none;
+  overflow: hidden;
+}
+.network-flash {
+  position: absolute;
+  z-index: 25;
+  inset-inline-start: 50%;
+  transform: translateX(-50%);
+  bottom: 52px;
+  padding: 6px 14px;
+  font-size: 12px;
+  background: #1b4d3e;
+  color: #f2f7f5;
+  border-radius: 999px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22);
+  pointer-events: none;
 }
 .network-tooltip {
-  position: absolute;
-  z-index: 20;
-  padding: 3px 8px;
+  position: fixed;
+  z-index: 40;
+  padding: 8px 12px;
   font-size: 11px;
+  line-height: 1.5;
   background: var(--bg-elevated);
   border: 1px solid var(--border-strong);
+  border-inline-start: 3px solid #1b4d3e;
   border-radius: var(--radius-sm);
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
   pointer-events: none;
   white-space: nowrap;
+  text-align: start;
+  max-inline-size: 340px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .network-menu {
   position: absolute;
@@ -6149,6 +6188,57 @@ html[dir="rtl"] .toggle-switch input:checked + .toggle-slider::before {
 .vision-action-msg {
   margin: var(--space-2) 0;
   white-space: pre-wrap;
+}
+
+/* First-run guidance card (v1.0.0): vision-model download + suite note */
+.vision-guidance {
+  margin: var(--space-3) 0;
+  padding: var(--space-3) var(--space-4);
+  background: linear-gradient(135deg, rgba(27, 77, 62, 0.07), rgba(27, 77, 62, 0.02));
+  border: 1px solid rgba(27, 77, 62, 0.25);
+  border-left: 4px solid #1b4d3e;
+  border-radius: var(--radius-md, 8px);
+  font-size: 13px;
+  line-height: 1.55;
+}
+.vision-guidance-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: var(--space-1);
+}
+.vision-guidance-header strong {
+  color: #1b4d3e;
+  font-size: 14px;
+}
+.vision-guidance-dismiss {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted, #6b7280);
+  font-size: 13px;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.vision-guidance-dismiss:hover { background: rgba(27, 77, 62, 0.1); }
+.vision-guidance-row { margin: var(--space-1) 0; }
+.vision-guidance-cmd {
+  display: inline-block;
+  padding: 3px 10px;
+  margin: var(--space-1) 0;
+  background: #1b4d3e;
+  color: #f2f7f5;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  user-select: all;
+}
+.vision-guidance-link { color: #1b4d3e; font-weight: 600; }
+.vision-guidance-crossapp {
+  border-top: 1px dashed rgba(27, 77, 62, 0.25);
+  padding-top: var(--space-2);
+  margin-top: var(--space-2);
 }
 
 /* Set picker label was previously unstyled */

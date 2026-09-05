@@ -207,6 +207,8 @@ export function VisionView() {
 
       {actionMsg && <div className="hint vision-action-msg">{actionMsg}</div>}
 
+      <VisionGuidance lang={lang} />
+
       {showNewSetForm && (
         <div className="vision-new-set-form">
           <input
@@ -434,6 +436,48 @@ function ImageSetWorkspace({
 
       <BatchRunnerPanel isetId={setId} />
       <BatchViewPanel isetId={setId} />
+    </div>
+  );
+}
+
+
+// ---------------------------------------------------------------------------
+// VisionGuidance — first-run guidance card (v1.0.0): where to get a vision
+// model + how the two apps of the suite interpret data together.
+// ---------------------------------------------------------------------------
+
+function VisionGuidance({ lang }: { lang: "en" | "ar" }) {
+  const [dismissed, setDismissed] = useState(false);
+  if (dismissed) return null;
+  return (
+    <div className="vision-guidance" dir={lang === "ar" ? "rtl" : "ltr"}>
+      <div className="vision-guidance-header">
+        <strong>{t(lang, "vision_guidance_title")}</strong>
+        <button
+          className="vision-guidance-dismiss"
+          onClick={() => setDismissed(true)}
+          aria-label={t(lang, "vision_cancel")}
+        >
+          ✕
+        </button>
+      </div>
+      <p className="vision-guidance-row">
+        {t(lang, "vision_guidance_models")}
+      </p>
+      <code className="vision-guidance-cmd">{t(lang, "vision_guidance_pull")}</code>
+      <p className="vision-guidance-row">
+        <a
+          href="https://ollama.com/library?q=vision"
+          target="_blank"
+          rel="noreferrer"
+          className="vision-guidance-link"
+        >
+          {t(lang, "vision_guidance_models_link")}
+        </a>
+      </p>
+      <p className="vision-guidance-row vision-guidance-crossapp">
+        {t(lang, "vision_guidance_crossapp")}
+      </p>
     </div>
   );
 }

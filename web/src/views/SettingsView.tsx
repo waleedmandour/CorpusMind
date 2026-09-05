@@ -315,7 +315,7 @@ export function SettingsView() {
               healthy={cloudOk}
               baseUrl="—"
               defaultModel="—"
-              description="Opt-in cloud provider (Anthropic / OpenAI). Off by default for privacy."
+              description="Opt-in cloud provider (Google Gemini, OpenAI, Anthropic, or any OpenAI-compatible API). Off by default for privacy."
             />
           </div>
 
@@ -1063,9 +1063,38 @@ function OllamaModelManager({ ollamaHealthy }: { ollamaHealthy: boolean }) {
 
 // ─── Cloud Provider Config (opt-in, consent-gated) ───────────────
 
+type CloudProvider = "openai" | "anthropic" | "gemini" | "custom";
+
+const CLOUD_PROVIDER_META: Record<CloudProvider, { label: string; hint: string; keyUrl: string; modelPlaceholder: string }> = {
+  gemini: {
+    label: "Google Gemini",
+    hint: "Generous free tier. Uses Google's OpenAI-compatible endpoint.",
+    keyUrl: "https://aistudio.google.com/apikey",
+    modelPlaceholder: "Model (optional, default gemini-2.5-flash)",
+  },
+  openai: {
+    label: "OpenAI",
+    hint: "GPT models via api.openai.com.",
+    keyUrl: "https://platform.openai.com/api-keys",
+    modelPlaceholder: "Model (optional, e.g. gpt-4o)",
+  },
+  anthropic: {
+    label: "Anthropic",
+    hint: "Claude models via api.anthropic.com.",
+    keyUrl: "https://console.anthropic.com/settings/keys",
+    modelPlaceholder: "Model (optional, e.g. claude-sonnet-4-5)",
+  },
+  custom: {
+    label: "Custom (OpenAI-compatible)",
+    hint: "Works with DeepSeek, Mistral, Groq, OpenRouter, xAI, Together, and any OpenAI-compatible endpoint.",
+    keyUrl: "",
+    modelPlaceholder: "Model (optional, e.g. deepseek-chat)",
+  },
+};
+
 function CloudProviderConfig() {
   const qc = useQueryClient();
-  const [provider, setProvider] = useState<"openai" | "anthropic">("openai");
+  const [provider, setProvider] = useState<CloudProvider>("gemini");
   const [apiKey, setApiKey] = useState("");
   const [showKey, setShowKey] = useState(false);
   const [model, setModel] = useState("");
@@ -1104,6 +1133,10 @@ function CloudProviderConfig() {
   });
 
   const isConfigured = config.data?.configured ?? false;
+  const meta = CLOUD_PROVIDER_META[provider];
+  const baseUrlRequired = provider === "custom";
+  const canSave =
+    !!apiKey.trim() && consent && !save.isPending && (!baseUrlRequired || !!baseUrl.trim());
 
   return (
     <div className="cloud-config-section" style={{ marginTop: "var(--space-3)", padding: "var(--space-3)", background: "var(--bg-subtle)", borderRadius: "var(--radius-md)", border: "1px solid var(--border)" }}>
@@ -1127,22 +1160,35 @@ function CloudProviderConfig() {
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
           <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
-            <select value={provider} onChange={(e) => setProvider(e.target.value as "openai" | "anthropic")} className="uploader-lang-dropdown">
-              <option value="openai">OpenAI</option>
-              <option value="anthropic">Anthropic</option>
+            <select value={provider} onChange={(e) => setProvider(e.target.value as CloudProvider)} className="uploader-lang-dropdown">
+              {(Object.keys(CLOUD_PROVIDER_META) as CloudProvider[]).map((p) => (
+                <option key={p} value={p}>{CLOUD_PROVIDER_META[p].label}</option>
+              ))}
             </select>
             <div style={{ position: "relative", flex: 1 }}>
               <input type={showKey ? "text" : "password"} value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder="API key" style={{ width: "100%", padding: "4px 8px", fontSize: "12px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }} />
               <button onClick={() => setShowKey(!showKey)} style={{ position: "absolute", right: "4px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", fontSize: "11px" }}>{showKey ? "Hide" : "Show"}</button>
             </div>
           </div>
-          <input type="text" value={model} onChange={(e) => setModel(e.target.value)} placeholder="Model (optional, e.g. gpt-4o)" style={{ padding: "4px 8px", fontSize: "12px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }} />
-          <input type="text" value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder="Base URL override (optional)" style={{ padding: "4px 8px", fontSize: "12px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }} />
+          <input type="text" value={model} onChange={(e) => setModel(e.target.value)} placeholder={meta.modelPlaceholder} style={{ padding: "4px 8px", fontSize: "12px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }} />
+          <input
+            type="text"
+            value={baseUrl}
+            onChange={(e) => setBaseUrl(e.target.value)}
+            placeholder={baseUrlRequired ? "Base URL (required, e.g. https://api.deepseek.com/v1)" : "Base URL override (optional)"}
+            style={{ padding: "4px 8px", fontSize: "12px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }}
+          />
+          <div className="settings-text-muted" style={{ fontSize: 11, lineHeight: 1.5 }}>
+            {meta.hint}
+            {meta.keyUrl && (
+              <> <a href={meta.keyUrl} target="_blank" rel="noreferrer" style={{ color: "var(--brand, #1b4d3e)" }}>Get a key ↗</a></>
+            )}
+          </div>
           <label style={{ display: "flex", alignItems: "center", gap: "var(--space-1)", fontSize: "12px", color: "var(--warning, #c77b0e)" }}>
             <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
             I understand that enabling this sends data to a third-party cloud API.
           </label>
-          <button className="btn-primary" disabled={!apiKey.trim() || !consent || save.isPending} onClick={() => save.mutate()}>
+          <button className="btn-primary" disabled={!canSave} onClick={() => save.mutate()}>
             {save.isPending ? "Saving..." : "Enable Cloud Provider"}
           </button>
         </div>
