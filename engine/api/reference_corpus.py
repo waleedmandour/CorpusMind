@@ -12,19 +12,26 @@ Exposes the reference-corpus subsystem over HTTP so the frontend can:
 
 All endpoints are prefixed with ``/api/v1/reference-corpora``.
 """
+
 from __future__ import annotations
 
+import asyncio
+import os
+import tarfile
+import tempfile
+import time
 import zipfile
 from pathlib import Path, PurePosixPath
 
-from fastapi import APIRouter, Depends, HTTPException
+import httpx
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.logging import get_logger
-from reference_corpus import (
-    get_manager,
-)
+from app.settings import get_settings
+from ingestion.service import ingest_document
+from reference_corpus import get_manager
 from reference_corpus.keyness_bridge import compute_keyness_with_reference_list
 from reference_corpus.manager import (
     ChecksumMismatchError,
@@ -116,7 +123,9 @@ async def download_reference(name: str) -> ReferenceDownloadResponse:
     try:
         entry = await mgr.download(name)
         return ReferenceDownloadResponse(
-            name=name, status="installed", installed=True,
+            name=name,
+            status="installed",
+            installed=True,
             message=f"Installed {entry.display_name} ({entry.size_bytes} bytes)",
         )
     except ChecksumMismatchError as e:
@@ -200,8 +209,12 @@ async def keyness_with_reference(
 
     try:
         r = await compute_keyness_with_reference_list(
-            session, cid, ref_name,
-            min_freq=body.min_freq, measures=body.measures, limit=body.limit,
+            session,
+            cid,
+            ref_name,
+            min_freq=body.min_freq,
+            measures=body.measures,
+            limit=body.limit,
         )
     except FileNotFoundError as e:
         raise HTTPException(404, str(e)) from e
@@ -222,18 +235,198 @@ async def keyness_with_reference(
 
 
 # --------------------------------------------------------------------------- #
-# v0.1.20: Full reference corpus download → extract → ingest
+# Full reference corpus download → extract → ingest
+#
+# v1.2.0 rewrite (user-reported OTA 504):
+#   The Oxford Text Archive gateway routinely fails large bitstream requests
+#   (HTTP 504 / hang) — reproduced for both BAWE (108 MB) and BNC Baby
+#   (22 MB). The old pipeline downloaded the ENTIRE archive into RAM in a
+#   single GET with no retries and no fallback, so any OTA hiccup failed the
+#   whole job with a raw httpx error string. The new pipeline:
+#
+#     1. Tries every URL in ``spec.source_urls`` (mirror fallback) in order.
+#     2. Per URL: streams to disk in 64 KB chunks with HTTP Range resume,
+#        retrying with backoff on transient failures.
+#     3. Reports REAL byte-level progress (0-49%) in the job status.
+#     4. Supports cancellation (POST .../download-full/cancel).
+#     5. Fails with an actionable message; the user can always download the
+#        archive manually in a browser and install it offline via
+#        POST .../import-archive (works even when every remote URL fails).
 # --------------------------------------------------------------------------- #
 
-
-# Fix #11: Track full-corpus download jobs so the UI can poll status
+# Job registry (Fix #11) + strong task references (Fix #12)
 _full_corpus_jobs: dict[str, dict] = {}
-
-# Fix #12: Keep strong references to background download tasks so asyncio
-# doesn't garbage-collect them mid-download. Python's own asyncio docs warn
-# about exactly this — create_task() returns a Task that may be GC'd if no
-# reference is held. See: https://docs.python.org/3/library/asyncio-task.html#asyncio.create_task
 _full_corpus_tasks: set = set()
+# Names for which the user requested cancellation (download-full path).
+_full_corpus_cancels: set[str] = set()
+
+# Download tuning. Module-level so tests can shrink the backoff.
+DOWNLOAD_ATTEMPTS_PER_URL = 2
+DOWNLOAD_RETRY_BACKOFF_S = (2.0, 4.0)
+DOWNLOAD_CHUNK_SIZE = 64 * 1024
+DOWNLOAD_CONNECT_TIMEOUT_S = 15.0
+DOWNLOAD_READ_TIMEOUT_S = 240.0
+DOWNLOAD_DEADLINE_S = 12 * 60.0  # overall cap across all URLs and attempts
+MAX_IMPORT_BYTES = 400 * 1024 * 1024  # safety cap for offline imports
+
+# Statuses that mean a job is still running.
+_ACTIVE_STATUSES = ("downloading", "extracting", "ingesting")
+
+
+class _DownloadCancelledError(Exception):
+    """Raised internally when the user cancels a full-corpus download."""
+
+
+class _NonArchiveContentError(Exception):
+    """The source returned 200 with non-archive bytes (HTML error page,
+    login page, …). Not retryable — the response would be identical."""
+
+
+def _set_job(job_id: str, **fields) -> None:
+    """Update a job dict in one call (keeps status transitions readable)."""
+    _full_corpus_jobs[job_id].update(fields)
+
+
+def _archive_dir() -> Path:
+    d = get_settings().data_dir / "reference-corpora" / "_archives"
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def _sniff_archive(path: Path) -> str:
+    """Detect archive type by magic bytes → ``'zip'`` | ``'gzip'`` | ``'unknown'``.
+
+    Fix #12 (v0.1.25): detection is by CONTENT, not URL suffix — the OTA
+    hosts archives at URLs ending in ``isAllowed=y``, so
+    ``endswith('.zip')`` never matched.
+    """
+    with open(path, "rb") as fh:
+        magic = fh.read(2)
+    if magic == b"PK":
+        return "zip"
+    if magic == b"\x1f\x8b":
+        return "gzip"
+    return "unknown"
+
+
+async def _download_archive(name: str, spec, job_id: str) -> tuple[Path, list[str]]:
+    """Download the archive for ``spec`` to disk, trying every source URL.
+
+    Returns ``(archive_path, tried_urls)``. Raises ``RuntimeError`` with an
+    actionable message once every source is exhausted. Partial downloads are
+    kept in a ``.part`` file and resumed (HTTP Range) on the next attempt,
+    so a flaky source costs bandwidth only once.
+    """
+    urls = (
+        list(spec.source_urls)
+        if spec.source_urls
+        else ([spec.source_url] if spec.source_url else [])
+    )
+    if not urls:
+        raise RuntimeError(f"Reference '{name}' has no download URL.")
+
+    part_path = _archive_dir() / f"{name}.part"
+    deadline = time.monotonic() + DOWNLOAD_DEADLINE_S
+    tried: list[str] = []
+    errors: list[str] = []
+
+    async with httpx.AsyncClient(
+        timeout=httpx.Timeout(DOWNLOAD_READ_TIMEOUT_S, connect=DOWNLOAD_CONNECT_TIMEOUT_S),
+        follow_redirects=True,
+    ) as client:
+        for url_index, url in enumerate(urls, start=1):
+            for attempt in range(DOWNLOAD_ATTEMPTS_PER_URL):
+                if name in _full_corpus_cancels:
+                    raise _DownloadCancelledError(name)
+                if time.monotonic() > deadline:
+                    break  # deadline hit — no point starting another attempt
+                tried.append(url)
+                existing = part_path.stat().st_size if part_path.exists() else 0
+                headers = {"Range": f"bytes={existing}-"} if existing > 0 else {}
+                label = (
+                    f"Downloading {name} "
+                    f"(source {url_index}/{len(urls)}, "
+                    f"attempt {attempt + 1}/{DOWNLOAD_ATTEMPTS_PER_URL})"
+                    f"{' — resuming' if existing > 0 else ''}"
+                )
+                _set_job(job_id, status="downloading", message=label + "…")
+                try:
+                    async with client.stream("GET", url, headers=headers) as resp:
+                        if resp.status_code == 416:
+                            # Range not satisfiable → the .part file already
+                            # holds the complete bytes (same convention as
+                            # reference_corpus.manager).
+                            pass
+                        elif resp.status_code >= 400:
+                            raise RuntimeError(f"HTTP {resp.status_code} fetching {url}")
+                        else:
+                            resume = resp.status_code == 206 and existing > 0
+                            done = existing if resume else 0
+                            total = None
+                            cl = resp.headers.get("content-length")
+                            if cl is not None and cl.isdigit():
+                                total = int(cl) + (existing if resume else 0)
+                            with open(part_path, "ab" if resume else "wb") as fh:
+                                async for chunk in resp.aiter_bytes():
+                                    if name in _full_corpus_cancels:
+                                        raise _DownloadCancelledError(name)
+                                    fh.write(chunk)
+                                    done += len(chunk)
+                                    if total:
+                                        _set_job(
+                                            job_id,
+                                            progress=min(int(50 * done / total), 49),
+                                            message=(
+                                                f"Downloading {name}: "
+                                                f"{done // (1024 * 1024)} MB / "
+                                                f"{max(total // (1024 * 1024), 1)} MB"
+                                            ),
+                                        )
+                                    else:
+                                        _set_job(
+                                            job_id,
+                                            message=f"Downloading {name}: {done // 1024} KB…",
+                                        )
+                    fmt = _sniff_archive(part_path)
+                    if fmt == "unknown":
+                        part_path.unlink(missing_ok=True)
+                        raise _NonArchiveContentError(
+                            "The server returned a non-archive response "
+                            "(expected ZIP or tar.gz magic bytes, got "
+                            f"{url})."
+                        )
+                    final_path = part_path.with_suffix(".zip" if fmt == "zip" else ".tar.gz")
+                    part_path.replace(final_path)
+                    return final_path, tried
+                except (_DownloadCancelledError, _NonArchiveContentError):
+                    raise
+                except Exception as e:
+                    # transient error must never kill the whole job.
+                    errors.append(f"{url} → {e}")
+                    log.warning(
+                        "download_full_attempt_failed",
+                        name=name,
+                        url=url,
+                        attempt=attempt + 1,
+                        error=str(e),
+                    )
+                    if attempt < DOWNLOAD_ATTEMPTS_PER_URL - 1:
+                        await asyncio.sleep(
+                            DOWNLOAD_RETRY_BACKOFF_S[
+                                min(attempt, len(DOWNLOAD_RETRY_BACKOFF_S) - 1)
+                            ]
+                        )
+
+    if part_path.exists():
+        log.info("download_full_partial_kept", name=name, bytes=part_path.stat().st_size)
+    raise RuntimeError(
+        "All download sources failed ("
+        + "; ".join(errors[-4:])
+        + f"). The source server may be down or overloaded — try again "
+        f"later, or download the archive manually in your browser and "
+        f"install it via 'Import archive' "
+        f"(POST /reference-corpora/{name}/import-archive)."
+    )
 
 
 def _validate_zip_members(zf: zipfile.ZipFile, dest: str) -> None:
@@ -253,38 +446,247 @@ def _validate_zip_members(zf: zipfile.ZipFile, dest: str) -> None:
             raise ValueError(f"Unsafe archive member path escapes destination: {name!r}")
 
 
+def _extract_text_files(archive_path: Path, spec, job_id: str) -> list[tuple[str, bytes, dict]]:
+    """Extract text documents from a downloaded/uploaded archive.
+
+    ZIP branch (BNC Baby, BAWE, mirror ZIPs): every ``.txt``/``.xml`` file
+    becomes a document; XML is parsed with BeautifulSoup restricted to
+    ``<text>``. tar.gz branch (Leipzig): ``*-sentences.txt`` TSVs become one
+    document per sentence.
+    """
+    text_files: list[tuple[str, bytes, dict]] = []
+    fmt = _sniff_archive(archive_path)
+
+    _set_job(job_id, status="extracting", progress=50, message="Extracting archive…")
+
+    if fmt == "gzip":
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with tarfile.open(archive_path, mode="r:gz") as tar:
+                # Issue 9 fix: "data" filter (Python 3.12+) rejects absolute
+                # paths, ".." traversal, symlinks and device files.
+                tar.extractall(tmpdir, filter="data")
+            for root, _d, files in os.walk(tmpdir):
+                for fname in files:
+                    if fname.endswith("-sentences.txt"):
+                        filepath = os.path.join(root, fname)
+                        with open(filepath, encoding="utf-8") as f:
+                            for line_num, line in enumerate(f):
+                                parts = line.strip().split("\t")
+                                if len(parts) >= 2:
+                                    text_files.append(
+                                        (
+                                            f"{fname}_{line_num}.txt",
+                                            parts[1].encode("utf-8"),
+                                            {"source": "leipzig", "genre": spec.genre},
+                                        )
+                                    )
+                        break
+    elif fmt == "zip":
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with zipfile.ZipFile(archive_path) as zf:
+                # Issue 9 fix: validate every member path before extraction —
+                # zipfile has no built-in "data" filter.
+                _validate_zip_members(zf, tmpdir)
+                zf.extractall(tmpdir)
+            for root, _d, files in os.walk(tmpdir):
+                dir_name = os.path.basename(root) if root != tmpdir else ""
+                genre = ""
+                if dir_name.lower() in ("aca", "academic"):
+                    genre = "academic"
+                elif dir_name.lower() in ("fic", "fiction"):
+                    genre = "fiction"
+                elif dir_name.lower() in ("news", "newspaper"):
+                    genre = "news"
+                elif dir_name.lower() in ("dem", "spoken", "conv"):
+                    genre = "spoken"
+                for fname in sorted(files):
+                    if fname.endswith((".txt", ".xml")):
+                        filepath = os.path.join(root, fname)
+                        try:
+                            with open(filepath, encoding="utf-8", errors="replace") as f:
+                                content = f.read()
+                            if fname.endswith(".xml"):
+                                from bs4 import BeautifulSoup
+
+                                soup = BeautifulSoup(content, "xml")
+                                # Restrict to <text> so <teiHeader>
+                                # bibliographic metadata isn't pulled into
+                                # the body. get_text() walks nested tags
+                                # correctly and visits each leaf text node
+                                # exactly once, in document order (Fix #13).
+                                # NOTE: named xml_root, NOT root — the outer
+                                # os.walk() loop above already uses `root`
+                                # for the current directory path.
+                                xml_root = soup.find("text") or soup
+                                content = xml_root.get_text(separator=" ")
+                                # BNC <w>/<c> tags are tightly packed with
+                                # irregular whitespace; collapse runs of
+                                # whitespace to single spaces.
+                                content = " ".join(content.split())
+                            if content.strip():
+                                text_files.append(
+                                    (
+                                        fname,
+                                        content.encode("utf-8"),
+                                        {"source": spec.name, "genre": genre or spec.genre},
+                                    )
+                                )
+                        except Exception as e:
+                            log.warning("extract_file_failed", file=fname, error=str(e))
+    else:
+        raise _NonArchiveContentError(
+            f"Archive {archive_path.name} is neither a valid ZIP (expected "
+            f"magic bytes b'PK') nor a valid tar.gz (expected magic bytes "
+            f"b'\\x1f\\x8b'). Got {_sniff_archive(archive_path)!r}."
+        )
+    return text_files
+
+
+async def _ingest_and_install(
+    name: str, spec, text_files: list[tuple[str, bytes, dict]], job_id: str
+) -> None:
+    """Create the Corpus row and ingest extracted documents (shared by the
+    download and offline-import paths)."""
+    from storage.models import Corpus as CorpusModel
+    from storage.models import Project
+    from storage.session import session_scope
+
+    _set_job(
+        job_id,
+        status="ingesting",
+        progress=60,
+        message=f"Ingesting {len(text_files)} documents…",
+    )
+
+    async with session_scope() as session:
+        from sqlalchemy import select as sa_select
+
+        stmt = sa_select(Project).where(Project.name == "Reference Corpora")
+        project = (await session.execute(stmt)).scalar_one_or_none()
+        if project is None:
+            project = Project(name="Reference Corpora")
+            session.add(project)
+            await session.flush()
+
+        stmt = sa_select(CorpusModel).where(
+            CorpusModel.project_id == project.id,
+            CorpusModel.name == spec.display_name,
+        )
+        existing = (await session.execute(stmt)).scalar_one_or_none()
+        if existing is not None:
+            _set_job(
+                job_id,
+                status="installed",
+                progress=100,
+                corpus_id=existing.id,
+                message="Already installed.",
+            )
+            return
+
+        corpus = CorpusModel(
+            project_id=project.id,
+            name=spec.display_name,
+            language=spec.language,
+            genre=spec.genre,
+        )
+        session.add(corpus)
+        await session.flush()
+
+        # v1.2.0: cap is a registry field now (was a hardcoded 500).
+        cap = max(1, int(getattr(spec, "max_files", 500)))
+        total = min(len(text_files), cap)
+        ingested = 0
+        for filename, content, meta in text_files[:cap]:
+            try:
+                await ingest_document(
+                    session,
+                    corpus,
+                    filename,
+                    content,
+                    metadata=meta,
+                    language=spec.language,
+                )
+                ingested += 1
+                if ingested % 10 == 0 or ingested == total:
+                    _set_job(
+                        job_id,
+                        progress=60 + int(39 * ingested / max(total, 1)),
+                        message=f"Ingesting {ingested}/{total}…",
+                    )
+            except Exception as e:
+                log.warning("ingest_reference_doc_failed", file=filename, error=str(e))
+
+        new_stats = dict(corpus.stats or {})
+        new_stats.update(
+            {
+                "document_count": ingested,
+                "reference_name": name,
+                "reference_license": spec.license,
+            }
+        )
+        corpus.stats = new_stats
+        await session.commit()
+
+        _set_job(
+            job_id,
+            status="installed",
+            progress=100,
+            corpus_id=corpus.id,
+            document_count=ingested,
+            message=f"Installed {ingested} documents.",
+        )
+        log.info(
+            "download_full_reference_complete",
+            name=name,
+            corpus_id=corpus.id,
+            ingested=ingested,
+        )
+
+
+async def _process_full_reference(name: str, spec, job_id: str) -> None:
+    """Background task: download → extract → ingest."""
+    try:
+        archive_path, _tried = await _download_archive(name, spec, job_id)
+        try:
+            text_files = await asyncio.to_thread(_extract_text_files, archive_path, spec, job_id)
+        finally:
+            # The archive is no longer needed once extraction has been
+            # attempted — remove it to avoid doubling disk usage.
+            archive_path.unlink(missing_ok=True)
+        if not text_files:
+            _set_job(
+                job_id,
+                status="failed",
+                message=(
+                    "Archive extracted successfully but contained no .txt or .xml files to ingest."
+                ),
+            )
+            return
+        await _ingest_and_install(name, spec, text_files, job_id)
+    except _DownloadCancelledError:
+        _full_corpus_cancels.discard(name)
+        _set_job(job_id, status="failed", message="Download cancelled.")
+        log.info("download_full_reference_cancelled", name=name)
+    except Exception as e:
+        _set_job(job_id, status="failed", message=str(e))
+        log.error("download_full_reference_failed", name=name, error=str(e))
+
+
 @router.post("/reference-corpora/{name}/download-full")
-async def download_full_reference(
-    name: str,
-) -> dict:
+async def download_full_reference(name: str) -> dict:
     """Download a full reference corpus (ZIP/tar.gz), extract text files,
     create a Corpus row, and ingest through the full NLP pipeline.
 
-    v0.1.20: This is the Phase 2 endpoint for full reference corpora
-    (BNC Baby, BAWE, Leipzig). Unlike the frequency-list download endpoint
-    (which just saves a TSV file), this endpoint:
+    v1.2.0: robust download pipeline — tries every source URL in
+    ``spec.source_urls`` (mirror fallback) with per-URL retries, backoff and
+    HTTP Range resume, streams to disk (no more 108 MB in RAM), reports
+    real byte-level progress, and supports cancellation. If every remote
+    source fails (e.g. the Oxford Text Archive gateway 504s), the message
+    explains the offline 'Import archive' path.
 
-    1. Downloads the archive (ZIP or tar.gz)
-    2. Extracts text files from the archive
-    3. Creates a new Corpus row (genre="reference")
-    4. Ingests each text file through the NLP pipeline
-    5. Tags documents with metadata (genre, register) for subcorpus support
-
-    The resulting Corpus row can be used with the standard keyness endpoint
-    (POST /corpora/{cid}/keyness) AND supports subcorpus filtering.
+    The job runs in the background; poll
+    ``GET /reference-corpora/{name}/download-full/status``.
     """
-    import io
-    import os
-    import tarfile
-    import tempfile
-    import zipfile
-
-    import httpx
-
-    from ingestion.service import ingest_document
-    from storage.models import Corpus as CorpusModel
-    from storage.models import Project
-
     mgr = get_manager()
     try:
         spec = mgr.spec(name)
@@ -298,12 +700,25 @@ async def download_full_reference(
             f"Use POST /reference-corpora/{name}/download instead.",
         )
 
-    if not spec.source_url:
+    if not (spec.source_urls or spec.source_url):
         raise HTTPException(400, f"Reference '{name}' has no download URL.")
 
     # Fix #11: Return a job ID immediately and process in background
     # to avoid HTTP timeouts on large downloads (BAWE is 108 MB + ingestion)
     job_id = f"fullref_{name}"
+    existing_job = _full_corpus_jobs.get(job_id)
+    if existing_job and existing_job.get("status") in _ACTIVE_STATUSES:
+        return {
+            "name": name,
+            "status": "started",
+            "job_id": job_id,
+            "message": (
+                f"An install for '{spec.display_name}' is already in "
+                f"progress — polling the existing job."
+            ),
+        }
+
+    _full_corpus_cancels.discard(name)
     _full_corpus_jobs[job_id] = {
         "name": name,
         "status": "downloading",
@@ -313,218 +728,9 @@ async def download_full_reference(
         "document_count": 0,
     }
 
-    async def _process_full_reference():
-        """Background task: download → extract → ingest."""
-
-        from storage.session import session_scope
-
-        try:
-            _full_corpus_jobs[job_id]["status"] = "downloading"
-            _full_corpus_jobs[job_id]["message"] = f"Downloading {name}…"
-            log.info("download_full_reference_start", name=name, url=spec.source_url)
-
-            async with httpx.AsyncClient(timeout=httpx.Timeout(300.0, connect=30.0)) as client:
-                resp = await client.get(spec.source_url, follow_redirects=True)
-                resp.raise_for_status()
-
-            archive_bytes = resp.content
-            _full_corpus_jobs[job_id]["message"] = f"Downloaded {len(archive_bytes) // 1024} KB. Extracting…"
-            _full_corpus_jobs[job_id]["status"] = "extracting"
-            log.info("download_full_reference_done", name=name, size=len(archive_bytes))
-
-            # Extract text files.
-            #
-            # Fix #12: Detect archive type by magic bytes (content sniffing),
-            # NOT by URL suffix. The OTA (Oxford Text Archive) hosts BNC Baby
-            # and BAWE at URLs like:
-            #     https://ota.bodleian.ox.ac.uk/.../2553.zip?sequence=3&isAllowed=y
-            # — the URL ends in "isAllowed=y", not ".zip", so the old
-            # `spec.source_url.endswith(".zip")` check never matched and the
-            # code silently skipped extraction ("No text files found in
-            # archive."). Magic-byte detection works regardless of URL.
-            text_files: list[tuple[str, bytes, dict]] = []
-
-            if len(archive_bytes) < 2:
-                _full_corpus_jobs[job_id]["status"] = "failed"
-                _full_corpus_jobs[job_id]["message"] = (
-                    f"Downloaded archive is only {len(archive_bytes)} bytes — "
-                    f"too small to be a valid ZIP or tar.gz."
-                )
-                return
-
-            # ZIP files start with b"PK", gzip files start with b"\x1f\x8b".
-            is_gzip = archive_bytes[:2] == b"\x1f\x8b"
-            is_zip = archive_bytes[:2] == b"PK"
-
-            if is_gzip:
-                with tempfile.TemporaryDirectory() as tmpdir:
-                    with tarfile.open(fileobj=io.BytesIO(archive_bytes), mode="r:gz") as tar:
-                        # Issue 9 fix: "data" filter (Python 3.12+) rejects
-                        # absolute paths, ".." traversal, symlinks and device
-                        # files — extraction can no longer escape tmpdir.
-                        tar.extractall(tmpdir, filter="data")
-                    for root, _d, files in os.walk(tmpdir):
-                        for fname in files:
-                            if fname.endswith("-sentences.txt"):
-                                filepath = os.path.join(root, fname)
-                                with open(filepath, encoding="utf-8") as f:
-                                    for line_num, line in enumerate(f):
-                                        parts = line.strip().split("\t")
-                                        if len(parts) >= 2:
-                                            text_files.append((
-                                                f"{fname}_{line_num}.txt",
-                                                parts[1].encode("utf-8"),
-                                                {"source": "leipzig", "genre": spec.genre},
-                                            ))
-                                break
-            elif is_zip:
-                with tempfile.TemporaryDirectory() as tmpdir:
-                    with zipfile.ZipFile(io.BytesIO(archive_bytes)) as zf:
-                        # Issue 9 fix: validate every member path before
-                        # extraction — zipfile has no built-in "data" filter.
-                        _validate_zip_members(zf, tmpdir)
-                        zf.extractall(tmpdir)
-                    for root, _d, files in os.walk(tmpdir):
-                        dir_name = os.path.basename(root) if root != tmpdir else ""
-                        genre = ""
-                        if dir_name.lower() in ("aca", "academic"):
-                                        genre = "academic"
-                        elif dir_name.lower() in ("fic", "fiction"):
-                                        genre = "fiction"
-                        elif dir_name.lower() in ("news", "newspaper"):
-                                        genre = "news"
-                        elif dir_name.lower() in ("dem", "spoken", "conv"):
-                                        genre = "spoken"
-                        for fname in sorted(files):
-                            if fname.endswith((".txt", ".xml")):
-                                filepath = os.path.join(root, fname)
-                                try:
-                                    with open(filepath, encoding="utf-8", errors="replace") as f:
-                                        content = f.read()
-                                    if fname.endswith(".xml"):
-                                        from bs4 import BeautifulSoup
-                                        soup = BeautifulSoup(content, "xml")
-                                        # BNC/TEI-XML nests <w>/<c> inside <s>,
-                                        # inside <p>, inside <div>/<text>/<body>.
-                                        # A parent tag's get_text() already
-                                        # includes all descendant text, so
-                                        # walking w/c/s/p/text/body and
-                                        # concatenating get_text() from each
-                                        # (the old code) appended every word's
-                                        # text once per ancestor level matched
-                                        # -- 3-4x duplicated, out-of-order text
-                                        # in every ingested document.
-                                        # BeautifulSoup's own get_text() already
-                                        # walks nested tags correctly and visits
-                                        # each leaf text node exactly once, in
-                                        # document order -- no manual
-                                        # accumulation needed. Restrict to
-                                        # <text> so <teiHeader> bibliographic
-                                        # metadata isn't pulled into the body.
-                                        # Note: named xml_root, NOT root -- the
-                                        # outer os.walk() loop above already
-                                        # uses `root` for the current directory
-                                        # path. Reusing that name here silently
-                                        # overwrote it after the first .xml file
-                                        # in any directory, so os.path.join(root,
-                                        # fname) crashed with "expected str,
-                                        # bytes or os.PathLike object, not
-                                        # BeautifulSoup"/"not Tag" on every
-                                        # subsequent file in that directory --
-                                        # which is every real multi-file BNC
-                                        # Baby genre folder.
-                                        xml_root = soup.find("text") or soup
-                                        content = xml_root.get_text(separator=" ")
-                                        # BNC <w>/<c> tags are tightly packed
-                                        # with irregular whitespace; collapse
-                                        # runs of whitespace to single spaces.
-                                        content = " ".join(content.split())
-                                    if content.strip():
-                                        text_files.append((fname, content.encode("utf-8"), {"source": name, "genre": genre or spec.genre}))
-                                except Exception as e:
-                                    log.warning("extract_file_failed", file=fname, error=str(e))
-            else:
-                # Genuinely unrecognized format — give the user a useful
-                # error rather than the misleading "No text files found".
-                _full_corpus_jobs[job_id]["status"] = "failed"
-                _full_corpus_jobs[job_id]["message"] = (
-                    f"Downloaded archive from {spec.source_url} is neither a "
-                    f"valid ZIP (expected magic bytes b'PK') nor a valid "
-                    f"tar.gz (expected magic bytes b'\\x1f\\x8b'). Got "
-                    f"{archive_bytes[:2]!r} ({len(archive_bytes)} bytes)."
-                )
-                return
-
-            if not text_files:
-                _full_corpus_jobs[job_id]["status"] = "failed"
-                _full_corpus_jobs[job_id]["message"] = (
-                    f"Archive extracted successfully but contained no .txt or "
-                    f".xml files. Inspected format: "
-                    f"{'tar.gz' if is_gzip else 'zip'}."
-                )
-                return
-
-            _full_corpus_jobs[job_id]["status"] = "ingesting"
-            _full_corpus_jobs[job_id]["message"] = f"Ingesting {len(text_files)} documents…"
-
-            # Create corpus + ingest in its own session
-            async with session_scope() as session:
-                from sqlalchemy import select as sa_select
-                stmt = sa_select(Project).where(Project.name == "Reference Corpora")
-                project = (await session.execute(stmt)).scalar_one_or_none()
-                if project is None:
-                    project = Project(name="Reference Corpora")
-                    session.add(project)
-                    await session.flush()
-
-                stmt = sa_select(CorpusModel).where(
-                    CorpusModel.project_id == project.id,
-                    CorpusModel.name == spec.display_name,
-                )
-                existing = (await session.execute(stmt)).scalar_one_or_none()
-                if existing is not None:
-                    _full_corpus_jobs[job_id]["status"] = "installed"
-                    _full_corpus_jobs[job_id]["corpus_id"] = existing.id
-                    _full_corpus_jobs[job_id]["message"] = "Already installed."
-                    return
-
-                corpus = CorpusModel(
-                    project_id=project.id, name=spec.display_name,
-                    language=spec.language, genre=spec.genre,
-                )
-                session.add(corpus)
-                await session.flush()
-
-                ingested = 0
-                for filename, content, meta in text_files[:500]:
-                    try:
-                        await ingest_document(session, corpus, filename, content, metadata=meta, language=spec.language)
-                        ingested += 1
-                        if ingested % 10 == 0:
-                            _full_corpus_jobs[job_id]["message"] = f"Ingesting {ingested}/{len(text_files)}…"
-                    except Exception as e:
-                        log.warning("ingest_reference_doc_failed", file=filename, error=str(e))
-
-                new_stats = dict(corpus.stats or {})
-                new_stats.update({"document_count": ingested, "reference_name": name, "reference_license": spec.license})
-                corpus.stats = new_stats
-                await session.commit()
-
-                _full_corpus_jobs[job_id]["status"] = "installed"
-                _full_corpus_jobs[job_id]["corpus_id"] = corpus.id
-                _full_corpus_jobs[job_id]["document_count"] = ingested
-                _full_corpus_jobs[job_id]["message"] = f"Installed {ingested} documents."
-                log.info("download_full_reference_complete", name=name, corpus_id=corpus.id, ingested=ingested)
-
-        except Exception as e:
-            _full_corpus_jobs[job_id]["status"] = "failed"
-            _full_corpus_jobs[job_id]["message"] = str(e)
-            log.error("download_full_reference_failed", name=name, error=str(e))
-
-    import asyncio
     # Fix #12: hold a strong reference so asyncio doesn't GC the task
     # mid-download. Discard from the set once complete so we don't leak.
-    task = asyncio.create_task(_process_full_reference())
+    task = asyncio.create_task(_process_full_reference(name, spec, job_id))
     _full_corpus_tasks.add(task)
     task.add_done_callback(_full_corpus_tasks.discard)
 
@@ -536,9 +742,128 @@ async def download_full_reference(
     }
 
 
+@router.post("/reference-corpora/{name}/download-full/cancel")
+async def cancel_full_reference(name: str) -> dict:
+    """Request cancellation of an in-flight full-corpus install. Idempotent."""
+    job = _full_corpus_jobs.get(f"fullref_{name}")
+    active = bool(job and job.get("status") in _ACTIVE_STATUSES)
+    if active:
+        _full_corpus_cancels.add(name)
+    return {"name": name, "cancel_requested": active}
+
+
+@router.post("/reference-corpora/{name}/import-archive")
+async def import_full_reference(
+    name: str,
+    file: UploadFile = File(...),
+) -> dict:
+    """Offline import: install a full reference corpus from a manually
+    downloaded archive (ZIP or tar.gz).
+
+    This is the guaranteed path when every remote source fails (the Oxford
+    Text Archive gateway routinely 504s on large bitstream responses, while
+    browsers cope much better). The user downloads the archive in their
+    browser, then uploads it here; extraction + ingestion run in the same
+    background job used by ``download-full`` (same status endpoint).
+
+    The upload is streamed to disk in chunks and rejected early if it is
+    not a real archive (magic-byte sniff) or exceeds the size cap.
+    """
+    mgr = get_manager()
+    try:
+        spec = mgr.spec(name)
+    except UnknownReferenceError as e:
+        raise HTTPException(404, str(e)) from e
+
+    if spec.format != "full_corpus":
+        raise HTTPException(
+            400,
+            f"Reference '{name}' is a {spec.format} reference; offline "
+            f"import applies to full_corpus references.",
+        )
+
+    job_id = f"fullref_{name}"
+    existing_job = _full_corpus_jobs.get(job_id)
+    if existing_job and existing_job.get("status") in _ACTIVE_STATUSES:
+        raise HTTPException(409, f"An install for '{name}' is already in progress.")
+
+    part_path = _archive_dir() / f"{name}.import.part"
+    size = 0
+    try:
+        with open(part_path, "wb") as fh:
+            while True:
+                chunk = await file.read(DOWNLOAD_CHUNK_SIZE)
+                if not chunk:
+                    break
+                size += len(chunk)
+                if size > MAX_IMPORT_BYTES:
+                    raise HTTPException(
+                        413,
+                        f"Archive exceeds the {MAX_IMPORT_BYTES // (1024 * 1024)} MB "
+                        f"offline-import limit.",
+                    )
+                fh.write(chunk)
+    finally:
+        await file.close()
+
+    fmt = _sniff_archive(part_path) if size >= 2 else "unknown"
+    if fmt == "unknown":
+        part_path.unlink(missing_ok=True)
+        raise HTTPException(
+            400,
+            "The uploaded file is neither a valid ZIP nor a tar.gz archive "
+            "(magic bytes mismatch). Re-download the archive from the "
+            "source page and try again.",
+        )
+
+    final_path = part_path.with_suffix(".zip" if fmt == "zip" else ".tar.gz")
+    part_path.replace(final_path)
+
+    _full_corpus_jobs[job_id] = {
+        "name": name,
+        "status": "extracting",
+        "progress": 50,
+        "message": f"Imported archive ({size // (1024 * 1024)} MB). Extracting…",
+        "corpus_id": None,
+        "document_count": 0,
+    }
+
+    async def _process_import() -> None:
+        try:
+            try:
+                text_files = await asyncio.to_thread(_extract_text_files, final_path, spec, job_id)
+            finally:
+                final_path.unlink(missing_ok=True)
+            if not text_files:
+                _set_job(
+                    job_id,
+                    status="failed",
+                    message=("Archive contained no .txt or .xml files to ingest."),
+                )
+                return
+            await _ingest_and_install(name, spec, text_files, job_id)
+        except Exception as e:
+            _set_job(job_id, status="failed", message=str(e))
+            log.error("import_full_reference_failed", name=name, error=str(e))
+
+    task = asyncio.create_task(_process_import())
+    _full_corpus_tasks.add(task)
+    task.add_done_callback(_full_corpus_tasks.discard)
+
+    return {
+        "name": name,
+        "status": "started",
+        "job_id": job_id,
+        "message": (
+            f"Archive accepted for '{spec.display_name}'. Poll "
+            f"GET /reference-corpora/{name}/download-full/status for progress."
+        ),
+    }
+
+
 @router.get("/reference-corpora/{name}/download-full/status")
 async def download_full_status(name: str) -> dict:
-    """Poll the status of a full-corpus download job."""
+    """Poll the status of a full-corpus download/import job."""
     job_id = f"fullref_{name}"
     job = _full_corpus_jobs.get(job_id)
     if not job:

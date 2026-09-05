@@ -22,6 +22,7 @@ These tests run without network access and without spaCy — they patch
 download → extract → ingest path is exercised end-to-end without any
 external dependency.
 """
+
 from __future__ import annotations
 
 import io
@@ -44,11 +45,14 @@ async def client():
     os.environ["CORPUSMIND_DATA_DIR"] = "/tmp/cm-test-archive-data"
 
     from app.settings import get_settings
+
     get_settings.cache_clear()
     from storage.session import _engine, dispose_db
+
     _engine.clear() if hasattr(_engine, "clear") else None
 
     from app.main import app
+
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         async with app.router.lifespan_context(app):
             yield ac
@@ -70,15 +74,67 @@ async def _wait_for_job(client, name: str, *, timeout_s: float = 5.0) -> dict:
     pytest.fail(f"Job for {name} did not reach terminal state within {timeout_s}s")
 
 
-class _FakeResponse:
-    """Minimal stand-in for an httpx.Response — only the attributes the
-    background task actually touches."""
+class _FakeStreamResponse:
+    """Minimal stand-in for an httpx streaming response — only the
+    attributes the v1.2.0 download pipeline touches."""
 
-    def __init__(self, content: bytes):
+    def __init__(self, content: bytes, status_code: int = 200):
         self.content = content
+        self.status_code = status_code
+        self.headers = {"content-length": str(len(content))}
 
     def raise_for_status(self) -> None:
         return None
+
+    async def aiter_bytes(self):
+        yield self.content
+
+
+class _FakeStreamContext:
+    """Async context manager returned by the fake ``client.stream()``."""
+
+    def __init__(self, response: _FakeStreamResponse):
+        self._response = response
+
+    async def __aenter__(self) -> _FakeStreamResponse:
+        return self._response
+
+    async def __aexit__(self, *args) -> bool:
+        return False
+
+
+def _make_fake_client(route):
+    """Build a fake httpx.AsyncClient class whose ``stream()`` calls
+    ``route(url)`` to decide the outcome:
+
+      * ``bytes``              → 200 streaming response with those bytes
+      * ``int``                → streaming response with that HTTP status
+      * ``Exception`` instance → raised synchronously by ``stream()``
+      * ``None``               → 200 with an empty body
+
+    ``route`` is consulted once per (url, attempt) so tests can model
+    retries (e.g. pop from a list of outcomes).
+    """
+
+    class _FakeAsyncClient:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args):
+            return False
+
+        def stream(self, method, url, **kwargs):
+            outcome = route(url)
+            if isinstance(outcome, Exception):
+                raise outcome
+            if isinstance(outcome, int):
+                return _FakeStreamContext(_FakeStreamResponse(b"", status_code=outcome))
+            return _FakeStreamContext(_FakeStreamResponse(outcome or b""))
+
+    return _FakeAsyncClient
 
 
 def _build_zip_archive(files: dict[str, str]) -> bytes:
@@ -108,20 +164,13 @@ def _patch_download(monkeypatch, archive_bytes: bytes) -> list[str]:
     so individual tests can assert on it."""
     import httpx
 
-    class _FakeAsyncClient:
-        def __init__(self, *args, **kwargs):
-            pass
+    seen_urls: list[str] = []
 
-        async def __aenter__(self):
-            return self
+    def _route(url: str):
+        seen_urls.append(url)
+        return archive_bytes
 
-        async def __aexit__(self, *args):
-            return False
-
-        async def get(self, url, **kwargs):
-            return _FakeResponse(archive_bytes)
-
-    monkeypatch.setattr(httpx, "AsyncClient", _FakeAsyncClient)
+    monkeypatch.setattr(httpx, "AsyncClient", _make_fake_client(_route))
 
     import ingestion.service as ingest_mod
 
@@ -132,9 +181,10 @@ def _patch_download(monkeypatch, archive_bytes: bytes) -> list[str]:
         return None
 
     monkeypatch.setattr(ingest_mod, "ingest_document", _fake_ingest)
-    # The endpoint imports ingest_document by name at call time, so patch
-    # the symbol the endpoint module looks up too.
+    # The endpoint imports ingest_document at module level, so patch the
+    # symbol the endpoint module looks up too.
     import api.reference_corpus as api_ref
+
     monkeypatch.setattr(api_ref, "ingest_document", _fake_ingest, raising=False)
     return ingested_files
 
@@ -181,12 +231,14 @@ async def test_zip_with_query_string_url_is_extracted(client, monkeypatch):
     "No text files found in archive."
     """
     # Build a ZIP that mimics BNC Baby's structure: Texts/<Genre>/<file>.txt
-    zip_bytes = _build_zip_archive({
-        "Texts/Aca/AA.txt": "Academic writing sample one. Another sentence here.",
-        "Texts/Fic/FN.txt": "Once upon a time, in a galaxy far far away.",
-        "Texts/News/ABC.txt": "LONDON — The government announced new policy today.",
-        "Texts/Dem/KS.txt": "Right so I was walking down the pub the other day.",
-    })
+    zip_bytes = _build_zip_archive(
+        {
+            "Texts/Aca/AA.txt": "Academic writing sample one. Another sentence here.",
+            "Texts/Fic/FN.txt": "Once upon a time, in a galaxy far far away.",
+            "Texts/News/ABC.txt": "LONDON — The government announced new policy today.",
+            "Texts/Dem/KS.txt": "Right so I was walking down the pub the other day.",
+        }
+    )
 
     ingested_files = _patch_download(monkeypatch, zip_bytes)
 
@@ -239,23 +291,34 @@ async def test_bawe_zip_with_query_string_url_is_extracted(client, monkeypatch):
     assert bawe_spec.source_url.endswith("isAllowed=y"), (
         f"BAWE URL no longer ends in 'isAllowed=y': {bawe_spec.source_url!r}"
     )
+    # v1.2.0: BAWE must declare a mirror list whose LAST entry is the
+    # canonical OTA URL and which includes a project-hosted mirror.
+    assert bawe_spec.source_urls, "BAWE must list source_urls (mirror fallback)"
+    assert bawe_spec.source_urls[-1] == bawe_spec.source_url, (
+        "The canonical OTA URL must be the LAST entry in source_urls"
+    )
+    assert any(
+        "github.com/waleedmandour/CorpusMind/releases" in u for u in bawe_spec.source_urls
+    ), f"BAWE must list a project-hosted mirror: {bawe_spec.source_urls!r}"
 
     # BAWE is organized by discipline + level. Build a ZIP with a small
     # representative subset mirroring that structure.
-    zip_bytes = _build_zip_archive({
-        "BAWE/A/Arts/Level1/0113a.txt": (
-            "This essay examines the representation of women in Victorian novels."
-        ),
-        "BAWE/A/SocialSciences/Level2/0214b.txt": (
-            "The demographic transition model describes four stages of population change."
-        ),
-        "BAWE/A/PhysicalSciences/Level3/0315c.txt": (
-            "The Michaelis-Menten equation describes enzyme kinetics."
-        ),
-        "BAWE/A/LifeSciences/Level4/0416d.txt": (
-            "Photosynthesis converts light energy into chemical energy stored in glucose."
-        ),
-    })
+    zip_bytes = _build_zip_archive(
+        {
+            "BAWE/A/Arts/Level1/0113a.txt": (
+                "This essay examines the representation of women in Victorian novels."
+            ),
+            "BAWE/A/SocialSciences/Level2/0214b.txt": (
+                "The demographic transition model describes four stages of population change."
+            ),
+            "BAWE/A/PhysicalSciences/Level3/0315c.txt": (
+                "The Michaelis-Menten equation describes enzyme kinetics."
+            ),
+            "BAWE/A/LifeSciences/Level4/0416d.txt": (
+                "Photosynthesis converts light energy into chemical energy stored in glucose."
+            ),
+        }
+    )
 
     ingested_files = _patch_download(monkeypatch, zip_bytes)
 
@@ -282,13 +345,15 @@ async def test_targz_leipzig_path_still_works(client, monkeypatch):
     """Regression guard: the tar.gz branch (used by Leipzig 10K corpora)
     must continue to work after the magic-byte refactor."""
     # Leipzig sentence files are TSV: id<TAB>sentence
-    targz_bytes = _build_targz_archive({
-        "eng_news_2023_10K-sentences.txt": (
-            "1\tThe prime minister held a press conference today.\n"
-            "2\tScientists discovered a new species in the Amazon.\n"
-            "3\tThe stock market closed higher on Friday.\n"
-        ),
-    })
+    targz_bytes = _build_targz_archive(
+        {
+            "eng_news_2023_10K-sentences.txt": (
+                "1\tThe prime minister held a press conference today.\n"
+                "2\tScientists discovered a new species in the Amazon.\n"
+                "3\tThe stock market closed higher on Friday.\n"
+            ),
+        }
+    )
 
     _patch_download(monkeypatch, targz_bytes)
 
@@ -316,20 +381,10 @@ async def test_unrecognized_format_produces_clear_error(client, monkeypatch):
     # NOTE: no ingest stub needed — the task fails before ingestion runs.
     import httpx
 
-    class _FakeAsyncClient:
-        def __init__(self, *args, **kwargs):
-            pass
+    def _route(url: str):
+        return garbage
 
-        async def __aenter__(self):
-            return self
-
-        async def __aexit__(self, *args):
-            return False
-
-        async def get(self, url, **kwargs):
-            return _FakeResponse(garbage)
-
-    monkeypatch.setattr(httpx, "AsyncClient", _FakeAsyncClient)
+    monkeypatch.setattr(httpx, "AsyncClient", _make_fake_client(_route))
 
     r = await client.post("/api/v1/reference-corpora/bnc-baby/download-full")
     assert r.status_code == 200, r.text
@@ -353,6 +408,7 @@ def test_background_task_set_exists():
     """Fix #12: the module exposes a strong-reference set for background
     tasks so asyncio cannot GC them mid-download."""
     import api.reference_corpus as api_ref
+
     assert hasattr(api_ref, "_full_corpus_tasks"), (
         "_full_corpus_tasks set must exist to hold strong refs to background "
         "download tasks (Fix #12)."
@@ -381,11 +437,13 @@ def _bnc_xml(word1: str, word2: str) -> str:
 async def test_multiple_xml_files_in_same_directory_all_extract(client, monkeypatch):
     """Reproduces Fix #13: a genre folder with 3 .xml files must extract
     all 3, not crash on the 2nd file with a root-variable TypeError."""
-    zip_bytes = _build_zip_archive({
-        "Texts/Aca/AA0.xml": _bnc_xml("First", "document"),
-        "Texts/Aca/AA1.xml": _bnc_xml("Second", "document"),
-        "Texts/Aca/AA2.xml": _bnc_xml("Third", "document"),
-    })
+    zip_bytes = _build_zip_archive(
+        {
+            "Texts/Aca/AA0.xml": _bnc_xml("First", "document"),
+            "Texts/Aca/AA1.xml": _bnc_xml("Second", "document"),
+            "Texts/Aca/AA2.xml": _bnc_xml("Third", "document"),
+        }
+    )
 
     ingested_files = _patch_download(monkeypatch, zip_bytes)
 
@@ -396,11 +454,184 @@ async def test_multiple_xml_files_in_same_directory_all_extract(client, monkeypa
     assert job["status"] == "installed", (
         f"Expected installed, got: {job!r}. Without the fix this fails on "
         f"the 2nd .xml file in the directory with "
-        f"\"TypeError: expected str, bytes or os.PathLike object, not "
-        f"BeautifulSoup\" (or \"not Tag\")."
+        f'"TypeError: expected str, bytes or os.PathLike object, not '
+        f'BeautifulSoup" (or "not Tag").'
     )
     assert job["document_count"] == 3, f"Expected 3 docs, got {job['document_count']}"
     assert len(ingested_files) == 3
+
+
+# --------------------------------------------------------------------------- #
+# v1.2.0 tests — robust download pipeline (retries, mirrors, offline import)
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.asyncio
+async def test_download_retries_on_504_then_succeeds(client, monkeypatch):
+    """A transient 504 from the source gateway must NOT fail the job: the
+    pipeline retries the same URL (with backoff) before moving on."""
+    import api.reference_corpus as api_ref
+
+    monkeypatch.setattr(api_ref, "DOWNLOAD_RETRY_BACKOFF_S", (0.01, 0.01))
+
+    zip_bytes = _build_zip_archive({"Texts/Aca/AA0.xml": _bnc_xml("Retry", "success")})
+    ingested_files = _patch_download(monkeypatch, zip_bytes)
+
+    outcomes = [504, zip_bytes]  # first attempt 504 → second succeeds
+    import httpx
+
+    def _route(url: str):
+        return outcomes.pop(0)
+
+    monkeypatch.setattr(httpx, "AsyncClient", _make_fake_client(_route))
+
+    r = await client.post("/api/v1/reference-corpora/bnc-baby/download-full")
+    assert r.status_code == 200, r.text
+
+    job = await _wait_for_job(client, "bnc-baby")
+    assert job["status"] == "installed", (
+        f"A single transient 504 should be retried, not fatal: {job!r}"
+    )
+    assert job["document_count"] == 1
+    assert len(ingested_files) == 1
+
+
+@pytest.mark.asyncio
+async def test_download_falls_back_between_mirror_and_canonical(client, monkeypatch):
+    """v1.2.0 mirror fallback, OTA direction: the project-hosted mirror is
+    tried FIRST; when it fails, the pipeline falls back to the canonical
+    OTA URL and still installs."""
+    import httpx
+
+    import api.reference_corpus as api_ref
+
+    monkeypatch.setattr(api_ref, "DOWNLOAD_RETRY_BACKOFF_S", (0.01, 0.01))
+
+    zip_bytes = _build_zip_archive(
+        {
+            "BAWE/A/Arts/Level1/0113a.txt": "Mirror fallback document text.",
+        }
+    )
+    _patch_download(monkeypatch, zip_bytes)
+
+    seen_urls: list[str] = []
+
+    def _route(url: str):
+        seen_urls.append(url)
+        if "github.com/waleedmandour/CorpusMind/releases" in url:
+            return 404  # mirror asset missing → fall through
+        return zip_bytes  # canonical OTA URL serves the archive
+
+    monkeypatch.setattr(httpx, "AsyncClient", _make_fake_client(_route))
+
+    r = await client.post("/api/v1/reference-corpora/bawe/download-full")
+    assert r.status_code == 200, r.text
+
+    job = await _wait_for_job(client, "bawe")
+    assert job["status"] == "installed", f"Mirror→OTA fallback failed: {job!r}"
+    assert job["document_count"] == 1
+    # The mirror must have been attempted before the OTA URL.
+    assert "github.com/waleedmandour/CorpusMind/releases" in seen_urls[0], (
+        f"Mirror should be tried first, saw: {seen_urls!r}"
+    )
+    assert any("ota.bodleian" in u for u in seen_urls)
+
+
+@pytest.mark.asyncio
+async def test_all_sources_fail_gives_actionable_message(client, monkeypatch):
+    """When every source fails, the job message must tell the user about
+    the offline 'Import archive' path instead of surfacing a raw httpx
+    error string."""
+    import httpx
+
+    import api.reference_corpus as api_ref
+
+    monkeypatch.setattr(api_ref, "DOWNLOAD_RETRY_BACKOFF_S", (0.01, 0.01))
+
+    _patch_download(monkeypatch, b"unused")
+
+    def _route(url: str):
+        return 504
+
+    monkeypatch.setattr(httpx, "AsyncClient", _make_fake_client(_route))
+
+    r = await client.post("/api/v1/reference-corpora/bnc-baby/download-full")
+    assert r.status_code == 200, r.text
+
+    job = await _wait_for_job(client, "bnc-baby", timeout_s=10)
+    assert job["status"] == "failed", f"Expected failed, got: {job!r}"
+    msg = job["message"]
+    assert "All download sources failed" in msg
+    assert "Import archive" in msg, f"Failure must point to the offline import path: {msg!r}"
+    # No raw httpx exception text may leak as the WHOLE message.
+    assert not msg.startswith("Server error"), msg
+
+
+@pytest.mark.asyncio
+async def test_import_archive_endpoint_installs_corpus(client, monkeypatch):
+    """Offline import: uploading a manually downloaded ZIP installs the
+    corpus through the same extract→ingest pipeline as download-full."""
+    zip_bytes = _build_zip_archive(
+        {
+            "BAWE/A/Arts/Level1/0113a.txt": "Imported document text.",
+        }
+    )
+    ingested_files = _patch_download(monkeypatch, zip_bytes)
+
+    r = await client.post(
+        "/api/v1/reference-corpora/bawe/import-archive",
+        files={"file": ("2539.zip", zip_bytes, "application/zip")},
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["status"] == "started", body
+
+    job = await _wait_for_job(client, "bawe")
+    assert job["status"] == "installed", f"Import failed: {job!r}"
+    assert job["document_count"] == 1
+    assert len(ingested_files) == 1
+
+
+@pytest.mark.asyncio
+async def test_import_archive_rejects_non_archive(client):
+    """Uploading a non-archive file must fail fast with a clear magic-bytes
+    error — not extract garbage or fail obscurely later."""
+    r = await client.post(
+        "/api/v1/reference-corpora/bawe/import-archive",
+        files={"file": ("page.html", b"<html>not an archive</html>", "text/html")},
+    )
+    assert r.status_code == 400, r.text
+    assert "magic bytes" in r.json()["detail"], r.text
+
+
+@pytest.mark.asyncio
+async def test_max_files_cap_is_a_registry_field(client, monkeypatch):
+    """v1.2.0: the ingestion cap moved from a hardcoded 500 to the registry
+    field ``ReferenceCorpusSpec.max_files`` — the endpoint must honor it."""
+    import dataclasses
+
+    import api.reference_corpus as api_ref
+    from reference_corpus.registry import BUNDLED_REFERENCES
+
+    files = {f"doc{i}.txt": f"Document number {i} body text." for i in range(6)}
+    zip_bytes = _build_zip_archive(files)
+    _patch_download(monkeypatch, zip_bytes)
+
+    bawe_spec = next(s for s in BUNDLED_REFERENCES if s.name == "bawe")
+    capped = dataclasses.replace(bawe_spec, max_files=2)
+
+    class _StubMgr:
+        def spec(self, name):
+            return capped
+
+    monkeypatch.setattr(api_ref, "get_manager", lambda: _StubMgr())
+
+    r = await client.post("/api/v1/reference-corpora/bawe/download-full")
+    assert r.status_code == 200, r.text
+
+    job = await _wait_for_job(client, "bawe")
+    assert job["status"] == "installed", f"{job!r}"
+    assert job["document_count"] == 2, f"max_files=2 cap ignored, ingested {job['document_count']}"
 
 
 if __name__ == "__main__":

@@ -18,6 +18,7 @@ Adding a new bundled reference:
        - ``json_freq`` — ``[{"word": ..., "freq": ...}, ...]``
      The ``keyness_bridge`` knows how to load all three.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -75,6 +76,12 @@ class ReferenceCorpusSpec:
     """APA/author-date citation string. Surfaced in the UI for the same
     reason as ``license``."""
 
+    source_urls: tuple[str, ...] = field(default_factory=tuple)
+    """Ordered download sources (v1.2.0), tried first-to-last by the
+    full-corpus pipeline, each with retries + HTTP Range resume. Empty
+    tuple → fall back to ``source_url`` alone. List a fast, dependable
+    mirror BEFORE the canonical (but sometimes flaky) source URL."""
+
     genre: str = "mixed"
     """Register/genre tag (academic, news, spoken, fiction, blog, legal,
     medical, mixed). Used for register-aware keyness warnings."""
@@ -82,6 +89,11 @@ class ReferenceCorpusSpec:
     min_corpus_tokens: int = 1_000
     """Soft minimum target-corpus size below which this reference is not
     recommended. The UI shows a warning, not a hard block."""
+
+    max_files: int = 500
+    """v1.2.0: maximum number of documents ingested from a full-corpus
+    archive (was a hardcoded 500 in the API layer). Keeps install time and
+    DB size predictable for very large archives."""
 
     tags: tuple[str, ...] = field(default_factory=tuple)
     """Free-form tags for filtering (e.g. ``("written", "british")``)."""
@@ -230,7 +242,11 @@ BUNDLED_REFERENCES: list[ReferenceCorpusSpec] = [
             "BNC Baby is a 4-million-word sample of the British National "
             "Corpus, containing four 1-million-word subcorpora: academic "
             "writing, fiction, newspapers, and spoken conversation. "
-            "Downloaded as a ZIP from the Oxford Text Archive (22 MB). "
+            "Downloaded as a ZIP from the Oxford Text Archive (22 MB) — a "
+            "gateway that routinely 504s on large responses, so if the "
+            "download fails, fetch the ZIP manually on the source page and "
+            "install it via 'Import archive'. NOTE: the BNC User Licence "
+            "does not permit redistribution, so no mirror is offered. "
             "After download, it is ingested through the full NLP pipeline "
             "(tokenize → tag → lemmatize → parse) and becomes a proper "
             "Corpus row with subcorpus support for register-matched keyness."
@@ -264,13 +280,33 @@ BUNDLED_REFERENCES: list[ReferenceCorpusSpec] = [
             "English, containing 2,761 student assignments across four "
             "disciplines (Arts/Humanities, Social Sciences, Physical "
             "Sciences, Life Sciences) and four levels (1st year through "
-            "Masters). Downloaded as a ZIP from the Oxford Text Archive "
-            "(108 MB). Ingested through the full NLP pipeline with "
-            "discipline and level metadata for subcorpus filtering."
+            "Masters). Installs a 500-assignment sample ingested through "
+            "the full NLP pipeline with discipline and level metadata for "
+            "subcorpus filtering. Download sources: a processed mirror ZIP "
+            "hosted on this project's GitHub releases (tried first — CC-"
+            "BY-NC-SA-3.0 permits redistribution with attribution), then "
+            "the canonical Oxford Text Archive ZIP (108 MB), whose gateway "
+            "routinely 504s on large responses. If both fail, download the "
+            "archive manually in a browser and use 'Import archive'."
         ),
         source_url=(
             "https://ota.bodleian.ox.ac.uk/repository/xmlui/bitstream/"
             "handle/20.500.12024/2539/2539.zip?sequence=3&isAllowed=y"
+        ),
+        source_urls=(
+            # v1.2.0: processed mirror (ZIP of 500 assignment texts) attached
+            # to the project's GitHub releases — fast, resumable, and immune
+            # to the OTA gateway's 504s. Built by scripts/build_bawe_mirror.py
+            # from a manually downloaded BAWE ZIP; CC-BY-NC-SA-3.0 permits
+            # redistribution with attribution (citation + license travel with
+            # the installed corpus). Tried FIRST; the canonical OTA URL
+            # (source_url, above) is the fallback.
+            "https://github.com/waleedmandour/CorpusMind/releases/download/"
+            "reference-mirrors-v1/bawe-sample-500.zip",
+            # Canonical source (Oxford Text Archive) — routinely 504s on
+            # large bitstream responses; kept as fallback with retries.
+            "https://ota.bodleian.ox.ac.uk/repository/xmlui/bitstream/"
+            "handle/20.500.12024/2539/2539.zip?sequence=3&isAllowed=y",
         ),
         sha256="",
         format="full_corpus",
@@ -295,10 +331,7 @@ BUNDLED_REFERENCES: list[ReferenceCorpusSpec] = [
             "frequency list and sentence-level source URLs. Suitable as "
             "a general English news reference for keyness analysis."
         ),
-        source_url=(
-            "https://downloads.wortschatz-leipzig.de/corpora/"
-            "eng_news_2023_10K.tar.gz"
-        ),
+        source_url=("https://downloads.wortschatz-leipzig.de/corpora/eng_news_2023_10K.tar.gz"),
         sha256="",
         format="full_corpus",
         size_hint="~3 MB",
@@ -322,10 +355,7 @@ BUNDLED_REFERENCES: list[ReferenceCorpusSpec] = [
             "and ingested through the full NLP pipeline. Suitable as a "
             "Modern Standard Arabic news reference for keyness analysis."
         ),
-        source_url=(
-            "https://downloads.wortschatz-leipzig.de/corpora/"
-            "ara_news_2022_10K.tar.gz"
-        ),
+        source_url=("https://downloads.wortschatz-leipzig.de/corpora/ara_news_2022_10K.tar.gz"),
         sha256="",
         format="full_corpus",
         size_hint="~4 MB",
