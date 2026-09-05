@@ -130,7 +130,10 @@ jobs:
             "engine\build",
             "engine\dist",
             "$env:TEMP\pyinstaller",
-            "$env:LOCALAPPDATA\pyinstaller"
+            "$env:LOCALAPPDATA\pyinstaller",
+            "$env:LOCALAPPDATA\tauri",
+            "desktop\src-tauri\target",
+            "desktop-lens\src-tauri\target"
           )
           foreach ($d in $dirs) {
             if (Test-Path $d) {
@@ -139,6 +142,16 @@ jobs:
           }
           # Also exclude the engine directory itself (where pip installs)
           Add-MpPreference -ExclusionPath (Get-Location).Path -ErrorAction SilentlyContinue
+          # The LOCALAPPDATA\tauri cache (NSIS + WiX tools) does not exist yet
+          # at this point — add the exclusion explicitly so it also covers the
+          # path when tauri-cli creates it mid-build.
+          Add-MpPreference -ExclusionPath "$env:LOCALAPPDATA\tauri" -ErrorAction SilentlyContinue
+          # New Defender signatures (2026-09-05 ~20:15 UTC) started blocking
+          # the WiX candle.exe at execute time on the runner images, failing
+          # every Windows MSI bundle with "failed to run ...candle.exe" even
+          # though the tool downloaded and extracted fine. Real-time scanning
+          # is unnecessary on an ephemeral CI runner — disable it outright.
+          Set-MpPreference -DisableRealtimeMonitoring $true -ErrorAction SilentlyContinue
           Write-Host "Windows Defender exclusions added for build directories"
 
       - name: Build engine sidecar (PyInstaller)
@@ -628,6 +641,25 @@ jobs:
           pip install cairosvg python-multipart pyinstaller
           python -m spacy download en_core_web_sm
         shell: bash
+      - name: Exclude build dirs from Windows Defender (tool cache + targets)
+        shell: pwsh
+        run: |
+          # See the same step in the parent Windows job: new Defender
+          # signatures block the WiX candle.exe at execute time, failing the
+          # MSI bundle with "failed to run ...candle.exe". This job runs on an
+          # ephemeral runner — disable real-time scanning for the build.
+          $dirs = @(
+            "$env:LOCALAPPDATA\tauri",
+            "engine\build",
+            "engine\dist",
+            "desktop-lens\src-tauri\target"
+          )
+          foreach ($d in $dirs) {
+            Add-MpPreference -ExclusionPath $d -ErrorAction SilentlyContinue
+          }
+          Add-MpPreference -ExclusionPath (Get-Location).Path -ErrorAction SilentlyContinue
+          Set-MpPreference -DisableRealtimeMonitoring $true -ErrorAction SilentlyContinue
+          Write-Host "Windows Defender exclusions added for build directories"
       - name: Build engine sidecar (PyInstaller)
         working-directory: engine
         run: pyinstaller corpusmind-engine.spec --noconfirm

@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
-## [1.0.3] — 2026-09-05 — Windows installer hardening
+## [1.0.4] — 2026-09-05 — Windows installer hardening
 
 The v1.0.1 Windows packages could fail to install or appear broken on real
 machines. This release fixes every identified install-time defect for both
