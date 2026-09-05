@@ -31,7 +31,12 @@ use thiserror::Error;
 
 const ENGINE_HOST: &str = "127.0.0.1";
 const ENGINE_PORT: u16 = 8765;
-const HEALTH_TIMEOUT: Duration = Duration::from_secs(30);
+// 60s: on the FIRST run after installing, Windows Defender scans the entire
+// ~700-file PyInstaller sidecar tree before the engine can finish booting.
+// A 30s budget made the shell report "engine offline" on slower machines
+// even though the engine came up seconds later. 60s covers the cold start;
+// the frontend keeps polling independently and auto-recovers.
+const HEALTH_TIMEOUT: Duration = Duration::from_secs(60);
 const HEALTH_POLL_INTERVAL: Duration = Duration::from_millis(500);
 
 // ─── Ollama auto-start manager ──────────────────────────────────────

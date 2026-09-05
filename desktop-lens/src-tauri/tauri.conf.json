@@ -46,6 +46,7 @@
       "binaries/corpusmind-engine/": "corpusmind-engine/"
     },
     "externalBin": [],
+    "publisher": "Dr. Waleed Mandour (Sultan Qaboos University) & Prof. Wesam Ibrahim (PNU)",
     "macOS": {
       "signingIdentity": null,
       "entitlements": null,
@@ -59,10 +60,11 @@
     "longDescription": "CorpusMind Lens is a separate installable desktop app that connects to the same CorpusMind engine. It focuses on vision-LM-powered image understanding: image-set management, visual discourse analysis, image-text alignment, and batch analysis across image sets — all running against a local Ollama or LM Studio instance with zero cloud calls.",
     "windows": {
       "nsis": {
-        "installMode": "currentUser"
+        "installMode": "currentUser",
+        "installerHooks": "./installer-hooks.nsh"
       },
       "webviewInstallMode": {
-        "type": "downloadBootstrapper"
+        "type": "embedBootstrapper"
       }
     }
   },

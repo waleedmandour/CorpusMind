@@ -83,8 +83,11 @@ export default function App() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      // Wait for engine to be ready (up to 15 seconds)
-      const ready = await waitForEngine(30);
+      // Wait for engine to be ready (up to 60 seconds). The first launch
+      // after an install can be slow on Windows (Defender scans the whole
+      // PyInstaller sidecar tree), so a 15s budget used to give up and show
+      // the "engine offline" state even though the engine was still booting.
+      const ready = await waitForEngine(120);
       if (cancelled || !ready) return;
       // Now safe to validate the persisted corpus ID
       if (activeCorpusId) {

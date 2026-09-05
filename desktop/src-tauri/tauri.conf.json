@@ -45,6 +45,7 @@
       "binaries/corpusmind-engine/": "corpusmind-engine/"
     },
     "externalBin": [],
+    "publisher": "Dr. Waleed Mandour (Sultan Qaboos University) & Prof. Wesam Ibrahim (PNU)",
     "macOS": {
       "signingIdentity": null,
       "entitlements": null,
@@ -58,10 +59,11 @@
     "longDescription": "CorpusMind lets a linguist go from raw texts and images to publication-ready quantitative and qualitative analysis — without writing a line of code, without sending unpublished data to a third-party server unless they explicitly choose to, and without losing the methodological transparency that peer review demands.",
     "windows": {
       "nsis": {
-        "installMode": "currentUser"
+        "installMode": "currentUser",
+        "installerHooks": "./installer-hooks.nsh"
       },
       "webviewInstallMode": {
-        "type": "downloadBootstrapper"
+        "type": "embedBootstrapper"
       }
     }
   },
