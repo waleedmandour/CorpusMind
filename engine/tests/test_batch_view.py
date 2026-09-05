@@ -178,7 +178,7 @@ async def test_batch_analysis_no_cached_vlm(client):
     assert data["images_with_discourse"] == 0
     assert data["recurring_themes"] == []
     assert "note" in data
-    assert "Run /describe" in data["note"]
+    assert "populate this view" in data["note"]
 
 
 @pytest.mark.asyncio

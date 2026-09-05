@@ -1,15 +1,19 @@
 """Phase 4 Vision API routes (§9.1–9.10)."""
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import os
+import re
 from dataclasses import asdict
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Literal
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Response, UploadFile
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
+from sqlalchemy import delete as sa_delete
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -19,6 +23,7 @@ from ai.providers import (
     check_vision_capability,
     resolve_vision_model,
 )
+from api.export import _make_response, _serialize
 from app.logging import get_logger
 from app.settings import get_settings
 from multimodal.alignment import (
@@ -578,6 +583,234 @@ def _detect_ocr_disagreement(vision_text: str, cached_ocr: str) -> bool:
     return overlap < 0.5
 
 
+async def _describe_fresh(
+    img: ImageModel,
+    registry,  # app.state.providers — ProviderRegistry
+    session: AsyncSession,
+    *,
+    provider_name: str,
+    prompt: str,
+    model: str | None,
+    refresh: bool,
+) -> dict:
+    """Fresh (non-cached) describe path, shared by the /describe route
+    and the batch runner (v1.2.0 Lens round).
+
+    Looks up the provider, health-checks it, resolves a vision-capable
+    model, calls it with the image bytes + context, caches the result
+    (full reassignment) and applies the consent gate. Raises
+    HTTPException (400/503/500) on failure — the batch runner catches
+    these per image so one bad image never kills the whole run.
+    """
+    # --- Provider lookup + health check ---------------------------------
+    try:
+        provider = registry.get(provider_name)
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Provider error: {e}",
+        ) from e
+
+    if provider is None:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"AI provider '{provider_name}' is not available. "
+                f"Make sure Ollama or LM Studio is running, or configure "
+                f"a cloud provider in Settings."
+            ),
+        )
+
+    # Health check before the call so we get a clear 503 instead of a
+    # confusing timeout. Same pattern as api/ai.py::chat().
+    try:
+        is_healthy = await provider.health()
+    except Exception:
+        is_healthy = False
+    if not is_healthy:
+        provider_name = getattr(provider, "name", provider_name)
+        if provider_name == "ollama":
+            raise HTTPException(
+                status_code=503,
+                detail=(
+                    "Ollama is not running or no vision model is loaded. "
+                    "Start Ollama and pull a vision model (e.g. "
+                    "`ollama pull qwen3-vl:2b` — small, multilingual OCR incl. Arabic — "
+                    "or `ollama pull qwen3-vl:8b` for higher quality)."
+                ),
+            )
+        elif provider_name == "lmstudio":
+            raise HTTPException(
+                status_code=503,
+                detail=(
+                    "LM Studio is not running or no vision model is loaded. "
+                    "Start LM Studio, load a vision model, and enable the "
+                    "local server (Developer > Start Local Server)."
+                ),
+            )
+        else:
+            raise HTTPException(
+                status_code=503,
+                detail=f"The {provider_name} provider is not available.",
+            )
+
+    # --- Build the prompt with context ----------------------------------
+    # Send the image bytes + the user's prompt. If the image has a cached
+    # OCR text or a user caption, include those as context so the model
+    # can corroborate or correct them — but never overwrite the cached
+    # OCR silently. The user sees both side by side in the response.
+    cached_ocr = (img.analysis or {}).get("ocr", {}).get("text", "")
+    caption = img.caption or ""
+
+    context_parts: list[str] = []
+    if caption:
+        context_parts.append(
+            f"The image has the following user-supplied caption: {caption!r}."
+        )
+    if cached_ocr:
+        context_parts.append(
+            f"A separate OCR pass (Tesseract) previously extracted this "
+            f"text from the image: {cached_ocr!r}. If your reading of the "
+            f"text differs, note the discrepancy in your description."
+        )
+    full_prompt = prompt
+    if context_parts:
+        full_prompt = prompt + "\n\nContext:\n" + "\n".join(context_parts)
+
+    # --- Read image bytes + call the provider ---------------------------
+    image_bytes = read_image_bytes(img.storage_path)
+    messages = [
+        Message(
+            role="user",
+            content=full_prompt,
+            images=(image_bytes,),
+        ),
+    ]
+
+    # v1.2.0: capability-aware model resolution. Previously this fell back
+    # to provider.default_model (frequently a TEXT-ONLY model like
+    # llama3.2:3b) or the first listed model — the describe call then
+    # failed confusingly. Now: explicit model → provider's vision-capable
+    # pick → legacy fallback, and an auto-picked model that the provider
+    # knows is NOT vision-capable gets an actionable 400.
+    model_name = await resolve_vision_model(provider, model)
+
+    if not model_name:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"No model specified and provider '{provider_name}' has no "
+                f"default model. Specify a model name in the request body."
+            ),
+        )
+
+    if not model:
+        vision_ok = await check_vision_capability(provider, model_name)
+        if vision_ok is False:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"The auto-selected model '{model_name}' does not support image input. "
+                    f"Install a vision model — for Ollama: `ollama pull qwen3-vl:2b` "
+                    f"(small, OCR in 32 languages incl. Arabic) or `ollama pull qwen3-vl:8b` "
+                    f"(higher quality) — or specify a model name in the request."
+                ),
+            )
+
+    cache_key = f"{model or 'default'}:{_prompt_hash(prompt)}"
+
+    log.info(
+        "vlm_describe_request",
+        image_id=img.id,
+        provider=provider_name,
+        model=model_name,
+        prompt_hash=_prompt_hash(prompt),
+        image_bytes=len(image_bytes),
+        has_ocr=bool(cached_ocr),
+        has_caption=bool(caption),
+        refresh=refresh,
+        cache_hit=False,
+    )
+
+    try:
+        response = await provider.chat(
+            messages,
+            model=model_name,
+            temperature=0.1,  # low temperature for descriptive accuracy
+            timeout=120.0,    # vision models are slower than text
+            max_tokens=2048,  # v1.2.0: rich descriptions were truncated at 512
+        )
+    except ModelProviderError as e:
+        log.warning("vlm_describe_failed", image_id=img.id, error=str(e))
+        raise HTTPException(
+            status_code=500,
+            detail=f"Vision-LM call failed: {e}",
+        ) from e
+
+    description = response.content.strip()
+    if not description:
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                f"Vision-LM returned empty content. Model: {model_name}. "
+                f"This can happen with small models if the prompt doesn't "
+                f"match their expected template — try a different prompt "
+                f"or a larger model."
+            ),
+        )
+
+    timestamp = datetime.now(UTC).isoformat()
+    prompt_hash = _prompt_hash(prompt)
+
+    # --- Cache the result (full reassignment per §2.4) ------------------
+    # CRITICAL: img.analysis is a plain JSON column, not wrapped in
+    # MutableDict.as_mutable(). In-place mutation (img.analysis["vision_llm"]
+    # = ... or img.analysis.update(...)) will NOT be detected by SQLAlchemy
+    # and will be silently lost on commit. This project has shipped that
+    # exact bug twice already. Always reassign the full dict.
+    new_analysis = dict(img.analysis or {})
+    vlm_cache = dict(new_analysis.get("vision_llm", {}))
+    vlm_cache[cache_key] = {
+        "description": description,
+        "model": response.model or model_name,
+        "provider": provider_name,
+        "prompt": prompt,
+        "prompt_hash": prompt_hash,
+        "timestamp": timestamp,
+    }
+    new_analysis["vision_llm"] = vlm_cache
+    img.analysis = new_analysis  # full reassignment — triggers SQLAlchemy change detection
+    await session.commit()
+
+    log.info(
+        "vlm_describe_success",
+        image_id=img.id,
+        model=response.model or model_name,
+        description_len=len(description),
+        cached=False,
+    )
+
+    # Step 5: filter person-descriptive content through the consent gate
+    # BEFORE returning. The gate is enforced at response-shaping time,
+    # not at prompt time — see vision/consent_gate.py.
+    gate_result = filter_describe_response(description)
+
+    return {
+        "image_id": img.id,
+        "description": gate_result["description"],
+        "model": response.model or model_name,
+        "provider": provider_name,
+        "prompt": prompt,
+        "prompt_hash": prompt_hash,
+        "timestamp": timestamp,
+        "cached": False,
+        "ocr_disagreement": _detect_ocr_disagreement(gate_result["description"], cached_ocr),
+        "cached_ocr": cached_ocr,
+        "person_descriptive_redacted": gate_result["person_descriptive_redacted"],
+    }
+
+
+
 @router.post("/images/{img_id}/describe")
 async def describe_image_route(
     img_id: str,
@@ -638,211 +871,17 @@ async def describe_image_route(
             "person_descriptive_redacted": gate_result["person_descriptive_redacted"],
         }
 
-    # --- Provider lookup + health check ---------------------------------
-    try:
-        provider = request.app.state.providers.get(body.provider)
-    except Exception as e:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Provider error: {e}",
-        ) from e
-
-    if provider is None:
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                f"AI provider '{body.provider}' is not available. "
-                f"Make sure Ollama or LM Studio is running, or configure "
-                f"a cloud provider in Settings."
-            ),
-        )
-
-    # Health check before the call so we get a clear 503 instead of a
-    # confusing timeout. Same pattern as api/ai.py::chat().
-    try:
-        is_healthy = await provider.health()
-    except Exception:
-        is_healthy = False
-    if not is_healthy:
-        provider_name = getattr(provider, "name", body.provider)
-        if provider_name == "ollama":
-            raise HTTPException(
-                status_code=503,
-                detail=(
-                    "Ollama is not running or no vision model is loaded. "
-                    "Start Ollama and pull a vision model (e.g. "
-                    "`ollama pull qwen3-vl:2b` — small, multilingual OCR incl. Arabic — "
-                    "or `ollama pull qwen3-vl:8b` for higher quality)."
-                ),
-            )
-        elif provider_name == "lmstudio":
-            raise HTTPException(
-                status_code=503,
-                detail=(
-                    "LM Studio is not running or no vision model is loaded. "
-                    "Start LM Studio, load a vision model, and enable the "
-                    "local server (Developer > Start Local Server)."
-                ),
-            )
-        else:
-            raise HTTPException(
-                status_code=503,
-                detail=f"The {provider_name} provider is not available.",
-            )
-
-    # --- Build the prompt with context ----------------------------------
-    # Send the image bytes + the user's prompt. If the image has a cached
-    # OCR text or a user caption, include those as context so the model
-    # can corroborate or correct them — but never overwrite the cached
-    # OCR silently. The user sees both side by side in the response.
-    cached_ocr = (img.analysis or {}).get("ocr", {}).get("text", "")
-    caption = img.caption or ""
-
-    context_parts: list[str] = []
-    if caption:
-        context_parts.append(
-            f"The image has the following user-supplied caption: {caption!r}."
-        )
-    if cached_ocr:
-        context_parts.append(
-            f"A separate OCR pass (Tesseract) previously extracted this "
-            f"text from the image: {cached_ocr!r}. If your reading of the "
-            f"text differs, note the discrepancy in your description."
-        )
-    full_prompt = body.prompt
-    if context_parts:
-        full_prompt = body.prompt + "\n\nContext:\n" + "\n".join(context_parts)
-
-    # --- Read image bytes + call the provider ---------------------------
-    image_bytes = read_image_bytes(img.storage_path)
-    messages = [
-        Message(
-            role="user",
-            content=full_prompt,
-            images=(image_bytes,),
-        ),
-    ]
-
-    # v1.2.0: capability-aware model resolution. Previously this fell back
-    # to provider.default_model (frequently a TEXT-ONLY model like
-    # llama3.2:3b) or the first listed model — the describe call then
-    # failed confusingly. Now: explicit model → provider's vision-capable
-    # pick → legacy fallback, and an auto-picked model that the provider
-    # knows is NOT vision-capable gets an actionable 400.
-    model_name = await resolve_vision_model(provider, body.model)
-
-    if not model_name:
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                f"No model specified and provider '{body.provider}' has no "
-                f"default model. Specify a model name in the request body."
-            ),
-        )
-
-    if not body.model:
-        vision_ok = await check_vision_capability(provider, model_name)
-        if vision_ok is False:
-            raise HTTPException(
-                status_code=400,
-                detail=(
-                    f"The auto-selected model '{model_name}' does not support image input. "
-                    f"Install a vision model — for Ollama: `ollama pull qwen3-vl:2b` "
-                    f"(small, OCR in 32 languages incl. Arabic) or `ollama pull qwen3-vl:8b` "
-                    f"(higher quality) — or specify a model name in the request."
-                ),
-            )
-
-    log.info(
-        "vlm_describe_request",
-        image_id=img.id,
-        provider=body.provider,
-        model=model_name,
-        prompt_hash=_prompt_hash(body.prompt),
-        image_bytes=len(image_bytes),
-        has_ocr=bool(cached_ocr),
-        has_caption=bool(caption),
+    # Fresh path (provider lookup, capability gate, call, cache store)
+    # lives in _describe_fresh — shared with the batch runner.
+    return await _describe_fresh(
+        img,
+        request.app.state.providers,
+        session,
+        provider_name=body.provider,
+        prompt=body.prompt,
+        model=body.model,
         refresh=body.refresh,
-        cache_hit=False,
     )
-
-    try:
-        response = await provider.chat(
-            messages,
-            model=model_name,
-            temperature=0.1,  # low temperature for descriptive accuracy
-            timeout=120.0,    # vision models are slower than text
-            max_tokens=2048,  # v1.2.0: rich descriptions were truncated at 512
-        )
-    except ModelProviderError as e:
-        log.warning("vlm_describe_failed", image_id=img.id, error=str(e))
-        raise HTTPException(
-            status_code=500,
-            detail=f"Vision-LM call failed: {e}",
-        ) from e
-
-    description = response.content.strip()
-    if not description:
-        raise HTTPException(
-            status_code=500,
-            detail=(
-                f"Vision-LM returned empty content. Model: {model_name}. "
-                f"This can happen with small models if the prompt doesn't "
-                f"match their expected template — try a different prompt "
-                f"or a larger model."
-            ),
-        )
-
-    timestamp = datetime.now(UTC).isoformat()
-    prompt_hash = _prompt_hash(body.prompt)
-
-    # --- Cache the result (full reassignment per §2.4) ------------------
-    # CRITICAL: img.analysis is a plain JSON column, not wrapped in
-    # MutableDict.as_mutable(). In-place mutation (img.analysis["vision_llm"]
-    # = ... or img.analysis.update(...)) will NOT be detected by SQLAlchemy
-    # and will be silently lost on commit. This project has shipped that
-    # exact bug twice already. Always reassign the full dict.
-    new_analysis = dict(img.analysis or {})
-    vlm_cache = dict(new_analysis.get("vision_llm", {}))
-    vlm_cache[cache_key] = {
-        "description": description,
-        "model": response.model or model_name,
-        "provider": body.provider,
-        "prompt": body.prompt,
-        "prompt_hash": prompt_hash,
-        "timestamp": timestamp,
-    }
-    new_analysis["vision_llm"] = vlm_cache
-    img.analysis = new_analysis  # full reassignment — triggers SQLAlchemy change detection
-    await session.commit()
-
-    log.info(
-        "vlm_describe_success",
-        image_id=img.id,
-        model=response.model or model_name,
-        description_len=len(description),
-        cached=False,
-    )
-
-    # Step 5: filter person-descriptive content through the consent gate
-    # BEFORE returning. The gate is enforced at response-shaping time,
-    # not at prompt time — see vision/consent_gate.py.
-    gate_result = filter_describe_response(description)
-
-    return {
-        "image_id": img.id,
-        "description": gate_result["description"],
-        "model": response.model or model_name,
-        "provider": body.provider,
-        "prompt": body.prompt,
-        "prompt_hash": prompt_hash,
-        "timestamp": timestamp,
-        "cached": False,
-        "ocr_disagreement": _detect_ocr_disagreement(gate_result["description"], cached_ocr),
-        "cached_ocr": cached_ocr,
-        "person_descriptive_redacted": gate_result["person_descriptive_redacted"],
-    }
-
 
 # --------------------------------------------------------------------------- #
 # §9.x Batch view — recurring themes + OCR frequency across an image set
@@ -994,7 +1033,339 @@ async def batch_analysis_route(
             f"Aggregated cached analysis across {len(images)} images. "
             f"{images_with_vlm} have vision-LM descriptions, "
             f"{images_with_discourse} have discourse analysis. "
-            f"Run /describe and /social-semiotic?mode=llm on individual "
-            f"images to populate this view."
+            f"Use 'Analyse set' (batch runner) or run /describe and "
+            f"/social-semiotic?mode=llm on individual images to populate this view."
         ) if images_with_vlm == 0 and images_with_discourse == 0 else "",
     }
+
+
+# --------------------------------------------------------------------------- #
+# §9.x Batch runner (v1.2.0 Lens round) — analyse a whole image set
+#
+# The batch view above is read-only; until now the only way to populate
+# it was running /describe per image by hand. This runner loops over
+# the set server-side: describe + optionally all eight discourse lenses,
+# with per-image error isolation, skip-if-cached, and cancel support.
+# State is in-process (single-engine deployment); poll the status route.
+# --------------------------------------------------------------------------- #
+
+
+DISCOURSE_LENS_KEYS = (
+    "social_semiotic",
+    "cda",
+    "persuasion",
+    "framing",
+    "narrative",
+    "visual_metaphor",
+    "emotion",
+    "cultural",
+)
+
+
+class BatchRunRequest(BaseModel):
+    action: Literal[
+        "describe",
+        "all",
+        "social_semiotic",
+        "cda",
+        "persuasion",
+        "framing",
+        "narrative",
+        "visual_metaphor",
+        "emotion",
+        "cultural",
+    ] = Field(
+        default="describe",
+        description=(
+            "describe: vision-LM description per image. "
+            "all: describe + all eight discourse lenses. "
+            "Or a single lens key (social_semiotic, cda, ...)."
+        ),
+    )
+    cda_framework: str = Field(
+        default="fairclough",
+        description="Which CDA sub-framework to use when action includes cda.",
+    )
+    provider: str = Field(default="ollama", description="ollama | lmstudio | cloud")
+    model: str | None = Field(default=None, description="Vision model; None = capability-aware auto-pick.")
+    refresh: bool = Field(default=False, description="Re-run even when a cached result exists.")
+    limit: int = Field(default=0, ge=0, le=500, description="Cap the run to N images. 0 = all.")
+
+
+_batch_state: dict[str, dict] = {}
+_batch_tasks: dict[str, asyncio.Task] = {}
+_batch_cancel: set[str] = set()
+
+
+async def _batch_runner(iset_id: str, request: Request, body: BatchRunRequest) -> None:
+    """Background loop — one engine pass over the image set.
+
+    Uses its own session (session_scope) because the request's session
+    closes when the POST returns. Errors are collected per image+action;
+    one bad image never stops the run.
+    """
+    state = _batch_state.setdefault(iset_id, {})
+    try:
+        from storage.session import session_scope
+
+        if body.action == "all":
+            actions = ["describe", *DISCOURSE_LENS_KEYS]
+        elif body.action == "describe":
+            actions = ["describe"]
+        else:
+            actions = [body.action]
+
+        default_prompt = DescribeRequest().prompt
+
+        async with session_scope() as session:
+            stmt = select(ImageModel).where(ImageModel.image_set_id == iset_id).order_by(ImageModel.created_at)
+            images = (await session.execute(stmt)).scalars().all()
+            if body.limit:
+                images = images[: body.limit]
+            state["total"] = len(images)
+
+            for img in images:
+                if iset_id in _batch_cancel:
+                    state["status"] = "cancelled"
+                    break
+                for action in actions:
+                    try:
+                        if action == "describe":
+                            cache_key = f"{body.model or 'default'}:{_prompt_hash(default_prompt)}"
+                            cached = (img.analysis or {}).get("vision_llm", {}).get(cache_key)
+                            if not cached or body.refresh:
+                                await _describe_fresh(
+                                    img,
+                                    request.app.state.providers,
+                                    session,
+                                    provider_name=body.provider,
+                                    prompt=default_prompt,
+                                    model=body.model,
+                                    refresh=body.refresh,
+                                )
+                        else:
+                            from api.phase5 import LLMModeRequest, _try_llm_discourse
+
+                            framework_key = f"cda_{body.cda_framework}" if action == "cda" else action
+                            mode_params = LLMModeRequest(
+                                mode="llm", provider=body.provider, model=body.model, refresh=body.refresh
+                            )
+                            await _try_llm_discourse(request, img, framework_key, mode_params, session)
+                    except HTTPException as e:
+                        state["errors"].append(
+                            {"image": img.filename, "action": action, "error": str(e.detail)}
+                        )
+                    except Exception as e:
+                        state["errors"].append(
+                            {"image": img.filename, "action": action, "error": str(e)}
+                        )
+                state["done"] = state.get("done", 0) + 1
+            else:
+                if state.get("status") != "cancelled":
+                    state["status"] = "done"
+        state["finished_at"] = datetime.now(UTC).isoformat()
+    except Exception as e:
+        state["status"] = "error"
+        state["error"] = str(e)
+        state["finished_at"] = datetime.now(UTC).isoformat()
+    finally:
+        _batch_tasks.pop(iset_id, None)
+        _batch_cancel.discard(iset_id)
+
+
+@router.post("/image-sets/{iset_id}/run-batch")
+async def run_batch_route(
+    iset_id: str,
+    request: Request,
+    body: BatchRunRequest | None = None,
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    """Start a batch analysis over every image in the set (fire-and-poll).
+
+    Returns the initial state; poll GET .../run-batch/status for progress.
+    Uses the vision-capable model resolution and honours the consent gate
+    (the underlying describe/discourse paths filter person-descriptive
+    content exactly like the single-image routes).
+    """
+    from multimodal.discourse import CDA_FRAMEWORKS
+
+    body = body or BatchRunRequest()
+    iset = await session.get(ImageSet, iset_id)
+    if not iset:
+        raise HTTPException(404, "Image set not found")
+    if body.action == "cda" and body.cda_framework not in CDA_FRAMEWORKS:
+        raise HTTPException(
+            400,
+            f"Unknown CDA framework: {body.cda_framework}. Supported: {list(CDA_FRAMEWORKS.keys())}",
+        )
+
+    existing = _batch_tasks.get(iset_id)
+    if existing is not None and not existing.done():
+        raise HTTPException(409, "A batch run is already in progress for this image set.")
+
+    state = {
+        "status": "running",
+        "action": body.action,
+        "total": 0,
+        "done": 0,
+        "errors": [],
+        "started_at": datetime.now(UTC).isoformat(),
+        "finished_at": None,
+    }
+    _batch_state[iset_id] = state
+    _batch_tasks[iset_id] = asyncio.create_task(_batch_runner(iset_id, request, body))
+    return state
+
+
+@router.get("/image-sets/{iset_id}/run-batch/status")
+async def run_batch_status(
+    iset_id: str,
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    """Poll batch-run progress: {status, action, total, done, errors[]}.
+
+    status: running | done | cancelled | error.
+    """
+    if iset_id not in _batch_state:
+        raise HTTPException(404, "No batch run has been started for this image set.")
+    task = _batch_tasks.get(iset_id)
+    return {
+        **_batch_state[iset_id],
+        "running": task is not None and not task.done(),
+    }
+
+
+@router.post("/image-sets/{iset_id}/run-batch/cancel")
+async def run_batch_cancel(iset_id: str) -> dict:
+    """Request cancellation — the loop stops before the next image."""
+    if iset_id not in _batch_state:
+        raise HTTPException(404, "No batch run has been started for this image set.")
+    _batch_cancel.add(iset_id)
+    return {"cancelling": True}
+
+
+# --------------------------------------------------------------------------- #
+# §9.x Deletion (v1.2.0 Lens round) — uploads were previously irreversible
+# from both the API and the UI. Privacy remediation for photos of people
+# requires a real delete: DB row + on-disk bytes.
+# --------------------------------------------------------------------------- #
+
+
+@router.delete("/images/{img_id}")
+async def delete_image(
+    img_id: str,
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    """Delete one image: DB row + stored file (decrypt-agnostic unlink)."""
+    img = await session.get(ImageModel, img_id)
+    if not img:
+        raise HTTPException(404, "Image not found")
+    if img.storage_path:
+        Path(img.storage_path).unlink(missing_ok=True)
+    await session.delete(img)
+    return {"deleted": True, "image_id": img_id}
+
+
+@router.delete("/image-sets/{iset_id}")
+async def delete_image_set(
+    iset_id: str,
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    """Delete an image set and every image in it (files + rows)."""
+    iset = await session.get(ImageSet, iset_id)
+    if not iset:
+        raise HTTPException(404, "Image set not found")
+    stmt = select(ImageModel).where(ImageModel.image_set_id == iset_id)
+    images = (await session.execute(stmt)).scalars().all()
+    for img in images:
+        if img.storage_path:
+            Path(img.storage_path).unlink(missing_ok=True)
+    await session.execute(sa_delete(ImageModel).where(ImageModel.image_set_id == iset_id))
+    await session.delete(iset)
+    return {
+        "deleted": True,
+        "image_set_id": iset_id,
+        "images_removed": len(images),
+    }
+
+
+# --------------------------------------------------------------------------- #
+# §9.x Export (v1.2.0 Lens round) — vision results were previously locked
+# inside the engine. One row per image: metadata + OCR + colour/composition
+# stats + latest vision-LM description + discourse summary.
+# --------------------------------------------------------------------------- #
+
+
+@router.get("/image-sets/{iset_id}/export")
+async def export_image_set(
+    iset_id: str,
+    format: Literal["xlsx", "csv", "tsv", "txt", "json"] = "xlsx",
+    session: AsyncSession = Depends(get_session),
+) -> StreamingResponse:
+    """Export the image set's cached analysis as a spreadsheet/flat file."""
+    iset = await session.get(ImageSet, iset_id)
+    if not iset:
+        raise HTTPException(404, "Image set not found")
+
+    stmt = select(ImageModel).where(ImageModel.image_set_id == iset_id).order_by(ImageModel.created_at)
+    images = (await session.execute(stmt)).scalars().all()
+
+    headers = [
+        "filename", "width", "height", "size_bytes", "caption", "created_at",
+        "ocr_text", "ocr_confidence", "ocr_word_count", "ocr_engine",
+        "dominant_colours", "brightness", "contrast", "saturation", "warm_cold_balance",
+        "visual_balance", "framing_balance", "salience_centre_x", "salience_centre_y",
+        "vlm_description", "vlm_model", "vlm_timestamp",
+        "discourse_frameworks", "discourse_claims_count",
+    ]
+
+    rows: list[list] = []
+    for img in images:
+        a = img.analysis or {}
+        ocr = a.get("ocr", {}) or {}
+        colours = a.get("colours", {}) or {}
+        comp = a.get("composition", {}) or {}
+        vlm = a.get("vision_llm", {}) or {}
+        latest: dict = {}
+        if vlm:
+            latest = max(vlm.values(), key=lambda d: d.get("timestamp", ""))
+        discourse = a.get("vision_llm_discourse", {}) or {}
+        frameworks = sorted({str(k).split(":")[0] for k in discourse})
+        claims_count = sum(len(v.get("claims", [])) for v in discourse.values())
+        top_colours = ", ".join(
+            f"{c.get('hex', '?')}:{round(float(c.get('percent', 0)) * 100)}%"
+            for c in (colours.get("dominant_colours", []) or [])[:3]
+        )
+        salience = comp.get("salience_centre", [0.0, 0.0]) or [0.0, 0.0]
+        rows.append([
+            img.filename,
+            img.width,
+            img.height,
+            img.size_bytes,
+            img.caption or "",
+            img.created_at.isoformat() if img.created_at else "",
+            ocr.get("text", ""),
+            ocr.get("confidence", 0.0),
+            ocr.get("word_count", 0),
+            ocr.get("engine", ""),
+            top_colours,
+            colours.get("brightness", ""),
+            colours.get("contrast", ""),
+            colours.get("saturation", ""),
+            colours.get("warm_cold_balance", ""),
+            comp.get("visual_balance", ""),
+            comp.get("framing_balance", ""),
+            salience[0] if len(salience) > 0 else "",
+            salience[1] if len(salience) > 1 else "",
+            latest.get("description", ""),
+            latest.get("model", ""),
+            latest.get("timestamp", ""),
+            ", ".join(frameworks),
+            claims_count,
+        ])
+
+    slug = re.sub(r"[^\w-]+", "-", iset.name)[:40].strip("-") or "imageset"
+    data, media_type, filename = _serialize(format, f"image-set {iset.name}", headers, rows)
+    # _serialize names files after the sheet; give it a stable, set-specific name.
+    filename = f"image-set-{slug}.{format}"
+    return _make_response(data, media_type, filename)

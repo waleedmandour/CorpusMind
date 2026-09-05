@@ -3,6 +3,9 @@ from __future__ import annotations
 
 import asyncio
 import json
+import sys
+from pathlib import Path
+from typing import Any
 
 import httpx
 from fastapi import APIRouter, HTTPException, Request
@@ -14,6 +17,82 @@ from app.settings import get_settings
 
 router = APIRouter()
 log = get_logger(__name__)
+
+
+# --------------------------------------------------------------------------- #
+# Theoretical frameworks catalogue (v1.2.0 Lens round)
+#
+# reference-data/frameworks/*.yaml has shipped with every install since
+# v1.0.0 but nothing read it at runtime — the analysis prompts hardcode
+# their logic and the UI hardcoded a second copy of the list. This
+# endpoint serves the YAML metadata (names, descriptions, categories) so
+# the frontend renders the REAL catalogue from a single source of truth.
+# --------------------------------------------------------------------------- #
+
+
+def _frameworks_dir() -> Path | None:
+    """Locate reference-data/frameworks/ in dev, onedir and onefile layouts."""
+    candidates: list[Path] = []
+    if getattr(sys, "frozen", False):
+        meipass = getattr(sys, "_MEIPASS", None)
+        if meipass:
+            candidates.append(Path(meipass) / "reference-data" / "frameworks")
+        exe_dir = Path(sys.executable).parent
+        candidates.append(exe_dir / "_internal" / "reference-data" / "frameworks")
+        candidates.append(exe_dir / "reference-data" / "frameworks")
+    else:
+        # engine/api/system.py → repo root
+        candidates.append(Path(__file__).resolve().parent.parent.parent / "reference-data" / "frameworks")
+    for c in candidates:
+        if c.is_dir():
+            return c
+    return None
+
+
+@router.get("/frameworks")
+async def list_frameworks() -> dict:
+    """Metadata for the supported theoretical frameworks (12 YAML lenses).
+
+    Serves {key, name, full_name, version, family, categories[]} per
+    framework. Heuristic thresholds / LLM prompts stay in engine code —
+    this endpoint exposes the catalogue, not the logic.
+    """
+    frameworks_dir = _frameworks_dir()
+    if frameworks_dir is None:
+        return {"frameworks": [], "note": "reference-data/frameworks not found in this install."}
+
+    try:
+        import yaml
+    except ImportError:  # pragma: no cover — pyyaml is a hard dependency
+        return {"frameworks": [], "note": "pyyaml unavailable."}
+
+    out: list[dict[str, Any]] = []
+    for yml in sorted(frameworks_dir.glob("*.yaml")):
+        try:
+            data = yaml.safe_load(yml.read_text(encoding="utf-8")) or {}
+        except Exception as e:
+            log.warning("framework_yaml_parse_failed", file=yml.name, error=str(e))
+            continue
+        categories = [
+            {
+                "id": c.get("id", ""),
+                "label": c.get("label", c.get("id", "")),
+                "description": (c.get("description") or "").strip(),
+            }
+            for c in (data.get("categories") or [])
+            if isinstance(c, dict)
+        ]
+        out.append(
+            {
+                "key": yml.stem,
+                "name": data.get("name", yml.stem),
+                "full_name": data.get("full_name", data.get("name", yml.stem)),
+                "version": str(data.get("version", "")),
+                "family": data.get("framework_family", ""),
+                "categories": categories,
+            }
+        )
+    return {"frameworks": out}
 
 
 # Curated catalogue of recommended Ollama models for CorpusMind.
