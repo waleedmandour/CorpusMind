@@ -448,7 +448,7 @@ jobs:
 
   # ─── Web PWA (zip) ───────────────────────────────────────────────
   build-web:
-    if: ${{ inputs.only_lens != 'true' }}
+    if: inputs.only_lens != 'true'
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
