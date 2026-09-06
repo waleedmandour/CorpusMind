@@ -112,6 +112,9 @@ export function CollocationNetwork({
   const [tooltip, setTooltip] = useState<{ x: number; y: number; text: string } | null>(null);
   const [flash, setFlash] = useState("");
   const [empty, setEmpty] = useState(false);
+  // v1.0.7: persistent load-error line (the 2.6s flash used to swallow real
+  // failures — e.g. a reducer exception — leaving a silently blank canvas).
+  const [loadError, setLoadError] = useState("");
 
   const qc = useQueryClient();
 
@@ -153,6 +156,7 @@ export function CollocationNetwork({
   useEffect(() => {
     let cancelled = false;
     setEmpty(false);
+    setLoadError("");
     (async () => {
       try {
         const res = await api.collocationNetwork(cid, {
@@ -181,7 +185,11 @@ export function CollocationNetwork({
         sigmaRef.current?.setGraph(graphRef.current);
         sigmaRef.current?.refresh();
       } catch (e) {
-        if (!cancelled) flashMsg(`Network failed: ${(e as Error).message}`);
+        if (!cancelled) {
+          setLoadError(`Network failed: ${(e as Error).message}`);
+          // eslint-disable-next-line no-console
+          console.error("[CollocationNetwork] load failed:", e);
+        }
       }
     })();
     return () => {
@@ -228,17 +236,26 @@ export function CollocationNetwork({
     });
 
     // Edge reducer — thickness ∝ selected measure, hover emphasis.
+    // v1.0.7 fix: this reducer MUST read the graph through the renderer.
+    // The previous version closed over the empty graph instance created at
+    // mount time, so after the data effect called setGraph() with the real
+    // graph, graph.extremities(edge) threw NotFoundGraphError for every edge,
+    // aborting Sigma's re-index mid-refresh and leaving the canvas blank
+    // forever (the error was then swallowed by the fetch's catch block).
     renderer.setSetting("edgeReducer", (edge, data: Attributes) => {
       const res: Attributes = { ...data };
       const norms = (data.norms ?? {}) as Record<string, number>;
       const norm = norms[measureRef.current] ?? 0;
       res.size = 0.4 + 3.2 * norm;
       res.color = BRAND_EDGE;
-      const [s, t] = graph.extremities(edge);
-      if (hoverRef.current && (hoverRef.current === s || hoverRef.current === t)) {
-        res.color = HIGHLIGHT;
-        res.size += 1.2;
-        res.zIndex = 5;
+      const g = renderer.getGraph();
+      if (g.hasEdge(edge)) {
+        const [s, t] = g.extremities(edge);
+        if (hoverRef.current && (hoverRef.current === s || hoverRef.current === t)) {
+          res.color = HIGHLIGHT;
+          res.size += 1.2;
+          res.zIndex = 5;
+        }
       }
       return res;
     });
@@ -537,7 +554,13 @@ export function CollocationNetwork({
 
       {flash && <div className="network-flash">{flash}</div>}
 
-      {empty && !flash && (
+      {loadError && !flash && (
+        <div className="network-flash" role="alert" style={{ background: "var(--danger, #b3261e)" }}>
+          {loadError}
+        </div>
+      )}
+
+      {empty && !flash && !loadError && (
         <div className="network-flash">No collocates met the thresholds — try a lower min frequency.</div>
       )}
 

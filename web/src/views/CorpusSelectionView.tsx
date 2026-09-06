@@ -362,10 +362,13 @@ function CorpusActionsPanel({ mode }: { mode: CorpusMode }) {
       ) : (
         activeCorpusId ? (
           <>
+            {/* v1.0.7: the Tagset card moves BEFORE the file list / uploader —
+                corpus-construction norm: pick the annotation scheme first,
+                then upload/tag/parse against it. */}
+            <TagsetSelector cid={activeCorpusId} />
             <DocumentUploader cid={activeCorpusId} />
             <DocumentList cid={activeCorpusId} />
             <CleanCorpusButton cid={activeCorpusId} />
-            <TagsetSelector cid={activeCorpusId} />
           </>
         ) : (
           <div className="corpus-empty">
@@ -1261,6 +1264,13 @@ function DocumentList({ cid }: { cid: string }) {
     queryFn: () => api.listDocuments(cid),
     refetchInterval: 3_000,
   });
+  // v1.0.7: corpus stats power the compile gate ("compiled successfully before
+  // moving on") — token_count === 0 means the pipeline has not produced an
+  // annotation yet (or compilation failed outright).
+  const corpus = useQuery({
+    queryKey: ["corpus", cid],
+    queryFn: () => api.getCorpus(cid),
+  });
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [recompiling, setRecompiling] = useState(false);
   const [status, setStatus] = useState<{ kind: "success" | "error" | "info"; msg: string } | null>(null);
@@ -1273,6 +1283,12 @@ function DocumentList({ cid }: { cid: string }) {
   // v0.1.19: subcorpus state
   const [showSubcorpusForm, setShowSubcorpusForm] = useState(false);
   const [subcorpusForm, setSubcorpusForm] = useState({ name: "", description: "", genre: "", register: "", yearMin: "", yearMax: "" });
+  // v1.0.7: bulk (all-files) genre/register tagging + compile gate state
+  const [showBulkTag, setShowBulkTag] = useState(false);
+  const [bulkForm, setBulkForm] = useState({ genre: "", register: "", year: "" });
+  const [bulkTagging, setBulkTagging] = useState(false);
+  const [needsRecompile, setNeedsRecompile] = useState(false);
+  const [lastCompile, setLastCompile] = useState<{ ok: boolean; msg: string } | null>(null);
   const subcorpora = useQuery({
     queryKey: ["subcorpora", cid],
     queryFn: () => api.listSubcorpora(cid),
@@ -1310,16 +1326,55 @@ function DocumentList({ cid }: { cid: string }) {
 
   const handleRecompile = async () => {
     setRecompiling(true);
-    showStatus("Recompiling corpus (re-running NLP pipeline)...", "info");
+    setNeedsRecompile(false);
+    showStatus("Recompiling corpus (re-running tagger, lemmatizer, parser and compile step)...", "info");
     try {
       const result = await api.recompileCorpus(cid);
-      showStatus(`✓ Recompiled ${result.recompiled}/${result.total_documents} documents. ${result.token_count} tokens, ${result.type_count} types.`, "success");
+      if (result.success) {
+        setLastCompile({
+          ok: true,
+          msg: `Compiled successfully — ${result.recompiled}/${result.total_documents} documents, ${result.token_count.toLocaleString()} tokens, ${result.type_count.toLocaleString()} types. The corpus is ready for analysis.`,
+        });
+        showStatus(`✓ Compiled ${result.recompiled}/${result.total_documents} documents. ${result.token_count} tokens, ${result.type_count} types.`, "success");
+      } else {
+        setLastCompile({
+          ok: false,
+          msg: `Compilation finished WITH FAILURES — ${result.recompiled}/${result.total_documents} documents recompiled. Fix the failing files and recompile before analysing.`,
+        });
+        showStatus(`✗ Compile incomplete: only ${result.recompiled}/${result.total_documents} documents recompiled.`, "error");
+      }
       qc.invalidateQueries({ queryKey: ["corpora"] });
       qc.invalidateQueries({ queryKey: ["corpus", cid] });
     } catch (e: any) {
+      setLastCompile({ ok: false, msg: `Compilation failed: ${e?.message || String(e)}` });
       showStatus(`✗ Recompile failed: ${e?.message || String(e)}`, "error");
     } finally {
       setRecompiling(false);
+    }
+  };
+
+  // v1.0.7: bulk (all-files) genre/register/year tagging.
+  const handleBulkTag = async () => {
+    const meta: Record<string, string> = {};
+    if (bulkForm.genre.trim()) meta.genre = bulkForm.genre.trim();
+    if (bulkForm.register.trim()) meta.register = bulkForm.register.trim();
+    if (bulkForm.year.trim()) meta.year = bulkForm.year.trim();
+    if (Object.keys(meta).length === 0) {
+      showStatus("Enter a genre and/or register to apply to all files.", "error");
+      return;
+    }
+    setBulkTagging(true);
+    try {
+      const res = await api.updateAllDocumentsMeta(cid, meta);
+      showStatus(`✓ Applied ${Object.keys(meta).join(" + ")} to ${res.updated} file(s). Now recompile to apply the tags to the pipeline.`, "success");
+      setNeedsRecompile(true);
+      setShowBulkTag(false);
+      setBulkForm({ genre: "", register: "", year: "" });
+      qc.invalidateQueries({ queryKey: ["documents", cid] });
+    } catch (e: any) {
+      showStatus(`✗ Bulk tagging failed: ${e?.message || String(e)}`, "error");
+    } finally {
+      setBulkTagging(false);
     }
   };
 
@@ -1381,12 +1436,30 @@ function DocumentList({ cid }: { cid: string }) {
     });
   };
 
+  const docCount = docs.data?.length ?? 0;
+  const compiledTokens = ((corpus.data?.stats as Record<string, number> | undefined)?.token_count as number) ?? 0;
+  // v1.0.7 compile gate — three states:
+  //   notCompiled : documents exist but the pipeline never produced tokens
+  //   staleMeta   : bulk/per-file metadata changed after the last compile
+  //   compiled    : token_count > 0 and no pending metadata changes
+  const notCompiled = docCount > 0 && compiledTokens === 0 && !lastCompile?.ok;
+  const compiled = docCount > 0 && compiledTokens > 0 && !needsRecompile && lastCompile?.ok !== false;
+
   return (
     <div className="document-list-section">
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "var(--space-2)" }}>
-        <h3 className="document-list-title">Documents ({docs.data?.length ?? 0})</h3>
-        <div style={{ display: "flex", gap: "var(--space-2)" }}>
-          {docs.data && docs.data.length > 0 && (
+        <h3 className="document-list-title">Documents ({docCount})</h3>
+        <div style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap" }}>
+          {docCount > 0 && (
+            <button
+              className="btn-small"
+              onClick={() => setShowBulkTag(!showBulkTag)}
+              title="Apply the same genre / register / year to ALL files at once (corpus-construction workflow)"
+            >
+              ✎ Tag All Files
+            </button>
+          )}
+          {docCount > 0 && (
             <button
               className="btn-small"
               onClick={() => setShowSubcorpusForm(!showSubcorpusForm)}
@@ -1395,22 +1468,72 @@ function DocumentList({ cid }: { cid: string }) {
               + Subcorpus
             </button>
           )}
-          {docs.data && docs.data.length > 0 && (
+          {docCount > 0 && (
             <button
-              className="btn-small"
+              className={clsx("btn-small", notCompiled || needsRecompile ? "btn-primary" : "")}
               onClick={handleRecompile}
               disabled={recompiling}
-              title="Re-run the full NLP pipeline on all documents"
+              title="Run the full pipeline on all documents: cleaning → tokenization → POS tagging → lemmatization → dependency parsing → compile"
             >
-              {recompiling ? "Compiling…" : "↻ Recompile"}
+              {recompiling ? "Compiling…" : notCompiled ? "⚙ Compile Corpus" : "↻ Recompile"}
             </button>
           )}
         </div>
       </div>
 
+      {/* v1.0.7: compile gate banner — the corpus must compile successfully
+          before the user moves on to analysis. */}
+      {docCount > 0 && (notCompiled || needsRecompile || lastCompile) && (
+        <div
+          role="status"
+          className={clsx(
+            "uploader-status",
+            lastCompile ? (lastCompile.ok ? "success" : "error") : needsRecompile ? "info" : "error",
+          )}
+          style={{ marginBottom: "var(--space-2)" }}
+        >
+          {lastCompile ? (
+            lastCompile.msg
+          ) : notCompiled ? (
+            <>⚠ Corpus is not compiled yet — click <strong>⚙ Compile Corpus</strong> to run the annotation pipeline (tokenize → tag → lemmatize → parse) before analysis.</>
+          ) : (
+            <>ℹ Tags changed — click <strong>↻ Recompile</strong> so the new genre/register classification is applied to the compiled corpus.</>
+          )}
+        </div>
+      )}
+      {compiled && !lastCompile && docCount > 0 && (
+        <div className="uploader-status success" role="status" style={{ marginBottom: "var(--space-2)" }}>
+          ✓ Corpus compiled — {compiledTokens.toLocaleString()} tokens ready for analysis.
+        </div>
+      )}
+
       {status && (
         <div className={clsx("uploader-status", status.kind)} style={{ marginBottom: "var(--space-2)" }}>
           {status.msg}
+        </div>
+      )}
+
+      {/* v1.0.7: bulk (all-files) tagging form */}
+      {showBulkTag && docCount > 0 && (
+        <div style={{
+          marginBottom: "var(--space-2)", padding: "var(--space-3)",
+          background: "var(--bg-subtle)", borderRadius: "var(--radius-sm)",
+          border: "1px solid var(--border)", fontSize: "12px",
+        }}>
+          <strong>Tag All Files ({docCount})</strong>
+          <p style={{ fontSize: "11px", color: "var(--text-muted)", margin: "4px 0 8px" }}>
+            Apply the same metadata to every file in the corpus, then recompile.
+            Leave a field empty to keep each file's existing value.
+          </p>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr auto", gap: "var(--space-2)", marginBottom: "var(--space-2)" }}>
+            <input placeholder="Genre (e.g. news)" value={bulkForm.genre} onChange={(e) => setBulkForm({ ...bulkForm, genre: e.target.value })} style={{ fontSize: "12px" }} />
+            <input placeholder="Register (e.g. academic)" value={bulkForm.register} onChange={(e) => setBulkForm({ ...bulkForm, register: e.target.value })} style={{ fontSize: "12px" }} />
+            <input placeholder="Year (e.g. 2024)" value={bulkForm.year} onChange={(e) => setBulkForm({ ...bulkForm, year: e.target.value })} style={{ fontSize: "12px" }} />
+            <button className="btn-small btn-primary" onClick={handleBulkTag} disabled={bulkTagging}>
+              {bulkTagging ? "Applying…" : `Apply to all ${docCount}`}
+            </button>
+          </div>
+          <button className="btn-small" onClick={() => setShowBulkTag(false)}>Cancel</button>
         </div>
       )}
 
@@ -1534,6 +1657,25 @@ function DocumentList({ cid }: { cid: string }) {
 
 // ─── Reference Upload ─────────────────────────────────────────────
 
+/**
+ * v1.0.7: machine-aware size guidance for reference-corpus uploads.
+ *
+ * Hard limit: the engine rejects any single file above 50 MB (HTTP 413,
+ * enforced in POST /corpora/{cid}/documents). Beyond that, the practical
+ * budget scales with the machine: spaCy tagging+parsing is CPU-bound
+ * (~5-15k tokens/s per core) and the annotation run holds one document
+ * in memory at a time, so RAM bounds a comfortable TOTAL corpus size.
+ * navigator.deviceMemory (Chromium/WebView2) gives a coarse RAM bucket;
+ * fall back to an 8 GB baseline when unavailable.
+ */
+function referenceSizeGuidance(): { perFileMb: number; memGB: number; cores: number; recTokens: number } {
+  const nav = navigator as Navigator & { deviceMemory?: number };
+  const memGB = nav.deviceMemory && nav.deviceMemory >= 1 ? Math.min(nav.deviceMemory, 16) : 8;
+  const cores = navigator.hardwareConcurrency || 4;
+  const recTokens = Math.round(memGB * 250_000); // conservative: 250k tokens per GB of RAM
+  return { perFileMb: 50, memGB, cores, recTokens };
+}
+
 function ReferenceUpload() {
   const setActive = useApp((s) => s.setReferenceCorpus);
   const activeProjectId = useApp((s) => s.activeProjectId);
@@ -1636,6 +1778,24 @@ function ReferenceUpload() {
       <p className="reference-section-desc">
         Upload your own reference corpus files, or select an existing corpus.
       </p>
+
+      {/* v1.0.7: max-size guidance based on engine limits + machine specs */}
+      <div className="reference-upload-section" style={{ fontSize: "11px", color: "var(--text-muted)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", padding: "var(--space-2)" }}>
+        <strong style={{ color: "var(--text)" }}>Size limits on this machine</strong>
+        <div>• Maximum file size: <strong>50 MB per file</strong> (engine-enforced — larger files are rejected).</div>
+        {(() => {
+          const g = referenceSizeGuidance();
+          const recM = (g.recTokens / 1_000_000).toFixed(1);
+          const recMB = Math.round((g.recTokens * 6) / 1_000_000); // ~6 bytes/token of plain text
+          return (
+            <div>
+              • Recommended total: <strong>≤ ~{recM}M tokens (≈ {recMB.toLocaleString()} MB of text)</strong> for this
+              machine (~{g.memGB} GB RAM, {g.cores} cores). Larger corpora are accepted (up to 50 MB per file)
+              but the first tagging/parsing run can take many minutes and keyness comparison slows down.
+            </div>
+          );
+        })()}
+      </div>
 
       <div className="reference-upload-section">
         <strong>Option 1: Use an existing corpus</strong>

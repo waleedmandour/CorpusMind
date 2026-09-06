@@ -56,8 +56,9 @@ export function TagsetSelector({ cid }: { cid: string }) {
     <div className="corpus-card tagset-card">
       <h3>Tagset</h3>
       <p className="settings-text-muted">
-        Choose the grammatical or semantic tagset used for POS-style analysis of
-        this corpus. The choice is saved with the corpus.
+        Step 1 — choose the grammatical or semantic tagset used when the corpus
+        is tagged, parsed and (re)compiled. Files uploaded afterwards are
+        annotated with this scheme; the choice is saved with the corpus.
       </p>
       <select
         className="tagset-select"

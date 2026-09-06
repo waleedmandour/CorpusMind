@@ -583,6 +583,35 @@ async def update_document_metadata(
     return {"ok": True, "document_id": did, "meta": new_meta}
 
 
+@router.patch("/corpora/{cid}/documents/meta")
+async def update_all_document_metadata(
+    cid: str, body: DocumentMetadataUpdate, session: AsyncSession = Depends(get_session)
+) -> dict:
+    """v1.0.7: bulk metadata update — apply genre/register/year to EVERY
+    document in the corpus in one call.
+
+    Corpus-construction workflow (Biber-style): the linguist tags all files
+    with the same genre/register labels first, then recompiles so the new
+    classification is reflected consistently across the analysis pipeline
+    and subcorpus filters. Returns the number of documents updated.
+    """
+    docs = (
+        (await session.execute(select(Document).where(Document.corpus_id == cid)))
+        .scalars()
+        .all()
+    )
+    if not docs:
+        raise HTTPException(404, "Corpus has no documents to tag")
+    for doc in docs:
+        # Reassign (not in-place mutation) for SQLAlchemy change detection
+        new_meta = dict(doc.meta or {})
+        new_meta.update(body.meta)
+        doc.meta = new_meta
+    await session.commit()
+    log.info("bulk_meta_updated", cid=cid, documents=len(docs), keys=sorted(body.meta.keys()))
+    return {"ok": True, "updated": len(docs), "meta": body.meta}
+
+
 class SubcorpusCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=128)
     description: str = ""

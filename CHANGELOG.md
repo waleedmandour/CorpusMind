@@ -6,6 +6,46 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
+## [1.0.7] — 2026-09-06 — Corpus-construction workflow + collocation network fix
+
+Five user-reported fixes and workflow upgrades in the parent app.
+
+### Fixed
+
+- **Collocation network rendered a blank canvas** (v1.0.0 regression): the
+  Sigma.js edge reducer closed over the empty graph instance created at mount
+  time, so the moment the real graph was loaded via `setGraph()` every reducer
+  call threw `NotFoundGraphError`, aborting Sigma's re-index mid-refresh and
+  leaving the canvas permanently blank. The fetch's catch block then swallowed
+  the error into a 2.6-second toast. The reducer now reads the graph through
+  the renderer (`renderer.getGraph()`), and load failures render as a
+  persistent, styled error line.
+- **The app no longer reopens on the last-visited screen**: `activeNav` is
+  removed from the persisted UI state (with a storage migration), so every
+  launch opens on Home (Vision for Lens), as users expect.
+
+### Changed
+
+- **Your Corpus: the Tagset card now comes FIRST** — before the upload zone
+  and the document list, matching the corpus-construction norm (pick the
+  annotation scheme, then upload/tag/parse against it).
+- **Tag all files at once**: a new "Tag All Files" control applies the same
+  genre / register / year to every document in one action (new engine
+  endpoint `PATCH /corpora/{cid}/documents/meta`), after which the UI prompts
+  for recompilation.
+- **Compile gate**: the document list now shows an explicit corpus-compile
+  status — a warning ("not compiled yet" / "tags changed, recompile") when
+  analysis would run against a stale corpus, and a green "Compiled
+  successfully — N/M documents, T tokens" confirmation when a recompile
+  succeeds. Per-document compile failures surface as an explicit error state
+  instead of a silent pass.
+- **Reference corpus size guidance**: the Upload tab now states the engine's
+  hard limit (50 MB per file, enforced with HTTP 413) and a recommended total
+  corpus size computed from the machine (RAM via `navigator.deviceMemory`
+  with an 8 GB fallback, plus CPU core count).
+- **Larger AI response text**: floating-assistant messages 12.5px → 14px and
+  full-Assistant message bodies 15px, both at 1.6 line-height.
+
 ## [1.0.6] — 2026-09-05 — Complete release asset matrix
 
 Every tag-gated release since v1.0.1 silently shipped without the parent

@@ -1128,13 +1128,18 @@ export const api = {
     ),
   // v0.1.17: recompile (re-run NLP pipeline) on all documents in a corpus
   recompileCorpus: (cid: string) =>
-    jsonFetch<{ recompiled: number; total_documents: number; token_count: number; type_count: number }>(
+    jsonFetch<{ recompiled: number; total_documents: number; token_count: number; type_count: number; success: boolean; failed: Array<{ document_id: string; filename: string; error: string }> }>(
       `/api/v1/corpora/${cid}/recompile`, { method: "POST" }
     ),
   // v0.1.19: update document metadata (genre, register, year, etc.)
   updateDocumentMeta: (cid: string, did: string, meta: Record<string, unknown>) =>
     jsonFetch<{ ok: boolean; document_id: string; meta: Record<string, unknown> }>(
       `/api/v1/corpora/${cid}/documents/${did}/meta`, { method: "PATCH", body: JSON.stringify({ meta }) }
+    ),
+  // v1.0.7: bulk metadata — apply genre/register/year to ALL documents at once
+  updateAllDocumentsMeta: (cid: string, meta: Record<string, unknown>) =>
+    jsonFetch<{ ok: boolean; updated: number; meta: Record<string, unknown> }>(
+      `/api/v1/corpora/${cid}/documents/meta`, { method: "PATCH", body: JSON.stringify({ meta }) }
     ),
   // v0.1.19: subcorpus management
   listSubcorpora: (cid: string) =>

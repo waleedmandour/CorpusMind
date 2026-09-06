@@ -939,7 +939,14 @@ code, pre { font-family: var(--font-mono); }
 .grounded-badge.grounded { background: var(--grounded-bg); color: var(--grounded-fg); }
 .grounded-badge.unground { background: var(--unground-bg); color: var(--unground-fg); }
 
-.msg-content { white-space: pre-wrap; word-wrap: break-word; }
+.msg-content {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  /* v1.0.7: larger AI response text (user request) — also lifts the full
+     Assistant view since every message body renders through .msg-content. */
+  font-size: 15px;
+  line-height: 1.6;
+}
 
 .tool-calls { margin-block-start: var(--space-2); font-size: 11px; }
 .tool-calls summary { cursor: pointer; color: var(--text-muted); }
@@ -2196,8 +2203,10 @@ code, pre { font-family: var(--font-mono); }
   max-inline-size: 92%;
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-md);
-  font-size: 12.5px;
-  line-height: 1.5;
+  /* v1.0.7: enlarged from 12.5px — user-requested, AI responses (e.g. the
+     grounded "The tool results indicate…" summaries) were too small. */
+  font-size: 14px;
+  line-height: 1.6;
 }
 .ai-drawer-msg.user {
   align-self: flex-end;
@@ -2218,7 +2227,7 @@ code, pre { font-family: var(--font-mono); }
   align-items: center;
   gap: var(--space-2);
   margin-block-end: 2px;
-  font-size: 10px;
+  font-size: 11px;
 }
 .ai-drawer-msg-head strong { text-transform: uppercase; letter-spacing: 0.04em; }
 .ai-badge {

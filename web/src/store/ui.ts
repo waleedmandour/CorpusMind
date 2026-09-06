@@ -136,19 +136,23 @@ export const useUI = create<UIState>()(
     }),
     {
       name: "corpusmind-ui",
-      // Don't persist isLensMode — it's always re-detected from the URL
-      // query param (?shell=lens) on each load. Also don't persist
-      // activeNav when in Lens mode so it always defaults to Vision.
+      // v1.0.7 (version bump + migrate): activeNav is NEVER persisted anymore —
+      // the app must open on its default view at every launch (Home for the
+      // main app, Vision for Lens). Old payloads carried a persisted
+      // activeNav, so the migration drops it once on first load.
+      version: 1,
+      migrate: (persisted, version) => {
+        const p = { ...((persisted ?? {}) as Record<string, unknown>) };
+        if (version < 1) delete p.activeNav;
+        return p as unknown as UIState;
+      },
       partialize: (state) => {
-        const { isLensMode, ...rest } = state;
-        // In Lens mode, don't persist activeNav (always default to Vision)
-        if (state.isLensMode) {
-          const { activeNav, ...restWithoutNav } = rest;
-          void activeNav;
-          void isLensMode;
-          return restWithoutNav;
-        }
+        // Don't persist isLensMode — it's always re-detected from the URL
+        // query param (?shell=lens) on each load. activeNav is likewise
+        // never persisted (see version note above).
+        const { isLensMode, activeNav, ...rest } = state;
         void isLensMode;
+        void activeNav;
         return rest;
       },
     },
