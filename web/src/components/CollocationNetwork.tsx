@@ -56,6 +56,71 @@ const MAX_NODES = 120;
 const INITIAL_TOP_N = 14;
 const EXPAND_TOP_N = 8;
 
+/**
+ * Sigma v3 is WebGL2-only. Some desktop webviews (WebKitGTK on Linux without
+ * compositing, remote desktops / VMs without a GPU, some locked-down
+ * WebView2 installs) silently return a context that can't actually draw —
+ * `new Sigma()` doesn't always throw in that case, it just produces an empty
+ * canvas forever. Probe WebGL2 up front so we can route to the built-in
+ * 2D-canvas fallback instead of leaving the user with a blank box and no
+ * way to explain why.
+ *
+ * Manual override for diagnostics: localStorage["cm-network-renderer"] =
+ * "canvas" forces the 2D engine, "webgl" forces Sigma.
+ */
+function supportsWebGL2(): boolean {
+  try {
+    const canvas = document.createElement("canvas");
+    const gl = canvas.getContext("webgl2");
+    return !!gl;
+  } catch {
+    return false;
+  }
+}
+
+type NetworkRendererMode = "webgl" | "canvas2d";
+
+function getPreferredRendererMode(): NetworkRendererMode {
+  try {
+    const override = localStorage.getItem("cm-network-renderer");
+    if (override === "canvas") return "canvas2d";
+    if (override === "webgl") return "webgl";
+  } catch {
+    /* storage unavailable (e.g. hardened private mode) — use detection */
+  }
+  return supportsWebGL2() ? "webgl" : "canvas2d";
+}
+
+/** Shared hover-tooltip text (used by both the WebGL and 2D renderers). */
+function nodeTooltipText(g: Graph, node: string, measure: CollocationMeasure): string {
+  const attrs = g.getNodeAttributes(node);
+  const parts = [
+    `${node}${attrs.isCenter ? " — center" : ""}`,
+    `corpus freq: ${attrs.freq ?? "—"}`,
+    `collocates in graph: ${g.degree(node)}`,
+  ];
+  // Strongest incident edge, with the exact numbers for every measure.
+  let bestEdge: CollocationNetworkEdge | null = null;
+  g.forEachEdge(node, (_e, attr, _s, _t) => {
+    const edge = attr as CollocationNetworkEdge & { norms?: Record<string, number> };
+    const v = Math.abs(Number(edge[measure] ?? 0));
+    if (!bestEdge || v > Math.abs(Number(bestEdge[measure] ?? 0))) {
+      bestEdge = edge;
+    }
+  });
+  if (bestEdge) {
+    const edge = bestEdge as CollocationNetworkEdge;
+    parts.push(
+      `with “${edge.source === node ? edge.target : edge.source}”: O=${edge.O}, f(x)=${edge.fx}, f(y)=${edge.fy}`,
+    );
+    for (const m of MEASURES) {
+      const v = edge[m.key];
+      if (typeof v === "number") parts.push(`${m.label}: ${v}`);
+    }
+  }
+  return parts.join("\n");
+}
+
 export interface CollocationNetworkProps {
   cid: string;
   centerNode: string;
@@ -115,6 +180,32 @@ export function CollocationNetwork({
   // v1.0.7: persistent load-error line (the 2.6s flash used to swallow real
   // failures — e.g. a reducer exception — leaving a silently blank canvas).
   const [loadError, setLoadError] = useState("");
+  // v1.0.8: renderer selection. Sigma v3 needs a working WebGL2 context; when
+  // that is missing (VMs, remote-desktop sessions, disabled hardware
+  // acceleration, locked-down webviews) or Sigma fails to start, we render
+  // the SAME graph with a built-in 2D-canvas engine instead of a blank box.
+  // localStorage["cm-network-renderer"] = "canvas" | "webgl" forces a mode.
+  const [mode, setMode] = useState<NetworkRendererMode>(getPreferredRendererMode);
+  const modeRef = useRef<NetworkRendererMode>(mode);
+  useEffect(() => {
+    modeRef.current = mode;
+  }, [mode]);
+  // Redraw tick for the 2D fallback — mirrors every sigmaRef.refresh() call.
+  const [tick, setTick] = useState(0);
+  const [fitTick, setFitTick] = useState(0);
+
+  const refreshAll = useCallback(() => {
+    if (modeRef.current === "webgl") sigmaRef.current?.refresh();
+    else setTick((t) => t + 1);
+  }, []);
+
+  const switchToCanvas2D = useCallback((reason: string) => {
+    if (modeRef.current === "canvas2d") return;
+    // eslint-disable-next-line no-console
+    console.warn(`[CollocationNetwork] switching to 2D canvas renderer: ${reason}`);
+    modeRef.current = "canvas2d";
+    setMode("canvas2d");
+  }, []);
 
   const qc = useQueryClient();
 
@@ -174,7 +265,7 @@ export function CollocationNetwork({
           flashMsg(`No collocates found for “${centerNode}” at ±${win} / min freq ${minFreq}.`);
           graphRef.current = null;
           sigmaRef.current?.setGraph(new Graph());
-          sigmaRef.current?.refresh();
+          refreshAll();
           setStats({ nodes: 0, edges: 0, density: 0 });
           setEmpty(true);
           return;
@@ -183,7 +274,7 @@ export function CollocationNetwork({
         setStats(res.stats);
         setExpanded(new Set());
         sigmaRef.current?.setGraph(graphRef.current);
-        sigmaRef.current?.refresh();
+        refreshAll();
       } catch (e) {
         if (!cancelled) {
           setLoadError(`Network failed: ${(e as Error).message}`);
@@ -195,27 +286,38 @@ export function CollocationNetwork({
     return () => {
       cancelled = true;
     };
-  }, [cid, centerNode, level, win, minFreq, buildGraph, flashMsg]);
+  }, [cid, centerNode, level, win, minFreq, buildGraph, flashMsg, refreshAll]);
 
-  // ── Sigma lifecycle (created once per mount) ────────────────────────────
+  // ── Sigma lifecycle (WebGL path; created once per mount) ────────────────
   useEffect(() => {
+    if (mode !== "webgl") return;
     const container = containerRef.current;
     if (!container) return;
 
     const graph = graphRef.current ?? new Graph();
     graphRef.current = graph;
 
-    const renderer = new Sigma(graph, container, {
-      allowInvalidContainer: true,
-      renderEdgeLabels: false,
-      labelRenderedSizeThreshold: 0.1,
-      labelColor: { color: "#1f2d28" },
-      labelSize: 12,
-      labelWeight: "500",
-      defaultEdgeColor: BRAND_EDGE,
-      minCameraRatio: 0.08,
-      maxCameraRatio: 12,
-    });
+    let renderer: Sigma;
+    try {
+      renderer = new Sigma(graph, container, {
+        allowInvalidContainer: true,
+        renderEdgeLabels: false,
+        labelRenderedSizeThreshold: 0.1,
+        labelColor: { color: "#1f2d28" },
+        labelSize: 12,
+        labelWeight: "500",
+        defaultEdgeColor: BRAND_EDGE,
+        minCameraRatio: 0.08,
+        maxCameraRatio: 12,
+      });
+    } catch (e) {
+      // Never let a renderer-construction failure disappear silently —
+      // fall back to the 2D canvas so the network still appears.
+      // eslint-disable-next-line no-console
+      console.error("[CollocationNetwork] Sigma construction failed:", e);
+      switchToCanvas2D(`Sigma failed to start: ${(e as Error).message}`);
+      return;
+    }
     sigmaRef.current = renderer;
 
     // Node reducer — color by role, hover ring, drag highlight.
@@ -282,38 +384,18 @@ export function CollocationNetwork({
       }
     });
 
-    // ── Hover tooltip with exact statistics ──
+    // ── Hover tooltip with exact statistics (shared with the 2D renderer) ──
     renderer.on("enterNode", (e) => {
       hoverRef.current = e.node;
       const g = renderer.getGraph();
       const attrs = g.getNodeAttributes(e.node);
-      const parts = [
-        `${e.node}${attrs.isCenter ? " — center" : ""}`,
-        `corpus freq: ${attrs.freq ?? "—"}`,
-        `collocates in graph: ${g.degree(e.node)}`,
-      ];
-      // Strongest incident edge, with the exact numbers for every measure.
-      let bestEdge: CollocationNetworkEdge | null = null;
-      g.forEachEdge(e.node, (_e, attr, _s, _t) => {
-        const edge = attr as CollocationNetworkEdge & { norms?: Record<string, number> };
-        const v = Math.abs(Number(edge[measureRef.current] ?? 0));
-        if (!bestEdge || v > Math.abs(Number(bestEdge[measureRef.current] ?? 0))) {
-          bestEdge = edge;
-        }
-      });
-      if (bestEdge) {
-        const edge = bestEdge as CollocationNetworkEdge;
-        parts.push(
-          `with “${edge.source === e.node ? edge.target : edge.source}”: O=${edge.O}, f(x)=${edge.fx}, f(y)=${edge.fy}`,
-        );
-        for (const m of MEASURES) {
-          const v = edge[m.key];
-          if (typeof v === "number") parts.push(`${m.label}: ${v}`);
-        }
-      }
       const p = renderer.graphToViewport({ x: attrs.x, y: attrs.y });
       const rect = container.getBoundingClientRect();
-      setTooltip({ x: p.x + rect.left + 14, y: p.y + rect.top - 8, text: parts.join("\n") });
+      setTooltip({
+        x: p.x + rect.left + 14,
+        y: p.y + rect.top - 8,
+        text: nodeTooltipText(g, e.node, measureRef.current),
+      });
     });
     renderer.on("leaveNode", () => {
       hoverRef.current = null;
@@ -324,18 +406,61 @@ export function CollocationNetwork({
     const blockMenu = (e: MouseEvent) => e.preventDefault();
     container.addEventListener("contextmenu", blockMenu);
 
+    // First paint — if the WebGL pipeline is broken in this webview (context
+    // created but unable to draw, shader compile failures, …), an exception
+    // here is a clear signal to fall back instead of staying blank.
+    try {
+      renderer.refresh();
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error("[CollocationNetwork] Sigma initial refresh failed:", e);
+      switchToCanvas2D(`Sigma refresh failed: ${(e as Error).message}`);
+      try {
+        renderer.kill();
+      } catch {
+        /* already dead */
+      }
+      sigmaRef.current = null;
+      container.removeEventListener("contextmenu", blockMenu);
+      return;
+    }
+
+    // The container is sized in CSS (fixed block-size, 100% inline-size),
+    // but if it's mounted before its parent has been laid out (font-load
+    // reflow, panel animation) Sigma can start at 0×0 and never repaint on
+    // its own. Kick a refresh whenever the observed size actually changes so
+    // that case self-heals instead of staying blank.
+    let lastW = 0;
+    let lastH = 0;
+    const resizeObserver = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      const { width, height } = entry.contentRect;
+      if (Math.abs(width - lastW) > 1 || Math.abs(height - lastH) > 1) {
+        lastW = width;
+        lastH = height;
+        try {
+          renderer.refresh();
+        } catch {
+          /* transient resize during teardown — ignore */
+        }
+      }
+    });
+    resizeObserver.observe(container);
+
     return () => {
+      resizeObserver.disconnect();
       container.removeEventListener("contextmenu", blockMenu);
       renderer.kill();
       sigmaRef.current = null;
     };
-  }, []);
+  }, [mode, switchToCanvas2D]);
 
   // Keep measure changes in sync without refetching.
   useEffect(() => {
     measureRef.current = measure;
-    sigmaRef.current?.refresh();
-  }, [measure]);
+    refreshAll();
+  }, [measure, refreshAll]);
 
   // ── Expand / collapse ───────────────────────────────────────────────────
   const expandNode = useCallback(
@@ -385,7 +510,7 @@ export function CollocationNetwork({
           });
         }
         runLayout(graph, 60);
-        sigmaRef.current?.refresh();
+        refreshAll();
         setExpanded((prev) => new Set(prev).add(node));
         setStats((s) => ({ ...s, nodes: graph.order, edges: graph.size }));
         if (added.length === 0) flashMsg(`“${node}” has no new collocates to add.`);
@@ -394,7 +519,7 @@ export function CollocationNetwork({
         flashMsg(`Expansion failed: ${(e as Error).message}`);
       }
     },
-    [cid, level, win, minFreq, flashMsg, qc],
+    [cid, level, win, minFreq, flashMsg, qc, refreshAll],
   );
 
   const collapseNode = useCallback(
@@ -418,7 +543,7 @@ export function CollocationNetwork({
         frontier = next;
       }
       for (const n of doomed) graph.dropNode(n);
-      sigmaRef.current?.refresh();
+      refreshAll();
       setExpanded((prev) => {
         const next = new Set(prev);
         for (const n of doomed) next.delete(n);
@@ -460,23 +585,37 @@ export function CollocationNetwork({
     };
   }, [handleNodeClick, onSetCenter]);
 
+  const handleCanvasRightClick = useCallback(
+    (node: string) => {
+      if (!graphRef.current?.getNodeAttribute(node, "isCenter")) onSetCenter?.(node);
+    },
+    [onSetCenter],
+  );
+
   // ── Toolbar actions ─────────────────────────────────────────────────────
   const resetLayout = () => {
     const graph = graphRef.current;
     if (!graph) return;
     runLayout(graph, 140);
-    sigmaRef.current?.refresh();
+    refreshAll();
   };
 
   const recenterView = () => {
-    sigmaRef.current?.getCamera().animatedReset({ duration: 300 });
+    if (modeRef.current === "webgl") {
+      sigmaRef.current?.getCamera().animatedReset({ duration: 300 });
+    } else {
+      setFitTick((t) => t + 1);
+    }
   };
 
   const exportPng = () => {
     const container = containerRef.current;
-    const renderer = sigmaRef.current;
-    if (!container || !renderer) return;
-    renderer.refresh();
+    if (!container) return;
+    if (modeRef.current === "webgl") {
+      const renderer = sigmaRef.current;
+      if (!renderer) return;
+      renderer.refresh();
+    }
     const canvases = Array.from(container.querySelectorAll("canvas"));
     if (canvases.length === 0) return;
     const out = document.createElement("canvas");
@@ -530,6 +669,14 @@ export function CollocationNetwork({
           <span className={total.nodes >= MAX_NODES ? "network-stats warn" : "network-stats"}>
             {total.nodes} nodes · {total.edges} edges · density {total.density.toFixed(3)}
           </span>
+          {mode === "canvas2d" && (
+            <span
+              className="network-mode-badge"
+              title="WebGL2 is not available in this window — the network is rendered with the built-in 2D canvas engine. Every interaction still works."
+            >
+              2D mode
+            </span>
+          )}
           <button className="btn-small" onClick={resetLayout} title="Re-run the ForceAtlas2 layout">
             Re-layout
           </button>
@@ -550,7 +697,19 @@ export function CollocationNetwork({
         className="network-canvas"
         role="application"
         aria-label={`Interactive collocation network for '${centerNode}'. Click a collocate to expand its collocates. The table above shows the same data in text form.`}
-      />
+      >
+        {mode === "canvas2d" && (
+          <NetworkCanvas2D
+            graphRef={graphRef}
+            measureRef={measureRef}
+            refreshTick={tick}
+            fitTick={fitTick}
+            onHover={setTooltip}
+            onNodeClick={handleNodeClick}
+            onNodeRightClick={handleCanvasRightClick}
+          />
+        )}
+      </div>
 
       {flash && <div className="network-flash">{flash}</div>}
 
@@ -577,6 +736,9 @@ export function CollocationNetwork({
         as center · drag nodes to rearrange · scroll to zoom. Edge thickness = the selected measure;
         node size = corpus frequency. Switching the measure re-weights every edge instantly (no
         refetch, ±{win} words, min freq {minFreq}).
+        {mode === "canvas2d"
+          ? " Rendered with the built-in 2D engine (no WebGL2 available) — all interactions are identical."
+          : ""}
       </p>
     </div>
   );
@@ -595,4 +757,306 @@ function normalizeEdge(edge: CollocationNetworkEdge, all: CollocationNetworkEdge
     norms[m.key] = max > 0 ? v / max : 0;
   }
   return norms;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// NetworkCanvas2D (v1.0.8) — zero-dependency 2D-canvas fallback renderer.
+//
+// Sigma v3 requires a working WebGL2 context. In webviews without one (VMs,
+// remote-desktop sessions, disabled hardware acceleration, locked-down
+// installs) the network used to vanish into a permanently blank box. This
+// renderer draws the SAME graphology graph — same ForceAtlas2 positions, same
+// color system, same per-measure edge weighting — with plain Canvas2D, and
+// supports the full interaction set: wheel zoom, drag-pan, node drag, hover
+// tooltips, click-to-expand / collapse, right-click re-center. PNG export
+// works unchanged (the parent composites whatever <canvas> elements live in
+// the container).
+// ─────────────────────────────────────────────────────────────────────────────
+interface NetworkCanvas2DProps {
+  graphRef: { current: Graph | null };
+  measureRef: { current: CollocationMeasure };
+  refreshTick: number;
+  fitTick: number;
+  onHover: (t: { x: number; y: number; text: string } | null) => void;
+  onNodeClick: (node: string) => void;
+  onNodeRightClick: (node: string) => void;
+}
+
+function NetworkCanvas2D({
+  graphRef,
+  measureRef,
+  refreshTick,
+  fitTick,
+  onHover,
+  onNodeClick,
+  onNodeRightClick,
+}: NetworkCanvas2DProps) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  // Camera: graph coords → screen via sx = x*scale + tx, sy = ty - y*scale
+  // (y flipped so ForceAtlas2 layouts read like Sigma's). fitScale is the
+  // scale at the last fit-to-view; node/edge sizes scale with its square root
+  // so nodes stay visible when zoomed out and grow gently when zoomed in.
+  const viewRef = useRef({ scale: 1, fitScale: 0, tx: 0, ty: 0, fitted: false, lastGraph: null as Graph | null });
+  const hoverRef = useRef<string | null>(null);
+  const dragRef = useRef<{ node: string | null; panning: boolean; moved: boolean; lastX: number; lastY: number } | null>(
+    null,
+  );
+
+  const fitView = useCallback(() => {
+    const canvas = canvasRef.current;
+    const graph = graphRef.current;
+    if (!canvas || !graph || graph.order === 0) return;
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    if (!w || !h) return;
+    let minX = Infinity;
+    let maxX = -Infinity;
+    let minY = Infinity;
+    let maxY = -Infinity;
+    graph.forEachNode((_n, a) => {
+      minX = Math.min(minX, a.x ?? 0);
+      maxX = Math.max(maxX, a.x ?? 0);
+      minY = Math.min(minY, a.y ?? 0);
+      maxY = Math.max(maxY, a.y ?? 0);
+    });
+    const pad = 90; // room for node labels
+    const spanX = Math.max(maxX - minX, 1e-6);
+    const spanY = Math.max(maxY - minY, 1e-6);
+    const scale = Math.min(
+      Math.max(Math.min((w - pad * 2) / spanX, (h - pad * 2) / spanY), 1e-3),
+      4000,
+    );
+    const cx = (minX + maxX) / 2;
+    const cy = (minY + maxY) / 2;
+    viewRef.current = {
+      scale,
+      fitScale: scale,
+      tx: w / 2 - cx * scale,
+      ty: h / 2 + cy * scale,
+      fitted: true,
+      lastGraph: graph,
+    };
+  }, [graphRef]);
+
+  const draw = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const graph = graphRef.current;
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    const dpr = window.devicePixelRatio || 1;
+    if (w && h) {
+      const bw = Math.round(w * dpr);
+      const bh = Math.round(h * dpr);
+      if (canvas.width !== bw || canvas.height !== bh) {
+        canvas.width = bw;
+        canvas.height = bh;
+        viewRef.current.fitted = false; // geometry changed → re-fit
+      }
+    }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+    if (!graph || graph.order === 0) return;
+    const v = viewRef.current;
+    if (!v.fitted || v.lastGraph !== graph) fitView();
+    const { scale, tx, ty, fitScale } = viewRef.current;
+    const sf = fitScale > 0 ? Math.sqrt(scale / fitScale) : 1;
+    const sx = (x: number) => x * scale + tx;
+    const sy = (y: number) => ty - y * scale;
+
+    // Hover neighborhood (node ring + incident edges light up, like Sigma).
+    const hover = hoverRef.current;
+    const hotNodes = new Set<string>();
+    if (hover && graph.hasNode(hover)) {
+      hotNodes.add(hover);
+      graph.forEachEdge(hover, (_e, _a, s, t) => hotNodes.add(s === hover ? t : s));
+    }
+
+    // Edges first.
+    graph.forEachEdge((_e, attr, s, t) => {
+      const a1 = graph.getNodeAttributes(s);
+      const a2 = graph.getNodeAttributes(t);
+      const norms = (attr.norms ?? {}) as Record<string, number>;
+      const norm = norms[measureRef.current] ?? 0;
+      const hot = !!hover && (s === hover || t === hover);
+      let width = (0.4 + 3.2 * norm) * sf;
+      width = Math.min(Math.max(width, 0.35), 16);
+      ctx.strokeStyle = hot ? HIGHLIGHT : BRAND_EDGE;
+      ctx.lineWidth = hot ? width + 1.2 * sf : width;
+      ctx.beginPath();
+      ctx.moveTo(sx(a1.x ?? 0), sy(a1.y ?? 0));
+      ctx.lineTo(sx(a2.x ?? 0), sy(a2.y ?? 0));
+      ctx.stroke();
+    });
+
+    // Nodes + labels on top.
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+    graph.forEachNode((node, a) => {
+      const x = sx(a.x ?? 0);
+      const y = sy(a.y ?? 0);
+      const r = Math.max((a.size ?? 6) * sf, 2.2);
+      const hot = hotNodes.has(node);
+      ctx.beginPath();
+      ctx.arc(x, y, hot ? r + 2 : r, 0, Math.PI * 2);
+      ctx.fillStyle = a.isCenter ? BRAND : hot ? HIGHLIGHT : BRAND_NODE;
+      ctx.fill();
+      if (a.isCenter) {
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = "#123528";
+        ctx.stroke();
+      }
+      const label = (a.label ?? node) as string;
+      ctx.font = `${a.isCenter ? "600 13px" : "500 12px"} system-ui, -apple-system, 'Segoe UI', sans-serif`;
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.85)";
+      ctx.strokeText(label, x + r + 5, y);
+      ctx.fillStyle = "#1f2d28";
+      ctx.fillText(label, x + r + 5, y);
+    });
+  }, [graphRef, measureRef, fitView]);
+
+  // Interactions (mount-once; handlers read through refs so they stay fresh).
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const localPos = (e: MouseEvent) => {
+      const r = canvas.getBoundingClientRect();
+      return { x: e.clientX - r.left, y: e.clientY - r.top };
+    };
+    const hitTest = (mx: number, my: number): string | null => {
+      const graph = graphRef.current;
+      if (!graph) return null;
+      const v = viewRef.current;
+      const sf = v.fitScale > 0 ? Math.sqrt(v.scale / v.fitScale) : 1;
+      let best: string | null = null;
+      let bestD = Infinity;
+      graph.forEachNode((node, a) => {
+        const x = (a.x ?? 0) * v.scale + v.tx;
+        const y = v.ty - (a.y ?? 0) * v.scale;
+        const r = Math.max((a.size ?? 6) * sf, 2.2) + 3;
+        const d = Math.hypot(mx - x, my - y);
+        if (d <= Math.max(r, 7) && d < bestD) {
+          best = node;
+          bestD = d;
+        }
+      });
+      return best;
+    };
+
+    const onDown = (e: MouseEvent) => {
+      const p = localPos(e);
+      const node = hitTest(p.x, p.y);
+      dragRef.current = { node, panning: !node, moved: false, lastX: p.x, lastY: p.y };
+      if (node) canvas.style.cursor = "grabbing";
+    };
+    const onMove = (e: MouseEvent) => {
+      const p = localPos(e);
+      const drag = dragRef.current;
+      const graph = graphRef.current;
+      if (drag) {
+        if (drag.node && graph) {
+          if (Math.abs(p.x - drag.lastX) + Math.abs(p.y - drag.lastY) > 2) drag.moved = true;
+          graph.setNodeAttribute(drag.node, "x", (p.x - viewRef.current.tx) / viewRef.current.scale);
+          graph.setNodeAttribute(drag.node, "y", (viewRef.current.ty - p.y) / viewRef.current.scale);
+          draw();
+          return;
+        }
+        if (drag.panning) {
+          viewRef.current.tx += p.x - drag.lastX;
+          viewRef.current.ty += p.y - drag.lastY;
+          drag.lastX = p.x;
+          drag.lastY = p.y;
+          draw();
+        }
+        return;
+      }
+      const node = hitTest(p.x, p.y);
+      if (node !== hoverRef.current) {
+        hoverRef.current = node;
+        if (node && graph) {
+          const r = canvas.getBoundingClientRect();
+          onHover({
+            x: p.x + r.left + 14,
+            y: p.y + r.top - 8,
+            text: nodeTooltipText(graph, node, measureRef.current),
+          });
+        } else {
+          onHover(null);
+        }
+        draw();
+      }
+    };
+    const onUp = () => {
+      const drag = dragRef.current;
+      dragRef.current = null;
+      canvas.style.cursor = "";
+      if (drag?.node && !drag.moved) onNodeClick(drag.node);
+    };
+    const onLeave = () => {
+      dragRef.current = null;
+      if (hoverRef.current) {
+        hoverRef.current = null;
+        onHover(null);
+        draw();
+      }
+    };
+    const onCtx = (e: MouseEvent) => {
+      e.preventDefault();
+      const p = localPos(e);
+      const node = hitTest(p.x, p.y);
+      if (node) onNodeRightClick(node);
+    };
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const p = localPos(e);
+      const v = viewRef.current;
+      const lo = v.fitScale > 0 ? v.fitScale * 0.05 : 0.01;
+      const hi = v.fitScale > 0 ? v.fitScale * 40 : 5000;
+      const next = Math.min(Math.max(v.scale * (e.deltaY < 0 ? 1.15 : 1 / 1.15), lo), hi);
+      const applied = next / v.scale;
+      v.tx = p.x - (p.x - v.tx) * applied;
+      v.ty = p.y - (p.y - v.ty) * applied;
+      v.scale = next;
+      draw();
+    };
+
+    canvas.addEventListener("mousedown", onDown);
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    canvas.addEventListener("mouseleave", onLeave);
+    canvas.addEventListener("contextmenu", onCtx);
+    canvas.addEventListener("wheel", onWheel, { passive: false });
+    return () => {
+      canvas.removeEventListener("mousedown", onDown);
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+      canvas.removeEventListener("mouseleave", onLeave);
+      canvas.removeEventListener("contextmenu", onCtx);
+      canvas.removeEventListener("wheel", onWheel);
+    };
+  }, [draw, graphRef, measureRef, onHover, onNodeClick, onNodeRightClick]);
+
+  // Size changes (panel reflows, window resizes) → resize + re-fit + redraw.
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ro = new ResizeObserver(() => draw());
+    ro.observe(canvas);
+    return () => ro.disconnect();
+  }, [draw]);
+
+  useEffect(() => {
+    draw();
+  }, [refreshTick, draw]);
+
+  useEffect(() => {
+    viewRef.current.fitted = false;
+    draw();
+  }, [fitTick, draw]);
+
+  return <canvas ref={canvasRef} className="network-canvas2d" aria-hidden="true" />;
 }

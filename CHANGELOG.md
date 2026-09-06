@@ -6,6 +6,44 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
+## [1.0.8] — 2026-09-06 — Collocation network: guaranteed rendering everywhere
+
+The collocation network could still come up blank on machines whose webview
+cannot provide a working WebGL2 context (Sigma v3 is WebGL2-only): VMs and
+remote-desktop sessions without a GPU, disabled hardware acceleration, and
+locked-down WebView2/WebKitGTK installs all silently produce an empty canvas.
+The network now renders on **every** machine.
+
+### Added
+
+- **Built-in 2D-canvas fallback renderer** (`NetworkCanvas2D`): when WebGL2 is
+  unavailable or Sigma fails to start, the exact same graphology graph — same
+  ForceAtlas2 layout, same colour system, same per-measure edge weighting — is
+  drawn with plain Canvas2D. Full interaction parity: wheel zoom, drag-pan,
+  node drag, hover tooltips with exact statistics, click-to-expand / collapse,
+  right-click re-center, measure re-weighting, and PNG/JSON export. A small
+  "2D mode" badge in the toolbar explains why it is active.
+- **WebGL2 capability probe** up front, with a `localStorage
+  ["cm-network-renderer"]` override (`"canvas"` / `"webgl"`) for diagnostics.
+- The network canvas is now full-width and taller (`min(72vh, 680px)`, min
+  460px) — a network reads much better wide than boxed in a fixed column.
+
+### Fixed
+
+- Sigma construction and first refresh are wrapped in try/catch and fall back
+  to the 2D renderer instead of disappearing silently.
+- A `ResizeObserver` kicks a refresh whenever the container's observed size
+  changes, so a canvas mounted before its parent has been laid out (font-load
+  reflow, panel animation) self-heals instead of staying blank.
+- Hover-tooltip text is now shared between both renderers (single source).
+
+### Verified
+
+- End-to-end in a real browser against a freshly compiled corpus: WebGL path
+  renders (12 nodes / 35 edges); forced 2D path renders identically (badge
+  shown, hover tooltip, click-to-expand 12 → 13 nodes, measure switch redraws
+  edges); zero console or page errors in either path.
+
 ## [1.0.7] — 2026-09-06 — Corpus-construction workflow + collocation network fix
 
 Five user-reported fixes and workflow upgrades in the parent app.

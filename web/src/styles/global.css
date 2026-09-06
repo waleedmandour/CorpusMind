@@ -820,17 +820,38 @@ code, pre { font-family: var(--font-mono); }
   color: var(--danger);
   font-weight: 600;
 }
-/* Sigma needs an explicitly sized, positioned container. */
+/* Sigma needs an explicitly sized, positioned container. Full width by
+   design (no max-inline-size) — a collocation network reads much better
+   wide than boxed into a fixed column. */
 .network-canvas {
   inline-size: 100%;
-  max-inline-size: 920px;
-  block-size: 560px;
+  block-size: min(72vh, 680px);
+  min-block-size: 460px;
   background: linear-gradient(160deg, #f4f8f6 0%, #eaf2ee 100%);
   border-radius: var(--radius-md);
   border: 1px solid var(--border);
   cursor: grab;
   touch-action: none;
   overflow: hidden;
+}
+/* 2D-canvas fallback renderer (v1.0.8): fills the same container. */
+.network-canvas > canvas {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+}
+.network-mode-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong, #c8d4cd);
+  background: #fff7ec;
+  color: #8a5a10;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
 }
 .network-flash {
   position: absolute;
