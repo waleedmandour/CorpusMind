@@ -231,38 +231,79 @@ Click **Arabic Tools** in the sidebar. Available tools:
 
 ---
 
-## 8. Vision Suite (Multimodal Analysis) — Coming Soon
+## 8. Vision Suite and CorpusMind Lens (Multimodal Analysis)
 
-The Vision Suite is currently under active development. The backend is
-implemented (20+ endpoints for image analysis, Visual Grammar, multimodal
-alignment), but the UI integration is in progress. When complete, it will
-support:
+The Vision Suite is fully shipped, both inside the main CorpusMind app and in
+the dedicated **CorpusMind Lens** desktop app (the image-corpus workbench of
+the suite). It implements the multimodal analysis workflow of current corpus
+practice: images are treated as corpus documents with their own metadata,
+provenance documentation, and query tools, and analysed against explicit
+theoretical frameworks rather than by ad-hoc inspection.
 
-1. Create an image set within your corpus.
-2. Drag and drop images (JPG, PNG, TIFF, WebP).
-3. Optionally add captions.
-4. Select an image and use the tabs:
+### 8.1 Building an image corpus
+
+1. Create a project and a corpus (shared with the text side of the suite).
+2. In **Your Corpus** (in Lens) or the **Vision Suite** (in the main app),
+   create an **image set** and document its provenance — source, period
+   covered, and selection criteria. Corpus-construction norms apply to image
+   corpora just as they do to text corpora.
+3. Drag images in (PNG, JPEG, WebP, GIF, TIFF, BMP; max 25 MB per image,
+   50 per batch). On upload the engine extracts **OCR text**, colour and
+   composition features, and any embedded **EXIF/XMP metadata** (GPS
+   coordinates are deliberately never extracted — research-ethics default).
+
+### 8.2 Image metadata (IPTC-Core-aligned)
+
+Each image carries researcher-editable descriptive metadata aligned with the
+IPTC Core schema: source/publication, date, licence/rights, genre, language
+of embedded text, and free notes. Use **Tag All Images** to apply the same
+fields to a whole set, and filter the grid by genre to build subsets. Set
+level statistics report formats, orientation mix, resolution and date ranges,
+and OCR coverage.
+
+### 8.3 Per-image analysis
+
+Select an image and use the analysis drawer:
 
 **Analyse**: Colour analysis (dominant colours, warm/cold balance,
 brightness, contrast, saturation, symbolism notes), composition analysis
 (information value: Given/New, Ideal/Real, centre/margin, salience,
-rule of thirds, visual balance, framing), and OCR text extraction.
+visual balance, framing), and OCR text extraction.
 
 **Visual Grammar**: Analyses the image against Kress and van Leeuwen's
 (2006) three metafunctions: Representational, Interactive, and
-Compositional. Every claim is phrased as a hypothesis.
+Compositional. Every claim is phrased as a hypothesis with evidence and a
+confidence score.
 
 **Align**: Multimodal image-text alignment. Type the co-occurring text and
 click Align. The engine extracts image regions and text spans, then matches
-them with confidence scores.
+them with confidence scores (heuristic or vision-LM mode).
 
-**Discourse**: 8 framework-lensed analyses: Social Semiotic, CDA (4
-frameworks: Fairclough, van Dijk, Wodak, Machin and Mayr), Persuasion
-(Aristotle + Toulmin), Framing (Entman), Narrative (Labov), Visual
-Metaphor, Combined Emotion, and Cultural analysis.
+**Discourse lenses**: 8 framework-lensed analyses: Social Semiotic, CDA (4
+frameworks: Fairclough, van Dijk, Wodak, Machin and Mayr), Persuasion,
+Framing, Narrative, Visual Metaphor, Emotion appeal, and Cultural analysis.
+Results carry provenance badges (heuristic vs vision-LM, model, confidence).
 
-The sidebar shows "Vision Suite (Soon)" — all other features are fully
-functional now.
+**Facial analysis** (opt-in, off by default): descriptive visual cues only
+(estimated age group, gender presentation, expression, gaze). It never
+performs identity recognition. Enable it in Settings → Ethics → Facial
+Analysis.
+
+### 8.4 Set-level analysis and the OCR corpus
+
+- **Vision-LM descriptions**: a local vision model (e.g. `qwen3-vl`) can
+  describe each image; the batch runner analyses the whole set at once.
+- **Recurring themes**: aggregated framework claims across the set.
+- **OCR Corpus Tools**: query the set's text like any corpus — KWIC-style
+  search over OCR text and captions, a word-frequency list with the shared
+  English/Arabic stopword lists, and set-vs-set keyword comparison ranked by
+  log-likelihood (Rayson and Garside's standard measure), with the full
+  keyness battery per term.
+- **Export**: spreadsheets (xlsx/csv/tsv/txt/json) with per-image analysis
+  and full model provenance, plus **Export OCR corpus** — the set's text as
+  a `<doc>`-marked corpus file (with filename, caption and metadata
+  attributes) that can be loaded into the main app's text tools, closing the
+  cross-modal loop between the visual and textual sides.
 
 ---
 

@@ -130,3 +130,4 @@ reference-data/wordlists/*/*.json
 secrets/
 node_modules/
 scripts/__pycache__/
+dev-dist/

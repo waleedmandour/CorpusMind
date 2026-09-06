@@ -255,6 +255,7 @@ class DynamicSuggestionsRequest(BaseModel):
 async def get_query_suggestions(
     language: str = Query("en", pattern="^(en|ar)$"),
     corpus_id: str | None = Query(None),
+    shell: str = Query("main", pattern="^(main|lens)$"),
 ) -> dict:
     """Return the pre-fabricated query catalogue, always visible in the UI.
 
@@ -263,10 +264,18 @@ async def get_query_suggestions(
     suggestion's requirements. The UI uses this to grey out unavailable
     suggestions instead of hiding them — so the user always sees the
     full range of what CorpusMind can do.
+
+    v1.0.9: ``shell=lens`` prepends the vision-oriented catalogue so the
+    Assistant in CorpusMind Lens suggests image-set / OCR / cross-modal
+    questions instead of text-only ones.
     """
     from ai.query_suggestions import has_reference_for_language, list_prefabricated
 
-    suggestions = list_prefabricated(language=language)
+    suggestions: list[dict] = []
+    if shell == "lens":
+        from ai.query_suggestions import list_vision_prefabricated
+        suggestions.extend(list_vision_prefabricated(language=language))
+    suggestions.extend(list_prefabricated(language=language))
 
     # Determine availability flags.
     has_corpus = bool(corpus_id)

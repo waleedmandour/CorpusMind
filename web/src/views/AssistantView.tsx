@@ -37,6 +37,8 @@ export function AssistantView() {
   const cid = useApp((s) => s.activeCorpusId);
   const storeModel = useApp((s) => s.selectedOllamaModel);
   const setActiveNav = useUI((s) => s.setActiveNav);
+  const isLensMode = useUI((s) => s.isLensMode);
+  const langUI = useUI((s) => s.lang);
   const studentMode = useUI((s) => s.studentMode);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -169,8 +171,10 @@ export function AssistantView() {
   // panel with the "Suggestions" button in the sidebar.
   const [showSuggestions, setShowSuggestions] = useState(true);
   const suggestions = useQuery({
-    queryKey: ["query-suggestions", cid, provider, selectedModel],
-    queryFn: () => api.getQuerySuggestions("en", cid),
+    // v1.0.9: Lens passes shell=lens so the vision-oriented catalogue
+    // (image sets, OCR vocabulary, cross-modal) is served first.
+    queryKey: ["query-suggestions", cid, provider, selectedModel, isLensMode],
+    queryFn: () => api.getQuerySuggestions("en", cid, isLensMode ? "lens" : "main"),
     enabled: true,
     staleTime: 60_000, // don't refetch on every render
   });
@@ -494,7 +498,11 @@ export function AssistantView() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={onKeyDown}
-            placeholder="Ask the Assistant about your corpus… (Enter to send, Shift+Enter for newline)"
+            placeholder={isLensMode
+              ? (langUI === "ar"
+                ? "اسأل المساعد عن صورك ونصوصك… (Enter للإرسال، Shift+Enter لسطر جديد)"
+                : "Ask the Assistant about your images and texts… (Enter to send, Shift+Enter for newline)")
+              : "Ask the Assistant about your corpus… (Enter to send, Shift+Enter for newline)"}
             rows={2}
           />
           <button onClick={send} disabled={!input.trim() || chat.isPending}>

@@ -24,6 +24,7 @@ import clsx from "clsx";
 
 import { api, exportWithFeedback, type ImageRecord, type ImageAnalysis, type VisualGrammarResult, type BatchAnalysisResult, type DiscourseResult, type DiscourseClaim } from "@/lib/api";
 import { ExportButton } from "@/components/ExportButton";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useApp } from "@/store/app";
 import { useUI } from "@/store/ui";
 import { t, type TranslationKey } from "@/lib/i18n";
@@ -58,7 +59,9 @@ function reportVisionError(e: unknown, endpoint: string, context: string): strin
   return msg;
 }
 
-const IMAGE_ACCEPT = "image/png,image/jpeg,image/webp,image/gif";
+// v1.0.9: accept the full engine-supported format set — TIFF and BMP were
+// supported server-side but silently unselectable in the picker.
+const IMAGE_ACCEPT = "image/png,image/jpeg,image/webp,image/gif,image/tiff,image/bmp";
 
 // The 8 discourse-lens routes (Phase 5 §9.11–9.18). Labels are i18n keys.
 const LENS_ROUTES: Array<{ route: string; labelKey: TranslationKey; isCda?: boolean }> = [
@@ -78,7 +81,7 @@ const LENS_NAMES: Record<string, { en: string; ar: string }> = {
   "social-semiotic": { en: "Social semiotics", ar: "السيميائيات الاجتماعية" },
   "cda": { en: "Critical discourse analysis", ar: "التحليل النقدي للخطاب" },
   "persuasion": { en: "Persuasion strategies", ar: "استراتيجيات الإقناع" },
-  "framing": { en: "Framing", ar: "ال تأطير" },
+  "framing": { en: "Framing", ar: "التأطير" },
   "narrative": { en: "Narrative structure", ar: "البنية السردية" },
   "visual-metaphor": { en: "Visual metaphor", ar: "الاستعارة البصرية" },
   "emotion": { en: "Emotion appeal", ar: "مناشدة العاطفة" },
@@ -101,6 +104,10 @@ export function VisionView() {
   const [showNewSetForm, setShowNewSetForm] = useState(false);
   const [newSetName, setNewSetName] = useState("");
   const [actionMsg, setActionMsg] = useState("");
+  // v1.0.9: ConfirmDialog replaces window.confirm — native confirm() trips
+  // the Tauri ACL (the exact bug fixed for corpus deletes in v0.1.19) and
+  // set/image deletion silently failed in the Lens desktop shell.
+  const [confirmState, setConfirmState] = useState<{ msg: string; onConfirm: () => void } | null>(null);
 
   // List image sets for the active corpus.
   const setsQuery = useQuery({
@@ -145,17 +152,21 @@ export function VisionView() {
   const onDeleteSet = async () => {
     if (!activeSetId) return;
     const name = setsQuery.data?.find((s) => s.id === activeSetId)?.name ?? "";
-    if (!window.confirm(`${t(lang, "vision_delete_confirm_set")}\n\n${name}`)) return;
-    try {
-      await api.deleteImageSet(activeSetId);
-      setSelectedImageId(null);
-      setActiveSetId(null);
-      setActionMsg(t(lang, "vision_deleted"));
-      queryClient.invalidateQueries({ queryKey: ["image-sets", cid] });
-    } catch (e) {
-      const msg = reportVisionError(e, `/image-sets/${activeSetId}`, "Delete image set");
-      setActionMsg(`${t(lang, "vision_delete_failed")}: ${msg}`);
-    }
+    setConfirmState({
+      msg: `${t(lang, "vision_delete_confirm_set")}\n\n${name}`,
+      onConfirm: async () => {
+        try {
+          await api.deleteImageSet(activeSetId);
+          setSelectedImageId(null);
+          setActiveSetId(null);
+          setActionMsg(t(lang, "vision_deleted"));
+          queryClient.invalidateQueries({ queryKey: ["image-sets", cid] });
+        } catch (e) {
+          const msg = reportVisionError(e, `/image-sets/${activeSetId}`, "Delete image set");
+          setActionMsg(`${t(lang, "vision_delete_failed")}: ${msg}`);
+        }
+      },
+    });
   };
 
   const exportSet = async (fmt: string) => {
@@ -206,6 +217,8 @@ export function VisionView() {
       </div>
 
       {actionMsg && <div className="hint vision-action-msg">{actionMsg}</div>}
+
+      <ConfirmDialog state={confirmState} onClose={() => setConfirmState(null)} />
 
       <VisionGuidance lang={lang} />
 
@@ -277,10 +290,17 @@ function ImageSetWorkspace({
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // v1.0.9: paginate the grid — the engine previously returned every image
+  // at once and the grid fired one thumbnail request per image, which
+  // degraded on large sets. Total rides in X-Total-Count.
+  const VISION_PAGE = 60;
+  const [imgLimit, setImgLimit] = useState(VISION_PAGE);
   const imagesQuery = useQuery({
-    queryKey: ["images", setId],
-    queryFn: () => api.listImages(setId),
+    queryKey: ["images", setId, imgLimit],
+    queryFn: () => api.listImagesPaged(setId, imgLimit, 0),
   });
+  const imgItems = imagesQuery.data?.items ?? [];
+  const imgTotal = imagesQuery.data?.total ?? 0;
 
   const uploadMutation = useMutation({
     mutationFn: ({ files, caption }: { files: File[]; caption: string }) =>
@@ -404,12 +424,12 @@ function ImageSetWorkspace({
           {t(lang, "vision_failed_images")}: {(imagesQuery.error as Error).message}
         </div>
       )}
-      {imagesQuery.data && imagesQuery.data.length === 0 && (
+      {imgItems.length === 0 && (
         <div className="hint">{t(lang, "vision_no_images")}</div>
       )}
-      {imagesQuery.data && imagesQuery.data.length > 0 && (
+      {imgItems.length > 0 && (
         <div className="vision-grid" role="list">
-          {imagesQuery.data.map((img) => (
+          {imgItems.map((img) => (
             <ImageGridItem
               key={img.id}
               image={img}
@@ -419,6 +439,16 @@ function ImageSetWorkspace({
               onDeleted={() => onSelectImage(null)}
             />
           ))}
+        </div>
+      )}
+
+      {/* v1.0.9: load-more pager (total comes from X-Total-Count) */}
+      {imgTotal > imgItems.length && (
+        <div className="hint" style={{ display: "flex", gap: "var(--space-2)", alignItems: "center", marginBlock: "var(--space-2)" }}>
+          <span>{imgItems.length} / {imgTotal}</span>
+          <button className="btn-small" onClick={() => setImgLimit((l) => l + VISION_PAGE)}>
+            {t(lang, "lens_load_more")}
+          </button>
         </div>
       )}
 
@@ -510,6 +540,9 @@ function ImageGridItem({
     retry: false,
   });
 
+  const [deleteErr, setDeleteErr] = useState("");
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
   const deleteMutation = useMutation({
     mutationFn: () => api.deleteImage(image.id),
     onSuccess: () => {
@@ -517,12 +550,15 @@ function ImageGridItem({
       queryClient.invalidateQueries({ queryKey: ["image-sets", cid] });
       onDeleted();
     },
+    // v1.0.9: deletion failures were silent — surface them on the card.
+    onError: (e: Error) => setDeleteErr(e.message),
   });
 
   const onDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!window.confirm(t(lang, "vision_delete_confirm_image"))) return;
-    deleteMutation.mutate();
+    // v1.0.9: ConfirmDialog instead of window.confirm (Tauri ACL — the
+    // desktop shell blocks native confirm(); deletion silently failed).
+    setConfirmOpen(true);
   };
 
   return (
@@ -565,6 +601,13 @@ function ImageGridItem({
       >
         ×
       </button>
+      {deleteErr && (
+        <div className="uploader-status error" style={{ fontSize: "11px" }}>{deleteErr}</div>
+      )}
+      <ConfirmDialog
+        state={confirmOpen ? { msg: t(lang, "vision_delete_confirm_image"), onConfirm: () => deleteMutation.mutate() } : null}
+        onClose={() => setConfirmOpen(false)}
+      />
     </div>
   );
 }
@@ -758,6 +801,11 @@ function AnalysisDrawer({ imageId }: { imageId: string }) {
           </>
         )}
       </div>
+
+      {/* v1.0.9: the opt-in facial-analysis panel — backend, API wrapper and
+          redaction notices existed, but there was no UI anywhere and the
+          promised Settings toggle did not exist. */}
+      <FacialAnalysisPanel imageId={imageId} />
     </div>
   );
 }
@@ -1344,6 +1392,95 @@ function BatchViewContent({ data }: { data: BatchAnalysisResult }) {
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+
+// ---------------------------------------------------------------------------
+// FacialAnalysisPanel (v1.0.9) — the opt-in §18 module finally gets UI.
+// Disabled by default; the panel links to Settings → Ethics, which now has
+// the promised toggle. Outputs are descriptive cues only — never identity.
+// ---------------------------------------------------------------------------
+
+interface FacialCue {
+  bbox: [number, number, number, number];
+  confidence: number;
+  estimated_age_group: string;
+  gender_presentation: string;
+  facial_expression: string;
+  eye_gaze: string;
+  head_direction: string;
+  interpretive_gloss: string;
+}
+
+function FacialAnalysisPanel({ imageId }: { imageId: string }) {
+  const lang = useUI((s) => s.lang);
+  const setActiveNav = useUI((s) => s.setActiveNav);
+  const statusQuery = useQuery({
+    queryKey: ["facial-status"],
+    queryFn: () => api.facialAnalysisStatus(),
+    staleTime: 30_000,
+  });
+  const [result, setResult] = useState<{ face_count: number; model: string; ethics_notice: string; faces: FacialCue[] } | null>(null);
+  const [running, setRunning] = useState(false);
+  const [errMsg, setErrMsg] = useState("");
+
+  const run = async () => {
+    setRunning(true);
+    setErrMsg("");
+    try {
+      const r = await api.facialAnalysis(imageId);
+      setResult(r);
+    } catch (e) {
+      const msg = reportVisionError(e, `/images/${imageId}/facial-analysis`, "Facial analysis");
+      setErrMsg(msg);
+      setResult(null);
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  const enabled = statusQuery.data?.enabled ?? false;
+
+  return (
+    <div className="vision-vg-section" style={{ marginBlockStart: "var(--space-2)" }}>
+      <div className="result-meta" style={{ marginBlockEnd: "var(--space-1)" }}>
+        <strong>{lang === "ar" ? "تحليل الوجوه (اختياري، §18)" : "Facial analysis (opt-in, §18)"}</strong>
+      </div>
+      {!enabled ? (
+        <div className="hint">
+          {lang === "ar"
+            ? "معطّل افتراضياً لأسباب أخلاقية. فعّله من الإعدادات ← الأخلاقيات ← تحليل الوجوه. لا يُجرى أي تعرّف على الهوية أبداً — إشارات وصفية فقط."
+            : "Off by default for research ethics. Enable it in Settings → Ethics → Facial Analysis. It never performs identity recognition — descriptive visual cues only."}{" "}
+          <button className="btn-small" onClick={() => setActiveNav("settings")}>
+            {lang === "ar" ? "الإعدادات" : "Settings"}
+          </button>
+        </div>
+      ) : (
+        <>
+          <button className="btn-secondary" onClick={run} disabled={running}>
+            {running ? t(lang, "vision_analysing") : (lang === "ar" ? "تشغيل تحليل الوجوه" : "Run facial analysis")}
+          </button>
+          {errMsg && <div className="uploader-status error" style={{ marginBlockStart: "var(--space-2)" }}>{errMsg}</div>}
+          {result && (
+            <div className="hint" style={{ marginBlockStart: "var(--space-2)" }}>
+              <div>
+                {lang === "ar" ? "الوجوه المكتشفة" : "Faces detected"}: <strong>{result.face_count}</strong> · <code>{result.model}</code>
+              </div>
+              <ul style={{ margin: "4px 0 0 1em" }}>
+                {result.faces.map((f, i) => (
+                  <li key={i} dir="ltr">
+                    ({(f.confidence * 100).toFixed(0)}% · {f.estimated_age_group} · {f.gender_presentation} · {f.facial_expression} · {f.eye_gaze} gaze · {f.head_direction})
+                    {f.interpretive_gloss && <div style={{ fontSize: "11px" }}>{f.interpretive_gloss}</div>}
+                  </li>
+                ))}
+              </ul>
+              <div style={{ marginBlockStart: "4px" }}>{result.ethics_notice}</div>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }

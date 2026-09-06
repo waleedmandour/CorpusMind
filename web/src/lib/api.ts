@@ -833,6 +833,8 @@ export interface ImageSet {
   id: string;
   corpus_id: string;
   name: string;
+  /** v1.0.9: sampling/provenance notes (corpus-construction documentation). */
+  description: string;
   image_count: number;
   created_at: string;
 }
@@ -846,7 +848,57 @@ export interface ImageRecord {
   height: number;
   size_bytes: number;
   caption: string;
+  /** v1.0.9: { user?: {source,date,license,genre,language,notes}, exif?: {}, xmp?: {} } */
+  meta: {
+    user?: { source?: string; date?: string; license?: string; genre?: string; language?: string; notes?: string };
+    exif?: Record<string, string>;
+    xmp?: Record<string, unknown>;
+  };
   created_at: string;
+}
+
+// --- v1.0.9 Lens round: image-corpus tools --------------------------------
+
+export interface ImageSetStats {
+  image_set_id: string;
+  name: string;
+  description: string;
+  image_count: number;
+  total_bytes: number;
+  formats: Record<string, number>;
+  orientations: Record<string, number>;
+  resolution: { min_width: number; max_width: number; min_height: number; max_height: number };
+  coverage: { with_ocr: number; with_caption: number; with_vlm: number; with_user_meta: number };
+  ocr_word_total: number;
+  genres: Record<string, number>;
+  sources: Record<string, number>;
+  date_min: string;
+  date_max: string;
+}
+
+export interface OcrSearchResult {
+  query: string;
+  regex: boolean;
+  hit_count: number;
+  images_searched: number;
+  hits: Array<{ image_id: string; filename: string; field: string; left: string; match: string; right: string; match_count: number }>;
+}
+
+export interface OcrFrequencyResult {
+  image_set_id: string;
+  images_with_text: number;
+  total_tokens: number;
+  types: number;
+  stopwords_filtered: boolean;
+  min_len: number;
+  frequency: Array<{ word: string; count: number; percent: number }>;
+}
+
+export interface OcrKeynessResult {
+  target: { id: string; name: string; tokens: number };
+  reference: { id: string; name: string; tokens: number };
+  rows: Array<{ term: string; f_target: number; f_reference: number; log_likelihood: number; log_ratio: number; chi_square: number; odds_ratio: number; pct_diff: number; simple_maths: number }>;
+  note?: string;
 }
 
 export interface ImageAnalysis {
@@ -1391,10 +1443,17 @@ export const api = {
     }),
 
   // --- Phase 4 Vision (9.1–9.10) ---
-  createImageSet: (cid: string, name: string) =>
+  createImageSet: (cid: string, name: string, description = "") =>
     jsonFetch<ImageSet>(`/api/v1/corpora/${cid}/image-sets`, {
       method: "POST",
-      body: JSON.stringify({ name }),
+      body: JSON.stringify({ name, description }),
+    }),
+
+  // v1.0.9 — edit an image set's name / provenance description.
+  updateImageSet: (isetId: string, body: { name?: string; description?: string }) =>
+    jsonFetch<ImageSet>(`/api/v1/image-sets/${isetId}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
     }),
 
   listImageSets: (cid: string) =>
@@ -1415,6 +1474,16 @@ export const api = {
 
   listImages: (isetId: string) =>
     jsonFetch<ImageRecord[]>(`/api/v1/image-sets/${isetId}/images`),
+
+  // v1.0.9 — paginated listing; the total rides in X-Total-Count (exposed
+  // via CORS for browser mode). Uses raw fetch so the header is readable.
+  listImagesPaged: async (isetId: string, limit: number, offset: number): Promise<{ items: ImageRecord[]; total: number }> => {
+    const r = await smartFetch(`/api/v1/image-sets/${isetId}/images?limit=${limit}&offset=${offset}`);
+    if (!r.ok) throw new Error(await r.text());
+    const items = (await r.json()) as ImageRecord[];
+    const total = parseInt(r.headers.get("X-Total-Count") ?? "", 10);
+    return { items, total: Number.isNaN(total) ? items.length : total };
+  },
 
   getImageAnalysis: (imgId: string) =>
     jsonFetch<ImageAnalysis>(`/api/v1/images/${imgId}/analysis`),
@@ -1478,6 +1547,55 @@ export const api = {
   exportImageSet: (isetId: string, fmt: "xlsx" | "csv" | "tsv" | "txt" | "json" = "xlsx") =>
     smartFetch(`/api/v1/image-sets/${isetId}/export?format=${fmt}`).then((r) => r.blob()),
 
+  // --- v1.0.9 Lens round: image-corpus metadata + OCR corpus tools ---
+
+  // Edit an image's caption and/or researcher metadata (non-destructive
+  // merge; the engine refuses to overwrite the machine-extracted exif/xmp).
+  updateImageMeta: (imgId: string, body: { caption?: string; meta?: Record<string, string> }) =>
+    jsonFetch<ImageRecord>(`/api/v1/images/${imgId}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+
+  // "Tag all images" — apply the same metadata to every image in the set.
+  bulkImageMeta: (isetId: string, meta: Record<string, string>) =>
+    jsonFetch<{ updated: number; applied: string[] }>(`/api/v1/image-sets/${isetId}/images-bulk-meta`, {
+      method: "POST",
+      body: JSON.stringify({ meta }),
+    }),
+
+  // Set-level corpus statistics (formats, orientations, coverage, genres…).
+  imageSetStats: (isetId: string) =>
+    jsonFetch<ImageSetStats>(`/api/v1/image-sets/${isetId}/stats`),
+
+  // Concordance-style search over the set's OCR text + captions.
+  ocrSearch: (isetId: string, q: string, regex = false) =>
+    jsonFetch<OcrSearchResult>(`/api/v1/image-sets/${isetId}/ocr-search?q=${encodeURIComponent(q)}&regex=${regex}`),
+
+  // Frequency list over OCR text with the engine's shared EN/AR stopwords.
+  ocrFrequency: (isetId: string, opts: { stopwords?: boolean; minLen?: number; limit?: number } = {}) => {
+    const p = new URLSearchParams({
+      stopwords: String(opts.stopwords ?? true),
+      min_len: String(opts.minLen ?? 2),
+      limit: String(opts.limit ?? 100),
+    });
+    return jsonFetch<OcrFrequencyResult>(`/api/v1/image-sets/${isetId}/ocr-frequency?${p.toString()}`);
+  },
+
+  // Set-vs-set keyword comparison (log-likelihood ranked).
+  ocrKeyness: (isetId: string, otherIsetId: string, opts: { stopwords?: boolean; minFreq?: number } = {}) => {
+    const p = new URLSearchParams({
+      other_iset_id: otherIsetId,
+      stopwords: String(opts.stopwords ?? true),
+      min_freq: String(opts.minFreq ?? 2),
+    });
+    return jsonFetch<OcrKeynessResult>(`/api/v1/image-sets/${isetId}/ocr-keyness?${p.toString()}`);
+  },
+
+  // Download the set's OCR text AS a corpus (txt with <doc> markers, or json).
+  exportOcrCorpus: (isetId: string, fmt: "txt" | "json" = "txt") =>
+    smartFetch(`/api/v1/image-sets/${isetId}/ocr-corpus?format=${fmt}`).then((r) => r.blob()),
+
   listFrameworks: () =>
     jsonFetch<{ frameworks: Array<{ key: string; name: string; full_name: string; version: string; family: string; categories: Array<{ id: string; label: string; description: string }> }> }>(
       "/api/v1/frameworks",
@@ -1531,7 +1649,14 @@ export const api = {
     jsonFetch<{ image_id: string; face_count: number; model: string; consent_verified: boolean; ethics_notice: string; faces: any[] }>(`/api/v1/images/${imgId}/facial-analysis`, { method: "POST" }),
 
   facialAnalysisStatus: () =>
-    jsonFetch<{ enabled: boolean; notice: string }>(`/api/v1/facial-analysis/status`),
+    jsonFetch<{ enabled: boolean; env_override?: boolean; notice: string }>(`/api/v1/facial-analysis/status`),
+
+  // v1.0.9 — persist the §18 opt-in decision (Settings → Ethics toggle).
+  setFacialAnalysisEnabled: (enabled: boolean) =>
+    jsonFetch<{ enabled: boolean }>(`/api/v1/facial-analysis/enabled`, {
+      method: "POST",
+      body: JSON.stringify({ enabled }),
+    }),
 
   cdaFrameworks: () =>
     jsonFetch<{ frameworks: Record<string, string> }>(`/api/v1/cda-frameworks`),
@@ -1663,8 +1788,9 @@ export const api = {
   listConversations: () => jsonFetch<Array<Record<string, unknown>>>("/api/v1/ai/conversations"),
   getConversation: (cid: string) => jsonFetch<Record<string, unknown>>(`/api/v1/ai/conversations/${cid}`),
   // v0.1.16 Issue 2: pre-fabricated + dynamic query suggestions
-  getQuerySuggestions: (language: string = "en", corpusId: string | null = null) =>
-    jsonFetch<QuerySuggestionsResponse>(`/api/v1/ai/query-suggestions?language=${encodeURIComponent(language)}${corpusId ? `&corpus_id=${encodeURIComponent(corpusId)}` : ""}`),
+  // v1.0.9: shell param — "lens" serves the vision-oriented catalogue first.
+  getQuerySuggestions: (language: string = "en", corpusId: string | null = null, shell: "main" | "lens" = "main") =>
+    jsonFetch<QuerySuggestionsResponse>(`/api/v1/ai/query-suggestions?language=${encodeURIComponent(language)}${corpusId ? `&corpus_id=${encodeURIComponent(corpusId)}` : ""}&shell=${shell}`),
   getDynamicSuggestions: (req: { provider: string; model: string | null; corpus_id: string | null; language: string; recent_analysis?: Record<string, unknown> }) =>
     jsonFetch<QuerySuggestionsResponse>("/api/v1/ai/query-suggestions/dynamic", {
       method: "POST",

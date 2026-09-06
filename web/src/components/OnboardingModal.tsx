@@ -9,6 +9,7 @@
  */
 import { useState } from "react";
 import { useUI } from "@/store/ui";
+import { t } from "@/lib/i18n";
 import clsx from "clsx";
 
 export function OnboardingModal() {
@@ -143,33 +144,38 @@ export function OnboardingModal() {
 
   // v1.2.0 — CorpusMind Lens onboarding: mirrors what the Lens sidebar
   // actually contains (no Projects / analysis-tool steps).
+  // v1.0.9: the Lens pages were previously hardcoded English — the only
+  // Lens surface that broke the app's en/ar parity. All strings now come
+  // from i18n (onb_lens_* keys) and describe the v1.0.9 Image Corpora
+  // workflow.
+  const lang = useUI((s) => s.lang);
   const lensPages = [
     {
-      title: "Welcome to CorpusMind Lens",
-      subtitle: "Vision-LM-powered multimodal discourse analysis — image sets, OCR, Visual Grammar, and the grounded AI assistant.",
+      title: t(lang, "onb_lens_w_title"),
+      subtitle: t(lang, "onb_lens_w_sub"),
       content: (
         <div className="onboarding-content">
-          <p>Lens reads the SAME engine and data directory as the main CorpusMind app: any text corpus you ingested there is already available here, and the AI assistant can interpret textual and visual data together.</p>
+          <p>{t(lang, "onb_lens_w_intro")}</p>
           <div className="onboarding-features">
             <div className="onboarding-feature">
               <div className="feature-badge">1</div>
               <div>
-                <strong>Image Sets</strong>
-                <p>Group images (front pages, posters, photos) inside a corpus; OCR, colour and composition are analysed on upload.</p>
+                <strong>{t(lang, "onb_lens_f1_t")}</strong>
+                <p>{t(lang, "onb_lens_f1_d")}</p>
               </div>
             </div>
             <div className="onboarding-feature">
               <div className="feature-badge">2</div>
               <div>
-                <strong>Vision-LM Analysis</strong>
-                <p>Descriptions, Visual Grammar (Kress and van Leeuwen), 8 discourse lenses, image-text alignment — all via a local vision model.</p>
+                <strong>{t(lang, "onb_lens_f2_t")}</strong>
+                <p>{t(lang, "onb_lens_f2_d")}</p>
               </div>
             </div>
             <div className="onboarding-feature">
               <div className="feature-badge">3</div>
               <div>
-                <strong>Cross-modal AI</strong>
-                <p>Ask the assistant about text corpora AND image sets — it grounds answers on both.</p>
+                <strong>{t(lang, "onb_lens_f3_t")}</strong>
+                <p>{t(lang, "onb_lens_f3_d")}</p>
               </div>
             </div>
           </div>
@@ -177,76 +183,76 @@ export function OnboardingModal() {
       ),
     },
     {
-      title: "Getting Started in 3 Steps",
-      subtitle: "From images to analysis in minutes.",
+      title: t(lang, "onb_lens_s_title"),
+      subtitle: t(lang, "onb_lens_s_sub"),
       content: (
         <div className="onboarding-content">
           <div className="onboarding-steps">
             <div className="onboarding-step">
               <div className="step-number">1</div>
               <div className="step-body">
-                <strong>Create or Open a Corpus</strong>
-                <p>Click <strong>Your Corpus</strong> in the sidebar and create a corpus. If you already use the main CorpusMind app, its corpora are already here — pick one.</p>
+                <strong>{t(lang, "onb_lens_s1_t")}</strong>
+                <p>{t(lang, "onb_lens_s1_d")}</p>
               </div>
             </div>
             <div className="onboarding-step">
               <div className="step-number">2</div>
               <div className="step-body">
-                <strong>Create an Image Set and Drop Images</strong>
-                <p>In the <strong>Vision</strong> view, click <strong>+ New set</strong>, then drag images in (PNG, JPEG, WebP, GIF). Use <strong>Analyse set</strong> to run the vision model over everything at once.</p>
+                <strong>{t(lang, "onb_lens_s2_t")}</strong>
+                <p>{t(lang, "onb_lens_s2_d")}</p>
               </div>
             </div>
             <div className="onboarding-step">
               <div className="step-number">3</div>
               <div className="step-body">
-                <strong>Install a Vision Model</strong>
-                <p>Run <code>ollama pull qwen3-vl:2b</code> in a terminal — small and multilingual (OCR in 32 languages incl. Arabic). For higher quality: <code>qwen3-vl:8b</code>. Then ask the AI Assistant anything about your images and texts.</p>
+                <strong>{t(lang, "onb_lens_s3_t")}</strong>
+                <p>{t(lang, "onb_lens_s3_d")}</p>
               </div>
             </div>
           </div>
           <div className="onboarding-tip">
-            <strong>Tip:</strong> Press <kbd>Ctrl</kbd>+<kbd>K</kbd> (or <kbd>Cmd</kbd>+<kbd>K</kbd>) to open the command palette and jump to any action.
+            <strong>{t(lang, "onb_lens_tip")}</strong>
           </div>
         </div>
       ),
     },
     {
-      title: "Privacy and Ethics by Design",
-      subtitle: "Your images and texts stay on your machine. Always.",
+      title: t(lang, "onb_lens_p_title"),
+      subtitle: t(lang, "onb_lens_p_sub"),
       content: (
         <div className="onboarding-content">
           <div className="onboarding-privacy">
             <div className="privacy-item">
               <div className="privacy-check-mark">Yes</div>
               <div>
-                <strong>Local-first by default.</strong>
-                <p>Images and AI queries never leave your machine unless you explicitly opt in to a cloud provider.</p>
+                <strong>{t(lang, "onb_lens_p1_t")}</strong>
+                <p>{t(lang, "onb_lens_p1_d")}</p>
               </div>
             </div>
             <div className="privacy-item">
               <div className="privacy-check-mark">Yes</div>
               <div>
-                <strong>Real deletion.</strong>
-                <p>Deleting an image or image set removes the files from disk — privacy remediation is a first-class feature.</p>
+                <strong>{t(lang, "onb_lens_p2_t")}</strong>
+                <p>{t(lang, "onb_lens_p2_d")}</p>
               </div>
             </div>
             <div className="privacy-item">
               <div className="privacy-check-mark">Yes</div>
               <div>
-                <strong>Framework-lensed hypotheses.</strong>
-                <p>Every interpretive claim is phrased as "Under a [Framework] reading, X may indicate Y." Never as a bare assertion of fact.</p>
+                <strong>{t(lang, "onb_lens_p3_t")}</strong>
+                <p>{t(lang, "onb_lens_p3_d")}</p>
               </div>
             </div>
             <div className="privacy-item">
               <div className="privacy-check-mark">Yes</div>
               <div>
-                <strong>Facial analysis is opt-in.</strong>
-                <p>Off by default. Never performs identity recognition or re-identification of real individuals.</p>
+                <strong>{t(lang, "onb_lens_p4_t")}</strong>
+                <p>{t(lang, "onb_lens_p4_d")}</p>
               </div>
             </div>
           </div>
           <div className="onboarding-cta">
-            <p>Ready to start? Create an image set and drop some images in.</p>
+            <p>{t(lang, "onb_lens_cta")}</p>
           </div>
         </div>
       ),
@@ -295,11 +301,11 @@ export function OnboardingModal() {
           </div>
           <div className="onboarding-actions">
             {page > 0 && (
-              <button className="onboarding-btn-secondary" onClick={handlePrev}>Back</button>
+              <button className="onboarding-btn-secondary" onClick={handlePrev}>{t(lang, "onb_back")}</button>
             )}
-            <button className="onboarding-btn-skip" onClick={handleClose}>Skip</button>
+            <button className="onboarding-btn-skip" onClick={handleClose}>{t(lang, "onb_skip")}</button>
             <button className="onboarding-btn-primary" onClick={handleNext}>
-              {isLast ? "Get Started" : "Next"}
+              {isLast ? t(lang, "onb_start") : t(lang, "onb_next")}
             </button>
           </div>
         </div>

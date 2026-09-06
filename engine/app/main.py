@@ -86,6 +86,10 @@ def create_app() -> FastAPI:
         # See: https://fastapi.tiangolo.com/tutorial/cors/
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=["Authorization", "Content-Type", "X-Requested-With"],
+        # v1.0.9: list_images pagination communicates the total via this
+        # response header; browsers only expose non-simple headers to JS
+        # when they are listed in Access-Control-Expose-Headers.
+        expose_headers=["X-Total-Count"],
     )
 
     # Private Network Access (PNA) preflight header.

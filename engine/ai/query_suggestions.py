@@ -41,7 +41,7 @@ log = get_logger(__name__)
 
 QueryCategory = Literal[
     "frequency", "collocation", "keyness", "concordance", "dispersion",
-    "ngrams", "pos", "compare", "explore", "methodology",
+    "ngrams", "pos", "compare", "explore", "methodology", "vision",
 ]
 
 
@@ -86,7 +86,7 @@ PREFABRICATED_QUERIES: list[QueryTemplate] = [
         label_en="Top 10 most frequent words",
         label_ar="أكثر 10 كلمات تكراراً",
         query_en="What are the top 10 most frequent words in this corpus?",
-        query_ar="ما هي أكثر 10 كلمات تكراراً في هذه الدخيرة اللغوية؟",
+        query_ar="ما هي أكثر 10 كلمات تكراراً في هذه الذخيرة اللغوية؟",
         description="Identify the dominant lexical content of the corpus.",
     ),
     QueryTemplate(
@@ -102,9 +102,9 @@ PREFABRICATED_QUERIES: list[QueryTemplate] = [
         id="freq-vs-reference",
         category="frequency",
         label_en="Compare top-100 here vs. a reference",
-        label_ar="قارن أفضل 100 كلمة هنا بالدخيرة المرجعية",
+        label_ar="قارن أفضل 100 كلمة هنا بالذخيرة المرجعية",
         query_en="How does the top-100 frequency list in this corpus compare to general written English? Which words are over-represented?",
-        query_ar="كيف تقارن قائمة أفضل 100 كلمة تكراراً في هذه الدخيرة بالإنجليزية المكتوبة العامة؟ ما الكلمات المفرطة التمثيل؟",
+        query_ar="كيف تقارن قائمة أفضل 100 كلمة تكراراً في هذه الذخيرة بالإنجليزية المكتوبة العامة؟ ما الكلمات المفرطة التمثيل؟",
         requires_reference=True,
     ),
 
@@ -135,7 +135,7 @@ PREFABRICATED_QUERIES: list[QueryTemplate] = [
         label_en="Top positive keywords vs. reference",
         label_ar="أهم الكلمات المفتاحية الإيجابية مقابل المرجع",
         query_en="What are the top 20 positive keywords in this corpus compared to the reference, with both log-likelihood and Log Ratio reported?",
-        query_ar="ما هي أهم 20 كلمة مفتاحية إيجابية في هذه الدخيرة مقارنة بالمرجع، مع الإبلاغ عن الاحتمالية اللوغاريتمية و Log Ratio؟",
+        query_ar="ما هي أهم 20 كلمة مفتاحية إيجابية في هذه الذخيرة مقارنة بالمرجع، مع الإبلاغ عن الاحتمالية اللوغاريتمية و Log Ratio؟",
         requires_reference=True,
         description="Identify words that distinguish this corpus from the reference.",
     ),
@@ -145,7 +145,7 @@ PREFABRICATED_QUERIES: list[QueryTemplate] = [
         label_en="Top negative keywords (under-represented)",
         label_ar="أهم الكلمات المفتاحية السلبية (ناقصة التمثيل)",
         query_en="What are the top 20 negative keywords — words significantly under-represented in this corpus compared to the reference?",
-        query_ar="ما هي أهم 20 كلمة مفتاحية سلبية — كلمات ناقصة التمثيل بشكل معنوي في هذه الدخيرة مقارنة بالمرجع؟",
+        query_ar="ما هي أهم 20 كلمة مفتاحية سلبية — كلمات ناقصة التمثيل بشكل معنوي في هذه الذخيرة مقارنة بالمرجع؟",
         requires_reference=True,
         description="Identify what this corpus avoids relative to the reference.",
     ),
@@ -175,7 +175,7 @@ PREFABRICATED_QUERIES: list[QueryTemplate] = [
         label_en="How evenly is 'the' distributed?",
         label_ar="ما مدى تساوي توزيع 'the'؟",
         query_en="How evenly is 'the' distributed across the documents in this corpus? Report Juilland's D and Gries' DP.",
-        query_ar="ما مدى تساوي توزيع 'the' عبر الوثائق في هذه الدخيرة؟ أبلغ عن Juilland's D و Gries' DP.",
+        query_ar="ما مدى تساوي توزيع 'the' عبر الوثائق في هذه الذخيرة؟ أبلغ عن Juilland's D و Gries' DP.",
     ),
 
     # --- N-grams ---
@@ -185,7 +185,7 @@ PREFABRICATED_QUERIES: list[QueryTemplate] = [
         label_en="Top 20 most frequent bigrams",
         label_ar="أفضل 20 ثنائية لفظية متكررة",
         query_en="What are the top 20 most frequent 2-word sequences (bigrams) in this corpus, excluding bigrams that span sentence boundaries?",
-        query_ar="ما هي أفضل 20 تسلسل ثنائي الكلمات (bigrams) تكراراً في هذه الدخيرة، باستثناء تلك التي تعبر حدود الجمل؟",
+        query_ar="ما هي أفضل 20 تسلسل ثنائي الكلمات (bigrams) تكراراً في هذه الذخيرة، باستثناء تلك التي تعبر حدود الجمل؟",
     ),
 
     # --- POS ---
@@ -195,7 +195,7 @@ PREFABRICATED_QUERIES: list[QueryTemplate] = [
         label_en="Overall POS distribution",
         label_ar="التوزيع الصرفي العام",
         query_en="What is the overall POS tag distribution in this corpus? Show percentages for each UPOS category.",
-        query_ar="ما هو التوزيع الصرفي العام في هذه الدخيرة؟ اعرض النسب المئوية لكل فئة UPOS.",
+        query_ar="ما هو التوزيع الصرفي العام في هذه الذخيرة؟ اعرض النسب المئوية لكل فئة UPOS.",
     ),
 
     # --- Compare ---
@@ -203,9 +203,9 @@ PREFABRICATED_QUERIES: list[QueryTemplate] = [
         id="compare-two-corpora",
         category="compare",
         label_en="Compare this corpus to another",
-        label_ar="قارن هذه الدخيرة بأخرى",
+        label_ar="قارن هذه الذخيرة بأخرى",
         query_en="Compare this corpus against the reference corpus side-by-side for the word '{node}'. How do the contexts differ?",
-        query_ar="قارن هذه الدخيرة بالدخيرة المرجعية جنباً إلى جنب لكلمة '{node}'. كيف تختلف السياقات؟",
+        query_ar="قارن هذه الذخيرة بالذخيرة المرجعية جنباً إلى جنب لكلمة '{node}'. كيف تختلف السياقات؟",
         requires_reference=True,
     ),
 
@@ -214,9 +214,9 @@ PREFABRICATED_QUERIES: list[QueryTemplate] = [
         id="method-summary",
         category="methodology",
         label_en="Summarise the corpus for my Methods section",
-        label_ar="لخّص الدخيرة لقسم المنهجية",
+        label_ar="لخّص الذخيرة لقسم المنهجية",
         query_en="Summarise this corpus for my Methods section: number of tokens, types, documents, TTR, and the annotation pipeline used.",
-        query_ar="لخّص هذه الدخيرة لقسم المنهجية: عدد الرموز، الأنواع، الوثائق، TTR، وخط المعالجة اللغوية المستخدم.",
+        query_ar="لخّص هذه الذخيرة لقسم المنهجية: عدد الرموز، الأنواع، الوثائق، TTR، وخط المعالجة اللغوية المستخدم.",
         requires_corpus=True,
     ),
 
@@ -225,9 +225,9 @@ PREFABRICATED_QUERIES: list[QueryTemplate] = [
         id="explore-unusual",
         category="explore",
         label_en="What's unusual about this corpus?",
-        label_ar="ما الذي غير معتاد في هذه الدخيرة؟",
+        label_ar="ما الذي غير معتاد في هذه الذخيرة؟",
         query_en="Based on the frequency and keyness results, what is unusual or noteworthy about this corpus compared to typical written text?",
-        query_ar="بناءً على نتائج التكرار وأهمية الكلمات، ما الذي غير معتاد أو جدير بالملاحظة في هذه الدخيرة مقارنة بالنص المكتوب النموذجي؟",
+        query_ar="بناءً على نتائج التكرار وأهمية الكلمات، ما الذي غير معتاد أو جدير بالملاحظة في هذه الذخيرة مقارنة بالنص المكتوب النموذجي؟",
         requires_reference=True,
     ),
 ]
@@ -416,3 +416,85 @@ def has_reference_for_language(language: str) -> bool:
         )
     except Exception:
         return False
+
+
+# --------------------------------------------------------------------------- #
+# Vision (Lens) pre-fabricated queries — v1.0.9
+#
+# The catalogue above is entirely text-corpus oriented, so in the Lens shell
+# the Assistant suggested concordance and keyness questions to a user whose
+# data is images. These templates surface the engine's actual vision tool
+# surface (list_image_sets, get_image_set_summary, describe, visual grammar,
+# discourse lenses, alignment) and the cross-modal loop. They are served when
+# the client passes shell=lens to /query-suggestions.
+# --------------------------------------------------------------------------- #
+
+VISION_QUERIES: list[QueryTemplate] = [
+    QueryTemplate(
+        id="vision-set-overview",
+        category="vision",
+        label_en="Summarise my image sets",
+        label_ar="لخّص مجموعات صوري",
+        query_en="Summarise the image sets in this corpus: how many sets and images are there, and what do their cached vision-LM descriptions and recurring discourse themes suggest?",
+        query_ar="لخّص مجموعات الصور في هذه المدونة: كم عدد المجموعات والصور، وماذا تشير أوصاف نموذج الرؤية المخزّنة وموضوعات الخطاب المتكررة؟",
+        requires_corpus=True,
+        description="Grounded overview of the visual side via list_image_sets + get_image_set_summary.",
+    ),
+    QueryTemplate(
+        id="vision-ocr-vocab",
+        category="vision",
+        label_en="Top words in the set's OCR text",
+        label_ar="أكثر الكلمات تكراراً في نصوص OCR",
+        query_en="What are the most frequent words across the OCR text of my images? Treat the OCR text as a corpus and report the top 20 content words.",
+        query_ar="ما أكثر الكلمات تكراراً في نصوص OCR المستخرجة من صوري؟ عامل نصوص OCR كمدونة وأبلغ عن أفضل 20 كلمة معجمية.",
+        requires_corpus=True,
+        description="Uses the set's OCR corpus tooling (frequency with stopword filtering).",
+    ),
+    QueryTemplate(
+        id="vision-grammar-claims",
+        category="vision",
+        label_en="Visual Grammar patterns across the set",
+        label_ar="أنماط القواعد البصرية في المجموعة",
+        query_en="Based on the cached Visual Grammar (Kress and van Leeuwen) claims across my image set, which representational, interactive and compositional patterns recur? Phrase recurring patterns as hypotheses, not facts.",
+        query_ar="بناءً على ادعاءات القواعد البصرية (كريس وفان ليوين) المخزّنة عبر مجموعتي، ما الأنماط التمثيلية والتفاعلية والتكوينية المتكررة؟ صُغ الأنماط كفرضيات لا كحقائق.",
+        requires_corpus=True,
+        description="Aggregates cached visual-grammar claims with provenance badges preserved.",
+    ),
+    QueryTemplate(
+        id="vision-crossmodal",
+        category="vision",
+        label_en="Compare OCR vocabulary with the corpus text",
+        label_ar="قارن مفردات OCR مع نص المدونة",
+        query_en="Compare the OCR vocabulary of my image sets with the keyword profile of the corpus text. Which words are over-represented on the visual side? Phrase every cross-modal claim as a framework-lensed hypothesis.",
+        query_ar="قارن مفردات OCR في مجموعات الصور مع البصمة المعجمية لنص المدونة. أي الكلمات أكثر تمثيلاً على الجانب البصري؟ صُغ كل ادعاء عابر للوسائط كفرضية منظورية.",
+        requires_corpus=True,
+        description="The cross-modal loop: visual OCR text vs the text side, with hedged claims.",
+    ),
+    QueryTemplate(
+        id="vision-model-install",
+        category="vision",
+        label_en="How do I install a vision model?",
+        label_ar="كيف أثبّت نموذج رؤية؟",
+        query_en="Which vision-capable model should I install for Lens, and how do I pull it with Ollama? Include the recommended default and its size.",
+        query_ar="أي نموذج مدعوم للرؤية يجب أن أثبّته لـ Lens، وكيف أجلبه عبر Ollama؟ اذكر الافتراضي الموصى به وحجمه.",
+        requires_corpus=False,
+        description="Setup guidance — available even before any corpus is loaded.",
+    ),
+]
+
+
+def list_vision_prefabricated(*, language: str = "en") -> list[dict[str, Any]]:
+    """Vision-side pre-fabricated queries (served when shell=lens)."""
+    out: list[dict[str, Any]] = []
+    for q in VISION_QUERIES:
+        out.append({
+            "id": q.id,
+            "category": q.category,
+            "label": q.label_en if language == "en" else q.label_ar,
+            "query": q.query_en if language == "en" else q.query_ar,
+            "requires_corpus": q.requires_corpus,
+            "requires_reference": q.requires_reference,
+            "description": q.description,
+            "source": "prefabricated",
+        })
+    return out

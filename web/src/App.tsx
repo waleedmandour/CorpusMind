@@ -21,6 +21,7 @@ import { HomeView } from "@/views/HomeView";
 import { AboutView } from "@/views/AboutView";
 import { AssistantView } from "@/views/AssistantView";
 import { CorpusSelectionView } from "@/views/CorpusSelectionView";
+import { LensCorporaView } from "@/views/LensCorporaView";
 import { ConcordancerView } from "@/views/ConcordancerView";
 import { AnalysisView } from "@/views/AnalysisView";
 import { ArabicView } from "@/views/ArabicView";
@@ -148,7 +149,11 @@ export default function App() {
         <Sidebar />
         <main className="app-main" id="main-content" role="main">
           {activeNav === "home" && <HomeView />}
-          {activeNav === "corpus-target" && <CorpusSelectionView mode="target" />}
+          {/* v1.0.9: Lens renders the image-corpus workbench for the same nav
+              target — the main app's text-corpus view is untouched. */}
+          {activeNav === "corpus-target" && (isLensMode
+            ? <LensCorporaView />
+            : <CorpusSelectionView mode="target" />)}
           {activeNav === "corpus-reference" && <CorpusSelectionView mode="reference" />}
           {activeNav === "concordance" && <ConcordancerView />}
           {activeNav === "frequency" && <AnalysisView />}

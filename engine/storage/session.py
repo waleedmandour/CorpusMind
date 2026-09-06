@@ -49,11 +49,37 @@ def _get_engine():
     return _engine
 
 
+async def _migrate_sqlite(conn) -> None:
+    """Lightweight column migrations for databases created before v1.0.9.
+
+    create_all() only creates missing TABLES — it never alters existing ones.
+    The v1.0.9 Lens round added ImageSet.description and Image.meta, so
+    engines upgrading an existing data directory would crash on first SELECT
+    (or silently drop the new fields) without these ALTERs. Each migration
+    checks PRAGMA table_info first, so it is idempotent.
+    """
+    from sqlalchemy import text
+
+    async def _columns(table: str) -> set[str]:
+        rows = await conn.execute(text(f"PRAGMA table_info({table})"))
+        return {row[1] for row in rows.fetchall()}
+
+    image_set_cols = await _columns("image_sets")
+    if image_set_cols and "description" not in image_set_cols:
+        await conn.execute(text("ALTER TABLE image_sets ADD COLUMN description TEXT NOT NULL DEFAULT ''"))
+
+    image_cols = await _columns("images")
+    if image_cols and "meta" not in image_cols:
+        # JSON columns are TEXT underneath in SQLite; '{}' deserializes to {}.
+        await conn.execute(text("ALTER TABLE images ADD COLUMN meta TEXT NOT NULL DEFAULT '{}'"))
+
+
 async def init_db() -> None:
-    """Create all tables. Idempotent — safe to call on every startup."""
+    """Create all tables + run idempotent column migrations. Safe on every startup."""
     engine = _get_engine()
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        await _migrate_sqlite(conn)
 
 
 async def dispose_db() -> None:

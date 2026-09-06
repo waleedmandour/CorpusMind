@@ -49,7 +49,17 @@ export function HomeView() {
     ? (nativeHealth.data?.ollama.healthy ?? false)
     : (providers.data?.providers.find((p) => p.name === "ollama")?.healthy ?? false);
 
-  const quickActions = [
+  // v1.0.9: quick actions are shell-aware. In Lens, text-analysis cards
+  // (Concordance, Frequency, Collocation, Keyness, Arabic Tools) previously
+  // still showed here and opened views the sidebar hides — they are replaced
+  // by the Lens workflow (image corpora → vision → assistant). The main app's
+  // card list is unchanged.
+  const quickActions = isLensMode ? [
+    { label: lang === "ar" ? "دخائر الصور" : "Image Corpora", nav: "corpus-target" as const, icon: "\u25A3", desc: lang === "ar" ? "أنشئ مجموعات الصور ووثّقها وأدر بياناتها الوصفية" : "Create and document image sets, metadata, and OCR corpora" },
+    { label: lang === "ar" ? "جناح الرؤية" : "Vision Suite", nav: "vision" as const, icon: "\u2728", desc: lang === "ar" ? "التحليل البصري، القواعد البصرية، عدسات الخطاب" : "Image analysis, Visual Grammar, discourse lenses" },
+    { label: lang === "ar" ? "المساعد الذكي" : "AI Assistant", nav: "assistant" as const, icon: "\u272B", desc: lang === "ar" ? "اسأل عن صورك ونصوصك معاً بأدلة مبرهنة" : "Ask about your images and texts with grounded evidence" },
+    { label: lang === "ar" ? "دليل المستخدم" : "User Guide", nav: "userguide" as const, icon: "\u25B6", desc: lang === "ar" ? "كيف تبني دخيرة صور خطوة بخطوة" : "How to build an image corpus, step by step" },
+  ] : [
     { label: "Create Project", nav: "corpus-target" as const, icon: "\u2630", desc: "Set up a new research project and upload texts" },
     { label: "Concordance Search", nav: "concordance" as const, icon: "\u2727", desc: "Search your corpus with KWIC view" },
     { label: "Frequency Analysis", nav: "frequency" as const, icon: "\u2727", desc: "Word, lemma, and POS frequency with STTR" },
@@ -143,24 +153,29 @@ export function HomeView() {
           share the same engine, so show BOTH sides of the active corpus. */}
       {isLensMode && activeCorpusId && <LensCrossModalCard corpusId={activeCorpusId} />}
 
-      <div className="home-stats">
-        <div className="home-stat">
-          <span className="home-stat-num">28</span>
-          <span className="home-stat-label">AI Tools</span>
+      {/* v1.0.9: the hardcoded suite-wide tiles ("28 AI Tools / 97 Tests"…)
+          were misleading in Lens (and drifted from reality); Lens gets no
+          fake counters. The main app keeps its tiles unchanged. */}
+      {!isLensMode && (
+        <div className="home-stats">
+          <div className="home-stat">
+            <span className="home-stat-num">28</span>
+            <span className="home-stat-label">AI Tools</span>
+          </div>
+          <div className="home-stat">
+            <span className="home-stat-num">20</span>
+            <span className="home-stat-label">Stat Formulas</span>
+          </div>
+          <div className="home-stat">
+            <span className="home-stat-num">12</span>
+            <span className="home-stat-label">Frameworks</span>
+          </div>
+          <div className="home-stat">
+            <span className="home-stat-num">97</span>
+            <span className="home-stat-label">Tests</span>
+          </div>
         </div>
-        <div className="home-stat">
-          <span className="home-stat-num">20</span>
-          <span className="home-stat-label">Stat Formulas</span>
-        </div>
-        <div className="home-stat">
-          <span className="home-stat-num">12</span>
-          <span className="home-stat-label">Frameworks</span>
-        </div>
-        <div className="home-stat">
-          <span className="home-stat-num">97</span>
-          <span className="home-stat-label">Tests</span>
-        </div>
-      </div>
+      )}
     </div>
   );
 }

@@ -6,6 +6,91 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
+## [1.0.9] — 2026-09-07 — CorpusMind Lens: the image-corpus workbench
+
+Lens's corpus layer was inherited verbatim from the text app: its "Corpora"
+section offered a text uploader, POS tagsets, text cleaning, a tokenize → tag
+→ parse compile gate, and a tokens/types/TTR dashboard — none of which mean
+anything for an image corpus. This round rebuilds the visual side's scholarly
+apparatus to match corpus-linguistics practice for multimodal corpora
+(CLARIN multimodal resource family; CASS corpus-methods-for-multimodal-data;
+IPTC photo-metadata standards). **The main CorpusMind app's behaviour is
+unchanged** — every UI change is Lens-gated or additive.
+
+### Added
+
+- **Image Corpora view (Lens)**: a dedicated `LensCorporaView` replaces the
+  text view in Lens mode — image sets as first-class corpus cards with
+  provenance/sampling notes, set-level statistics (formats, orientation mix,
+  resolution and date ranges, OCR/caption/VLM/metadata coverage, genre and
+  source distributions), genre filtering, and one-click entry to the Vision
+  Suite.
+- **Image metadata (IPTC-Core-aligned)**: per-image source/publication, date,
+  licence/rights, genre, language of embedded text, and notes — editable per
+  image or in bulk ("Tag All Images"); non-destructive merge; the
+  machine-extracted blocks are never user-overwritable.
+- **EXIF/XMP extraction at ingest** (`vision/image_meta.py`): Pillow-based
+  EXIF (camera, dates) + XMP/IPTC-Core packet scan (headline, creator,
+  rights, usage terms, keywords). **GPS coordinates are deliberately never
+  extracted** (research-ethics default).
+- **OCR Corpus Tools** (Lens): KWIC-style search over OCR text + captions
+  with match counts and context windows; a word-frequency list with the
+  engine's shared EN/AR stopword lists and minimum-length control; and
+  set-vs-set keyword comparison — the full keyness battery
+  (log-likelihood, log ratio, chi-square, odds ratio, % diff, simple maths)
+  ranked by log-likelihood.
+- **OCR corpus export**: the set's text as a `<doc>`-marked corpus file
+  (filename + caption + metadata attributes per image) or structured JSON —
+  so the visual side's text can be analysed with the main app's full text
+  tooling. This closes the cross-modal loop.
+- **Facial analysis opt-in UI (§18)**: Settings → Ethics → Facial Analysis
+  toggle (persisted marker in the data directory; env override respected),
+  plus an in-drawer facial-analysis panel. The backend, redaction gate and
+  API wrapper existed since Phase 5 — the UI and the promised Settings
+  toggle did not.
+- **Vision-aware AI suggestions**: `/query-suggestions?shell=lens` serves a
+  vision catalogue first (set overview, OCR vocabulary, Visual Grammar
+  patterns, cross-modal comparison, model setup); the Lens Assistant passes
+  the shell and uses a vision-aware input placeholder.
+- **Pagination** for image grids (engine `limit`/`offset` +
+  `X-Total-Count`, exposed via CORS) with load-more in both the Vision grid
+  and the Lens corpora grid.
+
+### Fixed
+
+- **Set/image deletion failed silently in the desktop shell**: VisionView
+  still used `window.confirm`, which trips the Tauri ACL (the same bug fixed
+  for corpus deletes in v0.1.19). Both deletes now use ConfirmDialog, and
+  delete failures surface on the card instead of vanishing.
+- **The Lens boundary was cosmetic**: `setActiveNav` accepted any navigation
+  target, so Home's text-tool cards opened views the Lens sidebar hides. The
+  Lens shell now enforces its navigation set (out-of-scope targets redirect
+  to Vision), Home shows Lens-aware quick actions, and the hardcoded
+  suite-wide stat tiles are hidden in Lens.
+- **Arabic typos**: "الدخيرة" → "الذخيرة" (30 occurrences across UI +
+  engine suggestion catalogue); "ال تأطير" → "التأطير"; the discourse-lens
+  framework dropdown label "Lens" (colliding with the product name) is now
+  "Framework" / "الإطار".
+- **Lens onboarding was English-only**: the entire Lens onboarding flow is
+  now i18n'd (en/ar) and describes the Image Corpora workflow; footer
+  buttons (Back/Skip/Next/Get Started) are translated too.
+- **TIFF/BMP support mismatch**: the engine accepted TIFF and BMP but the
+  file pickers silently excluded them; both pickers now match the engine.
+- **Docs accuracy**: USER_GUIDE.md (EN/AR) section 8 described the Vision
+  Suite as "Coming Soon"; it now documents the shipped Vision Suite and the
+  Lens image-corpus workflow (incl. metadata, OCR corpus tools, ethics).
+
+### Technical
+
+- Engine: `ImageSet.description` + `Image.meta` columns with an idempotent
+  PRAGMA-based migration for existing data directories; new endpoints
+  (PATCH image-set / image, bulk metadata, set stats, OCR search /
+  frequency / keyness / corpus); facial opt-in persistence; 14 new engine
+  tests (suite: 352 passed).
+- Web: `LensCorporaView` (new), Lens-gated `App.tsx` / `ui.ts` /
+  `HomeView`, ConfirmDialog + pagination + facial panel in `VisionView`,
+  Ethics card in `SettingsView`, i18n en/ar for all new surfaces.
+
 ## [1.0.8] — 2026-09-06 — Collocation network: guaranteed rendering everywhere
 
 The collocation network could still come up blank on machines whose webview

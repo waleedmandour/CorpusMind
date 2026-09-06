@@ -73,8 +73,10 @@ export function CorpusSelectionView({ mode }: { mode: CorpusMode }) {
 
 
 // ─── Project Selector ─────────────────────────────────────────────
+// v1.0.9: exported so the Lens shell's Image Corpora view can reuse the
+// exact same project management without touching the main app's workflow.
 
-function ProjectSelector() {
+export function ProjectSelector() {
   const qc = useQueryClient();
   const activeProjectId = useApp((s) => s.activeProjectId);
   const setActiveProject = useApp((s) => s.setActiveProject);

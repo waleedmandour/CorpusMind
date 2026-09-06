@@ -71,6 +71,15 @@ function detectLensMode(): boolean {
   return new URLSearchParams(window.location.search).get("shell") === "lens";
 }
 
+/** v1.0.9: navigation targets the Lens shell actually exposes. The sidebar
+ * filtered these visually before, but setActiveNav still accepted any
+ * target — so Home quick-action cards (and any stray call) could open the
+ * full text-analysis views that Lens deliberately hides. The guard makes
+ * the Lens boundary real: out-of-scope targets are redirected to vision. */
+const LENS_NAV_TARGETS: ReadonlySet<NavTarget> = new Set<NavTarget>([
+  "home", "corpus-target", "vision", "assistant", "settings", "userguide", "about",
+]);
+
 export const useUI = create<UIState>()(
   persist(
     (set, get) => ({
@@ -113,7 +122,14 @@ export const useUI = create<UIState>()(
       },
       setCommandPaletteOpen: (open) => set({ commandPaletteOpen: open }),
       setFloatingAssistantOpen: (open) => set({ floatingAssistantOpen: open }),
-      setActiveNav: (activeNav) => set({ activeNav }),
+      setActiveNav: (activeNav) => {
+        // v1.0.9: enforce the Lens navigation boundary (see LENS_NAV_TARGETS).
+        if (get().isLensMode && !LENS_NAV_TARGETS.has(activeNav)) {
+          set({ activeNav: "vision" });
+          return;
+        }
+        set({ activeNav });
+      },
       setOnboardingComplete: (onboardingComplete) => set({ onboardingComplete }),
       setOnboardingOpen: (onboardingOpen) => set({ onboardingOpen }),
       toggleGroup: (groupId) =>

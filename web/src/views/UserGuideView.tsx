@@ -412,6 +412,22 @@ camel_data -i morphology-db-msa-r13`}</pre>
           spawning a duplicate). This means you can ingest texts in the main app, analyse images
           in Lens, and the two sides meet inside the same corpus.
         </p>
+        <h4>Building an image corpus (v1.0.9)</h4>
+        <p>
+          In Lens, <strong>Your Corpus</strong> is the <em>image-corpus workbench</em>: create a
+          corpus, then create <strong>image sets</strong> inside it — each with provenance/sampling
+          notes (source, period, selection criteria), set-level statistics (formats, orientation,
+          resolution and date ranges, OCR coverage), per-image metadata aligned with the IPTC Core
+          descriptive fields (source, date, licence/rights, genre, language of embedded text),
+          bulk "Tag All Images", and genre-based subsetting. Metadata embedded in the files
+          themselves (EXIF/XMP) is extracted at ingest and shown read-only; GPS coordinates are
+          deliberately never extracted. The <strong>OCR Corpus Tools</strong> panel lets you query
+          the set's text like any corpus: KWIC-style search over OCR text and captions, a
+          word-frequency list with the shared English/Arabic stopword lists, and set-vs-set
+          keyword comparison ranked by log-likelihood. <strong>Export OCR corpus</strong> writes
+          the set's text out as a <code>&lt;doc&gt;</code>-marked corpus file you can load into
+          the main app's text tools — closing the cross-modal loop.
+        </p>
         <h4>Interpreting text and images together</h4>
         <p>
           Image sets live <em>inside</em> a corpus, next to its text documents. The AI Assistant
@@ -425,10 +441,11 @@ camel_data -i morphology-db-msa-r13`}</pre>
         <h4>What Lens shows, and what it doesn't</h4>
         <p>
           Lens deliberately hides the text-analysis toolbars: its sidebar keeps Home, Your Corpus
-          (target corpora only — reference corpora are a text-only concept), Vision, AI Assistant,
-          and System. To run full text analysis (concordance, collocation, keyness, Arabic
-          pipelines), open the same corpus in the main CorpusMind app — the corpus, its documents
-          and its image sets are identical in both.
+          (the image-corpus workbench — reference corpora are a text-only concept), Vision, AI
+          Assistant, and System, and the boundary is enforced (links to text-analysis views
+          redirect to the Vision view). To run full text analysis (concordance, collocation,
+          keyness, Arabic pipelines), open the same corpus in the main CorpusMind app — the
+          corpus, its documents and its image sets are identical in both.
         </p>
         <h4>Installing a vision model for Lens</h4>
         <p>

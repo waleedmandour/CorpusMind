@@ -57,6 +57,12 @@ export function SettingsView() {
   const version = useQuery({ queryKey: ["version"], queryFn: api.version });
   const encryption = useQuery({ queryKey: ["encryption"], queryFn: api.encryptionStatus });
   const troubleshoot = useQuery({ queryKey: ["troubleshoot-status"], queryFn: api.troubleshootStatus });
+  // v1.0.9: §18 facial-analysis opt-in state (Settings → Ethics card).
+  const facial = useQuery({ queryKey: ["facial-status"], queryFn: api.facialAnalysisStatus });
+  const facialMutation = useMutation({
+    mutationFn: (enabled: boolean) => api.setFacialAnalysisEnabled(enabled),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["facial-status"] }),
+  });
 
   // Resolve the final status: native health wins when available (Tauri),
   // otherwise fall back to the engine's /providers endpoint (browser/PWA).
@@ -466,6 +472,49 @@ export function SettingsView() {
               <p className="settings-text-muted">{encryption.data.notice}</p>
             </div>
           )}
+        </div>
+      </section>
+
+      {/* v1.0.9: Ethics — Facial Analysis toggle. The engine and the
+          redaction notices always pointed users here, but the toggle itself
+          never existed. Additive card: nothing else in Settings changes. */}
+      <section className="settings-card">
+        <div className="settings-card-header">
+          <span className="settings-card-icon" aria-hidden>{"\u2696"}</span>
+          <div>
+            <h2>Ethics — Facial Analysis</h2>
+            <p className="settings-card-desc">
+              Opt-in module (§18). Off by default; never performs identity recognition.
+            </p>
+          </div>
+          <span className={`settings-badge ${facial.data?.enabled ? "ok" : "warn"}`}>
+            <span className="settings-badge-dot" />
+            {facial.data?.enabled ? "Opted in" : "Off (default)"}
+          </span>
+        </div>
+        <div className="settings-card-body">
+          <p className="settings-text">
+            Facial analysis detects faces and produces <strong>descriptive visual
+            cues only</strong> (estimated age group, gender presentation, expression,
+            gaze) — it never identifies or re-identifies real individuals. Opt-in is
+            persisted next to your data; delete the marker or toggle off to revoke.
+          </p>
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
+            <label style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", fontSize: "13px" }}>
+              <input
+                type="checkbox"
+                checked={facial.data?.enabled ?? false}
+                disabled={facial.isPending || facialMutation.isPending || facial.data?.env_override}
+                onChange={(e) => facialMutation.mutate(e.target.checked)}
+              />
+              <span>Enable facial analysis (opt-in)</span>
+            </label>
+            {facial.data?.env_override && (
+              <span className="settings-text-muted">
+                Enabled via CORPUSMIND_FACIAL_ANALYSIS_ENABLED=1 (environment override).
+              </span>
+            )}
+          </div>
         </div>
       </section>
 

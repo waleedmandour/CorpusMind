@@ -5,12 +5,13 @@ import asyncio
 import hashlib
 import os
 import re
+from collections import Counter
 from dataclasses import asdict
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Literal
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Response, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, Response, UploadFile
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import delete as sa_delete
@@ -62,14 +63,23 @@ MAX_FILES_PER_UPLOAD = 50
 
 class ImageSetCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
+    # v1.0.9: sampling/provenance notes (corpus-construction documentation).
+    description: str = Field("", max_length=4000)
 
 
 class ImageSetOut(BaseModel):
     id: str
     corpus_id: str
     name: str
+    description: str = ""
     image_count: int = 0
     created_at: str
+
+
+class ImageSetUpdate(BaseModel):
+    """v1.0.9 — PATCH /image-sets/{id}: rename or edit provenance notes."""
+    name: str | None = Field(None, min_length=1, max_length=255)
+    description: str | None = Field(None, max_length=4000)
 
 
 @router.post("/corpora/{cid}/image-sets", response_model=ImageSetOut)
@@ -77,11 +87,31 @@ async def create_image_set(cid: str, body: ImageSetCreate,
                             session: AsyncSession = Depends(get_session)) -> ImageSetOut:
     if not await session.get(Corpus, cid):
         raise HTTPException(404, "Corpus not found")
-    iset = ImageSet(corpus_id=cid, name=body.name)
+    iset = ImageSet(corpus_id=cid, name=body.name, description=body.description)
     session.add(iset)
     await session.flush()
     return ImageSetOut(id=iset.id, corpus_id=iset.corpus_id, name=iset.name,
-                        image_count=0, created_at=iset.created_at.isoformat())
+                        description=iset.description, image_count=0,
+                        created_at=iset.created_at.isoformat())
+
+
+@router.patch("/image-sets/{iset_id}", response_model=ImageSetOut)
+async def update_image_set(iset_id: str, body: ImageSetUpdate,
+                           session: AsyncSession = Depends(get_session)) -> ImageSetOut:
+    """v1.0.9 — edit an image set's name and/or provenance description."""
+    iset = await session.get(ImageSet, iset_id)
+    if not iset:
+        raise HTTPException(404, "Image set not found")
+    if body.name is not None:
+        iset.name = body.name.strip() or iset.name
+    if body.description is not None:
+        iset.description = body.description
+    await session.flush()
+    from sqlalchemy import func
+    n = await session.scalar(select(func.count(ImageModel.id)).where(ImageModel.image_set_id == iset_id)) or 0
+    return ImageSetOut(id=iset.id, corpus_id=iset.corpus_id, name=iset.name,
+                        description=iset.description, image_count=n,
+                        created_at=iset.created_at.isoformat())
 
 
 @router.get("/corpora/{cid}/image-sets", response_model=list[ImageSetOut])
@@ -93,6 +123,7 @@ async def list_image_sets(cid: str, session: AsyncSession = Depends(get_session)
     for s in sets:
         n = await session.scalar(select(func.count(ImageModel.id)).where(ImageModel.image_set_id == s.id)) or 0
         out.append(ImageSetOut(id=s.id, corpus_id=s.corpus_id, name=s.name,
+                                description=s.description or "",
                                 image_count=n, created_at=s.created_at.isoformat()))
     return out
 
@@ -111,7 +142,22 @@ class ImageOut(BaseModel):
     height: int
     size_bytes: int
     caption: str
+    meta: dict = {}
     created_at: str
+
+
+class ImageMetaUpdate(BaseModel):
+    """v1.0.9 — PATCH /images/{id}: edit caption and/or user metadata.
+
+    User metadata keys are merged non-destructively; the machine-extracted
+    ``exif``/``xmp`` blocks can be viewed but never overwritten from here.
+    """
+    caption: str | None = Field(None, max_length=4000)
+    meta: dict | None = None
+
+
+# Researcher-editable metadata keys (IPTC-Core-aligned descriptive fields).
+_USER_META_KEYS = frozenset({"source", "date", "license", "genre", "language", "notes"})
 
 
 def _image_storage_dir() -> Path:
@@ -184,6 +230,10 @@ async def upload_images(
             storage_path = storage_dir / f"{img_id}.{fmt}"
             storage_path.write_bytes(raw)
             caption = caption_list[i] if i < len(caption_list) else ""
+            # v1.0.9: extract privacy-safe EXIF/XMP metadata at ingest so the
+            # image corpus carries its own provenance (IPTC-Core-aligned).
+            from vision.image_meta import extract_image_metadata
+            extracted = extract_image_metadata(raw)
 
             img = ImageModel(
                 id=img_id,
@@ -200,6 +250,7 @@ async def upload_images(
                     "composition": asdict(analysis.composition),
                 },
                 caption=caption,
+                meta=extracted,
             )
             session.add(img)
             await session.flush()
@@ -207,6 +258,7 @@ async def upload_images(
                 id=img.id, image_set_id=img.image_set_id, filename=img.filename,
                 format=img.format, width=img.width, height=img.height,
                 size_bytes=img.size_bytes, caption=img.caption,
+                meta=img.meta or {},
                 created_at=img.created_at.isoformat(),
             ))
         except Exception as e:
@@ -216,15 +268,415 @@ async def upload_images(
 
 
 @router.get("/image-sets/{iset_id}/images", response_model=list[ImageOut])
-async def list_images(iset_id: str, session: AsyncSession = Depends(get_session)) -> list[ImageOut]:
+async def list_images(
+    iset_id: str,
+    response: Response,
+    limit: int | None = None,
+    offset: int = 0,
+    session: AsyncSession = Depends(get_session),
+) -> list[ImageOut]:
+    """List images (newest first). v1.0.9: optional limit/offset pagination —
+    the total count rides back in the X-Total-Count header so the UI can
+    offer "load more" without a shape change. No params = full list
+    (backward compatible)."""
+    from sqlalchemy import func
+    total = await session.scalar(
+        select(func.count(ImageModel.id)).where(ImageModel.image_set_id == iset_id)) or 0
     stmt = select(ImageModel).where(ImageModel.image_set_id == iset_id).order_by(ImageModel.created_at.desc())
+    if limit is not None and limit > 0:
+        stmt = stmt.limit(limit).offset(max(0, offset))
+        response.headers["X-Total-Count"] = str(total)
     imgs = (await session.execute(stmt)).scalars().all()
     return [ImageOut(
         id=i.id, image_set_id=i.image_set_id, filename=i.filename,
         format=i.format, width=i.width, height=i.height,
-        size_bytes=i.size_bytes, caption=i.caption,
+        size_bytes=i.size_bytes, caption=i.caption, meta=i.meta or {},
         created_at=i.created_at.isoformat(),
     ) for i in imgs]
+
+
+# --------------------------------------------------------------------------- #
+# §9.3b Image metadata + corpus tools (v1.0.9 Lens round)
+#
+# The image side previously had NO corpus-linguistics surface: images could
+# be analysed one at a time, but the researcher could not document, tag,
+# filter, or query the set the way the text side can. These routes give the
+# visual side the same scholarly apparatus:
+#   PATCH /images/{id}            — per-image metadata (IPTC-Core-aligned)
+#   POST  .../images-bulk-meta    — "tag all images" (bulk metadata)
+#   GET   .../stats               — set-level corpus statistics
+#   GET   .../ocr-search          — concordance-style search over OCR+captions
+#   GET   .../ocr-frequency       — frequency list with stopword control
+#   GET   .../ocr-keyness         — set-vs-set keyword comparison (log-likelihood)
+#   GET   .../ocr-corpus          — export the set's OCR text AS a corpus
+# --------------------------------------------------------------------------- #
+
+
+@router.patch("/images/{img_id}", response_model=ImageOut)
+async def update_image(img_id: str, body: ImageMetaUpdate,
+                       session: AsyncSession = Depends(get_session)) -> ImageOut:
+    """v1.0.9 — edit an image's caption and/or researcher metadata.
+
+    Metadata is merged non-destructively: only the whitelisted user keys
+    (source, date, license, genre, language, notes) are written; the
+    machine-extracted ``exif``/``xmp`` blocks are never overwritable.
+    """
+    img = await session.get(ImageModel, img_id)
+    if not img:
+        raise HTTPException(404, "Image not found")
+    if body.caption is not None:
+        img.caption = body.caption
+    if body.meta:
+        meta = dict(img.meta or {})
+        user = dict(meta.get("user") or {})
+        for k, v in body.meta.items():
+            if k in _USER_META_KEYS:
+                user[k] = str(v).strip()[:500]
+        meta["user"] = user
+        img.meta = meta
+        # Flag the JSON column as mutated (in-place dict edits are not
+        # always detected by SQLAlchemy's change tracking).
+        from sqlalchemy.orm.attributes import flag_modified
+        flag_modified(img, "meta")
+    await session.flush()
+    return ImageOut(
+        id=img.id, image_set_id=img.image_set_id, filename=img.filename,
+        format=img.format, width=img.width, height=img.height,
+        size_bytes=img.size_bytes, caption=img.caption, meta=img.meta or {},
+        created_at=img.created_at.isoformat(),
+    )
+
+
+class BulkMetaBody(BaseModel):
+    meta: dict = Field(..., description="User metadata keys to apply to ALL images in the set")
+
+
+@router.post("/image-sets/{iset_id}/images-bulk-meta")
+async def bulk_update_image_meta(iset_id: str, body: BulkMetaBody,
+                                 session: AsyncSession = Depends(get_session)) -> dict:
+    """v1.0.9 — apply the same metadata to every image in the set (the
+    image-side analogue of the text side's "Tag All Files")."""
+    iset = await session.get(ImageSet, iset_id)
+    if not iset:
+        raise HTTPException(404, "Image set not found")
+    allowed = {k: str(v).strip()[:500] for k, v in body.meta.items() if k in _USER_META_KEYS and str(v).strip()}
+    if not allowed:
+        raise HTTPException(400, "No valid metadata fields supplied (allowed: "
+                                 + ", ".join(sorted(_USER_META_KEYS)) + ")")
+    stmt = select(ImageModel).where(ImageModel.image_set_id == iset_id)
+    images = (await session.execute(stmt)).scalars().all()
+    from sqlalchemy.orm.attributes import flag_modified
+    for img in images:
+        meta = dict(img.meta or {})
+        user = dict(meta.get("user") or {})
+        user.update(allowed)
+        meta["user"] = user
+        img.meta = meta
+        flag_modified(img, "meta")
+    await session.flush()
+    return {"updated": len(images), "applied": sorted(allowed.keys())}
+
+
+@router.get("/image-sets/{iset_id}/stats")
+async def image_set_stats(iset_id: str, session: AsyncSession = Depends(get_session)) -> dict:
+    """v1.0.9 — set-level corpus statistics (the image analogue of the text
+    corpus dashboard): format breakdown, orientation mix, resolution range,
+    coverage flags, OCR word total, and the distribution of the researcher's
+    genre/source tags."""
+    iset = await session.get(ImageSet, iset_id)
+    if not iset:
+        raise HTTPException(404, "Image set not found")
+    images = (await session.execute(
+        select(ImageModel).where(ImageModel.image_set_id == iset_id)
+    )).scalars().all()
+
+    formats: Counter = Counter()
+    orientations: Counter = Counter()
+    genres: Counter = Counter()
+    sources: Counter = Counter()
+    total_bytes = 0
+    with_ocr = with_caption = with_vlm = 0
+    ocr_words = 0
+    min_w = min_h = None
+    max_w = max_h = 0
+    dates: list[str] = []
+    for img in images:
+        formats[img.format] += 1
+        total_bytes += img.size_bytes
+        if img.width and img.height:
+            ratio = img.width / img.height
+            orientations["landscape" if ratio > 1.05 else "portrait" if ratio < 0.95 else "square"] += 1
+        min_w = img.width if min_w is None else min(min_w, img.width)
+        max_w = max(max_w, img.width)
+        min_h = img.height if min_h is None else min(min_h, img.height)
+        max_h = max(max_h, img.height)
+        meta = img.meta or {}
+        user = meta.get("user") or {}
+        if user.get("genre"):
+            genres[str(user["genre"])] += 1
+        if user.get("source"):
+            sources[str(user["source"])] += 1
+        for key in ("date", "date_time_original", "date_time"):
+            if user.get(key) or meta.get("exif", {}).get(key):
+                dates.append(str(user.get(key) or meta["exif"][key]))
+                break
+        ocr_text = (img.analysis or {}).get("ocr", {}).get("text", "")
+        if ocr_text:
+            with_ocr += 1
+            ocr_words += len(ocr_text.split())
+        if img.caption:
+            with_caption += 1
+        if (img.analysis or {}).get("vision_llm"):
+            with_vlm += 1
+
+    return {
+        "image_set_id": iset_id,
+        "name": iset.name,
+        "description": iset.description or "",
+        "image_count": len(images),
+        "total_bytes": total_bytes,
+        "formats": dict(formats),
+        "orientations": dict(orientations),
+        "resolution": {
+            "min_width": min_w or 0, "max_width": max_w,
+            "min_height": min_h or 0, "max_height": max_h,
+        },
+        "coverage": {
+            "with_ocr": with_ocr, "with_caption": with_caption,
+            "with_vlm": with_vlm, "with_user_meta": sum(1 for img in images if (img.meta or {}).get("user")),
+        },
+        "ocr_word_total": ocr_words,
+        "genres": dict(genres),
+        "sources": dict(sources),
+        "date_min": min(dates) if dates else "",
+        "date_max": max(dates) if dates else "",
+    }
+
+
+def _ocr_text_of(img) -> str:
+    return (img.analysis or {}).get("ocr", {}).get("text", "") or ""
+
+
+@router.get("/image-sets/{iset_id}/ocr-search")
+async def ocr_search(
+    iset_id: str,
+    q: str = Query(..., min_length=1, max_length=200),
+    regex: bool = False,
+    limit: int = 50,
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    """Concordance-style search over the set's OCR text and captions.
+
+    Returns per-image hits with a KWIC-style window (left / match / right)
+    so the researcher can read the match in context — the image-corpus
+    analogue of a concordance line.
+    """
+    iset = await session.get(ImageSet, iset_id)
+    if not iset:
+        raise HTTPException(404, "Image set not found")
+    try:
+        pattern = re.compile(q if regex else re.escape(q), re.IGNORECASE)
+    except re.error as e:
+        raise HTTPException(400, f"Invalid pattern: {e}") from e
+
+    images = (await session.execute(
+        select(ImageModel).where(ImageModel.image_set_id == iset_id)
+    )).scalars().all()
+    hits: list[dict] = []
+    for img in images:
+        fields = {"ocr": _ocr_text_of(img), "caption": img.caption or ""}
+        for field, text in fields.items():
+            if not text:
+                continue
+            matches = list(pattern.finditer(text))[:5]
+            for m in matches:
+                left = text[max(0, m.start() - 60):m.start()]
+                right = text[m.end():m.end() + 60]
+                hits.append({
+                    "image_id": img.id,
+                    "filename": img.filename,
+                    "field": field,
+                    "left": "…" + left if m.start() > 60 else left,
+                    "match": m.group(0),
+                    "right": right + "…" if m.end() + 60 < len(text) else right,
+                    "match_count": len(list(pattern.finditer(text))),
+                })
+            if len(hits) >= limit:
+                break
+        if len(hits) >= limit:
+            break
+    return {
+        "query": q, "regex": regex, "hit_count": len(hits),
+        "images_searched": len(images),
+        "hits": hits[:limit],
+    }
+
+
+@router.get("/image-sets/{iset_id}/ocr-frequency")
+async def ocr_frequency(
+    iset_id: str,
+    stopwords: bool = True,
+    min_len: int = 2,
+    limit: int = 100,
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    """Frequency list over the set's OCR text (surface forms), with the
+    engine's shared EN/AR stopword lists — the image-corpus analogue of a
+    word-list. Surface forms, not lemmas: OCR text is not POS-tagged."""
+    from nlp.stopwords import ARABIC_STOPWORDS, ENGLISH_STOPWORDS
+
+    iset = await session.get(ImageSet, iset_id)
+    if not iset:
+        raise HTTPException(404, "Image set not found")
+    images = (await session.execute(
+        select(ImageModel).where(ImageModel.image_set_id == iset_id)
+    )).scalars().all()
+    counter: Counter = Counter()
+    images_with_text = 0
+    for img in images:
+        text = _ocr_text_of(img) + " " + (img.caption or "")
+        if text.strip():
+            images_with_text += 1
+        words = text.lower().split()
+        for w in words:
+            w = w.strip(".,;:!?()[]{}\"'«»„“”·—–-")
+            if len(w) < max(1, min_len):
+                continue
+            if stopwords and (w in ENGLISH_STOPWORDS or w in ARABIC_STOPWORDS):
+                continue
+            counter[w] += 1
+    total_tokens = sum(counter.values())
+    return {
+        "image_set_id": iset_id,
+        "images_with_text": images_with_text,
+        "total_tokens": total_tokens,
+        "types": len(counter),
+        "stopwords_filtered": stopwords,
+        "min_len": min_len,
+        "frequency": [{"word": w, "count": c, "percent": round(c / total_tokens * 100, 2) if total_tokens else 0.0}
+                      for w, c in counter.most_common(max(1, min(limit, 500)))],
+    }
+
+
+@router.get("/image-sets/{iset_id}/ocr-keyness")
+async def ocr_keyness(
+    iset_id: str,
+    other_iset_id: str = Query(..., description="The comparison set (reference)"),
+    stopwords: bool = True,
+    min_freq: int = 2,
+    limit: int = 60,
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    """Set-vs-set keyword comparison over OCR text — the image-corpus
+    analogue of keyness. Full §12 battery per term via
+    ``stats.measures.compute_keyness_row``; ranked by log-likelihood
+    (Rayson & Garside's standard for corpus comparison)."""
+    from nlp.stopwords import ARABIC_STOPWORDS, ENGLISH_STOPWORDS
+    from stats.measures import compute_keyness_row
+
+    if other_iset_id == iset_id:
+        raise HTTPException(400, "The target and reference sets must differ")
+    iset = await session.get(ImageSet, iset_id)
+    if not iset:
+        raise HTTPException(404, "Image set not found")
+    other = await session.get(ImageSet, other_iset_id)
+    if not other:
+        raise HTTPException(404, "Reference image set not found")
+
+    def _counts(images) -> Counter:
+        c: Counter = Counter()
+        for img in images:
+            text = _ocr_text_of(img) + " " + (img.caption or "")
+            for w in text.lower().split():
+                w = w.strip(".,;:!?()[]{}\"'«»„“”·—–-")
+                if len(w) < 2:
+                    continue
+                if stopwords and (w in ENGLISH_STOPWORDS or w in ARABIC_STOPWORDS):
+                    continue
+                c[w] += 1
+        return c
+
+    target_imgs = (await session.execute(
+        select(ImageModel).where(ImageModel.image_set_id == iset_id))).scalars().all()
+    ref_imgs = (await session.execute(
+        select(ImageModel).where(ImageModel.image_set_id == other_iset_id))).scalars().all()
+    f1_counts = _counts(target_imgs)
+    f2_counts = _counts(ref_imgs)
+    n1, n2 = sum(f1_counts.values()), sum(f2_counts.values())
+    if n1 == 0 or n2 == 0:
+        return {
+            "target": {"id": iset_id, "name": iset.name, "tokens": n1},
+            "reference": {"id": other_iset_id, "name": other.name, "tokens": n2},
+            "rows": [],
+            "note": "One of the sets has no OCR text yet — run the batch analyser first.",
+        }
+
+    rows = []
+    for term, f1 in f1_counts.items():
+        if f1 < min_freq:
+            continue
+        f2 = f2_counts.get(term, 0)
+        row = compute_keyness_row(term, f1, f2, n1, n2)
+        measures = {k: round(v, 3) if isinstance(v, float) else v for k, v in row.measures.items()}
+        rows.append({"term": term, "f_target": f1, "f_reference": f2, **measures})
+    rows.sort(key=lambda r: r["log_likelihood"], reverse=True)
+    return {
+        "target": {"id": iset_id, "name": iset.name, "tokens": n1},
+        "reference": {"id": other_iset_id, "name": other.name, "tokens": n2},
+        "rows": rows[:max(1, min(limit, 300))],
+    }
+
+
+@router.get("/image-sets/{iset_id}/ocr-corpus")
+async def ocr_corpus(
+    iset_id: str,
+    format: Literal["txt", "json"] = "txt",
+    session: AsyncSession = Depends(get_session),
+) -> StreamingResponse:
+    """Export the set's OCR text AS a corpus file.
+
+    This closes the cross-modal loop: the visual side's text can now be fed
+    to the main app's text tools (concordance, keyness, collocations) like
+    any other corpus. ``txt`` uses <doc> markers with filename + caption +
+    user metadata per image (vertical-text conventions); ``json`` returns the
+    structured equivalent.
+    """
+    iset = await session.get(ImageSet, iset_id)
+    if not iset:
+        raise HTTPException(404, "Image set not found")
+    images = (await session.execute(
+        select(ImageModel).where(ImageModel.image_set_id == iset_id).order_by(ImageModel.created_at)
+    )).scalars().all()
+
+    if format == "json":
+        import json as _json
+        docs = [{
+            "filename": img.filename,
+            "caption": img.caption or "",
+            "ocr_text": _ocr_text_of(img),
+            "meta": (img.meta or {}).get("user") or {},
+        } for img in images]
+        data = _json.dumps({"image_set": iset.name, "description": iset.description or "",
+                            "documents": docs}, ensure_ascii=False, indent=1)
+        return _make_response(data.encode("utf-8"), "application/json",
+                              f"ocr-corpus-{re.sub(r'[^\w-]+', '-', iset.name)[:40].strip('-') or 'imageset'}.json")
+
+    parts: list[str] = []
+    for img in images:
+        user = (img.meta or {}).get("user") or {}
+        header = f"<doc filename=\"{img.filename}\""
+        if user.get("source"):
+            header += f" source=\"{user['source']}\""
+        if user.get("genre"):
+            header += f" genre=\"{user['genre']}\""
+        if user.get("date"):
+            header += f" date=\"{user['date']}\""
+        header += ">"
+        body = _ocr_text_of(img)
+        parts.append(header + (f"\n<caption>{img.caption}</caption>" if img.caption else "") + f"\n{body}\n</doc>")
+    text = "\n\n".join(parts) if parts else ""
+    slug = re.sub(r"[^\w-]+", "-", iset.name)[:40].strip("-") or "imageset"
+    return _make_response(text.encode("utf-8"), "text/plain; charset=utf-8", f"ocr-corpus-{slug}.txt")
 
 
 # --------------------------------------------------------------------------- #

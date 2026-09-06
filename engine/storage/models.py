@@ -207,12 +207,19 @@ class ConversationTurn(Base):
 
 
 class ImageSet(Base):
-    """A set of images within a corpus (Phase 4)."""
+    """A set of images within a corpus (Phase 4).
+
+    v1.0.9 Lens round: ``description`` documents the set's provenance the way
+    corpus-construction norms require (sampling frame, source, period covered).
+    """
     __tablename__ = "image_sets"
 
     id: Mapped[str] = mapped_column(String(16), primary_key=True, default=_uuid)
     corpus_id: Mapped[str] = mapped_column(ForeignKey("corpora.id", ondelete="CASCADE"), index=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
+    # v1.0.9: sampling/provenance notes (where the images came from, period,
+    # selection criteria) — the image-corpus analogue of corpus documentation.
+    description: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
     images: Mapped[list[Image]] = relationship(back_populates="image_set", cascade="all, delete-orphan")
@@ -236,6 +243,11 @@ class Image(Base):
     analysis: Mapped[dict] = mapped_column(JSON, default=dict)
     # Optional co-occurring text (caption, alt-text, article body)
     caption: Mapped[str] = mapped_column(Text, default="")
+    # v1.0.9: metadata JSON — {"user": {source, date, license, genre,
+    # language, notes}, "exif": {...}, "xmp": {...}}. EXIF/XMP are extracted
+    # on ingest (privacy-safe: GPS deliberately NOT extracted); "user" keys
+    # are researcher-editable (IPTC-Core-aligned descriptive fields).
+    meta: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
     image_set: Mapped[ImageSet] = relationship(back_populates="images")

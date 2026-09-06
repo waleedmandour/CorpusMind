@@ -511,12 +511,30 @@ async def facial_analysis_route(img_id: str, session: AsyncSession = Depends(get
 @router.get("/facial-analysis/status")
 async def facial_analysis_status() -> dict:
     """Check whether facial analysis is enabled (§18 transparency)."""
+    import os
     from vision.facial import is_facial_analysis_enabled
     return {
         "enabled": is_facial_analysis_enabled(),
+        "env_override": os.environ.get("CORPUSMIND_FACIAL_ANALYSIS_ENABLED", "0") == "1",
         "notice": (
             "Facial analysis is OFF by default (§18 Ethical Guardrails). "
             "When enabled, it performs NO identity recognition or re-identification "
             "of real individuals. Outputs are descriptive visual cues only."
         ),
     }
+
+
+class FacialOptInBody(BaseModel):
+    enabled: bool
+
+
+@router.post("/facial-analysis/enabled")
+async def set_facial_analysis_enabled_route(body: FacialOptInBody) -> dict:
+    """v1.0.9 — persist the user's §18 opt-in decision (Settings toggle).
+
+    The decision is stored as a marker file in the data directory (not env),
+    so it survives restarts while staying with the user's data. The module
+    itself NEVER performs identity recognition — see vision/facial.py."""
+    from vision.facial import is_facial_analysis_enabled, set_facial_analysis_enabled
+    set_facial_analysis_enabled(body.enabled)
+    return {"enabled": is_facial_analysis_enabled()}

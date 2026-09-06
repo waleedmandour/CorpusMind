@@ -36,11 +36,43 @@ log = get_logger(__name__)
 def is_facial_analysis_enabled() -> bool:
     """Check whether the user has explicitly opted in to facial analysis.
 
-    Default: OFF. The user must set CORPUSMIND_FACIAL_ANALYSIS_ENABLED=1
-    (or toggle it in Settings → Ethics → Facial Analysis) to enable.
+    Default: OFF. Two opt-in paths, either of which enables the module:
+      1. env var  CORPUSMIND_FACIAL_ANALYSIS_ENABLED=1 (headless/CI), or
+      2. a persistent opt-in marker written by the Settings toggle
+         (POST /facial-analysis/enabled) — survives restarts, lives in the
+         data directory so it moves with the user's data.
     """
     import os
-    return os.environ.get("CORPUSMIND_FACIAL_ANALYSIS_ENABLED", "0") == "1"
+    if os.environ.get("CORPUSMIND_FACIAL_ANALYSIS_ENABLED", "0") == "1":
+        return True
+    try:
+        return _marker_path().exists()
+    except Exception:
+        return False
+
+
+def _marker_path():
+    """Path of the persistent opt-in marker file (data_dir)."""
+    from pathlib import Path
+
+    from app.settings import get_settings
+    return Path(get_settings().data_dir) / "facial_analysis.enabled"
+
+
+def set_facial_analysis_enabled(enabled: bool) -> None:
+    """Persist (or revoke) the user's opt-in decision. Called by the
+    Settings → Ethics → Facial Analysis toggle via
+    POST /facial-analysis/enabled."""
+    marker = _marker_path()
+    if enabled:
+        marker.parent.mkdir(parents=True, exist_ok=True)
+        marker.write_text(
+            "Facial analysis opt-in (§18). Delete this file to revoke.\n",
+            encoding="utf-8",
+        )
+    else:
+        marker.unlink(missing_ok=True)
+    log.info("facial_analysis_optin_changed", enabled=enabled)
 
 
 class FacialAnalysisDisabledError(PermissionError):
