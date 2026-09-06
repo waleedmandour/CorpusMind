@@ -512,6 +512,7 @@ async def facial_analysis_route(img_id: str, session: AsyncSession = Depends(get
 async def facial_analysis_status() -> dict:
     """Check whether facial analysis is enabled (§18 transparency)."""
     import os
+
     from vision.facial import is_facial_analysis_enabled
     return {
         "enabled": is_facial_analysis_enabled(),

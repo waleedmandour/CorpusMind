@@ -18,7 +18,6 @@ round tests: background/second sessions must see the same database.
 from __future__ import annotations
 
 import io
-import json
 import os
 from pathlib import Path
 
@@ -182,7 +181,7 @@ async def test_image_meta_patch_merge_and_lock(client: AsyncClient):
 async def test_bulk_meta(client: AsyncClient):
     cid = await _make_project_corpus(client)
     iset_id = await _make_set(client, cid, "Posters")
-    ids = await _upload(client, iset_id, n=3)
+    await _upload(client, iset_id, n=3)
 
     r = await client.post(f"/api/v1/image-sets/{iset_id}/images-bulk-meta",
                           json={"meta": {"genre": "poster", "language": "ar"}})
@@ -385,7 +384,6 @@ def test_extract_image_metadata_never_raises_and_no_gps():
 
 
 def test_extract_image_metadata_xmp_packet():
-    from vision.image_meta import extract_image_metadata
     xmp = (b"<x:xmpmeta xmlns:x='adobe:ns:meta/'>"
            b"<rdf:RDF><rdf:Description>"
            b"<photoshop:Headline>Protest march</photoshop:Headline>"
