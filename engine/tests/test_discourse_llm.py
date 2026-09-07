@@ -77,7 +77,7 @@ async def _setup_corpus_with_image(client: AsyncClient) -> str:
         files={"files": ("test.png", io.BytesIO(img_bytes), "image/png")},
     )
     assert r.status_code == 200, r.text
-    return r.json()[0]["id"]
+    return r.json()["uploaded"][0]["id"]
 
 
 def _inject_mock_provider(

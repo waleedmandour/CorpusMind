@@ -70,8 +70,9 @@ async def test_image_upload_and_analysis(client):
     )
     assert r.status_code == 200
     data = r.json()
-    assert len(data) == 1
-    img = data[0]
+    assert len(data["uploaded"]) == 1
+    assert data["failed"] == []
+    img = data["uploaded"][0]
     assert img["filename"] == "test.png"
     assert img["format"] == "png"
     assert img["width"] == 200
@@ -103,7 +104,7 @@ async def test_visual_grammar_analysis(client):
         f"/api/v1/image-sets/{iset_id}/images",
         files={"files": ("blue.png", io.BytesIO(img_bytes), "image/png")},
     )
-    img_id = r.json()[0]["id"]
+    img_id = r.json()["uploaded"][0]["id"]
 
     r = await client.post(f"/api/v1/images/{img_id}/visual-grammar")
     assert r.status_code == 200
@@ -135,7 +136,7 @@ async def test_image_text_alignment(client):
         f"/api/v1/image-sets/{iset_id}/images",
         files={"files": ("red.png", io.BytesIO(img_bytes), "image/png")},
     )
-    img_id = r.json()[0]["id"]
+    img_id = r.json()["uploaded"][0]["id"]
 
     # Align with a caption mentioning "red"
     r = await client.post(f"/api/v1/images/{img_id}/align", json={
@@ -174,7 +175,7 @@ async def test_cross_modal_relations(client):
         f"/api/v1/image-sets/{iset_id}/images",
         files={"files": ("green.png", io.BytesIO(img_bytes), "image/png")},
     )
-    img_id = r.json()[0]["id"]
+    img_id = r.json()["uploaded"][0]["id"]
 
     # Align with text that mentions "green" — should produce high-confidence matches
     r = await client.post(f"/api/v1/images/{img_id}/align", json={
@@ -203,7 +204,7 @@ async def test_image_upload_with_caption(client):
         data={"captions": "A neutral grey square"},
     )
     assert r.status_code == 200
-    img = r.json()[0]
+    img = r.json()["uploaded"][0]
     assert img["caption"] == "A neutral grey square"
 
 

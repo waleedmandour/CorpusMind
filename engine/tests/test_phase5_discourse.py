@@ -46,7 +46,7 @@ async def _setup_image_with_caption(client: AsyncClient, color=(220, 50, 50), ca
         files={"files": ("test.png", io.BytesIO(img_bytes), "image/png")},
         data={"captions": caption} if caption else None,
     )
-    return r.json()[0]["id"]
+    return r.json()["uploaded"][0]["id"]
 
 
 @pytest.mark.asyncio

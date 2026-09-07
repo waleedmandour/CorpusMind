@@ -63,7 +63,7 @@ async def _setup_image_set_with_images(client: AsyncClient, count: int = 3) -> t
             files={"files": (f"img{i}.png", io.BytesIO(img_bytes), "image/png")},
         )
         assert r.status_code == 200, r.text
-        img_ids.append(r.json()[0]["id"])
+        img_ids.append(r.json()["uploaded"][0]["id"])
     return iset_id, img_ids
 
 

@@ -5,6 +5,7 @@ import asyncio
 import hashlib
 import os
 import re
+import uuid
 from collections import Counter
 from dataclasses import asdict
 from datetime import UTC, datetime
@@ -166,6 +167,40 @@ class ImageMetaUpdate(BaseModel):
     meta: dict | None = None
 
 
+class UploadFailure(BaseModel):
+    filename: str
+    error: str
+
+
+class UploadResult(BaseModel):
+    """v1.1.0 — per-file isolation: one bad file is reported in ``failed``
+    and skipped instead of aborting the whole batch (previously a single
+    corrupt file rolled back a 50-image upload)."""
+
+    uploaded: list[ImageOut]
+    failed: list[UploadFailure]
+
+
+# Corpus language (ISO 639-1) → Tesseract language pack(s). Arabic corpora
+# get ara+eng so bilingual image content (watermarks, Latin brand marks)
+# still OCRs — the app is EN/AR bilingual by design. v1.1.0: this was
+# hardcoded "eng" at ingest, silently mis-OCRing Arabic image corpora.
+_OCR_LANG_MAP = {
+    "en": "eng", "ar": "ara+eng", "fr": "fra", "de": "deu", "es": "spa",
+    "it": "ita", "pt": "por", "ru": "rus", "tr": "tur", "nl": "nld",
+    "zh": "chi_sim", "ja": "jpn", "ko": "kor",
+}
+
+
+def _resolve_ocr_language(explicit: str | None, corpus: Corpus | None) -> str:
+    """Explicit upload parameter wins; else the corpus language; else eng."""
+    if explicit and explicit.strip():
+        return explicit.strip()[:16]
+    if corpus and corpus.language:
+        return _OCR_LANG_MAP.get(corpus.language.lower(), "eng")
+    return "eng"
+
+
 # Researcher-editable metadata keys (IPTC-Core-aligned descriptive fields).
 _USER_META_KEYS = frozenset({"source", "date", "license", "genre", "language", "notes"})
 
@@ -177,20 +212,36 @@ def _image_storage_dir() -> Path:
     return p
 
 
-@router.post("/image-sets/{iset_id}/images", response_model=list[ImageOut])
+@router.post("/image-sets/{iset_id}/images", response_model=UploadResult)
 async def upload_images(
     iset_id: str,
     files: list[UploadFile] = File(...),
     captions: str | None = Form(None),
+    ocr_language: str | None = Form(None),
     session: AsyncSession = Depends(get_session),
-) -> list[ImageOut]:
+) -> UploadResult:
     """Upload one or more images into an image set. Each is parsed, analysed
     (colour, composition, OCR), and the analysis is cached in the DB.
 
-    v1.2.0 hardening: per-file 25 MB cap (413), max 50 files per request,
-    and magic-byte sniffing — a text file named .png is rejected with a
-    clear 400 instead of crashing deep inside Pillow.
+    v1.2.0 hardening: per-file 25 MB cap, max 50 files per request, and
+    magic-byte sniffing — a text file named .png is rejected instead of
+    crashing deep inside Pillow.
+
+    v1.1.0 pipeline fixes (the researcher-local-machine round):
+      - Per-file error isolation: a bad file lands in ``failed`` and is
+        skipped — it no longer aborts (and rolls back) the whole batch.
+      - The CPU-bound analysis (Pillow + Tesseract + numpy + EXIF parsing)
+        runs in a worker thread via ``asyncio.to_thread`` so the engine
+        stays responsive during batch ingest — previously it blocked the
+        event loop, freezing every other request for the whole run.
+      - OCR language resolves from the corpus language (or an explicit
+        ``ocr_language`` form field) instead of hardcoded "eng".
+      - Image bytes are encrypted at rest when CORPUSMIND_ENCRYPTION_KEY
+        is set (reads already decrypted via read_image_bytes; writes were
+        plaintext, contradicting the documented at-rest encryption).
     """
+    from vision.image_meta import extract_image_metadata
+
     iset = await session.get(ImageSet, iset_id)
     if not iset:
         raise HTTPException(404, "Image set not found")
@@ -201,54 +252,69 @@ async def upload_images(
             f"Too many files in one upload ({len(files)}). Maximum is {MAX_FILES_PER_UPLOAD} — split the batch.",
         )
 
+    corpus = await session.get(Corpus, iset.corpus_id)
+    resolved_lang = _resolve_ocr_language(ocr_language, corpus)
+
     caption_list = captions.split("\n") if captions else []
     storage_dir = _image_storage_dir()
     out: list[ImageOut] = []
+    failed: list[UploadFailure] = []
 
     for i, f in enumerate(files):
-        raw = await f.read()
-        if not raw:
-            continue
-        if len(raw) > MAX_IMAGE_BYTES:
-            raise HTTPException(
-                413,
-                f"'{f.filename}' is {len(raw) / (1024 * 1024):.1f} MB — the per-image limit is "
-                f"{MAX_IMAGE_BYTES / (1024 * 1024):.0f} MB. Downscale or recompress the image and retry.",
-            )
+        filename = f.filename or "image.jpg"
         try:
-            fmt = detect_image_format(f.filename or "image.jpg")
+            raw = await f.read()
+            if not raw:
+                failed.append(UploadFailure(filename=filename, error="empty file"))
+                continue
+            if len(raw) > MAX_IMAGE_BYTES:
+                failed.append(UploadFailure(
+                    filename=filename,
+                    error=(
+                        f"{len(raw) / (1024 * 1024):.1f} MB exceeds the "
+                        f"{MAX_IMAGE_BYTES / (1024 * 1024):.0f} MB per-image limit — "
+                        f"downscale or recompress and retry"
+                    ),
+                ))
+                continue
+            fmt = detect_image_format(filename)
             sniffed = sniff_image_format(raw)
             if sniffed is None:
-                raise HTTPException(
-                    400,
-                    f"'{f.filename}' does not look like a real image (magic-byte check failed). "
-                    f"Re-export it as PNG or JPEG and retry.",
-                )
+                failed.append(UploadFailure(
+                    filename=filename,
+                    error="magic-byte check failed — not a real image; re-export as PNG/JPEG",
+                ))
+                continue
             if sniffed != fmt and not {fmt, sniffed} <= {"jpg", "jpeg", "tif", "tiff"}:
-                raise HTTPException(
-                    400,
-                    f"'{f.filename}' is named .{fmt} but its content is {sniffed.upper()}. "
-                    f"Rename the file to match its real format.",
-                )
-            info = get_image_info(raw, f.filename or "image.jpg")
-            # Run full analysis
-            analysis = analyse_image(raw, f.filename or "image.jpg")
-            # Persist image bytes to disk
-            img_id = ImageModel.id.default.arg.__wrapped__() if hasattr(ImageModel.id.default, 'arg') else None
-            import uuid
+                failed.append(UploadFailure(
+                    filename=filename,
+                    error=f"named .{fmt} but content is {sniffed.upper()} — Rename the file to match its real format",
+                ))
+                continue
+
+            # CPU-bound work off the event loop (see docstring). The loop
+            # variables are bound as defaults so the closure is iteration-safe
+            # (B023) — the function runs before the next iteration anyway.
+            def _sync_work(raw: bytes = raw, filename: str = filename) -> tuple:
+                info = get_image_info(raw, filename)
+                analysis = analyse_image(raw, filename, ocr_language=resolved_lang)
+                extracted = extract_image_metadata(raw)
+                return info, analysis, extracted
+
+            info, analysis, extracted = await asyncio.to_thread(_sync_work)
+
+            # Persist image bytes to disk — encrypted at rest when enabled.
             img_id = uuid.uuid4().hex[:16]
             storage_path = storage_dir / f"{img_id}.{fmt}"
-            storage_path.write_bytes(raw)
-            caption = caption_list[i] if i < len(caption_list) else ""
-            # v1.0.9: extract privacy-safe EXIF/XMP metadata at ingest so the
-            # image corpus carries its own provenance (IPTC-Core-aligned).
-            from vision.image_meta import extract_image_metadata
-            extracted = extract_image_metadata(raw)
+            from storage.encryption import encrypt_file
 
+            storage_path.write_bytes(encrypt_file(raw))
+
+            caption = caption_list[i] if i < len(caption_list) else ""
             img = ImageModel(
                 id=img_id,
                 image_set_id=iset_id,
-                filename=f.filename or "image.jpg",
+                filename=filename,
                 format=fmt,
                 width=info.width,
                 height=info.height,
@@ -272,9 +338,17 @@ async def upload_images(
                 created_at=img.created_at.isoformat(),
             ))
         except Exception as e:
-            log.error("image_ingest_failed", filename=f.filename, error=str(e))
-            raise HTTPException(400, f"Failed to ingest '{f.filename}': {e}") from e
-    return out
+            log.error("image_ingest_failed", filename=filename, error=str(e))
+            failed.append(UploadFailure(filename=filename, error=str(e)[:500]))
+
+    if failed:
+        log.warning(
+            "upload_partial_failure",
+            uploaded=len(out),
+            failed=len(failed),
+            reasons=[f.error for f in failed][:5],
+        )
+    return UploadResult(uploaded=out, failed=failed)
 
 
 @router.get("/image-sets/{iset_id}/images", response_model=list[ImageOut])
@@ -767,6 +841,64 @@ async def get_image_analysis(img_id: str, session: AsyncSession = Depends(get_se
         "dimensions": f"{img.width}x{img.height}",
         "analysis": analysis,
         "caption": img.caption,
+    }
+
+
+class ReanalyseBody(BaseModel):
+    ocr_language: str | None = Field(None, max_length=16)
+
+
+def _refresh_base_analysis(img: ImageModel, raw: bytes, ocr_language: str) -> dict:
+    """Re-run the Phase-4 heuristic analysis on raw bytes and merge it into
+    the image's cached ``analysis`` JSON (LLM caches are preserved)."""
+    result = analyse_image(raw, img.filename, ocr_language=ocr_language)
+    analysis = dict(img.analysis or {})
+    analysis["ocr"] = asdict(result.ocr)
+    analysis["colours"] = asdict(result.colours)
+    analysis["composition"] = asdict(result.composition)
+    img.analysis = analysis
+    return analysis
+
+
+@router.post("/images/{img_id}/reanalyse")
+async def reanalyse_image(
+    img_id: str,
+    body: ReanalyseBody | None = None,
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    """v1.1.0 — re-run the base analysis (OCR, colours, composition) for one
+    image and refresh the cached ``analysis`` JSON.
+
+    This closes the no-recovery-path defect: if Tesseract (or a language
+    pack) was missing at ingest, OCR text stayed empty forever. Cached LLM
+    results (vision_llm, discourse) are preserved; only the heuristic
+    blocks are regenerated. Language resolution matches ingest (explicit
+    → corpus language → eng).
+    """
+    img = await session.get(ImageModel, img_id)
+    if not img:
+        raise HTTPException(404, "Image not found")
+    if not img.storage_path or not Path(img.storage_path).exists():
+        raise HTTPException(410, "Stored image bytes are gone — re-upload the file")
+
+    iset = await session.get(ImageSet, img.image_set_id)
+    corpus = await session.get(Corpus, iset.corpus_id) if iset else None
+    lang = _resolve_ocr_language(body.ocr_language if body else None, corpus)
+
+    raw = read_image_bytes(img.storage_path)
+    analysis = await asyncio.to_thread(_refresh_base_analysis, img, raw, lang)
+    from sqlalchemy.orm.attributes import flag_modified
+
+    flag_modified(img, "analysis")
+    await session.flush()
+    ocr = analysis.get("ocr", {})
+    return {
+        "image_id": img_id,
+        "reanalysed": True,
+        "ocr_language": lang,
+        "ocr_engine": ocr.get("engine", "none"),
+        "ocr_word_count": ocr.get("word_count", 0),
+        "ocr_text": ocr.get("text", ""),
     }
 
 
@@ -1528,6 +1660,7 @@ class BatchRunRequest(BaseModel):
     action: Literal[
         "describe",
         "all",
+        "analyse",
         "social_semiotic",
         "cda",
         "persuasion",
@@ -1541,6 +1674,8 @@ class BatchRunRequest(BaseModel):
         description=(
             "describe: vision-LM description per image. "
             "all: describe + all eight discourse lenses. "
+            "analyse: re-run the base heuristic analysis (OCR/colours/composition) — "
+            "fills gaps by default, refresh=True re-runs everything. "
             "Or a single lens key (social_semiotic, cda, ...)."
         ),
     )
@@ -1552,6 +1687,10 @@ class BatchRunRequest(BaseModel):
     model: str | None = Field(default=None, description="Vision model; None = capability-aware auto-pick.")
     refresh: bool = Field(default=False, description="Re-run even when a cached result exists.")
     limit: int = Field(default=0, ge=0, le=500, description="Cap the run to N images. 0 = all.")
+    ocr_language: str | None = Field(
+        default=None, max_length=16,
+        description="Tesseract language for the 'analyse' action (default: corpus language).",
+    )
 
 
 _batch_state: dict[str, dict] = {}
@@ -1572,14 +1711,22 @@ async def _batch_runner(iset_id: str, request: Request, body: BatchRunRequest) -
 
         if body.action == "all":
             actions = ["describe", *DISCOURSE_LENS_KEYS]
-        elif body.action == "describe":
-            actions = ["describe"]
+        elif body.action in ("describe", "analyse"):
+            actions = [body.action]
         else:
             actions = [body.action]
 
         default_prompt = DescribeRequest().prompt
 
         async with session_scope() as session:
+            # The 'analyse' action resolves its OCR language once, matching
+            # the ingest resolution order (explicit → corpus language → eng).
+            analyse_lang = "eng"
+            if body.action == "analyse":
+                iset = await session.get(ImageSet, iset_id)
+                corpus = await session.get(Corpus, iset.corpus_id) if iset else None
+                analyse_lang = _resolve_ocr_language(body.ocr_language, corpus)
+
             stmt = select(ImageModel).where(ImageModel.image_set_id == iset_id).order_by(ImageModel.created_at)
             images = (await session.execute(stmt)).scalars().all()
             if body.limit:
@@ -1605,6 +1752,25 @@ async def _batch_runner(iset_id: str, request: Request, body: BatchRunRequest) -
                                     model=body.model,
                                     refresh=body.refresh,
                                 )
+                        elif action == "analyse":
+                            # Gap-filling by default: skip images whose OCR
+                            # already ran on a real engine unless refresh=True
+                            # (the defect-#4 recovery path — e.g. Tesseract was
+                            # absent at ingest, OCR stayed empty forever).
+                            ocr_state = (img.analysis or {}).get("ocr", {})
+                            ocr_ok = ocr_state.get("engine") not in (None, "", "none")
+                            if ocr_ok and not body.refresh:
+                                continue
+                            if not img.storage_path or not Path(img.storage_path).exists():
+                                raise HTTPException(410, "stored bytes missing — re-upload")
+                            raw = read_image_bytes(img.storage_path)
+                            await asyncio.to_thread(
+                                _refresh_base_analysis, img, raw, analyse_lang
+                            )
+                            from sqlalchemy.orm.attributes import flag_modified
+
+                            flag_modified(img, "analysis")
+                            await session.flush()
                         else:
                             from api.phase5 import LLMModeRequest, _try_llm_discourse
 

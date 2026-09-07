@@ -83,7 +83,7 @@ async def _setup_corpus_with_image(client: AsyncClient, *, image_bytes: bytes | 
         data={"captions": caption} if caption else None,
     )
     assert r.status_code == 200, r.text
-    img_id = r.json()[0]["id"]
+    img_id = r.json()["uploaded"][0]["id"]
     return img_id, iset_id
 
 

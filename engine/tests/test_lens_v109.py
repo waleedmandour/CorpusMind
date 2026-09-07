@@ -81,7 +81,7 @@ async def _upload(client: AsyncClient, iset_id: str, n: int = 2, name_prefix: st
             files={"files": (f"{name_prefix}{i}.png", io.BytesIO(_make_test_image()), "image/png")},
         )
         assert r.status_code == 200, r.text
-        ids.extend(img["id"] for img in r.json())
+        ids.extend(img["id"] for img in r.json()["uploaded"])
     return ids
 
 

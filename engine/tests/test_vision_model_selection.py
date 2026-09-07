@@ -64,7 +64,7 @@ async def _setup_image(client: AsyncClient) -> tuple[str, str]:
         files={"files": ("test.png", io.BytesIO(_make_test_image()), "image/png")},
     )
     assert r.status_code == 200, r.text
-    return r.json()[0]["id"], iset_id
+    return r.json()["uploaded"][0]["id"], iset_id
 
 
 def _inject(client: AsyncClient, provider: Any, name: str = "ollama") -> None:
@@ -337,8 +337,14 @@ async def test_upload_rejects_fake_image_by_magic_bytes(client):
         f"/api/v1/image-sets/{iset_id}/images",
         files={"files": ("fake.png", io.BytesIO(fake), "image/png")},
     )
-    assert r.status_code == 400, r.text
-    assert "magic-byte" in r.json()["detail"]
+    # v1.1.0 per-file isolation: the bad file is reported, not raised —
+    # one corrupt file must not abort (and roll back) a whole batch.
+    assert r.status_code == 200, r.text
+    data = r.json()
+    assert data["uploaded"] == []
+    assert len(data["failed"]) == 1
+    assert data["failed"][0]["filename"] == "fake.png"
+    assert "magic-byte" in data["failed"][0]["error"]
 
 
 @pytest.mark.asyncio
@@ -349,8 +355,11 @@ async def test_upload_rejects_extension_mismatch(client):
         f"/api/v1/image-sets/{iset_id}/images",
         files={"files": ("actually-png.jpg", io.BytesIO(png), "image/jpeg")},
     )
-    assert r.status_code == 400, r.text
-    assert "Rename the file" in r.json()["detail"]
+    assert r.status_code == 200, r.text
+    data = r.json()
+    assert data["uploaded"] == []
+    assert len(data["failed"]) == 1
+    assert "Rename the file" in data["failed"][0]["error"]
 
 
 @pytest.mark.asyncio
@@ -361,8 +370,31 @@ async def test_upload_rejects_oversized_image(client):
         f"/api/v1/image-sets/{iset_id}/images",
         files={"files": ("big.png", io.BytesIO(big), "image/png")},
     )
-    assert r.status_code == 413, r.text
-    assert "per-image limit" in r.json()["detail"]
+    assert r.status_code == 200, r.text
+    data = r.json()
+    assert data["uploaded"] == []
+    assert len(data["failed"]) == 1
+    assert "per-image limit" in data["failed"][0]["error"]
+
+
+@pytest.mark.asyncio
+async def test_upload_partial_failure_isolates_bad_file(client):
+    """v1.1.0: the core isolation guarantee — a bad file among good ones
+    no longer aborts the batch; the good files are ingested and the bad
+    one is reported with its reason."""
+    _, iset_id = await _setup_image(client)
+    fake = b"definitely not an image, just padding padding padding" * 4
+    files = [
+        ("files", ("good1.png", io.BytesIO(_make_test_image()), "image/png")),
+        ("files", ("bad.png", io.BytesIO(fake), "image/png")),
+        ("files", ("good2.png", io.BytesIO(_make_test_image(120, 90, (20, 90, 200))), "image/png")),
+    ]
+    r = await client.post(f"/api/v1/image-sets/{iset_id}/images", files=files)
+    assert r.status_code == 200, r.text
+    data = r.json()
+    assert [u["filename"] for u in data["uploaded"]] == ["good1.png", "good2.png"]
+    assert len(data["failed"]) == 1
+    assert data["failed"][0]["filename"] == "bad.png"
 
 
 @pytest.mark.asyncio
