@@ -6,6 +6,77 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
+## [1.1.0] — 2026-09-07 — Your Vision Corpora: the merged workbench + the visual-linguistics battery
+
+Lens's two top-level tabs ("Your Corpora" and "Your Vision") split one
+workflow across two views — the same image sets were managed in one tab and
+analysed in another, with duplicated pickers, dropzones and grids. This
+release merges them into a single **"Your Vision Corpora"** workbench and
+gives the visual side what corpus linguistics has for text: a research-
+grounded annotation scheme plus the standard measurement battery computed
+over it. The engine's ingest pipeline is also fixed to match how
+researchers actually work on local machines. **The main CorpusMind app is
+unchanged** — every UI change is Lens-gated or additive.
+
+### Added
+
+- **"Your Vision Corpora" (Lens)**: `VisionCorporaView` — corpus list +
+  set management (provenance notes, export, delete) + four workflow tabs:
+  *Overview* (set statistics + coverage), *Corpus* (upload, grid, metadata,
+  tags, annotations), *Measures* (the linguistic battery), and *Vision
+  Analysis* (VLM describe, visual grammar, discourse lenses, alignment,
+  opt-in facial analysis, batch runner/view). The former `LensCorporaView`
+  is retired; `VisionView` remains for the main app and its panels are
+  shared components.
+- **Five-dimension visual annotation framework** (research-grounded, EN+AR,
+  schema served by the engine — single source of truth for the UI):
+  *Visual Morphology* (Cohn 2013; 12 categories), *Attentional Framing*
+  (Kress & van Leeuwen 2006; Bateman 2008; 15), *Filmic Shot Scale*
+  (social-distance mapping; 8), *Path Structure and Transitions*
+  (McCloud 1993; Halliday & Hasan 1976; 10), and *Multimodal Integration*
+  (Barthes 1977; Royce 2007; 9). Multi-select values + annotator notes per
+  dimension; unknown category ids are rejected (a typo never corrupts a
+  corpus). Annotations live in `Image.meta` — zero DB migration.
+- **Corpus-linguistics battery over visual annotations** (reuses the §12
+  formulas in `stats/measures.py` — the exact code the text side uses):
+  frequency profile per dimension, diversity battery (TTR, Guiraud, MATTR,
+  STTR), sequence n-grams over the reading order (chains of shot scales or
+  transitions, optional `<gap>` surfacing), co-occurrence association
+  between dimensions (MI, t-score, Dice, log-Dice, ΔP, G²), set-vs-set
+  keyness (full battery, LL-ranked), dispersion (Juilland's D, Gries' DP/
+  DP-norm with per-bin histograms), and a visual KWIC (sequence
+  concordance with left/right context).
+- **Free multi-value researcher tags** on images (per-image and bulk, add/
+  replace modes) — the tagging capability the single-value IPTC fields
+  could not express.
+- **Upload OCR-language control**: per-upload override + corpus-language
+  resolution (Arabic corpora OCR with `ara+eng`); the resolved language is
+  recorded in the cached analysis.
+- **Re-analysis path**: `POST /images/{id}/reanalyse` and the batch runner's
+  new `analyse` action (gap-filling by default, `refresh=true` re-runs) —
+  if Tesseract or a language pack was missing at ingest, OCR is no longer
+  empty forever. Cached LLM results are preserved.
+
+### Fixed
+
+- **Upload event-loop blocking**: the synchronous Pillow/Tesseract/numpy
+  analysis now runs in a worker thread (`asyncio.to_thread`) — batch
+  ingest no longer freezes the whole engine.
+- **Upload all-or-nothing failure**: one bad file aborted (and rolled back)
+  the entire batch; failures are now isolated per file and reported
+  (`{uploaded, failed}` response, surfaced in the UI).
+- **At-rest encryption gap**: uploads wrote plaintext while every read path
+  decrypted — writes now go through `encrypt_file` when
+  `CORPUSMIND_ENCRYPTION_KEY` is set (verified by round-trip test).
+- **Lens icon reverted** to the "CorpusMind" mark with the blue surround
+  (per maintainer decision — the purpose-made aperture-eye icon shipped in
+  the v1.0.9 re-issue is retired).
+
+### Release housekeeping
+
+- Deleted stale release pages `v0.1.25`, `v0.1.26`, `v0.1.27` with all
+  their artifacts (tag commits preserved in main history).
+
 ## [1.0.9] — 2026-09-07 — CorpusMind Lens: the image-corpus workbench (re-issued)
 
 Lens's corpus layer was inherited verbatim from the text app: its "Corpora"
