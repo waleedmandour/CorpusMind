@@ -49,6 +49,13 @@ unchanged** — every UI change is Lens-gated or additive.
 - **Free multi-value researcher tags** on images (per-image and bulk, add/
   replace modes) — the tagging capability the single-value IPTC fields
   could not express.
+- **Image-set-count badge on Lens corpus rows** (issue #8): every corpus
+  row in the "Your Vision Corpora" list now carries a badge with the number
+  of image sets attached (icon + count, EN+AR tooltip via `vc_sets_badge`),
+  and corpora with image sets sort first (stable — created_at-desc order
+  preserved within each group), so text-only corpora no longer read the
+  same as image-bearing ones. Engine: additive `image_set_count` on
+  `CorpusOut` (list + detail endpoints).
 - **Upload OCR-language control**: per-upload override + corpus-language
   resolution (Arabic corpora OCR with `ara+eng`); the resolved language is
   recorded in the cached analysis.
@@ -73,6 +80,10 @@ unchanged** — every UI change is Lens-gated or additive.
   with many sets on a researcher laptop. Now a single GROUP BY aggregate
   join — one query per request, counts verified identical by a regression
   test (upload and delete paths).
+- **`list_corpora` N+1 query** (issue #8 follow-through): the route ran one
+  COUNT query per corpus; now two GROUP BY aggregates (documents, image
+  sets) per request regardless of corpus count — verified by a regression
+  test covering zero/many/deleted cases and the detail endpoint.
 - **Lens icon reverted** to the "CorpusMind" mark with the blue surround
   (per maintainer decision — the purpose-made aperture-eye icon shipped in
   the v1.0.9 re-issue is retired).

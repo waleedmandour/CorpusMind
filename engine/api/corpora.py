@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.logging import get_logger
 from ingestion.service import ingest_document
-from storage.models import Corpus, Document, Project, Subcorpus
+from storage.models import Corpus, Document, ImageSet, Project, Subcorpus
 from storage.session import get_session
 
 log = get_logger(__name__)
@@ -138,6 +138,9 @@ class CorpusOut(BaseModel):
     stats: dict
     created_at: datetime
     document_count: int = 0
+    # v1.1.0 (issue #8): lets the Lens corpus list badge corpora that already
+    # carry image sets, and sort them first — additive, defaults to 0.
+    image_set_count: int = 0
 
 
 @router.post("/projects/{pid}/corpora", response_model=CorpusOut)
@@ -162,33 +165,53 @@ async def create_corpus(
         stats=c.stats,
         created_at=c.created_at,
         document_count=0,
+        image_set_count=0,
     )
 
 
 @router.get("/projects/{pid}/corpora", response_model=list[CorpusOut])
 async def list_corpora(pid: str, session: AsyncSession = Depends(get_session)) -> list[CorpusOut]:
-    stmt = select(Corpus).where(Corpus.project_id == pid).order_by(Corpus.created_at.desc())
-    corpora = (await session.execute(stmt)).scalars().all()
-    out = []
-    for c in corpora:
-        n = (
-            await session.scalar(select(func.count(Document.id)).where(Document.corpus_id == c.id))
-            or 0
+    # v1.1.0 (issue #8 + pipeline review): one GROUP BY aggregate per count
+    # instead of a per-corpus COUNT inside the loop — list_corpora was the
+    # classic N+1 (1 + C queries per request) on projects with many corpora,
+    # and the image-set count is what the Lens badge (issue #8) reads.
+    corpora = (
+        await session.execute(
+            select(Corpus).where(Corpus.project_id == pid).order_by(Corpus.created_at.desc())
         )
-        out.append(
-            CorpusOut(
-                id=c.id,
-                project_id=c.project_id,
-                name=c.name,
-                language=c.language,
-                genre=c.genre,
-                pipeline_recipe=c.pipeline_recipe,
-                stats=c.stats,
-                created_at=c.created_at,
-                document_count=n,
-            )
+    ).scalars().all()
+    if not corpora:
+        return []
+    ids = [c.id for c in corpora]
+    doc_counts = dict(
+        (await session.execute(
+            select(Document.corpus_id, func.count(Document.id))
+            .where(Document.corpus_id.in_(ids))
+            .group_by(Document.corpus_id)
+        )).all()
+    )
+    set_counts = dict(
+        (await session.execute(
+            select(ImageSet.corpus_id, func.count(ImageSet.id))
+            .where(ImageSet.corpus_id.in_(ids))
+            .group_by(ImageSet.corpus_id)
+        )).all()
+    )
+    return [
+        CorpusOut(
+            id=c.id,
+            project_id=c.project_id,
+            name=c.name,
+            language=c.language,
+            genre=c.genre,
+            pipeline_recipe=c.pipeline_recipe,
+            stats=c.stats,
+            created_at=c.created_at,
+            document_count=doc_counts.get(c.id, 0),
+            image_set_count=set_counts.get(c.id, 0),
         )
-    return out
+        for c in corpora
+    ]
 
 
 @router.get("/corpora/{cid}", response_model=CorpusOut)
@@ -197,6 +220,10 @@ async def get_corpus(cid: str, session: AsyncSession = Depends(get_session)) -> 
     if not c:
         raise HTTPException(404, "Corpus not found")
     n = await session.scalar(select(func.count(Document.id)).where(Document.corpus_id == cid)) or 0
+    # v1.1.0 (issue #8): image-set count for the detail view as well.
+    n_sets = (
+        await session.scalar(select(func.count(ImageSet.id)).where(ImageSet.corpus_id == cid)) or 0
+    )
     return CorpusOut(
         id=c.id,
         project_id=c.project_id,
@@ -207,6 +234,7 @@ async def get_corpus(cid: str, session: AsyncSession = Depends(get_session)) -> 
         stats=c.stats,
         created_at=c.created_at,
         document_count=n,
+        image_set_count=n_sets,
     )
 
 

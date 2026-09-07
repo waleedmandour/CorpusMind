@@ -254,6 +254,54 @@ async def test_list_image_sets_aggregate_counts(client):
 
 
 @pytest.mark.asyncio
+async def test_list_corpora_image_set_counts(client):
+    """v1.1.0 (issue #8): CorpusOut.image_set_count — the Lens corpus list
+    badges corpora that already carry image sets. Regression: the grouped
+    counts must be correct across corpora (zero, several, after deletion)
+    and must not disturb document_count (also aggregated now)."""
+    r = await client.post("/api/v1/projects", json={"name": "Lens Badge", "language": "en"})
+    pid = r.json()["id"]
+    r = await client.post(f"/api/v1/projects/{pid}/corpora", json={"name": "Text only", "language": "en"})
+    text_cid = r.json()["id"]
+    r = await client.post(f"/api/v1/projects/{pid}/corpora", json={"name": "With images", "language": "en"})
+    img_cid = r.json()["id"]
+
+    async def counts() -> dict:
+        r = await client.get(f"/api/v1/projects/{pid}/corpora")
+        assert r.status_code == 200
+        return {row["name"]: (row["image_set_count"], row["document_count"]) for row in r.json()}
+
+    # fresh corpora: both zero sets, zero docs
+    assert await counts() == {"Text only": (0, 0), "With images": (0, 0)}
+
+    # two image sets on one corpus
+    for name in ["Set A", "Set B"]:
+        r = await client.post(f"/api/v1/corpora/{img_cid}/image-sets", json={"name": name})
+        assert r.status_code == 200
+    assert await counts() == {"Text only": (0, 0), "With images": (2, 0)}
+
+    # a text document on the other corpus — document_count stays correct too
+    r = await client.post(
+        f"/api/v1/corpora/{text_cid}/documents",
+        files={"files": ("doc.txt", io.BytesIO(b"Corpus linguistics measures language in use."), "text/plain")},
+    )
+    assert r.status_code == 200
+    assert await counts() == {"Text only": (0, 1), "With images": (2, 0)}
+
+    # delete one image set — the grouped count must follow
+    sets = (await client.get(f"/api/v1/corpora/{img_cid}/image-sets")).json()
+    r = await client.delete(f"/api/v1/image-sets/{sets[0]['id']}")
+    assert r.status_code == 200
+    assert await counts() == {"Text only": (0, 1), "With images": (1, 0)}
+
+    # the corpus detail endpoint carries the same field
+    r = await client.get(f"/api/v1/corpora/{img_cid}")
+    assert r.status_code == 200
+    assert r.json()["image_set_count"] == 1
+    assert r.json()["document_count"] == 0
+
+
+@pytest.mark.asyncio
 async def test_list_images_in_set(client):
     """§9.2: List images in an image set."""
     _, iset_id = await _setup_corpus_with_image_set(client)

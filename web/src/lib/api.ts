@@ -383,6 +383,8 @@ export interface Corpus {
   stats: Record<string, number>;
   created_at: string;
   document_count: number;
+  /** v1.1.0 (issue #8): image sets attached to this corpus — Lens list badge. */
+  image_set_count: number;
 }
 
 export interface Document {

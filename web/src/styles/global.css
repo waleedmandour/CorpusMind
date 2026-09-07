@@ -4655,6 +4655,28 @@ html[dir="rtl"] .toggle-switch input:checked + .toggle-slider::before {
   margin-inline-start: var(--space-1);
 }
 
+/* v1.1.0 (issue #8): image-set count badge in Lens corpus rows — theme-aware
+   (green in the main app, blue in Lens) so image-bearing corpora stand out
+   from text-only ones at a glance. */
+.corpus-item-sets {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  background: color-mix(in srgb, var(--brand-500) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--brand-500) 28%, transparent);
+  color: var(--brand-600);
+  padding: 2px 5px;
+  border-radius: 3px;
+  margin-inline-start: var(--space-1);
+}
+.corpus-item-sets svg {
+  display: block;
+  flex: none;
+}
+
 /* Pre-publication check results */
 .precheck-result {
   margin-block-end: var(--space-2);

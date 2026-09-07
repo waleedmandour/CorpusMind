@@ -583,6 +583,7 @@ export const translations = {
     vc_frame_pos: "Frame {n}",
     vc_annotated_images: "{n} of {total} images annotated",
     vc_select_image_hint: "Select an image in the Corpus tab to run vision-model analysis on it.",
+    vc_sets_badge: "Image sets in this corpus",
 
     // --- v1.0.9: Lens onboarding (was hardcoded English) + shared footer ---
     onb_back: "Back",
@@ -1194,6 +1195,7 @@ export const translations = {
     vc_frame_pos: "اللوحة {n}",
     vc_annotated_images: "أُشِّرت {n} من {total} صورة",
     vc_select_image_hint: "اختر صورة من تبويب المجموعة لتشغيل تحليل النموذج البصري عليها.",
+    vc_sets_badge: "مجموعات الصور في هذه الدخيرة",
 
     // --- v1.0.9: Lens onboarding (was hardcoded English) + shared footer ---
     onb_back: "رجوع",

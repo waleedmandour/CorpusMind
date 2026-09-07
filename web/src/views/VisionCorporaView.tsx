@@ -135,6 +135,18 @@ function CorpusListPanel() {
     enabled: !!activeProjectId,
   });
 
+  // Issue #8: corpora that already carry image sets surface first (stable
+  // sort — the API's created_at-desc order is kept within each group), and
+  // each row carries an image-set count badge so text-only corpora no
+  // longer read the same as image-bearing ones.
+  const sorted = useMemo(
+    () =>
+      [...(corpora.data ?? [])].sort(
+        (a, b) => (b.image_set_count ?? 0) - (a.image_set_count ?? 0),
+      ),
+    [corpora.data],
+  );
+
   return (
     <section className="corpus-panel">
       <header className="corpus-panel-header">
@@ -146,7 +158,7 @@ function CorpusListPanel() {
       )}
 
       <ul className="corpus-list">
-        {corpora.data?.map((c) => (
+        {sorted.map((c) => (
           <li
             key={c.id}
             className={clsx("corpus-list-item", { active: c.id === activeCorpusId })}
@@ -156,6 +168,20 @@ function CorpusListPanel() {
             <div className="corpus-item-meta">
               <span className="corpus-meta-lang">{c.language.toUpperCase()}</span>
               {c.genre && c.genre !== "mixed" && <span className="corpus-item-genre">{c.genre}</span>}
+              {c.image_set_count > 0 && (
+                <span
+                  className="corpus-item-sets"
+                  title={t(lang, "vc_sets_badge")}
+                  aria-label={`${t(lang, "vc_sets_badge")}: ${c.image_set_count}`}
+                >
+                  <svg viewBox="0 0 16 16" width="10" height="10" aria-hidden="true" focusable="false">
+                    <rect x="1.5" y="3" width="13" height="10" rx="1.5" fill="none" stroke="currentColor" strokeWidth="1.4" />
+                    <circle cx="5.5" cy="6.5" r="1.3" fill="currentColor" />
+                    <path d="M2.5 12.2 L6 8.7 L8.5 11.2 L11 8.2 L13.5 10.7" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" strokeLinecap="round" />
+                  </svg>
+                  {c.image_set_count}
+                </span>
+              )}
             </div>
             {c.id === activeCorpusId && (
               <span className="corpus-active-badge">Active</span>
