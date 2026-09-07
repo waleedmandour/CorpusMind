@@ -27,6 +27,7 @@ from api import (
     system,
     troubleshoot,
     vision,
+    visual_corpus,
     wordlists,
 )
 from app import __version__
@@ -155,6 +156,7 @@ def create_app() -> FastAPI:
     app.include_router(arabic.router, prefix="/api/v1", tags=["arabic"])
     app.include_router(vision.router, prefix="/api/v1", tags=["vision"])
     app.include_router(phase5.router, prefix="/api/v1", tags=["phase5"])
+    app.include_router(visual_corpus.router, prefix="/api/v1", tags=["visual-corpus"])
     app.include_router(phase6.router, prefix="/api/v1", tags=["phase6"])
     app.include_router(export.router, prefix="/api/v1", tags=["export"])
     app.include_router(troubleshoot.router, prefix="/api/v1", tags=["troubleshoot"])
