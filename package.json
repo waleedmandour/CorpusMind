@@ -1,7 +1,7 @@
 {
   "name": "corpusmind",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.10",
   "description": "Local-first, AI-native research environment for corpus linguistics and multimodal discourse analysis. Monorepo root.",
   "license": "AGPL-3.0-only",
   "workspaces": [
