@@ -14,7 +14,14 @@ export function AboutView() {
   return (
     <div className="about-view">
       <div className="about-hero">
-        <img src="/icon-512.png" alt={appName} width="96" height="96" className="about-logo-img" />
+        {/* v1.0.10: switch the logo with the shell (see Sidebar.tsx). */}
+        <img
+          src={isLensMode ? "/icon-512-lens.png" : "/icon-512.png"}
+          alt={appName}
+          width="96"
+          height="96"
+          className="about-logo-img"
+        />
         <h1>{appName}</h1>
         <p className="about-version">Version {version} | AGPL-3.0-only</p>
         <p className="about-tagline">{tagline}</p>

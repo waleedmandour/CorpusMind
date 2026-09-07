@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2563eb"/>
+      <stop offset="100%" style="stop-color:#1d4ed8"/>
+    </linearGradient>
+    <linearGradient id="bookGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff"/>
+      <stop offset="100%" style="stop-color:#e0e8e4"/>
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#e8b339"/>
+      <stop offset="100%" style="stop-color:#d4a030"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- Rounded square background -->
+  <rect width="512" height="512" rx="112" fill="url(#bgGrad)"/>
+
+  <!-- Decorative circle (subtle) -->
+  <circle cx="256" cy="256" r="200" fill="none" stroke="#ffffff" stroke-width="1" opacity="0.05"/>
+
+  <!-- Open book / corpus symbol -->
+  <g filter="url(#shadow)" transform="translate(256, 240)">
+    <!-- Left page -->
+    <path d="M -120 -60 Q -120 -70, -110 -70 L -10 -70 Q -5 -70, 0 -65 L 0 60 Q -5 55, -10 55 L -110 55 Q -120 55, -120 45 Z"
+          fill="url(#bookGrad)" opacity="0.95"/>
+    <!-- Right page -->
+    <path d="M 120 -60 Q 120 -70, 110 -70 L 10 -70 Q 5 -70, 0 -65 L 0 60 Q 5 55, 10 55 L 110 55 Q 120 55, 120 45 Z"
+          fill="url(#bookGrad)" opacity="0.9"/>
+    <!-- Spine -->
+    <line x1="0" y1="-65" x2="0" y2="60" stroke="#2563eb" stroke-width="2" opacity="0.3"/>
+    <!-- Text lines on left page -->
+    <line x1="-100" y1="-45" x2="-20" y2="-45" stroke="#2563eb" stroke-width="3" opacity="0.25" stroke-linecap="round"/>
+    <line x1="-100" y1="-30" x2="-30" y2="-30" stroke="#2563eb" stroke-width="3" opacity="0.25" stroke-linecap="round"/>
+    <line x1="-100" y1="-15" x2="-25" y2="-15" stroke="#2563eb" stroke-width="3" opacity="0.25" stroke-linecap="round"/>
+    <line x1="-100" y1="0" x2="-35" y2="0" stroke="#2563eb" stroke-width="3" opacity="0.25" stroke-linecap="round"/>
+    <line x1="-100" y1="15" x2="-20" y2="15" stroke="#2563eb" stroke-width="3" opacity="0.25" stroke-linecap="round"/>
+    <line x1="-100" y1="30" x2="-40" y2="30" stroke="#2563eb" stroke-width="3" opacity="0.25" stroke-linecap="round"/>
+    <!-- Text lines on right page -->
+    <line x1="20" y1="-45" x2="100" y2="-45" stroke="#2563eb" stroke-width="3" opacity="0.25" stroke-linecap="round"/>
+    <line x1="30" y1="-30" x2="100" y2="-30" stroke="#2563eb" stroke-width="3" opacity="0.25" stroke-linecap="round"/>
+    <line x1="25" y1="-15" x2="100" y2="-15" stroke="#2563eb" stroke-width="3" opacity="0.25" stroke-linecap="round"/>
+    <line x1="35" y1="0" x2="100" y2="0" stroke="#2563eb" stroke-width="3" opacity="0.25" stroke-linecap="round"/>
+    <line x1="20" y1="15" x2="95" y2="15" stroke="#2563eb" stroke-width="3" opacity="0.25" stroke-linecap="round"/>
+    <line x1="40" y1="30" x2="100" y2="30" stroke="#2563eb" stroke-width="3" opacity="0.25" stroke-linecap="round"/>
+  </g>
+
+  <!-- Mind/AI symbol: neural network node cluster above the book -->
+  <g transform="translate(256, 130)" filter="url(#shadow)">
+    <!-- Central node -->
+    <circle cx="0" cy="0" r="18" fill="url(#accentGrad)"/>
+    <!-- Outer nodes -->
+    <circle cx="-40" cy="-25" r="10" fill="#ffffff" opacity="0.9"/>
+    <circle cx="40" cy="-25" r="10" fill="#ffffff" opacity="0.9"/>
+    <circle cx="-40" cy="25" r="10" fill="#ffffff" opacity="0.9"/>
+    <circle cx="40" cy="25" r="10" fill="#ffffff" opacity="0.9"/>
+    <circle cx="0" cy="-45" r="8" fill="#ffffff" opacity="0.7"/>
+    <circle cx="0" cy="45" r="8" fill="#ffffff" opacity="0.7"/>
+    <!-- Connections -->
+    <line x1="0" y1="0" x2="-40" y2="-25" stroke="#ffffff" stroke-width="2" opacity="0.4"/>
+    <line x1="0" y1="0" x2="40" y2="-25" stroke="#ffffff" stroke-width="2" opacity="0.4"/>
+    <line x1="0" y1="0" x2="-40" y2="25" stroke="#ffffff" stroke-width="2" opacity="0.4"/>
+    <line x1="0" y1="0" x2="40" y2="25" stroke="#ffffff" stroke-width="2" opacity="0.4"/>
+    <line x1="0" y1="0" x2="0" y2="-45" stroke="#ffffff" stroke-width="2" opacity="0.3"/>
+    <line x1="0" y1="0" x2="0" y2="45" stroke="#ffffff" stroke-width="2" opacity="0.3"/>
+    <line x1="-40" y1="-25" x2="0" y2="-45" stroke="#ffffff" stroke-width="1.5" opacity="0.2"/>
+    <line x1="40" y1="-25" x2="0" y2="-45" stroke="#ffffff" stroke-width="1.5" opacity="0.2"/>
+    <line x1="-40" y1="25" x2="0" y2="45" stroke="#ffffff" stroke-width="1.5" opacity="0.2"/>
+    <line x1="40" y1="25" x2="0" y2="45" stroke="#ffffff" stroke-width="1.5" opacity="0.2"/>
+  </g>
+
+  <!-- Bottom accent bar -->
+  <rect x="0" y="498" width="512" height="14" fill="url(#accentGrad)" opacity="0.8"/>
+</svg>

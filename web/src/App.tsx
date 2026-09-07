@@ -106,7 +106,14 @@ export default function App() {
 
       <header className="app-topbar" role="banner">
         <div className="app-brand">
-          <img src="/icon-32.png" alt="CorpusMind" width="28" height="28" className="app-brand-icon" />
+          {/* v1.0.10: switch the logo with the shell (see Sidebar.tsx). */}
+          <img
+            src={isLensMode ? "/icon-32-lens.png" : "/icon-32.png"}
+            alt={isLensMode ? "CorpusMind Lens" : "CorpusMind"}
+            width="28"
+            height="28"
+            className="app-brand-icon"
+          />
           {/* v1.2.0: show the real app name in Lens (was hardcoded CorpusMind) */}
           <span className="app-name">{isLensMode ? "CorpusMind Lens" : "CorpusMind"}</span>
         </div>

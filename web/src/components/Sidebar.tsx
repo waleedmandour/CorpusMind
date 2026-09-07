@@ -148,7 +148,15 @@ export function Sidebar() {
       {/* Logo + collapse toggle */}
       <div className="sidebar-header">
         <div className="sidebar-logo">
-          <img src="/icon-32.png" alt="CorpusMind" width="28" height="28" />
+          {/* v1.0.10: switch the logo with the shell — Lens gets its own blue
+              icon so the two apps are distinguishable side by side (taskbar,
+              Alt-Tab). Mirrors the text label switch directly below. */}
+          <img
+            src={isLensMode ? "/icon-32-lens.png" : "/icon-32.png"}
+            alt={isLensMode ? "CorpusMind Lens" : "CorpusMind"}
+            width="28"
+            height="28"
+          />
           {!sidebarCollapsed && (
             <div className="sidebar-logo-text-group">
               <span className="sidebar-logo-text">
