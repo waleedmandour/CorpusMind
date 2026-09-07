@@ -848,11 +848,15 @@ export interface ImageRecord {
   height: number;
   size_bytes: number;
   caption: string;
-  /** v1.0.9: { user?: {source,date,license,genre,language,notes}, exif?: {}, xmp?: {} } */
+  /** v1.0.9: { user?: {source,date,license,genre,language,notes}, exif?: {}, xmp?: {} }
+   *  v1.1.0: + tags (free multi-value researcher tags) and annotations
+   *  (the five-dimension visual annotation framework). */
   meta: {
     user?: { source?: string; date?: string; license?: string; genre?: string; language?: string; notes?: string };
     exif?: Record<string, string>;
     xmp?: Record<string, unknown>;
+    tags?: string[];
+    annotations?: Record<string, { values: string[]; note: string; updated_at?: string }>;
   };
   created_at: string;
 }
@@ -899,6 +903,198 @@ export interface OcrKeynessResult {
   reference: { id: string; name: string; tokens: number };
   rows: Array<{ term: string; f_target: number; f_reference: number; log_likelihood: number; log_ratio: number; chi_square: number; odds_ratio: number; pct_diff: number; simple_maths: number }>;
   note?: string;
+}
+
+// --- v1.1.0 Lens round: the five-dimension visual annotation framework ---
+
+export interface AnnotationCategory {
+  id: string;
+  label_en: string;
+  label_ar: string;
+  description_en: string;
+  description_ar: string;
+}
+
+export interface AnnotationDimension {
+  id: string;
+  label_en: string;
+  label_ar: string;
+  description_en: string;
+  description_ar: string;
+  framework: string;
+  multi: boolean;
+  categories: AnnotationCategory[];
+}
+
+export interface AnnotationSchema {
+  image_set_id: string;
+  dimensions: AnnotationDimension[];
+  reading_order: string;
+  transition_semantics: string;
+}
+
+export interface ImageAnnotationBlock {
+  values: string[];
+  note: string;
+  updated_at?: string;
+}
+
+export interface ImageAnnotations {
+  image_id: string;
+  tags: string[];
+  annotations: Record<string, ImageAnnotationBlock>;
+}
+
+export interface UploadFailure {
+  filename: string;
+  error: string;
+}
+
+/** v1.1.0 — per-file isolation: a bad file lands in `failed` and is skipped
+ * instead of aborting (and rolling back) the whole batch. */
+export interface UploadImagesResult {
+  uploaded: ImageRecord[];
+  failed: UploadFailure[];
+}
+
+export interface VisualStatsDimension {
+  label_en: string;
+  label_ar: string;
+  images_annotated: number;
+  coverage: number;
+  total_values: number;
+  distinct: number;
+  frequency: Array<{ category: string; label_en: string; count: number; percent: number; images: number }>;
+}
+
+export interface VisualStatsResult {
+  image_set_id: string;
+  name: string;
+  image_count: number;
+  images_annotated: number;
+  annotation_coverage: number;
+  dimensions: Record<string, VisualStatsDimension>;
+}
+
+export interface VisualProfileDimension {
+  label_en: string;
+  tokens: number;
+  types: number;
+  frames_with_values: number;
+  values_per_frame: number;
+  ttr: number;
+  guiraud: number;
+  mattr_w10: number;
+  sttr_c20: number;
+}
+
+export interface VisualProfileResult {
+  image_set_id: string;
+  name: string;
+  dimensions: Record<string, VisualProfileDimension>;
+  note: string;
+}
+
+export interface VisualNgramsResult {
+  image_set_id: string;
+  name: string;
+  dimension: string;
+  n: number;
+  include_gaps: boolean;
+  stream_length: number;
+  ngram_total: number;
+  ngrams: Array<{ ngram: string[]; ngram_labels: string[]; count: number; percent: number; positions: number[] }>;
+}
+
+export interface VisualCollocationRow {
+  category_a: string;
+  category_b: string;
+  label_a: string;
+  label_b: string;
+  joint: number;
+  f_a: number;
+  f_b: number;
+  frames: number;
+  mi: number;
+  t_score: number;
+  dice: number;
+  log_dice: number;
+  ll: number;
+  delta_p_a_given_b: number;
+  delta_p_b_given_a: number;
+}
+
+export interface VisualCollocationsResult {
+  image_set_id: string;
+  name: string;
+  dim_a: string;
+  dim_b: string;
+  frames: number;
+  sorted_by: string;
+  rows: VisualCollocationRow[];
+  note?: string;
+}
+
+export interface VisualKeynessRow {
+  category: string;
+  label_en: string;
+  f_target: number;
+  f_reference: number;
+  log_likelihood: number;
+  log_ratio: number;
+  chi_square: number;
+  odds_ratio: number;
+  pct_diff: number;
+  simple_maths: number;
+}
+
+export interface VisualKeynessResult {
+  target: { id: string; name: string; values: number };
+  reference: { id: string; name: string; values: number };
+  dimension: string;
+  rows: VisualKeynessRow[];
+  note?: string;
+}
+
+export interface VisualDispersionCategory {
+  category: string;
+  label_en: string;
+  total: number;
+  per_bin: number[];
+  range: number;
+  juillands_d: number;
+  dp: number;
+  dp_norm: number;
+}
+
+export interface VisualDispersionResult {
+  image_set_id: string;
+  name: string;
+  dimension: string;
+  stream_length: number;
+  bins: number;
+  include_gaps: boolean;
+  part_sizes: number[];
+  categories: VisualDispersionCategory[];
+}
+
+export interface VisualKwicResult {
+  image_set_id: string;
+  name: string;
+  dimension: string;
+  category: string;
+  category_label: string;
+  hit_count: number;
+  stream_length: number;
+  hits: Array<{
+    image_id: string;
+    filename: string;
+    position: number;
+    left: Array<{ category: string; label_en: string }>;
+    node: { category: string; label_en: string };
+    right: Array<{ category: string; label_en: string }>;
+    tags: string[];
+  }>;
 }
 
 export interface ImageAnalysis {
@@ -1459,16 +1655,21 @@ export const api = {
   listImageSets: (cid: string) =>
     jsonFetch<ImageSet[]>(`/api/v1/corpora/${cid}/image-sets`),
 
-  uploadImages: (isetId: string, files: File[], caption?: string) => {
+  uploadImages: (isetId: string, files: File[], caption?: string, ocrLanguage?: string) => {
     const fd = new FormData();
     files.forEach((f) => fd.append("files", f));
     if (caption) fd.append("captions", caption);
+    if (ocrLanguage) fd.append("ocr_language", ocrLanguage);
     return smartFetch(`/api/v1/image-sets/${isetId}/images`, {
       method: "POST",
       body: fd,
     }).then(async (r) => {
       if (!r.ok) throw new Error(await r.text());
-      return (await r.json()) as ImageRecord[];
+      const data = await r.json();
+      // v1.1.0: per-file isolation — {uploaded, failed}. Older engines
+      // return a bare array; normalise both shapes for the callers.
+      if (Array.isArray(data)) return { uploaded: data as ImageRecord[], failed: [] as UploadFailure[] };
+      return data as UploadImagesResult;
     });
   },
 
@@ -1595,6 +1796,103 @@ export const api = {
   // Download the set's OCR text AS a corpus (txt with <doc> markers, or json).
   exportOcrCorpus: (isetId: string, fmt: "txt" | "json" = "txt") =>
     smartFetch(`/api/v1/image-sets/${isetId}/ocr-corpus?format=${fmt}`).then((r) => r.blob()),
+
+  // --- v1.1.0: five-dimension visual annotation framework ---
+
+  // The annotation taxonomy (EN + AR labels) — schema-driven tag pickers.
+  getAnnotationSchema: (isetId: string) =>
+    jsonFetch<AnnotationSchema>(`/api/v1/image-sets/${isetId}/annotation-schema`),
+
+  // Save one image's tags + dimension annotations. dimensions is a REPLACE
+  // payload; omit it (undefined) to update tags only.
+  saveImageAnnotations: (imgId: string, body: { tags?: string[]; dimensions?: Record<string, { values: string[]; note: string }> }) =>
+    jsonFetch<ImageAnnotations>(`/api/v1/images/${imgId}/annotations`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    }),
+
+  // Bulk-apply dimensions/tags to every image in the set.
+  bulkAnnotations: (isetId: string, body: { dimensions?: Record<string, { values: string[]; note?: string }>; tags?: string[]; tag_mode?: "add" | "replace" }) =>
+    jsonFetch<{ updated: number; dimensions_applied: string[] }>(
+      `/api/v1/image-sets/${isetId}/annotations-bulk`,
+      { method: "POST", body: JSON.stringify(body) },
+    ),
+
+  // All annotations in the set, in reading order (audit / export view).
+  listAnnotations: (isetId: string) =>
+    jsonFetch<{
+      image_set_id: string; name: string; image_count: number; reading_order: string;
+      annotations: Array<{ position: number; image_id: string; filename: string; tags: string[]; dimensions: Record<string, ImageAnnotationBlock> }>;
+    }>(`/api/v1/image-sets/${isetId}/annotations`),
+
+  // 1. Frequency profile per dimension (the visual word-list).
+  visualStats: (isetId: string) =>
+    jsonFetch<VisualStatsResult>(`/api/v1/image-sets/${isetId}/visual-stats`),
+
+  // 2. Diversity battery per dimension (TTR/Guiraud/MATTR/STTR).
+  visualProfile: (isetId: string) =>
+    jsonFetch<VisualProfileResult>(`/api/v1/image-sets/${isetId}/visual-profile`),
+
+  // 3. Sequence n-grams over a dimension's value stream.
+  visualNgrams: (isetId: string, dim: string, opts: { n?: number; includeGaps?: boolean; limit?: number } = {}) => {
+    const p = new URLSearchParams({
+      dim,
+      n: String(opts.n ?? 3),
+      limit: String(opts.limit ?? 50),
+    });
+    if (opts.includeGaps) p.set("include_gaps", "true");
+    return jsonFetch<VisualNgramsResult>(`/api/v1/image-sets/${isetId}/visual-ngrams?${p.toString()}`);
+  },
+
+  // 4. Co-occurrence association between two dimensions (MI/t-score/Dice/logDice/LL/ΔP).
+  visualCollocations: (isetId: string, dimA: string, dimB: string, opts: { minFreq?: number; limit?: number; sort?: "log_dice" | "mi" | "t_score" | "dice" | "ll" | "delta_p" } = {}) => {
+    const p = new URLSearchParams({
+      dim_a: dimA,
+      dim_b: dimB,
+      min_freq: String(opts.minFreq ?? 2),
+      limit: String(opts.limit ?? 50),
+      sort: opts.sort ?? "log_dice",
+    });
+    return jsonFetch<VisualCollocationsResult>(`/api/v1/image-sets/${isetId}/visual-collocations?${p.toString()}`);
+  },
+
+  // 5. Set-vs-set keyness over a dimension's categories (full §12 battery).
+  visualKeyness: (isetId: string, otherIsetId: string, dim: string, opts: { limit?: number } = {}) => {
+    const p = new URLSearchParams({
+      other_iset_id: otherIsetId,
+      dim,
+      limit: String(opts.limit ?? 60),
+    });
+    return jsonFetch<VisualKeynessResult>(`/api/v1/image-sets/${isetId}/visual-keyness?${p.toString()}`);
+  },
+
+  // 6. Dispersion across the reading order (Juilland's D / DP / DP-norm).
+  visualDispersion: (isetId: string, dim: string, opts: { bins?: number; includeGaps?: boolean } = {}) => {
+    const p = new URLSearchParams({
+      dim,
+      bins: String(opts.bins ?? 10),
+    });
+    if (opts.includeGaps) p.set("include_gaps", "true");
+    return jsonFetch<VisualDispersionResult>(`/api/v1/image-sets/${isetId}/visual-dispersion?${p.toString()}`);
+  },
+
+  // 7. Visual KWIC — sequence concordance for one category.
+  visualKwic: (isetId: string, dim: string, category: string, opts: { context?: number; limit?: number } = {}) => {
+    const p = new URLSearchParams({
+      dim,
+      category,
+      context: String(opts.context ?? 2),
+      limit: String(opts.limit ?? 50),
+    });
+    return jsonFetch<VisualKwicResult>(`/api/v1/image-sets/${isetId}/visual-kwic?${p.toString()}`);
+  },
+
+  // Re-run the base heuristic analysis (OCR/colours/composition) for one image.
+  reanalyseImage: (imgId: string, ocrLanguage?: string) =>
+    jsonFetch<{ image_id: string; reanalysed: boolean; ocr_language: string; ocr_engine: string; ocr_word_count: number; ocr_text: string }>(
+      `/api/v1/images/${imgId}/reanalyse`,
+      { method: "POST", body: JSON.stringify(ocrLanguage ? { ocr_language: ocrLanguage } : {}) },
+    ),
 
   listFrameworks: () =>
     jsonFetch<{ frameworks: Array<{ key: string; name: string; full_name: string; version: string; family: string; categories: Array<{ id: string; label: string; description: string }> }> }>(

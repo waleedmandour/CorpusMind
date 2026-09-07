@@ -476,7 +476,7 @@ function ImageSetWorkspace({
 // model + how the two apps of the suite interpret data together.
 // ---------------------------------------------------------------------------
 
-function VisionGuidance({ lang }: { lang: "en" | "ar" }) {
+export function VisionGuidance({ lang }: { lang: "en" | "ar" }) {
   const [dismissed, setDismissed] = useState(false);
   if (dismissed) return null;
   return (
@@ -617,7 +617,7 @@ function ImageGridItem({
 // Vision model picker — capability-aware auto pick or explicit model
 // ---------------------------------------------------------------------------
 
-function VisionModelSelect({
+export function VisionModelSelect({
   value,
   onChange,
 }: {
@@ -650,7 +650,7 @@ function VisionModelSelect({
 // AnalysisDrawer — cached analysis for the selected image
 // ---------------------------------------------------------------------------
 
-function AnalysisDrawer({ imageId }: { imageId: string }) {
+export function AnalysisDrawer({ imageId }: { imageId: string }) {
   const lang = useUI((s) => s.lang);
   const queryClient = useQueryClient();
   const analysisQuery = useQuery({
@@ -869,7 +869,7 @@ function VisualGrammarPanel({ data }: { data: VisualGrammarResult }) {
 // engine's /frameworks catalogue, provenance badges on every claim.
 // ---------------------------------------------------------------------------
 
-function DiscourseLensesPanel({ imageId }: { imageId: string }) {
+export function DiscourseLensesPanel({ imageId }: { imageId: string }) {
   const lang = useUI((s) => s.lang);
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -1010,7 +1010,7 @@ function LensResult({ result }: { result: DiscourseResult }) {
 
 type AlignMode = "heuristic" | "llm" | "both";
 
-function AlignmentPanel({ imageId }: { imageId: string }) {
+export function AlignmentPanel({ imageId }: { imageId: string }) {
   const lang = useUI((s) => s.lang);
   const [text, setText] = useState("");
   const [mode, setMode] = useState<AlignMode>("heuristic");
@@ -1159,7 +1159,7 @@ function AlignmentResultView({
 // BatchRunnerPanel — analyse the whole set server-side (v1.2.0)
 // ---------------------------------------------------------------------------
 
-function BatchRunnerPanel({ isetId }: { isetId: string }) {
+export function BatchRunnerPanel({ isetId }: { isetId: string }) {
   const lang = useUI((s) => s.lang);
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -1281,7 +1281,7 @@ function BatchRunnerPanel({ isetId }: { isetId: string }) {
 // (read-only aggregation of cached analysis)
 // ---------------------------------------------------------------------------
 
-function BatchViewPanel({ isetId }: { isetId: string }) {
+export function BatchViewPanel({ isetId }: { isetId: string }) {
   const lang = useUI((s) => s.lang);
   const [enabled, setEnabled] = useState(false);
 
@@ -1414,7 +1414,7 @@ interface FacialCue {
   interpretive_gloss: string;
 }
 
-function FacialAnalysisPanel({ imageId }: { imageId: string }) {
+export function FacialAnalysisPanel({ imageId }: { imageId: string }) {
   const lang = useUI((s) => s.lang);
   const setActiveNav = useUI((s) => s.setActiveNav);
   const statusQuery = useQuery({

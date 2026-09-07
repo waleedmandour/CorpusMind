@@ -21,7 +21,7 @@ import { HomeView } from "@/views/HomeView";
 import { AboutView } from "@/views/AboutView";
 import { AssistantView } from "@/views/AssistantView";
 import { CorpusSelectionView } from "@/views/CorpusSelectionView";
-import { LensCorporaView } from "@/views/LensCorporaView";
+import { VisionCorporaView } from "@/views/VisionCorporaView";
 import { ConcordancerView } from "@/views/ConcordancerView";
 import { AnalysisView } from "@/views/AnalysisView";
 import { ArabicView } from "@/views/ArabicView";
@@ -156,10 +156,11 @@ export default function App() {
         <Sidebar />
         <main className="app-main" id="main-content" role="main">
           {activeNav === "home" && <HomeView />}
-          {/* v1.0.9: Lens renders the image-corpus workbench for the same nav
-              target — the main app's text-corpus view is untouched. */}
+          {/* v1.1.0: Lens renders the merged "Your Vision Corpora" workbench
+              (former Your Corpora + Your Vision) for both nav targets — the
+              main app's text-corpus and vision views are untouched. */}
           {activeNav === "corpus-target" && (isLensMode
-            ? <LensCorporaView />
+            ? <VisionCorporaView />
             : <CorpusSelectionView mode="target" />)}
           {activeNav === "corpus-reference" && <CorpusSelectionView mode="reference" />}
           {activeNav === "concordance" && <ConcordancerView />}
@@ -176,7 +177,7 @@ export default function App() {
           {activeNav === "sentiment" && <AnalysisView />}
           {activeNav === "metaphor" && <AnalysisView />}
           {activeNav === "arabic" && <ArabicView />}
-          {activeNav === "vision" && <VisionView />}
+          {activeNav === "vision" && (isLensMode ? <VisionCorporaView /> : <VisionView />)}
           {activeNav === "assistant" && <AssistantView />}
           {activeNav === "settings" && <SettingsView />}
           {activeNav === "userguide" && <UserGuideView />}

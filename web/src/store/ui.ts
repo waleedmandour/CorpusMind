@@ -71,11 +71,11 @@ function detectLensMode(): boolean {
   return new URLSearchParams(window.location.search).get("shell") === "lens";
 }
 
-/** v1.0.9: navigation targets the Lens shell actually exposes. The sidebar
- * filtered these visually before, but setActiveNav still accepted any
- * target — so Home quick-action cards (and any stray call) could open the
- * full text-analysis views that Lens deliberately hides. The guard makes
- * the Lens boundary real: out-of-scope targets are redirected to vision. */
+/** v1.0.9→v1.1.0: navigation targets the Lens shell actually exposes. Both
+ * "corpus-target" and "vision" render the merged Your Vision Corpora
+ * workbench in Lens mode — they are kept as valid targets so deep links
+ * and the command palette keep working. The guard makes the Lens boundary
+ * real: out-of-scope targets are redirected to the merged workbench. */
 const LENS_NAV_TARGETS: ReadonlySet<NavTarget> = new Set<NavTarget>([
   "home", "corpus-target", "vision", "assistant", "settings", "userguide", "about",
 ]);
@@ -88,8 +88,9 @@ export const useUI = create<UIState>()(
       lang: "en",
       commandPaletteOpen: false,
       floatingAssistantOpen: false,
-      // In Lens mode, default to the Vision view instead of Home.
-      activeNav: detectLensMode() ? "vision" : "home",
+      // In Lens mode, default to the merged "Your Vision Corpora" workbench
+      // (v1.1.0 — was "vision" before the tab merge).
+      activeNav: detectLensMode() ? "corpus-target" : "home",
       isLensMode: detectLensMode(),
       onboardingComplete: false,
       onboardingOpen: false,
@@ -123,9 +124,9 @@ export const useUI = create<UIState>()(
       setCommandPaletteOpen: (open) => set({ commandPaletteOpen: open }),
       setFloatingAssistantOpen: (open) => set({ floatingAssistantOpen: open }),
       setActiveNav: (activeNav) => {
-        // v1.0.9: enforce the Lens navigation boundary (see LENS_NAV_TARGETS).
+        // v1.1.0: enforce the Lens navigation boundary (see LENS_NAV_TARGETS).
         if (get().isLensMode && !LENS_NAV_TARGETS.has(activeNav)) {
-          set({ activeNav: "vision" });
+          set({ activeNav: "corpus-target" });
           return;
         }
         set({ activeNav });

@@ -117,18 +117,20 @@ export function Sidebar() {
   const activeCorpusId = useApp((s) => s.activeCorpusId);
   const versionDisplay = useEngineVersionDisplay();
 
-  // In Lens mode, only show vision-relevant nav groups:
-  // Overview (Home), Corpora (target only — vision sets live in target
-  // corpora, and the reference corpus is a text-only concept), Vision,
-  // AI Assistant, System. Hide: Analysis Tools (text-only), Arabic.
-  // v1.2.0: corpus-reference is now actually filtered (it used to stay
-  // visible here while the command palette hid it — inconsistent).
-  const LENS_GROUP_IDS = ["overview", "corpora", "vision", "ai", "system"];
+  // In Lens mode the sidebar shows the merged workbench (v1.1.0):
+  // the "corpora" group carries a single "Your Vision Corpora" item (the
+  // former Your Corpora + Your Vision tabs), and the separate vision
+  // group is gone. Reference corpora remain a text-only concept — hidden.
+  // Analysis Tools (text-only) and Arabic stay hidden as before.
+  const LENS_GROUP_IDS = ["overview", "corpora", "ai", "system"];
   const visibleGroups = isLensMode
     ? NAV_GROUPS.filter(g => LENS_GROUP_IDS.includes(g.id))
         .map(g =>
           g.id === "corpora"
-            ? { ...g, items: g.items.filter((i) => i.id !== "corpus-reference") }
+            ? {
+                ...g,
+                items: [{ id: "corpus-target", labelKey: "nav_vision_corpora", icon: "\u25A4" }] as NavItem[],
+              }
             : g,
         )
     : NAV_GROUPS;
