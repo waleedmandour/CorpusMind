@@ -1,10 +1,11 @@
 """End-to-end coverage for POST /api/v1/ai/chat — the endpoint both desktop
 apps (CorpusMind and CorpusMind Lens) call for the grounded AI assistant.
 
-Why this file exists (v1.0.10): every piece around this endpoint was unit
-tested — system-prompt snapshot injection (assistant tests), the cross-modal
-corpus-overview tool (test_assistant_vision_tools), provider behaviour
-(test_vision_providers) — but nothing exercised the real route end to end.
+Why this file exists (v1.0.9 re-issue closeout): every piece around this
+endpoint was unit tested — system-prompt snapshot injection (assistant
+tests), the cross-modal corpus-overview tool (test_assistant_vision_tools),
+provider behaviour (test_vision_providers) — but nothing exercised the real
+route end to end.
 These tests assemble the whole thing over a real HTTP round trip (httpx
 ASGITransport against the actual FastAPI app, with its lifespan running):
 

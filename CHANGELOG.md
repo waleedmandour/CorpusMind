@@ -6,52 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
-## [1.0.10] — 2026-09-07 — Lens branding + assistant endpoint hardening
-
-Closeout round for the v1.0.9 Lens release, from a review that cloned the
-repo and ran the real test suite: two shipped fixes, an audit, and release
-housekeeping. No engine behaviour changes.
-
-### Fixed
-
-- **CorpusMind Lens now has its own icon.** Every icon file in
-  `desktop-lens/src-tauri/icons/` was byte-for-byte identical to the main
-  app's, and the web UI's logo (`Sidebar.tsx`, `App.tsx`, `AboutView.tsx`)
-  hardcoded the main-app asset even inside the Lens shell — with both apps
-  installed side by side there was no way to tell them apart in the
-  taskbar/dock/Start menu or Alt-Tab. The Lens set now uses a blue badge
-  (`#2563eb`, the same Lens blue the CSS shell override already uses) with
-  the book/network artwork unchanged; the in-app logos switch on
-  `isLensMode`, and `index.html` swaps the favicon, theme color, and
-  document title when `?shell=lens` is present. A vector source is kept at
-  `download/icon-lens.svg` for future redesigns (a purpose-made eye/lens
-  mark remains a reasonable follow-up).
-- **Version files were inconsistent**: root and shared `package.json` were
-  still at `1.0.0` (and `web/package-lock.json` at `0.1.0`) while every
-  other package had moved on. All version files now read `1.0.10`
-  consistently.
-- **CITATION.cff was stale**: it still declared `1.2.0` (an abandoned
-  numbering line) and its DOI description referenced `v0.1.16`. Updated to
-  `1.0.10` with a version-agnostic concept-DOI description; minting the
-  1.0.10 version DOI on Zenodo happens at release time
-  (see `docs/ZENODO_DOI_GUIDE.md`).
-
-### Testing
-
-- **Added end-to-end coverage for `POST /api/v1/ai/chat`** — the endpoint
-  both apps call, previously untested as an assembled route:
-  `tests/test_ai_chat_endpoint_e2e.py` runs a real HTTP round trip through
-  the FastAPI app (with lifespan), verifies the response shape the
-  frontend consumes plus conversation/turn persistence, and proves that a
-  corpus shared between CorpusMind and CorpusMind Lens (annotated text +
-  analysed image set in the same corpus) grounds the system prompt the
-  model actually receives in both text-side stats and the vision-side
-  image sets, including the explicit cross-modal instruction. The provider
-  stub patches `health()` and `pick_default_model()` — the endpoint's
-  health gate and auto-selection run before `.chat()` is ever reached.
-  Suite: 354 passed, 9 skipped (pre-existing optional CAMeL Tools skips).
-
-## [1.0.9] — 2026-09-07 — CorpusMind Lens: the image-corpus workbench
+## [1.0.9] — 2026-09-07 — CorpusMind Lens: the image-corpus workbench (re-issued)
 
 Lens's corpus layer was inherited verbatim from the text app: its "Corpora"
 section offered a text uploader, POS tagsets, text cleaning, a tokenize → tag
@@ -135,6 +90,53 @@ unchanged** — every UI change is Lens-gated or additive.
 - Web: `LensCorporaView` (new), Lens-gated `App.tsx` / `ui.ts` /
   `HomeView`, ConfirmDialog + pagination + facial panel in `VisionView`,
   Ethics card in `SettingsView`, i18n en/ar for all new surfaces.
+
+### Re-issued closeout (2026-09-07): Lens identity, endpoint tests, housekeeping
+
+The v1.0.9 tag was re-pointed and every release asset rebuilt to carry a
+closeout round driven by a review that cloned the repo and ran the real
+test suite. No engine behaviour changes. (An interim 1.0.10 version bump
+was rolled back — v1.0.10 was never tagged or released, and the decision
+was to re-issue 1.0.9 with the fixes rather than supersede it.)
+
+- **CorpusMind Lens now has its own purpose-made icon — an aperture-eye
+  mark.** Every icon file in `desktop-lens/src-tauri/icons/` was
+  byte-for-byte identical to the main app's, and the web UI's logo
+  (`Sidebar.tsx`, `App.tsx`, `AboutView.tsx`) hardcoded the main-app asset
+  even inside the Lens shell — with both apps installed side by side there
+  was no way to tell them apart in the taskbar/dock/Start menu or Alt-Tab.
+  Lens now carries a purpose-made mark: an eye whose iris is a camera
+  aperture (gold barrel ring + six blades) with a corpus-constellation
+  pupil, on the Lens-blue badge (`#2563eb`) — eye for vision, aperture for
+  imaging, constellation for the corpus — while the badge family (rounded
+  square, gradient, gold accents, bottom bar) is shared with the main app
+  so the two still read as siblings. The in-app logos switch on
+  `isLensMode`, and `index.html` swaps the favicon, theme color, and
+  document title when `?shell=lens` is present. The vector source of
+  record is `download/icon-lens.svg`; the raster set was generated from it
+  with cairosvg + Pillow (no Rust toolchain was available in the build
+  environment, so `cargo tauri icon` could not be used — see issue #9).
+- **Version files were inconsistent**: root and shared `package.json` were
+  still at `1.0.0` (and `web/package-lock.json` at `0.1.0`) while every
+  other package had moved on. All version files now read `1.0.9`
+  consistently.
+- **CITATION.cff was stale**: it still declared `1.2.0` (an abandoned
+  numbering line) and its DOI description referenced `v0.1.16`. Updated to
+  `1.0.9` with a version-agnostic concept-DOI description; minting the
+  1.0.9 version DOI on Zenodo happens at release time
+  (see `docs/ZENODO_DOI_GUIDE.md`).
+- **Added end-to-end coverage for `POST /api/v1/ai/chat`** — the endpoint
+  both apps call, previously untested as an assembled route:
+  `tests/test_ai_chat_endpoint_e2e.py` runs a real HTTP round trip through
+  the FastAPI app (with lifespan), verifies the response shape the
+  frontend consumes plus conversation/turn persistence, and proves that a
+  corpus shared between CorpusMind and CorpusMind Lens (annotated text +
+  analysed image set in the same corpus) grounds the system prompt the
+  model actually receives in both text-side stats and the vision-side
+  image sets, including the explicit cross-modal instruction. The provider
+  stub patches `health()` and `pick_default_model()` — the endpoint's
+  health gate and auto-selection run before `.chat()` is ever reached.
+  Suite: 354 passed, 9 skipped (pre-existing optional CAMeL Tools skips).
 
 ## [1.0.8] — 2026-09-06 — Collocation network: guaranteed rendering everywhere
 
