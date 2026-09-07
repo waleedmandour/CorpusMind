@@ -68,6 +68,11 @@ unchanged** — every UI change is Lens-gated or additive.
 - **At-rest encryption gap**: uploads wrote plaintext while every read path
   decrypted — writes now go through `encrypt_file` when
   `CORPUSMIND_ENCRYPTION_KEY` is set (verified by round-trip test).
+- **`list_image_sets` N+1 query** (pipeline review): the route ran one
+  COUNT query per set (1 + S queries per request), noticeable on corpora
+  with many sets on a researcher laptop. Now a single GROUP BY aggregate
+  join — one query per request, counts verified identical by a regression
+  test (upload and delete paths).
 - **Lens icon reverted** to the "CorpusMind" mark with the blue surround
   (per maintainer decision — the purpose-made aperture-eye icon shipped in
   the v1.0.9 re-issue is retired).

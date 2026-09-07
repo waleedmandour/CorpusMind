@@ -128,15 +128,22 @@ async def update_image_set(iset_id: str, body: ImageSetUpdate,
 @router.get("/corpora/{cid}/image-sets", response_model=list[ImageSetOut])
 async def list_image_sets(cid: str, session: AsyncSession = Depends(get_session)) -> list[ImageSetOut]:
     from sqlalchemy import func
-    stmt = select(ImageSet).where(ImageSet.corpus_id == cid).order_by(ImageSet.created_at.desc())
-    sets = (await session.execute(stmt)).scalars().all()
-    out = []
-    for s in sets:
-        n = await session.scalar(select(func.count(ImageModel.id)).where(ImageModel.image_set_id == s.id)) or 0
-        out.append(ImageSetOut(id=s.id, corpus_id=s.corpus_id, name=s.name,
-                                description=s.description or "",
-                                image_count=n, created_at=s.created_at.isoformat()))
-    return out
+    # v1.1.0 (pipeline review): one GROUP BY aggregate instead of a
+    # per-set COUNT query — list_image_sets was the classic N+1 (1 + S
+    # queries per request), noticeable on corpora with many sets on a
+    # researcher laptop. Behaviour identical, including the empty-set 0.
+    stmt = (
+        select(ImageSet, func.count(ImageModel.id))
+        .outerjoin(ImageModel, ImageModel.image_set_id == ImageSet.id)
+        .where(ImageSet.corpus_id == cid)
+        .group_by(ImageSet.id)
+        .order_by(ImageSet.created_at.desc())
+    )
+    rows = (await session.execute(stmt)).all()
+    return [ImageSetOut(id=s.id, corpus_id=s.corpus_id, name=s.name,
+                        description=s.description or "",
+                        image_count=n or 0, created_at=s.created_at.isoformat())
+            for s, n in rows]
 
 
 # --------------------------------------------------------------------------- #

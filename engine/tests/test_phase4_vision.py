@@ -221,6 +221,39 @@ async def test_list_image_sets(client):
 
 
 @pytest.mark.asyncio
+async def test_list_image_sets_aggregate_counts(client):
+    """v1.1.0 (pipeline review): list_image_sets uses one GROUP BY aggregate
+    instead of a per-set COUNT (the classic N+1). Regression: the counts
+    must stay correct after upload and after deletion — including sets
+    with zero images."""
+    cid, iset_id = await _setup_corpus_with_image_set(client)
+    await client.post(f"/api/v1/corpora/{cid}/image-sets", json={"name": "Empty Set"})
+
+    async def counts() -> dict:
+        r = await client.get(f"/api/v1/corpora/{cid}/image-sets")
+        assert r.status_code == 200
+        return {row["name"]: row["image_count"] for row in r.json()}
+
+    # fresh sets: both zero
+    assert await counts() == {"Test Set": 0, "Empty Set": 0}
+
+    # upload two images into the first set
+    for color in [(220, 50, 50), (50, 50, 220)]:
+        await client.post(
+            f"/api/v1/image-sets/{iset_id}/images",
+            files={"files": ("img.png", io.BytesIO(_make_test_image(100, 100, color)), "image/png")},
+        )
+    assert await counts() == {"Test Set": 2, "Empty Set": 0}
+
+    # delete one image — the aggregate must follow
+    r = await client.get(f"/api/v1/image-sets/{iset_id}/images")
+    img_id = r.json()[0]["id"]
+    r = await client.delete(f"/api/v1/images/{img_id}")
+    assert r.status_code == 200
+    assert await counts() == {"Test Set": 1, "Empty Set": 0}
+
+
+@pytest.mark.asyncio
 async def test_list_images_in_set(client):
     """§9.2: List images in an image set."""
     _, iset_id = await _setup_corpus_with_image_set(client)
