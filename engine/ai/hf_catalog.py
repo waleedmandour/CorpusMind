@@ -24,7 +24,7 @@ import re
 import subprocess
 import sys
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 import httpx
@@ -79,7 +79,7 @@ _PROFILE_TTL = 60.0
 
 def _read_ram_linux() -> tuple[int, int] | None:
     try:
-        text = Path_read_text("/proc/meminfo")
+        text = read_text_file("/proc/meminfo")
         vals: dict[str, int] = {}
         for line in text.splitlines():
             if ":" in line:
@@ -94,8 +94,8 @@ def _read_ram_linux() -> tuple[int, int] | None:
     return None
 
 
-def Path_read_text(path: str) -> str:  # pragma: no cover - platform helper
-    with open(path, "r", encoding="utf-8") as f:
+def read_text_file(path: str) -> str:  # pragma: no cover - platform helper
+    with open(path, encoding="utf-8") as f:
         return f.read()
 
 

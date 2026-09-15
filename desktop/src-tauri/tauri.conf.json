@@ -42,7 +42,8 @@
       "icons/icon.ico"
     ],
     "resources": {
-      "binaries/corpusmind-engine/": "corpusmind-engine/"
+      "binaries/corpusmind-engine/": "corpusmind-engine/",
+      "resources/CorpusMind_User_Guide.pdf": "CorpusMind_User_Guide.pdf"
     },
     "externalBin": [],
     "publisher": "Dr. Waleed Mandour (Sultan Qaboos University) and Prof. Wesam Ibrahim (PNU)",

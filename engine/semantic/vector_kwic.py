@@ -35,8 +35,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.logging import get_logger
-from storage.models import KwicVectorCache, Token
 from stats.service import search_concordance
+from storage.models import KwicVectorCache, Token
 
 log = get_logger(__name__)
 
@@ -97,7 +97,7 @@ def cosine(a: list[float], b: list[float]) -> float:
     dot = 0.0
     na = 0.0
     nb = 0.0
-    for x, y in zip(a, b):
+    for x, y in zip(a, b, strict=False):
         dot += x * y
         na += x * x
         nb += y * y
@@ -257,7 +257,7 @@ async def vector_kwic(
 
         to_embed: list[str] = []
         to_embed_keys: list[str] = []
-        for line, key in zip(candidates, keys):
+        for line, key in zip(candidates, keys, strict=False):
             if key in cached:
                 continue
             ctx = f"{line.left} {line.node} {line.right}".strip()
@@ -269,14 +269,14 @@ async def vector_kwic(
         new_vecs: dict[str, list[float]] = {}
         if to_embed:
             embedded = await _embed_texts(provider, to_embed, embed_model)
-            new_vecs = dict(zip(to_embed_keys, embedded))
+            new_vecs = dict(zip(to_embed_keys, embedded, strict=False))
             await _store_vectors(session, corpus_id, embed_model, new_vecs)
 
         vectors = {**cached, **new_vecs}
         qvec = (await _embed_texts(provider, [query_text], embed_model))[0]
 
         scored: list[tuple[float, object]] = []
-        for line, key in zip(candidates, keys):
+        for line, key in zip(candidates, keys, strict=False):
             vec = vectors.get(key)
             if not vec:
                 continue
@@ -380,7 +380,7 @@ async def vector_kwic(
 
     to_embed: list[str] = []
     to_embed_keys: list[str] = []
-    for (key, entry) in zip(keys, sentences.values()):
+    for (key, entry) in zip(keys, sentences.values(), strict=False):
         if key in cached:
             continue
         text = " ".join(entry["tokens"])
@@ -392,14 +392,14 @@ async def vector_kwic(
     new_vecs: dict[str, list[float]] = {}
     if to_embed:
         embedded = await _embed_texts(provider, to_embed, embed_model)
-        new_vecs = dict(zip(to_embed_keys, embedded))
+        new_vecs = dict(zip(to_embed_keys, embedded, strict=False))
         await _store_vectors(session, corpus_id, embed_model, new_vecs)
 
     vectors = {**cached, **new_vecs}
     qvec = (await _embed_texts(provider, [query_text], embed_model))[0]
 
     scored: list[tuple[float, tuple, dict]] = []
-    for (sent_key, entry), key in zip(sentences.items(), keys):
+    for (sent_key, entry), key in zip(sentences.items(), keys, strict=False):
         vec = vectors.get(key)
         if not vec:
             continue

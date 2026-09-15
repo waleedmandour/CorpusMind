@@ -177,7 +177,7 @@ async def learner_caf_text(body: LearnerCAFTextRequest, session: AsyncSession = 
     try:
         pipeline = get_pipeline("spacy", body.language)
         parsed = pipeline.parse_document(body.text)
-    except Exception as e:  # noqa: BLE001 — any pipeline failure is a 503, not a 500
+    except Exception as e:
         hint = (
             "Install the spaCy model: pip install en_core_web_sm or "
             "python -m spacy download en_core_web_sm."
@@ -193,7 +193,7 @@ async def learner_caf_text(body: LearnerCAFTextRequest, session: AsyncSession = 
 
     info = pipeline.info()
     sentences: list[list[dict]] = []
-    for si, sent in enumerate(parsed.sentences):
+    for _si, sent in enumerate(parsed.sentences):
         toks = [
             {
                 "text": t.text,

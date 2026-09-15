@@ -120,7 +120,6 @@ async def concordance_vector(cid: str, body: VectorKwicRequest, request: Request
         if body.subcorpus_id
         else None
     )
-    from app.settings import get_settings
     from semantic.vector_kwic import EmbeddingModelError, resolve_embed_model, vector_kwic
 
     # Resolve the embedding provider up front so a cold Ollama fails loudly.

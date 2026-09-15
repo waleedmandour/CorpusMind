@@ -28,8 +28,11 @@ WEB_DIR="$REPO_ROOT/web"
 DESKTOP_DIR="$REPO_ROOT/desktop/src-tauri"
 
 TARGET_TRIPLE="aarch64-apple-darwin"
-SIDECAR_NAME="corpusmind-engine-${TARGET_TRIPLE}"
-SIDECAR_OUT="$DESKTOP_DIR/binaries/$SIDECAR_NAME"
+# corpusmind-engine.spec builds ONE-DIR (dist/corpusmind-engine/ = the
+# executable + _internal/ deps). Tauri bundles that whole directory via the
+# "binaries/corpusmind-engine/" resource mapping and the desktop shell spawns
+# resources/corpusmind-engine/corpusmind-engine at runtime (lib.rs).
+SIDECAR_DIR="$DESKTOP_DIR/binaries/corpusmind-engine"
 
 # What to build
 BUILD_ENGINE=1
@@ -103,7 +106,7 @@ fi
 
 # ─── 1. engine sidecar (PyInstaller) ──────────────────────────────────────
 if [[ $BUILD_SIDECAR -eq 1 ]] && [[ $BUILD_ENGINE -eq 1 ]]; then
-    log "building engine sidecar → $SIDECAR_NAME"
+    log "building engine sidecar → $SIDECAR_DIR"
 
     VENV="$ENGINE_DIR/.venv-build"
     if [[ ! -d "$VENV" ]]; then
@@ -114,8 +117,11 @@ if [[ $BUILD_SIDECAR -eq 1 ]] && [[ $BUILD_ENGINE -eq 1 ]]; then
     source "$VENV/bin/activate"
 
     pip install --upgrade pip wheel
-    pip install -e "$ENGINE_DIR[dev,vision]"
-    pip install pyinstaller python-multipart cryptography
+    # Core engine deps only: the [vision] extra pulls opencv (~60MB) which
+    # the spec EXCLUDES from the bundle (cv2 is a lazy import); pillow IS
+    # bundled and must be present. Same recipe as the Windows build script.
+    pip install -e "$ENGINE_DIR"
+    pip install pillow python-multipart cryptography pyinstaller
     ok "engine deps installed"
 
     cd "$ENGINE_DIR"
@@ -123,19 +129,19 @@ if [[ $BUILD_SIDECAR -eq 1 ]] && [[ $BUILD_ENGINE -eq 1 ]]; then
     pyinstaller corpusmind-engine.spec --noconfirm
     cd "$REPO_ROOT"
 
-    [[ -f "$ENGINE_DIR/dist/corpusmind-engine" ]] \
-        || die "pyinstaller did not produce dist/corpusmind-engine"
+    [[ -x "$ENGINE_DIR/dist/corpusmind-engine/corpusmind-engine" ]] \
+        || die "pyinstaller did not produce dist/corpusmind-engine/corpusmind-engine"
 
+    rm -rf "$SIDECAR_DIR"
     mkdir -p "$DESKTOP_DIR/binaries"
-    cp "$ENGINE_DIR/dist/corpusmind-engine" "$SIDECAR_OUT"
-    chmod +x "$SIDECAR_OUT"
-    ok "sidecar → $SIDECAR_OUT ($(du -h "$SIDECAR_OUT" | cut -f1))"
+    cp -R "$ENGINE_DIR/dist/corpusmind-engine" "$SIDECAR_DIR"
+    ok "sidecar → $SIDECAR_DIR ($(du -sh "$SIDECAR_DIR" | cut -f1))"
 elif [[ $BUILD_SIDECAR -eq 0 ]]; then
     warn "skipping sidecar build (--no-sidecar). The desktop app will fall back"
     warn "to running 'python -m app.main' from the engine/ directory at runtime."
     warn "This requires Python 3.12 + the engine deps on the target machine."
-    # Remove the sidecar binary if it exists so Tauri doesn't try to bundle a stale one
-    rm -f "$SIDECAR_OUT"
+    # Remove the sidecar directory if it exists so Tauri doesn't try to bundle a stale one
+    rm -rf "$SIDECAR_DIR"
 fi
 
 # ─── 2. web PWA ───────────────────────────────────────────────────────────
@@ -158,8 +164,8 @@ if [[ $BUILD_DESKTOP -eq 1 ]]; then
 
     # If sidecar was built, verify it exists
     if [[ $BUILD_SIDECAR -eq 1 ]]; then
-        [[ -x "$SIDECAR_OUT" ]] \
-            || die "sidecar missing at $SIDECAR_OUT — run with --engine first"
+        [[ -x "$SIDECAR_DIR/corpusmind-engine" ]] \
+            || die "sidecar missing at $SIDECAR_DIR/corpusmind-engine — run with --engine first"
     fi
 
     # If --no-sidecar, temporarily remove externalBin from tauri.conf.json

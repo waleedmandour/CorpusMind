@@ -69,6 +69,11 @@ desktop/binaries/*
 # Sidecar binaries are large; never commit them. CI produces them per release.
 desktop/src-tauri/binaries/*
 !desktop/src-tauri/binaries/.gitkeep
+# CorpusMind Lens shell — same rules as the main desktop shell
+desktop-lens/src-tauri/target/
+desktop-lens/src-tauri/gen/
+desktop-lens/src-tauri/binaries/*
+!desktop-lens/src-tauri/binaries/.gitkeep
 
 # ---------------------------------------------------------------------------
 # Local data (never commit user data — privacy)

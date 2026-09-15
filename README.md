@@ -51,6 +51,13 @@ themes, and image thumbnails.
 **Both suites:** installable PWA + two Tauri 2 desktop shells (CorpusMind and
 CorpusMind Lens), 400+ backend tests, ruff-clean, self-hosted Docker image.
 
+**Desktop installers** for every release — Windows (NSIS `.exe` + `.msi`),
+Linux (`.deb` + `.AppImage`) and macOS (Apple Silicon + Intel `.dmg`) — are
+built automatically from the v1.2.0 tag on and attached to
+[GitHub Releases](https://github.com/waleedmandour/CorpusMind/releases)
+together with the 2-page User Guide PDF. Each installer bundles the
+analysis engine as a local sidecar, so the desktop apps run fully offline.
+
 <details>
 <summary><strong>Phase history (Phase 0 → 6)</strong></summary>
 

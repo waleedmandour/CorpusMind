@@ -121,8 +121,8 @@ async def _seed_corpus(session_factory):
 async def client():
     from httpx import ASGITransport, AsyncClient
 
-    from app.main import app
     import storage.session as _ss
+    from app.main import app
     from storage.session import dispose_db
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
@@ -140,8 +140,8 @@ async def client():
 async def client_missing_model():
     from httpx import ASGITransport, AsyncClient
 
-    from app.main import app
     import storage.session as _ss
+    from app.main import app
     from storage.session import dispose_db
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
@@ -186,7 +186,7 @@ def test_resolve_embed_model_chain(monkeypatch):
 
 
 async def test_vector_kwic_mode_a_ranks_and_orders(client):
-    ac, cid, fake = client
+    ac, cid, _fake = client
     r = await ac.post(f"/api/v1/corpora/{cid}/concordance/vector", json={
         "query": "climate change effects on farming and crops",
         "node": "climate",
@@ -210,7 +210,7 @@ async def test_vector_kwic_mode_a_ranks_and_orders(client):
 
 
 async def test_vector_kwic_mode_b_semantic_search(client):
-    ac, cid, fake = client
+    ac, cid, _fake = client
     r = await ac.post(f"/api/v1/corpora/{cid}/concordance/vector", json={
         "query": "farmers and crop harvests",
         "node": None,
@@ -252,7 +252,7 @@ async def test_vector_kwic_missing_model_409_with_hint(client_missing_model):
 
 
 async def test_vector_kwic_corpus_missing_404(client):
-    ac, cid, fake = client
+    ac, _cid, _fake = client
     r = await ac.post("/api/v1/corpora/does-not-exist/concordance/vector", json={
         "query": "x", "node": "y",
     })

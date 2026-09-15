@@ -253,7 +253,7 @@ def _sentence_firings(sent: list[dict], language: str) -> list[tuple[int, str, s
 
     out: list[tuple[int, str, str]] = []
     rules = _errors._rules_for(language)
-    for rid, rule in rules.items():
+    for _rid, rule in rules.items():
         out.extend(rule["detect"](sent))
     return out
 

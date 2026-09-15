@@ -173,21 +173,23 @@ cd CorpusMind
 What the script does:
 
 1. Creates an isolated Python venv in `engine/.venv-build/` and installs the
-   engine plus PyInstaller.
-2. Runs `pyinstaller corpusmind-engine.spec` to produce
-   `engine/dist/corpusmind-engine` (a single-file executable).
-3. Copies the binary to
-   `desktop/src-tauri/binaries/corpusmind-engine-aarch64-apple-darwin`,
-   which is the path Tauri's `externalBin` mechanism looks for.
+   engine (core deps + pillow) plus PyInstaller.
+2. Runs `pyinstaller corpusmind-engine.spec` to produce the one-directory
+   bundle `engine/dist/corpusmind-engine/` (executable + `_internal/`).
+3. Copies that directory to
+   `desktop/src-tauri/binaries/corpusmind-engine/`, which the Tauri
+   `resources` mapping ships inside the app (the desktop shell spawns
+   `resources/corpusmind-engine/corpusmind-engine` at runtime).
 4. Builds the web PWA with `npm install && npm run build`.
 5. Runs `cargo tauri build --target aarch64-apple-darwin` to produce the
-   `.app` bundle and the `.dmg` installer.
+   `.app` bundle and the `.dmg` installer (with the sidecar + the User
+   Guide PDF bundled as resources).
 
 Final artifacts:
 
 ```
 desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/
-    dmg/CorpusMind_0.1.0_aarch64.dmg
+    dmg/CorpusMind_1.2.0_aarch64.dmg
     macos/CorpusMind.app
 ```
 
@@ -238,11 +240,15 @@ performs these steps automatically when you set the following repository secrets
 | Secret | Value |
 |--------|-------|
 | `APPLE_SIGNING_IDENTITY` | `Developer ID Application: Your Name (TEAMID)` |
-| `APPLE_CERTIFICATE_BASE64` | base64 of your exported `.p12` developer certificate |
+| `APPLE_CERTIFICATE` | base64 of your exported `.p12` developer certificate |
 | `APPLE_CERTIFICATE_PASSWORD` | password for the `.p12` file |
 | `APPLE_ID` | your Apple ID email |
 | `APPLE_PASSWORD` | app-specific password from appleid.apple.com |
 | `APPLE_TEAM_ID` | your 10-character team ID |
+
+Without these secrets the workflow still produces **unsigned** `.dmg`
+files on both `macos-arm64` (Apple Silicon) and `macos-intel` (Intel,
+`macos-15-intel` runner) — users right-click → Open on first launch.
 
 ---
 
@@ -644,18 +650,26 @@ On first launch, the desktop app:
 5. Waits for the engine health check to pass
 6. Opens the webview pointed at the engine
 
-### 6.4 Sidedar Binary (Future)
+### 6.4 Engine Sidecar (standard since v1.1.0)
 
-For a true "double-click and run" experience, the engine needs to be packaged as a single binary using PyInstaller:
+The engine ships inside the desktop installers as a PyInstaller **one-dir**
+bundle produced from `engine/corpusmind-engine.spec`. The release workflow
+builds it on every platform; to rebuild it locally:
 
 ```bash
 cd CorpusMind/engine
 source .venv/bin/activate
 pip install pyinstaller
-pyinstaller --onefile --name corpusmind-engine-$(rustc -vV | grep host | awk '{print $2}') app/main.py
+pyinstaller corpusmind-engine.spec --noconfirm
 ```
 
-The resulting binary goes in `desktop/binaries/` with the target-triple suffix that Tauri expects. This is a future task that will make the desktop app fully self-contained.
+Copy the resulting `dist/corpusmind-engine/` directory (executable +
+`_internal/`) to `desktop/src-tauri/binaries/corpusmind-engine/` before
+running `cargo tauri build` — the Tauri `resources` mapping bundles it, and
+`desktop/src-tauri/src/lib.rs` spawns
+`resources/corpusmind-engine/corpusmind-engine` on app start. The 2-page
+User Guide PDF rides along as an app resource
+(`resources/CorpusMind_User_Guide.pdf`).
 
 ---
 

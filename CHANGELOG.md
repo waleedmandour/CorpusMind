@@ -102,7 +102,16 @@ bilingual.
 - **2-page PDF quick-start guide** (`download/CorpusMind_User_Guide_v1.2.0.pdf`,
   regenerated via `scripts/generate_user_guide_pdf_v120.py`) covering
   corpora, analysis tools incl. Vector KWIC, Learner Research, companion
-  apps, and the HF explorer.
+  apps, and the HF explorer. The guide ships **inside every installer**
+  (bundled as a Tauri resource in both desktop shells) and is attached to
+  the GitHub Release next to the installers.
+- **Multi-platform release pipeline** (`.github/workflows/release.yml`):
+  tag-gated builds for **Windows (NSIS .exe + WiX .msi), Linux (.deb +
+  .AppImage), macOS Apple Silicon (.dmg) and macOS Intel (.dmg — new
+  `macos-intel` job on `macos-15-intel`)**, each bundling the PyInstaller
+  engine sidecar + the User Guide PDF; Lens installers build on every tag
+  too; a SHA256SUMS manifest and the guide PDF are attached last.
+  The legacy dispatch-only `build-release.yml` is removed (superseded).
 
 ### Changed
 
@@ -133,6 +142,17 @@ bilingual.
   underscore key convention.
 - Onboarding step 1 referenced a "Projects" sidebar item that does not
   exist (see above).
+- **Release gate restored**: 22 ruff violations in the new v1.2.0 modules
+  (`learner/`, `semantic/vector_kwic.py`, `ai/hf_catalog.py`, tests) failed
+  the lint step of every CI/release gate; all fixed (`ruff check .` clean).
+- **Docker / wheel packaging**: `learner` and `semantic` were missing from
+  `[tool.hatch.build.targets.wheel] packages`, so the Dockerized engine
+  crashed at boot with `ModuleNotFoundError: No module named 'learner'`.
+  Both packages are now declared and verified by a wheel smoke build.
+- Workflow corruption from the v1.2.0 commit (`[main]` → `ain]`,
+  `[math]::Round` → `ath]::Round`) repaired; `scripts/build-macos-arm64.sh`
+  now stages the PyInstaller **onedir** sidecar directory (it previously
+  expected a stale onefile layout and aborted).
 
 ## [1.1.0] — 2026-09-07 — Your Vision Corpora: the merged workbench + the visual-linguistics battery
 
