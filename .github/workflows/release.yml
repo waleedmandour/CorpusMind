@@ -277,6 +277,9 @@ jobs:
     needs: test-gate
     runs-on: macos-14
     timeout-minutes: 45
+    env:
+      APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+      APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
 
@@ -365,10 +368,7 @@ jobs:
           npm run build
 
       - name: Import macOS signing certificate (optional)
-        if: ${{ secrets.APPLE_CERTIFICATE != '' }}
-        env:
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        if: env.APPLE_CERTIFICATE != ''
         run: |
           CERT_PATH=$RUNNER_TEMP/build_certificate.p12
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
@@ -414,6 +414,9 @@ jobs:
     needs: test-gate
     runs-on: macos-15-intel
     timeout-minutes: 45
+    env:
+      APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+      APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
 
@@ -502,10 +505,7 @@ jobs:
           npm run build
 
       - name: Import macOS signing certificate (optional)
-        if: ${{ secrets.APPLE_CERTIFICATE != '' }}
-        env:
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        if: env.APPLE_CERTIFICATE != ''
         run: |
           CERT_PATH=$RUNNER_TEMP/build_certificate.p12
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
