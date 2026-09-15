@@ -30,6 +30,12 @@ COPY engine/multimodal /build/multimodal
 COPY engine/storage /build/storage
 COPY engine/reference_corpus /build/reference_corpus
 COPY engine/export_queue /build/export_queue
+# v1.2.0: learner (CAF/CIA/error-patterns, imported by api/learner.py) and
+# semantic (Vector KWIC, imported by api/analysis.py) — both were missing
+# here, so the v1.2.0 image shipped a wheel without them and the engine
+# died at boot with ModuleNotFoundError: No module named 'learner'.
+COPY engine/learner /build/learner
+COPY engine/semantic /build/semantic
 
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
