@@ -7,6 +7,8 @@
  * but reformatted as an interactive in-app page.
  */
 import { useState } from "react";
+import { useUI } from "@/store/ui";
+import { t } from "@/lib/i18n";
 
 interface GuideSection {
   id: string;
@@ -15,7 +17,12 @@ interface GuideSection {
   body: React.ReactNode;
 }
 
-const sections: GuideSection[] = [
+// v1.2.0: the three retitled/new sections pull their titles from i18n
+// (ug_companion_title, ug_vector_kwic_title, ug_learner_title), so the array
+// is built per render from the active UI language. Everything else stays
+// hardcoded English, matching the rest of the guide.
+function getSections(lang: "en" | "ar"): GuideSection[] {
+  return [
   {
     id: "getting-started",
     title: "Getting Started",
@@ -101,6 +108,91 @@ camel_data -i morphology-db-msa-r13`}</pre>
           Every concordance line has a stable evidence ID you can cite. Click <strong>Export Excel</strong>
           to download the full results as a spreadsheet for offline analysis or inclusion in a
           manuscript supplement.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "vector-kwic",
+    title: t(lang, "ug_vector_kwic_title"),
+    icon: "\u25B6",
+    body: (
+      <>
+        <p>
+          <strong>Vector KWIC</strong> adds semantic concordancing (Anthony 2025). It has two modes:
+        </p>
+        <ul>
+          <li>
+            <strong>Mode A — keyword + semantic re-rank:</strong> give a node word; the classic KWIC
+            match set is fetched, then re-ranked by the similarity of each line to your semantic
+            query, so related-but-different wordings surface first (e.g. node <em>rain</em>, query
+            "heavy rainfall destroying crops").
+          </li>
+          <li>
+            <strong>Mode B — semantic sentence search:</strong> leave the node empty and describe the
+            phenomenon in your own words; the engine scans sentences and returns the closest matches
+            with their similarity scores.
+          </li>
+        </ul>
+        <h4>Requirements</h4>
+        <p>
+          A local embedding model is required. Run <code>ollama pull bge-m3</code> (multilingual,
+          strong Arabic performance); it is also installable via{" "}
+          <strong>Settings → Models → Embedding</strong>. When the model is missing, the panel offers
+          a one-click pull.
+        </p>
+        <h4>Reading the scores</h4>
+        <p>
+          <strong>Similarity is a raw cosine value</strong> between query and line embeddings — there
+          is no confidence claim attached. Use "Min. similarity" to filter weak matches, and report
+          the model name and threshold (shown in the result header) alongside your analysis. Export
+          files include the Similarity column.
+        </p>
+        <p className="hint">
+          Citation: Anthony, L. (2025). Concordancing with AI: Applications of word and sentence
+          embeddings. <em>Applied Corpus Linguistics, 5</em>(3), 100164.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "learner",
+    title: t(lang, "ug_learner_title"),
+    icon: "\u25B6",
+    body: (
+      <>
+        <p>
+          The <strong>Learner Research</strong> group brings learner-corpus methodology into the app:
+        </p>
+        <h4>CAF Report</h4>
+        <p>
+          A Complexity–Accuracy–Fluency battery: TTR, MATTR, MTLD, HD-D and Guiraud for lexical
+          diversity; mean sentence length and length SD for fluency; sentence and clause indices
+          (mean clause length, clauses per sentence) for English syntactic complexity; and Arabic
+          proxies (root type ratio, spelling-candidate rate). Accuracy is reported through honest
+          heuristic proxies (error-free sentence ratio, candidates per 100 tokens) computed from the
+          same seed rules as the Error Patterns tool — the numbers are labelled as heuristics, not
+          judged errors. Results can be grouped by L1 or CEFR proficiency, with formulas and
+          citations included, plus an AI-vs-learner comparator that runs the identical battery over a
+          pasted AI-produced text and shows per-index deltas.
+        </p>
+        <h4>CIA Compare</h4>
+        <p>
+          Contrastive Interlanguage Analysis (Granger 1998): compare the learner corpus with an
+          engine reference corpus, a bundled reference frequency list, or a second learner corpus
+          (L1-vs-L1). You get keyness (over- and under-used words) and CAF deltas in one report.
+        </p>
+        <h4>Error Patterns</h4>
+        <p>
+          Rule-based error <strong>candidates</strong> (ERRANT-lineage seed rules: articles,
+          prepositions, agreement, spelling for English; hamza, ta-marbuta, alef maksura for Arabic).
+          Every candidate is a flag for human verification — nothing is counted as an error
+          automatically.
+        </p>
+        <h4>Learner metadata</h4>
+        <p>
+          Corpus L1 and CEFR proficiency facets can be set at creation (Your Corpus → New), and
+          per-document metadata overrides the corpus default when grouping.
         </p>
       </>
     ),
@@ -335,58 +427,31 @@ camel_data -i morphology-db-msa-r13`}</pre>
     ),
   },
   {
-    id: "vision",
-    title: "Vision Suite",
+    id: "companions",
+    title: t(lang, "ug_companion_title"),
     icon: "\u25B6",
     body: (
       <>
+        <p>{t(lang, "ug_companion_intro")}</p>
+        <h4>CorpusMind Lens</h4>
         <p>
-          The <strong>Vision Suite</strong> supports multimodal discourse analysis — analyzing
-          images alongside text using Kress and van Leeuwen's Visual Grammar framework, and
-          now with vision-LM-powered image understanding via local models.
+          {t(lang, "ug_companion_lens")}{" "}
+          <a className="about-link" href="https://waleedmandour.org/projects/CorpusMindLens/" target="_blank" rel="noopener">
+            waleedmandour.org/projects/CorpusMindLens
+          </a>
         </p>
-        <h4>Image set management</h4>
-        <ul>
-          <li>Create image sets within a corpus to organize images for analysis.</li>
-          <li>Drag-and-drop upload with optional per-image captions.</li>
-          <li>Automatic cached analysis: OCR (Tesseract), colour palette, composition geometry.</li>
-        </ul>
-        <h4>Visual Grammar (Kress &amp; van Leeuwen 2006)</h4>
+        <h4>CorpusMind Voice</h4>
         <p>
-          Scores each image on the four metafunctions:
+          {t(lang, "ug_companion_voice")}{" "}
+          <a className="about-link" href="https://waleedmandour.org/projects/CorpusMindVoice/" target="_blank" rel="noopener">
+            waleedmandour.org/projects/CorpusMindVoice
+          </a>
         </p>
-        <ul>
-          <li><strong>Representational</strong> — narrative vs. conceptual processes.</li>
-          <li><strong>Interactive</strong> — gaze, angle, social distance (power and involvement).</li>
-          <li><strong>Compositional</strong> — information value, framing, salience.</li>
-          <li><strong>Modal</strong> — modality cues (color saturation, focus, illumination).</li>
-        </ul>
-        <h4>Vision-LM image description</h4>
-        <p>
-          With a local vision model installed (e.g. <code>ollama pull moondream</code>), you can:
+        <p className="hint">
+          The parent-app "Vision Suite" tab was removed in v1.2.0 — the vision workbench (image sets,
+          Visual Grammar, vision-LM descriptions) now lives in the Lens companion; the engine's
+          vision endpoints are untouched and Lens uses them.
         </p>
-        <ul>
-          <li><strong>Describe</strong> — POST <code>/images/{`{img_id}`}/describe</code> sends the image to the vision-LM for a grounded description with provenance metadata.</li>
-          <li><strong>Discourse analysis</strong> — All 8 discourse routes accept <code>?mode=llm</code> to send the image + framework lens to the vision-LM. Falls back to heuristic if no model is available.</li>
-          <li><strong>Alignment</strong> — POST <code>/images/{`{img_id}`}/align?mode=llm</code> asks the vision-LM to identify which text spans refer to which image regions.</li>
-          <li><strong>Batch view</strong> — GET <code>/image-sets/{`{iset_id}`}/batch-analysis</code> aggregates recurring framework themes + OCR word frequency across all images in a set.</li>
-        </ul>
-        <h4>Consent gate</h4>
-        <p>
-          Person-descriptive content (age, gender, expression, appearance) from vision-LM output
-          is automatically redacted unless the user explicitly enables facial analysis in
-          Settings. This applies to <em>all</em> vision-LM routes.
-        </p>
-        <h4>Downloading vision models</h4>
-        <p>
-          Go to <strong>Settings → Model Providers</strong> to download vision models:
-        </p>
-        <ul>
-          <li><strong>qwen3-vl:2b</strong> (1.9 GB, 2B) — recommended for Lens: small, multilingual, OCR in 32 languages including Arabic; robust to blur, tilt and low light.</li>
-          <li><strong>qwen3-vl:8b</strong> (6.1 GB, 8B) — higher quality for visual discourse analysis, needs 12 GB+ RAM.</li>
-          <li><strong>gemma3:4b</strong> (3.3 GB, 4B) — also supports vision, multilingual including Arabic.</li>
-          <li><strong>moondream</strong> (1.7 GB, 1.8B) — runs on any machine, but English-only (weak Arabic OCR).</li>
-        </ul>
       </>
     ),
   },
@@ -795,10 +860,13 @@ software]. Zenodo. https://doi.org/10.5281/zenodo.21226650`}</pre>
       </>
     ),
   },
-];
+  ];
+}
 
 export function UserGuideView() {
   const [openId, setOpenId] = useState<string | null>("getting-started");
+  const lang = useUI((s) => s.lang);
+  const sections = getSections(lang);
 
   return (
     <div className="userguide-view">

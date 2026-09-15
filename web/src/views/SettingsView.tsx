@@ -862,11 +862,51 @@ function MuteToggle() {
 }
 
 
+// v1.2.0: rule-of-thumb fit badge — colored per machine-memory verdict.
+// Labels come from i18n (set_fit_*); the tooltip prefers the engine's own
+// fit_note and falls back to the generic set_fit_note disclaimer.
+function FitChip({ fit, fitNote }: { fit: string; fitNote?: string }) {
+  const lang = useUI((s) => s.lang);
+  const labels: Record<string, string> = {
+    gpu: t(lang, "set_fit_gpu"),
+    cpu: t(lang, "set_fit_cpu"),
+    tight: t(lang, "set_fit_tight"),
+    "too-big": t(lang, "set_fit_toobig"),
+    unknown: t(lang, "set_fit_unknown"),
+  };
+  const cls = fit === "too-big" ? "fit-toobig" : labels[fit] ? `fit-${fit}` : "fit-unknown";
+  return (
+    <span className={clsx("fit-chip", cls)} title={fitNote || t(lang, "set_fit_note")}>
+      {labels[fit] ?? t(lang, "set_fit_unknown")}
+    </span>
+  );
+}
+
+
 function OllamaModelManager({ ollamaHealthy }: { ollamaHealthy: boolean }) {
   const qc = useQueryClient();
   const isTauri = isTauriRuntime();
+  const lang = useUI((s) => s.lang);
   const [loadModelMsg, setLoadModelMsg] = useState("");
-  const catalogue = useQuery({ queryKey: ["ollama-catalogue"], queryFn: api.ollamaCatalogue });
+  // v1.2.0: catalogue source tabs (Curated | Hugging Face), task filter chips
+  // and a debounced (400 ms) HF search. The curated list ignores the query;
+  // the HF list returns an empty/hint list until something is typed.
+  const [source, setSource] = useState<"curated" | "huggingface">("curated");
+  const [task, setTask] = useState<"any" | "text" | "embedding">("any");
+  const [hfQuery, setHfQuery] = useState("");
+  const [hfDebounced, setHfDebounced] = useState("");
+  // Per-repo selected quantisation pull_name (defaults to the model's default_pull).
+  const [hfPullChoice, setHfPullChoice] = useState<Record<string, string>>({});
+  useEffect(() => {
+    const id = setTimeout(() => setHfDebounced(hfQuery.trim()), 400);
+    return () => clearTimeout(id);
+  }, [hfQuery]);
+  const catalogue = useQuery({
+    queryKey: ["ollama-catalogue", source, task, source === "huggingface" ? hfDebounced : ""],
+    queryFn: () => api.ollamaCatalogue(source, source === "huggingface" ? hfDebounced : "", task),
+    // The engine caches HF search for 5 min; don't re-hit it on window focus.
+    refetchOnWindowFocus: false,
+  });
   const installedModels = useQuery({
     queryKey: ["ollama-models"],
     queryFn: () => api.listModels("ollama"),
@@ -1046,13 +1086,135 @@ function OllamaModelManager({ ollamaHealthy }: { ollamaHealthy: boolean }) {
         )}
       </div>
 
+      {/* v1.2.0: source tabs (Curated | Hugging Face), task chips, HF search,
+          machine fit line — everything above the model grid. */}
+      <div className="ollama-catalogue-controls">
+        <div className="ollama-source-tabs" role="tablist">
+          <button
+            className={clsx("ollama-source-tab", { active: source === "curated" })}
+            onClick={() => setSource("curated")}
+          >
+            Curated
+          </button>
+          <button
+            className={clsx("ollama-source-tab", { active: source === "huggingface" })}
+            onClick={() => setSource("huggingface")}
+          >
+            Hugging Face
+          </button>
+        </div>
+        <div className="ollama-task-chips" role="group">
+          {(["any", "text", "embedding"] as const).map((k) => (
+            <button
+              key={k}
+              className={clsx("ollama-task-chip", { active: task === k })}
+              onClick={() => setTask(k)}
+            >
+              {t(lang, k === "any" ? "set_models_task_any" : k === "text" ? "set_models_task_text" : "set_models_task_embedding")}
+            </button>
+          ))}
+        </div>
+        {source === "huggingface" && (
+          <input
+            type="text"
+            className="ollama-import-input"
+            style={{ flex: 1, minWidth: 180 }}
+            value={hfQuery}
+            onChange={(e) => setHfQuery(e.target.value)}
+            placeholder={t(lang, "set_hf_search_ph")}
+            title={t(lang, "set_hf_search")}
+          />
+        )}
+        {source === "huggingface" && catalogue.isFetching && (
+          <span className="settings-text-muted">{t(lang, "set_hf_searching")}</span>
+        )}
+      </div>
+
+      {catalogue.data?.machine && (
+        <p className="settings-text-muted ollama-machine-line">
+          {t(lang, "set_machine")}: {t(lang, "set_machine_ram")} {catalogue.data.machine.ram_total_human}
+          {" · "}{t(lang, "set_machine_vram")} {catalogue.data.machine.vram_total_human || "—"}
+          {catalogue.data.machine.gpu_name ? ` · ${catalogue.data.machine.gpu_name}` : ""}
+        </p>
+      )}
+
       <div className="ollama-model-grid">
         {catalogue.data?.models.map((m) => {
-          const isInstalled = installedSet.has(m.name);
-          const isPulling = pullingModel === m.name;
           const pct = pullStatus && pullStatus.total > 0
             ? Math.round((pullStatus.completed / pullStatus.total) * 100)
             : 0;
+
+          if ("repo" in m) {
+            // ── Hugging Face GGUF row ──────────────────────────────────
+            // Pull reuses the normal Ollama flow, but on the SELECTED
+            // quantisation's pull_name (hf.co/<repo>:<quant>) — status is
+            // polled on that exact name too.
+            const selectedPull = hfPullChoice[m.repo] ?? m.default_pull;
+            const selectedVariant =
+              m.quant_variants.find((v) => v.pull_name === selectedPull) ?? m.quant_variants[0];
+            const isInstalled = installedSet.has(selectedPull);
+            const isPulling = pullingModel === selectedPull;
+            return (
+              <div key={m.repo} className="ollama-model-card">
+                <div className="ollama-model-header">
+                  <strong className="ollama-model-name">{m.model}</strong>
+                  {m.task === "embedding" && (
+                    <span className="model-task-badge">{t(lang, "set_models_task_embedding")}</span>
+                  )}
+                  {isInstalled && <span className="ollama-installed-badge">Installed</span>}
+                </div>
+                <p className="ollama-model-desc">
+                  {m.author}
+                  {" · \u2935 "}{m.downloads.toLocaleString()}
+                  {" · \u2665 "}{m.likes.toLocaleString()}
+                  {m.best_size ? ` · ${m.best_size}` : ""}
+                  {m.pipeline_tag ? ` · ${m.pipeline_tag}` : ""}
+                </p>
+                {m.quant_variants.length > 0 && (
+                  <div className="ollama-model-meta">
+                    <select
+                      className="ollama-quant-select"
+                      value={selectedPull}
+                      disabled={!!pullingModel}
+                      title={t(lang, "set_quant")}
+                      onChange={(e) => setHfPullChoice((prev) => ({ ...prev, [m.repo]: e.target.value }))}
+                    >
+                      {m.quant_variants.map((v) => (
+                        <option key={v.pull_name} value={v.pull_name}>{`${v.quant} · ${v.size}`}</option>
+                      ))}
+                    </select>
+                    {selectedVariant && (
+                      <FitChip fit={selectedVariant.fit} fitNote={selectedVariant.fit_note} />
+                    )}
+                  </div>
+                )}
+                {isPulling && (
+                  <div className="ollama-pull-progress">
+                    <div className="ollama-progress-bar" style={{ width: `${pct}%` }} />
+                    <span className="ollama-progress-text">
+                      {pullStatus?.status === "starting" ? "Starting..." : `${pct}%`}
+                    </span>
+                  </div>
+                )}
+                {!isInstalled && !isPulling && (
+                  <button
+                    className="btn-small ollama-pull-btn"
+                    onClick={() => pullModel(selectedPull)}
+                    disabled={!!pullingModel}
+                  >
+                    Download
+                  </button>
+                )}
+                {isInstalled && !isPulling && (
+                  <span className="ollama-ready-text">{"\u2713"} Installed</span>
+                )}
+              </div>
+            );
+          }
+
+          // ── Curated row (existing card layout + fit chip + task badge) ──
+          const isInstalled = installedSet.has(m.name);
+          const isPulling = pullingModel === m.name;
           return (
             <div key={m.name} className={`ollama-model-card ${m.recommended ? "recommended" : ""}`}>
               <div className="ollama-model-header">
@@ -1065,6 +1227,10 @@ function OllamaModelManager({ ollamaHealthy }: { ollamaHealthy: boolean }) {
                 <span className="ollama-meta-tag">{m.size}</span>
                 <span className="ollama-meta-tag">{m.params} params</span>
                 <span className="ollama-meta-tag">{m.ram} RAM</span>
+                {m.task === "embedding" && (
+                  <span className="model-task-badge">{t(lang, "set_models_task_embedding")}</span>
+                )}
+                {m.fit && <FitChip fit={m.fit} fitNote={m.fit_note} />}
                 {m.languages.includes("ar") && <span className="ollama-meta-tag ar">Arabic</span>}
               </div>
               {isPulling && (
@@ -1104,6 +1270,15 @@ function OllamaModelManager({ ollamaHealthy }: { ollamaHealthy: boolean }) {
           );
         })}
       </div>
+
+      {source === "huggingface" && !catalogue.isFetching && (catalogue.data?.models.length ?? 0) === 0 && (
+        <p className="settings-text-muted">{t(lang, "set_hf_empty")}</p>
+      )}
+      {source === "huggingface" && (
+        <p className="hint" style={{ marginTop: "var(--space-2)" }}>
+          {t(lang, "set_fit_note")} {t(lang, "set_hf_note")}
+        </p>
+      )}
       {loadModelMsg && (
         <div className="uploader-status success" style={{ marginTop: "var(--space-2)" }}>
           {loadModelMsg}

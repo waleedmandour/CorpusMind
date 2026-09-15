@@ -99,168 +99,181 @@ async def list_frameworks() -> dict:
 # These are models that work well for the grounded-AI Assistant — small
 # enough to run on consumer hardware (4-16 GB RAM), large enough to be
 # useful for tool-calling and interpretation.
+#
+# v1.2.0: the parent app no longer surfaces vision models (qwen3-vl,
+# moondream, llama3.2-vision) — the CorpusMind Lens companion carries its
+# own vision catalogue. Text + embedding models remain, and bge-m3 is the
+# recommended embedding model (feeds Vector KWIC). Task tags drive the
+# new task filter chips in Settings → Models.
 RECOMMENDED_OLLAMA_MODELS: list[dict] = [
     {
         "name": "llama3.2:3b",
         "size": "2.0 GB",
+        "size_bytes": 2000000000,
         "params": "3B",
         "ram": "4 GB",
         "description": "Meta Llama 3.2 — fast, capable, good default for the AI Assistant.",
         "languages": ["en"],
         "recommended": True,
+        "task": "text",
     },
     {
         "name": "llama3.2:1b",
         "size": "1.3 GB",
+        "size_bytes": 1300000000,
         "params": "1B",
         "ram": "2 GB",
         "description": "Smaller Llama 3.2 — runs on minimal hardware, less capable but fast.",
         "languages": ["en"],
         "recommended": False,
+        "task": "text",
     },
     {
         "name": "qwen2.5:3b",
         "size": "2.0 GB",
+        "size_bytes": 2000000000,
         "params": "3B",
         "ram": "4 GB",
         "description": "Qwen 2.5 — strong multilingual support including Arabic. Good for bilingual workflows.",
         "languages": ["en", "ar", "zh"],
         "recommended": True,
+        "task": "text",
     },
     {
         "name": "qwen2.5:7b",
         "size": "4.7 GB",
+        "size_bytes": 4700000000,
         "params": "7B",
         "ram": "8 GB",
         "description": "Larger Qwen 2.5 — better quality, needs more RAM. Excellent Arabic support.",
         "languages": ["en", "ar", "zh"],
         "recommended": False,
+        "task": "text",
     },
     {
         "name": "qwen2.5-coder:3b",
         "size": "2.0 GB",
+        "size_bytes": 2000000000,
         "params": "3B",
         "ram": "4 GB",
         "description": "Qwen 2.5 Coder — specialized for code generation. Useful if you want the Assistant to write Python/R snippets.",
         "languages": ["en"],
         "recommended": False,
+        "task": "text",
     },
     {
         "name": "phi3.5:3.8b",
         "size": "2.5 GB",
+        "size_bytes": 2500000000,
         "params": "3.8B",
         "ram": "4 GB",
         "description": "Microsoft Phi-3.5 — small but capable, good reasoning quality for its size.",
         "languages": ["en"],
         "recommended": False,
+        "task": "text",
     },
     {
         "name": "gemma2:2b",
         "size": "1.6 GB",
+        "size_bytes": 1600000000,
         "params": "2B",
         "ram": "2 GB",
         "description": "Google Gemma 2 — lightweight, fast, good for quick queries.",
         "languages": ["en"],
         "recommended": False,
+        "task": "text",
     },
     {
         "name": "mistral:7b",
         "size": "4.1 GB",
+        "size_bytes": 4100000000,
         "params": "7B",
         "ram": "8 GB",
         "description": "Mistral 7B — solid all-around model, good for longer reasoning chains.",
         "languages": ["en", "fr", "de", "es"],
         "recommended": False,
+        "task": "text",
     },
     {
         "name": "aya:8b",
         "size": "4.9 GB",
+        "size_bytes": 4900000000,
         "params": "8B",
         "ram": "8 GB",
         "description": "Cohere Aya — specifically designed for multilingual including Arabic. 23 languages.",
         "languages": ["en", "ar", "fr", "es"],
         "recommended": True,
+        "task": "text",
     },
-    # --- Google Gemma 3 (2025 release, multilingual + multimodal) ---
+    # --- Google Gemma 3 (2025 release, multilingual) ---
     {
         "name": "gemma3:1b",
         "size": "0.8 GB",
+        "size_bytes": 800000000,
         "params": "1B",
         "ram": "1 GB",
         "description": "Google Gemma 3 1B — ultra-lightweight, runs on any machine. Multilingual including Arabic. Good for basic queries.",
         "languages": ["en", "ar", "fr", "de", "es", "ja", "ko", "zh"],
         "recommended": True,
+        "task": "text",
     },
     {
         "name": "gemma3:4b",
         "size": "3.3 GB",
+        "size_bytes": 3300000000,
         "params": "4B",
         "ram": "4 GB",
-        "description": "Google Gemma 3 4B — best balance of size + quality. Multilingual, handles Arabic well. Supports vision (images) in addition to text.",
+        "description": "Google Gemma 3 4B — best balance of size + quality. Multilingual, handles Arabic well.",
         "languages": ["en", "ar", "fr", "de", "es", "ja", "ko", "zh"],
         "recommended": True,
-        "vision": True,
+        "task": "text",
     },
     {
         "name": "gemma3:12b",
         "size": "8.1 GB",
+        "size_bytes": 8100000000,
         "params": "12B",
         "ram": "12 GB",
-        "description": "Google Gemma 3 12B — high quality, needs 12 GB+ RAM. Multilingual + multimodal (text + images). Best quality for research.",
+        "description": "Google Gemma 3 12B — high quality, needs 12 GB+ RAM. Multilingual. Best quality for research.",
         "languages": ["en", "ar", "fr", "de", "es", "ja", "ko", "zh"],
         "recommended": False,
-        "vision": True,
+        "task": "text",
     },
     {
         "name": "gemma3:27b",
         "size": "17 GB",
+        "size_bytes": 17000000000,
         "params": "27B",
         "ram": "24 GB",
-        "description": "Google Gemma 3 27B — flagship quality, needs 24 GB+ RAM. Best for complex interpretive tasks. Multilingual + multimodal.",
+        "description": "Google Gemma 3 27B — flagship quality, needs 24 GB+ RAM. Best for complex interpretive tasks. Multilingual.",
         "languages": ["en", "ar", "fr", "de", "es", "ja", "ko", "zh"],
         "recommended": False,
-        "vision": True,
+        "task": "text",
     },
-    # --- Vision models (for CorpusMind Lens — multimodal discourse analysis) ---
+    # --- Embedding models (v1.2.0 — power Vector KWIC / semantic search) ---
     {
-        "name": "qwen3-vl:2b",
-        "size": "1.9 GB",
-        "params": "2B",
-        "ram": "4 GB",
-        "description": "Qwen3-VL 2B — small multilingual vision-language model with OCR in 32 languages (incl. Arabic), robust to blur/tilt/low light. Best default for CorpusMind Lens on modest hardware.",
-        "languages": ["en", "ar", "fr", "de", "es", "ja", "ko", "zh"],
+        "name": "bge-m3",
+        "size": "1.2 GB",
+        "size_bytes": 1200000000,
+        "params": "568M",
+        "ram": "2 GB",
+        "description": "BAAI bge-m3 — multilingual embedding model (100+ languages, strong Arabic). Powers Vector KWIC: semantically re-ranked concordances and similar-sentence search.",
+        "languages": ["multi (100+)"],
         "recommended": True,
-        "vision": True,
+        "task": "embedding",
+        "embedding": True,
     },
     {
-        "name": "qwen3-vl:8b",
-        "size": "6.1 GB",
-        "params": "8B",
-        "ram": "12 GB",
-        "description": "Qwen3-VL 8B — high-quality multilingual vision model (32-language OCR incl. Arabic). Best quality for visual discourse analysis when 12 GB+ RAM is available.",
-        "languages": ["en", "ar", "fr", "de", "es", "ja", "ko", "zh"],
-        "recommended": True,
-        "vision": True,
-    },
-    {
-        "name": "moondream",
-        "size": "1.7 GB",
-        "params": "1.8B",
-        "ram": "4 GB",
-        "description": "Moondream2 — tiny vision-language model. Runs on any machine, but ENGLISH-ONLY (weak Arabic OCR) — prefer qwen3-vl:2b for multilingual material.",
+        "name": "nomic-embed-text",
+        "size": "0.27 GB",
+        "size_bytes": 270000000,
+        "params": "137M",
+        "ram": "1 GB",
+        "description": "Nomic embed text — compact English-focused embedding model. Lightweight alternative to bge-m3 for English-only corpora.",
         "languages": ["en"],
         "recommended": False,
-        "vision": True,
-    },
-    {
-        "name": "llama3.2-vision:11b",
-        "size": "7.9 GB",
-        "params": "11B",
-        "ram": "8 GB",
-        "description": "Llama 3.2 Vision 11B — solid image understanding, but ENGLISH-CENTRIC — prefer qwen3-vl:8b for Arabic/multilingual material. Needs 8 GB+ RAM.",
-        "languages": ["en"],
-        "recommended": False,
-        "vision": True,
+        "task": "embedding",
+        "embedding": True,
     },
 ]
 
@@ -334,14 +347,69 @@ async def encryption_status() -> dict:
 
 
 @router.get("/ollama/catalogue")
-async def ollama_catalogue() -> dict:
-    """Return the curated catalogue of recommended Ollama models.
+async def ollama_catalogue(
+    source: str = "curated",
+    query: str = "",
+    task: str = "any",
+) -> dict:
+    """Model catalogue for the Settings → Models manager.
 
-    Each entry includes: name, size, params, RAM requirement, description,
-    languages, and whether it's recommended. The frontend uses this to
-    show a model-picker UI where the user can download (pull) models.
+    v1.2.0: two sources —
+    - ``source=curated`` (default): the built-in recommended list, now
+      text + embedding models only (vision models live in the Lens
+      companion's own catalogue). ``task`` filters: any|text|embedding.
+    - ``source=huggingface``: live GGUF search on huggingface.co sorted by
+      downloads (see engine/ai/hf_catalog.py). Results only when a query
+      is typed (the Lens pattern). Quant variants carry real file sizes
+      and machine-aware rule-of-thumb fit badges (gpu/cpu/tight/too-big).
+
+    Pulling any HF result reuses the existing /ollama/pull progress flow —
+    ``hf.co/<user>/<repo>:<quant>`` resolves natively through Ollama.
     """
-    return {"models": RECOMMENDED_OLLAMA_MODELS}
+    from ai import hf_catalog
+
+    if source == "huggingface":
+        if not query.strip():
+            return {
+                "models": [],
+                "source": "huggingface",
+                "query": query,
+                "task": task,
+                "machine": hf_catalog._machine_dict(),
+                "note": "Type a search query (e.g. 'qwen', 'llama', 'embed') to browse Hugging Face GGUF models.",
+            }
+        try:
+            result = await hf_catalog.search_gguf(query, task=task)
+        except Exception as e:
+            log.warning("hf_catalogue_search_failed", error=str(e))
+            raise HTTPException(502, f"Hugging Face search failed: {e}") from e
+        result["source"] = "huggingface"
+        result["query"] = query
+        result["task"] = task
+        return result
+
+    # --- curated source (default) ---
+    models = RECOMMENDED_OLLAMA_MODELS
+    if task in ("text", "embedding"):
+        models = [m for m in models if m.get("task", "text") == task]
+
+    # Machine-aware fit badges for curated entries too (rule-of-thumb from
+    # the catalogue's own size metadata).
+    profile = hf_catalog.machine_profile()
+    out_models = []
+    for m in models:
+        row = dict(m)
+        size_bytes = m.get("size_bytes") or 0
+        if size_bytes:
+            row.update(hf_catalog.fit_badge(size_bytes, profile))
+        out_models.append(row)
+
+    return {
+        "models": out_models,
+        "source": "curated",
+        "task": task,
+        "machine": hf_catalog._machine_dict(),
+    }
 
 
 class OllamaPullRequest(BaseModel):

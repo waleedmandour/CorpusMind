@@ -1,9 +1,18 @@
 /**
- * OnboardingModal -- 3-page welcome guide shown on first launch.
+ * OnboardingModal -- welcome guide shown on first launch.
  *
- * Page 1: Welcome + what CorpusMind is
- * Page 2: How to get started (create project, upload, analyze)
- * Page 3: Privacy + AI Assistant explanation
+ * Main app (v1.2.0): 4 pages — Welcome, Steps, Privacy, Companions.
+ *   - Fully i18n (onb_main_* keys; the pages were hardcoded English before,
+ *     which broke en/ar parity).
+ *   - Companion-first: page 4 presents CorpusMind Lens (vision) and
+ *     CorpusMind Voice (audio-to-corpus) with links to their pages on
+ *     waleedmandour.org, reusing AboutView's external-link mechanism
+ *     (plain <a href> anchors — the Tauri webview hands them to the OS).
+ *   - Feature card B "Vision Suite" became "Companion Apps" (the vision
+ *     workbench itself lives in the Lens companion since v1.2.0).
+ *   - Step 1 stale copy fixed: it said "Click Projects in the sidebar" but
+ *     no such nav item exists — now "Open Corpus and upload texts".
+ * Lens shell: unchanged 3-page i18n flow (onb_lens_*).
  *
  * Shown when onboardingComplete is false. Can be re-opened from Settings.
  */
@@ -12,53 +21,57 @@ import { useUI } from "@/store/ui";
 import { t } from "@/lib/i18n";
 import clsx from "clsx";
 
+/** Companion app links (waleedmandour.org) — opened via plain anchors,
+ * the same mechanism AboutView uses for its external links. */
+const LENS_URL = "https://waleedmandour.org/projects/CorpusMindLens/";
+const VOICE_URL = "https://waleedmandour.org/projects/CorpusMindVoice/";
+
 export function OnboardingModal() {
   const onboardingOpen = useUI((s) => s.onboardingOpen);
   const onboardingComplete = useUI((s) => s.onboardingComplete);
   const setOnboardingOpen = useUI((s) => s.setOnboardingOpen);
   const setOnboardingComplete = useUI((s) => s.setOnboardingComplete);
   const isLensMode = useUI((s) => s.isLensMode);
+  const lang = useUI((s) => s.lang);
   const [page, setPage] = useState(0);
 
   if (!onboardingOpen && onboardingComplete) return null;
 
-  // v1.2.0: Lens gets its own welcome + steps — the main-app steps used
-  // to tell Lens users to click a "Projects" item that doesn't exist in
-  // the Lens sidebar.
+  // v1.2.0: main-app pages are i18n-driven (onb_main_*) and companion-first.
   const mainAppPages = [
     {
-      title: "Welcome to CorpusMind",
-      subtitle: "Local-first, AI-native research environment for corpus linguistics and multimodal discourse analysis.",
+      title: t(lang, "onb_main_w_title"),
+      subtitle: t(lang, "onb_main_w_sub"),
       content: (
         <div className="onboarding-content">
-          <p>CorpusMind lets you go from raw texts and images to publication-ready analysis without writing a line of code.</p>
+          <p>{t(lang, "onb_main_w_intro")}</p>
           <div className="onboarding-features">
             <div className="onboarding-feature">
               <div className="feature-badge">A</div>
               <div>
-                <strong>Corpus Analysis</strong>
-                <p>Concordance, frequency, collocation, keyness, n-grams, dispersion, and more.</p>
+                <strong>{t(lang, "onb_main_f1_t")}</strong>
+                <p>{t(lang, "onb_main_f1_d")}</p>
               </div>
             </div>
             <div className="onboarding-feature">
               <div className="feature-badge">B</div>
               <div>
-                <strong>Vision Suite</strong>
-                <p>Image analysis, Visual Grammar (Kress and van Leeuwen), multimodal alignment.</p>
+                <strong>{t(lang, "onb_main_f2_t")}</strong>
+                <p>{t(lang, "onb_main_f2_d")}</p>
               </div>
             </div>
             <div className="onboarding-feature">
               <div className="feature-badge">C</div>
               <div>
-                <strong>Arabic First-Class</strong>
-                <p>CAMeL Tools morphology, dialect ID, root extraction, bilingual alignment.</p>
+                <strong>{t(lang, "onb_main_f3_t")}</strong>
+                <p>{t(lang, "onb_main_f3_d")}</p>
               </div>
             </div>
             <div className="onboarding-feature">
               <div className="feature-badge">D</div>
               <div>
-                <strong>Grounded AI</strong>
-                <p>Every AI answer cites real evidence. No hallucination passes as fact.</p>
+                <strong>{t(lang, "onb_main_f4_t")}</strong>
+                <p>{t(lang, "onb_main_f4_d")}</p>
               </div>
             </div>
           </div>
@@ -66,30 +79,30 @@ export function OnboardingModal() {
       ),
     },
     {
-      title: "Getting Started in 3 Steps",
-      subtitle: "From zero to analysis in minutes.",
+      title: t(lang, "onb_main_s_title"),
+      subtitle: t(lang, "onb_main_s_sub"),
       content: (
         <div className="onboarding-content">
           <div className="onboarding-steps">
             <div className="onboarding-step">
               <div className="step-number">1</div>
               <div className="step-body">
-                <strong>Create a Project and Upload Texts</strong>
-                <p>Click <strong>Projects</strong> in the sidebar. Click "+ New" to create a project, then a corpus. Drag and drop your text files (TXT, DOCX, PDF, HTML, XML, CSV, Markdown). The engine automatically tokenizes, tags, and parses them.</p>
+                <strong>{t(lang, "onb_main_s1_t")}</strong>
+                <p>{t(lang, "onb_main_s1_d")}</p>
               </div>
             </div>
             <div className="onboarding-step">
               <div className="step-number">2</div>
               <div className="step-body">
-                <strong>Run Analysis</strong>
-                <p>Click any analysis tool in the sidebar: Concordance (KWIC search), Frequency, Collocation, Keyness, Dispersion, N-grams, POS, Grammar, Dependency, Discourse, Vocabulary, Sentiment, or Metaphor. Every result includes its parameters for reproducibility.</p>
+                <strong>{t(lang, "onb_main_s2_t")}</strong>
+                <p>{t(lang, "onb_main_s2_d")}</p>
               </div>
             </div>
             <div className="onboarding-step">
               <div className="step-number">3</div>
               <div className="step-body">
-                <strong>Ask the AI Assistant</strong>
-                <p>Click <strong>AI Assistant</strong> in the sidebar. Ask questions in natural language. Every answer is either <span className="badge-grounded">grounded</span> (backed by a tool call with cited evidence) or <span className="badge-unground">ungrounded</span> (clearly flagged). Start Ollama locally for fully offline AI.</p>
+                <strong>{t(lang, "onb_main_s3_t")}</strong>
+                <p>{t(lang, "onb_main_s3_d")}</p>
               </div>
             </div>
           </div>
@@ -100,43 +113,76 @@ export function OnboardingModal() {
       ),
     },
     {
-      title: "Privacy and Ethics by Design",
-      subtitle: "Your data stays on your machine. Always.",
+      title: t(lang, "onb_main_p_title"),
+      subtitle: t(lang, "onb_main_p_sub"),
       content: (
         <div className="onboarding-content">
           <div className="onboarding-privacy">
             <div className="privacy-item">
               <div className="privacy-check-mark">Yes</div>
               <div>
-                <strong>Local-first by default.</strong>
-                <p>Your corpus text, images, and AI queries never leave your machine unless you explicitly opt in to a cloud provider.</p>
+                <strong>{t(lang, "onb_main_p1_t")}</strong>
+                <p>{t(lang, "onb_main_p1_d")}</p>
               </div>
             </div>
             <div className="privacy-item">
               <div className="privacy-check-mark">Yes</div>
               <div>
-                <strong>No telemetry.</strong>
-                <p>Zero analytics, zero error reporting, zero phone-home. By design.</p>
+                <strong>{t(lang, "onb_main_p2_t")}</strong>
+                <p>{t(lang, "onb_main_p2_d")}</p>
               </div>
             </div>
             <div className="privacy-item">
               <div className="privacy-check-mark">Yes</div>
               <div>
-                <strong>Framework-lensed hypotheses.</strong>
-                <p>Every interpretive claim (CDA, power, ideology) is phrased as "Under a [Framework] reading, X may indicate Y." Never as a bare assertion of fact.</p>
+                <strong>{t(lang, "onb_main_p3_t")}</strong>
+                <p>{t(lang, "onb_main_p3_d")}</p>
               </div>
             </div>
             <div className="privacy-item">
               <div className="privacy-check-mark">Yes</div>
               <div>
-                <strong>Facial analysis is opt-in.</strong>
-                <p>Off by default. Never performs identity recognition or re-identification of real individuals.</p>
+                <strong>{t(lang, "onb_main_p4_t")}</strong>
+                <p>{t(lang, "onb_main_p4_d")}</p>
               </div>
             </div>
           </div>
           <div className="onboarding-cta">
-            <p>Ready to start? Create your first project and upload some texts.</p>
+            <p>{t(lang, "onb_main_cta") ?? "Ready to start? Create your first project and upload some texts."}</p>
           </div>
+        </div>
+      ),
+    },
+    {
+      // v1.2.0: the companion-first page — Lens + Voice, opened in the
+      // system browser (AboutView's plain-anchor mechanism).
+      title: t(lang, "onb_main_c4_title"),
+      subtitle: t(lang, "onb_main_c4_sub"),
+      content: (
+        <div className="onboarding-content">
+          <div className="onboarding-features">
+            <div className="onboarding-feature">
+              <div className="feature-badge">1</div>
+              <div>
+                <strong>{t(lang, "onb_main_comp1_t")}</strong>
+                <p>{t(lang, "onb_main_comp1_d")}</p>
+                <a href={LENS_URL} className="about-link onboarding-companion-link">
+                  {t(lang, "onb_main_comp1_open")} ↗
+                </a>
+              </div>
+            </div>
+            <div className="onboarding-feature">
+              <div className="feature-badge">2</div>
+              <div>
+                <strong>{t(lang, "onb_main_comp2_t")}</strong>
+                <p>{t(lang, "onb_main_comp2_d")}</p>
+                <a href={VOICE_URL} className="about-link onboarding-companion-link">
+                  {t(lang, "onb_main_comp2_open")} ↗
+                </a>
+              </div>
+            </div>
+          </div>
+          <p className="hint onboarding-companions-hint">{t(lang, "onb_main_companions_hint")}</p>
         </div>
       ),
     },
@@ -148,7 +194,6 @@ export function OnboardingModal() {
   // Lens surface that broke the app's en/ar parity. All strings now come
   // from i18n (onb_lens_* keys) and describe the v1.0.9 Image Corpora
   // workflow.
-  const lang = useUI((s) => s.lang);
   const lensPages = [
     {
       title: t(lang, "onb_lens_w_title"),

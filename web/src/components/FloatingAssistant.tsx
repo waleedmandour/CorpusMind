@@ -22,11 +22,15 @@ import { useApp } from "@/store/app";
 import { useUI } from "@/store/ui";
 import { t } from "@/lib/i18n";
 
-/** Human label per sidebar nav id (falls back to the raw id). */
+/** Human label per sidebar nav id (falls back to the raw id).
+ * v1.2.0: nav ids use hyphens ("corpus-target", "learner-caf") while i18n
+ * keys use underscores ("nav_corpus_target", "nav_learner_caf") — the old
+ * lookup built non-existent keys and fell back to the raw id, so the
+ * context line and the AI grounding context showed "corpus-target" verbatim. */
 function navLabel(nav: string, lang: "en" | "ar"): string {
-  const key = `nav_${nav}` as const;
-  const label = t(lang, key as Parameters<typeof t>[1]);
-  return label || nav;
+  const key = `nav_${nav.replace(/-/g, "_")}` as Parameters<typeof t>[1];
+  const label = t(lang, key);
+  return label && label !== key ? label : nav;
 }
 
 interface Msg {

@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>CorpusMind v1.2.0 — User Guide</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=Noto+Sans+Arabic:wght@400;600&display=swap" rel="stylesheet">
+<style>
+@page { size: 720px 1020px; margin: 0; }
+:root {
+  --c-bg: #f7f8fb;        /* page background */
+  --c-text: #1e293b;      /* body text */
+  --c-primary: #1e40af;   /* CorpusMind blue */
+  --c-accent: #0e7490;    /* teal accent */
+  --c-muted: #64748b;     /* secondary text */
+}
+html, body {
+  margin: 0; padding: 0;
+  width: 720px;
+  background: var(--c-bg);
+  color: var(--c-text);
+  font-family: 'Inter', 'Noto Sans Arabic', sans-serif;
+  font-size: 11.4px;
+  line-height: 1.38;
+}
+@media screen {
+  html { height: auto; display: flex; justify-content: center; background: #dde3ec; }
+  body { transform-origin: top center; margin: 20px auto; box-shadow: 0 8px 30px rgba(15,23,42,.18); }
+}
+p, td, li, .body-text { overflow-wrap: break-word; word-break: break-word; margin: 0; }
+
+/* ---------- header band (page 1, not a fixed cover) ---------- */
+.hero {
+  break-after: avoid; break-inside: avoid;
+  background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 55%, #0e7490 100%);
+  color: #f8fafc;
+  padding: 17px 40px 14px 40px;
+}
+.hero-kicker { font-size: 9.5px; letter-spacing: 2.2px; text-transform: uppercase; opacity: .85; }
+.hero-title { font-size: 26px; font-weight: 900; line-height: 1.08; margin: 6px 0 4px 0; }
+.hero-sub { font-size: 11.8px; opacity: .92; max-width: 570px; }
+.hero-chips { margin-top: 9px; display: flex; flex-wrap: wrap; gap: 6px; max-width: 100%; }
+.hero-chip {
+  flex: 0 1 auto; min-width: 52px; max-width: 100%;
+  font-size: 9.5px; font-weight: 600; letter-spacing: .3px;
+  border: 1px solid rgba(248,250,252,.45); border-radius: 999px;
+  padding: 2.5px 10px; background: rgba(248,250,252,.12);
+}
+.hero-foot { margin-top: 9px; font-size: 9.4px; opacity: .8; }
+
+/* ---------- flowing content ---------- */
+.main-content { padding: 12px 40px 14px 40px; }
+.chapter-header { break-after: avoid; break-inside: avoid; margin-top: 11px; }
+.section-tag {
+  display: inline-block; font-size: 9px; font-weight: 700; letter-spacing: 1.4px;
+  text-transform: uppercase; color: var(--c-accent); margin-bottom: 1px;
+}
+.section-title { font-size: 14.5px; font-weight: 900; color: var(--c-primary); line-height: 1.2; }
+.divider { height: 2.5px; width: 44px; background: var(--c-accent); border-radius: 2px; margin: 4px 0 6px 0; }
+.body-text { margin: 0 0 6px 0; }
+.body-text strong { color: var(--c-primary); }
+.hint { font-size: 10.4px; color: var(--c-muted); }
+
+/* cards */
+.card {
+  break-inside: avoid; background: #ffffff; border: 1px solid #e2e8f0;
+  border-left: 3.5px solid var(--c-accent); border-radius: 7px;
+  padding: 7px 11px; margin-bottom: 7px; max-width: 100%;
+}
+.card h4 { margin: 0 0 2px 0; font-size: 11.8px; font-weight: 700; color: var(--c-primary); }
+.card p { margin: 0 0 3px 0; }
+.card p:last-child { margin-bottom: 0; }
+.card .code {
+  font-family: 'DejaVu Sans Mono', monospace;
+  font-size: 10px; background: #eef2f7; border-radius: 4px; padding: 0 5px;
+  color: var(--c-primary);
+}
+.two-col { display: flex; flex-wrap: wrap; gap: 7px; max-width: 100%; }
+.two-col .card { flex: 1 1 290px; min-width: 240px; max-width: 100%; margin-bottom: 0; }
+
+/* steps */
+.step-row { display: flex; flex-wrap: wrap; gap: 7px; margin: 2px 0 6px 0; max-width: 100%; break-inside: avoid; }
+.step {
+  flex: 1 1 200px; min-width: 180px; max-width: 100%;
+  background: #ffffff; border: 1px solid #e2e8f0; border-radius: 7px; padding: 6px 10px;
+}
+.step-num {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: var(--c-primary); color: #fff; font-size: 10.3px; font-weight: 700;
+  margin-right: 5px;
+}
+.step b { font-size: 11.3px; color: var(--c-primary); }
+.step p { margin: 4px 0 0 0; font-size: 10.5px; color: var(--c-muted); }
+
+/* tool table */
+table.tools { width: 100%; border-collapse: collapse; font-size: 10.7px; break-inside: avoid; }
+table.tools td { padding: 3.5px 7px; border-bottom: 1px solid #e6eaf1; vertical-align: top; overflow-wrap: break-word; }
+table.tools td:first-child { font-weight: 700; color: var(--c-primary); white-space: nowrap; width: 122px; }
+table.tools tr:last-child td { border-bottom: none; }
+
+.badge-new {
+  display: inline-block; font-size: 9px; font-weight: 700; letter-spacing: .6px;
+  color: #fff; background: var(--c-accent); border-radius: 4px; padding: 1px 5px;
+  vertical-align: 2px; margin-left: 4px;
+}
+a { color: var(--c-accent); text-decoration: none; font-weight: 600; }
+.footer {
+  break-inside: avoid; margin-top: 10px; border-top: 2px solid var(--c-primary);
+  padding-top: 6px; font-size: 9.3px; color: var(--c-muted);
+}
+.footer b { color: var(--c-primary); }
+.ar { font-family: 'Noto Sans Arabic', 'Inter', sans-serif; }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-kicker">Corpus Linguistics Workbench · Local-First · AGPL-3.0</div>
+  <div class="hero-title">CorpusMind v1.2.0 — User Guide</div>
+  <div class="hero-sub">The two-page quick start: corpora, the analysis battery, the new Learner Research suite, Vector KWIC, and the companion apps.</div>
+  <div class="hero-chips">
+    <span class="hero-chip">NEW · Learner Research (CAF · CIA · Errors)</span>
+    <span class="hero-chip">NEW · Vector KWIC (bge-m3)</span>
+    <span class="hero-chip">NEW · Hugging Face explorer</span>
+    <span class="hero-chip">EN / عربي</span>
+  </div>
+  <div class="hero-foot">waleedmandour.org · September 2026 · CorpusMind (main app) v1.2.0 · Companion: CorpusMind Lens</div>
+</div>
+
+<div class="main-content">
+
+  <div class="chapter-header" style="margin-top:0">
+    <div class="section-tag">1 · Getting started</div>
+    <div class="section-title">From raw texts to analysis in three steps</div>
+    <div class="divider"></div>
+  </div>
+  <p class="body-text">CorpusMind is a <strong>local-first</strong> research environment: your data never leaves your machine, and the grounded assistant answers only with evidence from your own corpora. Open <strong>Your Corpus</strong> and work top to bottom:</p>
+  <div class="step-row">
+    <div class="step"><span class="step-num">1</span><b>Create a project &amp; corpus</b>
+      <p>Optional learner facets: the learners' <b>L1</b> and a <b>CEFR level (A1–C2)</b> at creation — they power the new group-by views.</p></div>
+    <div class="step"><span class="step-num">2</span><b>Upload texts</b>
+      <p>Drag in TXT, DOCX, PDF, HTML or XML — the engine builds a versioned annotation layer (tokens, lemmas, POS, morphology).</p></div>
+    <div class="step"><span class="step-num">3</span><b>Pick a tool</b>
+      <p>Concordance, Frequency, Collocation, Keyness, N-grams, Dispersion and more — every result carries its full parameters.</p></div>
+  </div>
+  <p class="hint">Tip: press <b>Ctrl/Cmd + K</b> for the command palette. The floating AI assistant (bottom-right) is
+  context-aware on every tool screen — in v1.2.0 its panel is wider and wraps model output properly.</p>
+
+  <div class="chapter-header">
+    <div class="section-tag">2 · The workspace</div>
+    <div class="section-title">One sidebar, six working groups</div>
+    <div class="divider"></div>
+  </div>
+  <table class="tools">
+    <tr><td>Corpora</td><td>Your Corpus (create, upload, clean, subcorpora) and Reference Corpus for comparisons. Vision corpora now live in the Lens companion — the parent-app Vision tab was retired in v1.2.0, and stale links redirect automatically.</td></tr>
+    <tr><td>Analysis Tools</td><td>Concordance, Frequency, Collocation, Keyness, Dispersion, Documents, Readability, Groups, N-grams, POS, Grammar, Discourse, Vocabulary, Sentiment, Metaphor — plus <b>Vector KWIC</b> (§3).</td></tr>
+    <tr><td>Learner Research&nbsp;<span class="badge-new">NEW</span></td><td><span class="ar">أبحاث لغة المتعلم</span> — CAF Report, CIA Compare and Error Patterns for learner-corpus work (§4).</td></tr>
+    <tr><td>Arabic</td><td>Morphology, roots, clitics, Buckwalter transliteration, dialect and register identification — Arabic is first-class throughout the suite (§5).</td></tr>
+    <tr><td>AI &amp; System</td><td>The grounded AI Assistant; Settings with the new Hugging Face model explorer (§6); User Guide; About.</td></tr>
+  </table>
+
+  <div class="chapter-header">
+    <div class="section-tag">3 · New analysis tool</div>
+    <div class="section-title">Vector KWIC — concordancing with embeddings<span class="badge-new">NEW</span></div>
+    <div class="divider"></div>
+  </div>
+  <p class="body-text">Following Anthony (2025), <strong>Mode A</strong> takes a node word plus a research query: every KWIC line containing the node is re-ranked by cosine similarity between its context window and your query, so the lines that <em>mean</em> what you are looking for surface first. <strong>Mode B</strong> leaves the node empty and just asks a question — the corpus is scanned sentence-by-sentence (capped at 6,000, always reported) for the top-k most similar sentences.</p>
+  <div class="card">
+    <h4>One-click setup — and an honesty rule</h4>
+    <p>Lines are embedded with a local model — recommended: <span class="code">ollama pull bge-m3</span> (multilingual, strong Arabic), also in Settings → Models → Embedding; a missing model triggers a one-click pull hint. The <b>Similarity</b> column is <b>raw cosine similarity</b> — closer means more relevant to your query, never a confidence score. Vectors are cached per corpus and model; exports include similarity.</p>
+  </div>
+
+</div>
+
+<div class="main-content" style="padding-top:0">
+
+  <div class="chapter-header" style="margin-top:8px">
+    <div class="section-tag">4 · New research suite</div>
+    <div class="section-title">Learner Research — CAF, CIA and error candidates<span class="badge-new">NEW</span></div>
+    <div class="divider"></div>
+  </div>
+  <p class="body-text">The <strong>Learner Research</strong> group (<span class="ar">أبحاث لغة المتعلم</span>) brings learner-corpus methodology into the app — exportable, with formulas and citations shown in the interface.</p>
+  <div class="two-col">
+    <div class="card">
+      <h4>CAF Report</h4>
+      <p>Complexity–Accuracy–Fluency per corpus or grouped by <b>L1</b> / <b>CEFR</b>: TTR, MATTR, MTLD, HD-D, Guiraud; EN clause indices from the dependency parser; Arabic word-length and root-richness proxies; a labelled error-free-sentence heuristic.</p>
+    </div>
+    <div class="card">
+      <h4>CIA Compare</h4>
+      <p>Contrastive Interlanguage Analysis (Granger 1998): learner corpus vs reference (engine corpus or bundled list), or group vs group — keyness plus CAF deltas in one exportable report.</p>
+    </div>
+    <div class="card">
+      <h4>Error Patterns</h4>
+      <p>Rule-based error <b>candidates</b>, never confirmed errors: EN articles, prepositions, agreement, spelling; AR hamza variants, ة/ه and ى/ي confusions. Each links to its exact line — you verify before counting.</p>
+    </div>
+    <div class="card">
+      <h4>AI-vs-learner comparator</h4>
+      <p>Paste an AI text on the same prompt: the identical CAF battery runs on it — a side-by-side delta table against your learner corpus (cf. the 2025 LLM-vs-student-writing studies).</p>
+    </div>
+  </div>
+
+  <div class="chapter-header">
+    <div class="section-tag">5 · Arabic-first search</div>
+    <div class="section-title">Arabic normalization across the tools<span class="badge-new">NEW</span></div>
+    <div class="divider"></div>
+  </div>
+  <p class="body-text">The Concordancer, Frequency, Collocation and Keyness tools now carry an <strong>“Arabic normalization”</strong> toggle: hamza spellings unify (أ إ آ → ا), teh marbuta (ة → ه), alef maksura (ى → ي), and diacritics are stripped <em>before</em> matching or counting — spelling variants collapse into one row without re-ingesting anything. Regex always runs on raw text (and the tool says so); the same flag exists inside Vector KWIC.</p>
+
+  <div class="chapter-header">
+    <div class="section-tag">6 · Models &amp; AI</div>
+    <div class="section-title">Settings: curated lists, Hugging Face, fit badges<span class="badge-new">NEW</span></div>
+    <div class="divider"></div>
+  </div>
+  <p class="body-text">Settings → Models separates <strong>text</strong> and <strong>embedding</strong> models with filter chips (bge-m3 is the recommended embedder); vision models moved to Lens. The new <strong>Hugging Face explorer</strong> searches live GGUF models sorted by real downloads, shows actual per-quantisation file sizes, and labels each with a machine-aware fit badge — <b>GPU · CPU · Tight · Too-big</b> — from real RAM/VRAM (rule-of-thumb, never a guarantee). Pulling (<span class="code">hf.co/&lt;user&gt;/&lt;repo&gt;:&lt;quant&gt;</span>) reuses the familiar pull-progress flow.</p>
+
+  <div class="chapter-header">
+    <div class="section-tag">7 · The CorpusMind family</div>
+    <div class="section-title">Companion apps: Lens &amp; Voice<span class="badge-new">NEW</span></div>
+    <div class="divider"></div>
+  </div>
+  <p class="body-text">CorpusMind is deliberately modular: the main app masters text; the companions extend it to images and audio — all three read the same engine and data directory, so projects, corpora and settings are shared.</p>
+  <div class="two-col">
+    <div class="card">
+      <h4>CorpusMind Lens — vision</h4>
+      <p>Vision-LM multimodal discourse analysis: image sets with OCR, Visual Grammar (Kress &amp; van Leeuwen),
+      image–text alignment, and a cross-modal AI that reads texts and images together. The parent-app Vision tab was
+      removed in v1.2.0 — the workbench lives here now. <a href="https://waleedmandour.org/projects/CorpusMindLens/">waleedmandour.org/projects/CorpusMindLens</a></p>
+    </div>
+    <div class="card">
+      <h4>CorpusMind Voice — audio</h4>
+      <p>Audio-to-corpus: transcribe recordings, build spoken-corpus data, and analyse it with the same battery of
+      tools — closing the loop between written and spoken data in one research environment.
+      <a href="https://waleedmandour.org/projects/CorpusMindVoice/">waleedmandour.org/projects/CorpusMindVoice</a></p>
+    </div>
+  </div>
+
+  <div class="footer">
+    <p><b>References.</b> Anthony (2025) <i>Applied Corpus Linguistics 5</i>(3):100164 · Granger (1998) <i>Learner English on Computer</i> · McCarthy &amp; Jarvis (2010) <i>Behav. Res. Methods 42</i>(2) · Housen &amp; Kuiken (2009) <i>Applied Linguistics 30</i>(4) · Lu (2012) <i>MLJ 96</i>(2). &nbsp;·&nbsp; <b>CorpusMind</b> — AGPL-3.0 · local-first, no telemetry · docs/METHODOLOGY.md · <a href="https://github.com/waleedmandour/CorpusMind">github.com/waleedmandour/CorpusMind</a></p>
+  </div>
+
+</div>
+
+</body>
+</html>

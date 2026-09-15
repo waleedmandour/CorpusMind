@@ -56,7 +56,7 @@ export function HomeView() {
   // card list is unchanged.
   const quickActions = isLensMode ? [
     { label: lang === "ar" ? "دخائر الصور" : "Image Corpora", nav: "corpus-target" as const, icon: "\u25A3", desc: lang === "ar" ? "أنشئ مجموعات الصور ووثّقها وأدر بياناتها الوصفية" : "Create and document image sets, metadata, and OCR corpora" },
-    { label: lang === "ar" ? "جناح الرؤية" : "Vision Suite", nav: "vision" as const, icon: "\u2728", desc: lang === "ar" ? "التحليل البصري، القواعد البصرية، عدسات الخطاب" : "Image analysis, Visual Grammar, discourse lenses" },
+    { label: lang === "ar" ? "مساحة عمل الرؤية" : "Vision Workbench", nav: "corpus-target" as const, icon: "\u2728", desc: lang === "ar" ? "التحليل البصري، القواعد البصرية، عدسات الخطاب" : "Image analysis, Visual Grammar, discourse lenses" },
     { label: lang === "ar" ? "المساعد الذكي" : "AI Assistant", nav: "assistant" as const, icon: "\u272B", desc: lang === "ar" ? "اسأل عن صورك ونصوصك معاً بأدلة مبرهنة" : "Ask about your images and texts with grounded evidence" },
     { label: lang === "ar" ? "دليل المستخدم" : "User Guide", nav: "userguide" as const, icon: "\u25B6", desc: lang === "ar" ? "كيف تبني دخيرة صور خطوة بخطوة" : "How to build an image corpus, step by step" },
   ] : [
@@ -67,7 +67,7 @@ export function HomeView() {
     { label: "Keyness", nav: "keyness" as const, icon: "\u2727", desc: "Compare target vs reference corpus" },
     { label: "AI Assistant", nav: "assistant" as const, icon: "\u272B", desc: "Ask questions about your corpus with grounded evidence" },
     { label: "Arabic Tools", nav: "arabic" as const, icon: "\u272A", desc: "Morphology, roots, dialect ID, Buckwalter" },
-    { label: "Vision Suite", nav: "vision" as const, icon: "\u2728", desc: "Image analysis, Visual Grammar, alignment" },
+    { label: "Learner Research", nav: "learner-caf" as const, icon: "\u03A3", desc: "CAF battery, Contrastive Interlanguage Analysis, error patterns" },
   ];
 
   return (
@@ -221,8 +221,10 @@ function LensCrossModalCard({ corpusId }: { corpusId: string }) {
       </p>
       <p className="hint">{t(lang, "home_crossmodal_hint")}</p>
       <div className="lens-crossmodal-actions">
-        <button className="btn-secondary" onClick={() => setActiveNav("vision")}>
-          {t(lang, "nav_vision")}
+        {/* v1.2.0: the parent-app vision tab is gone — the merged vision
+            workbench now lives under "corpus-target". */}
+        <button className="btn-secondary" onClick={() => setActiveNav("corpus-target")}>
+          {t(lang, "nav_vision_corpora")}
         </button>
         <button className="btn-secondary" onClick={() => setActiveNav("assistant")}>
           {t(lang, "nav_ai")}

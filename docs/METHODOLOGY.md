@@ -504,3 +504,163 @@ These are the standard normalizations used in Arabic computational
 linguistics (Sawalha & Atwell 2013; Al-Thubaity 2014). They are
 **lossy** — the original forms are preserved alongside the normalized
 text for reproducibility.
+
+## HD-D — McCarthy & Jarvis (2010) — new in v1.2.0
+
+For each type with corpus frequency $f$, HD-D sums the hypergeometric
+probability of the type appearing exactly $x$ times in a random 42-token
+sample, divided by $x$:
+
+$$\text{HD-D} = \sum_{t} \sum_{x=1}^{\min(f_t,\,42)} \frac{P(X_t = x)}{x}, \qquad
+P(X = x) = \frac{\binom{f}{x}\binom{N-f}{42-x}}{\binom{N}{42}}$$
+
+Computed with an exact float recurrence (no scipy dependency):
+
+$$P(X{=}0) = \prod_{i=0}^{41} \frac{N-f-i}{N-i}, \qquad
+P(X{=}x) = P(X{=}x{-}1)\cdot\frac{f-x+1}{x}\cdot\frac{42-x+1}{N-f-42+x}$$
+
+- **Use:** the vocd-D replacement — length-robust lexical diversity for
+  learner corpora (short texts fall back to raw TTR when $n \le 42$).
+- **Where:** `stats/measures.py::hd_d`, reported in the CAF battery and
+  usable via the frequency lexical-diversity battery.
+
+**Reference:** McCarthy, P. M., & Jarvis, S. (2010). MTLD, vocd-D, and HD-D:
+A validation study of sophisticated approaches to lexical diversity
+assessment. *Behavior Research Methods*, 42(2), 381–392.
+
+## Vector KWIC — new in v1.2.0
+
+Vector KWIC (Analysis Tools → Vector KWIC) implements semantic
+concordancing following Anthony, L. (2025). "Concordancing with AI:
+Applications of word and sentence embeddings." *Applied Corpus
+Linguistics*, 5(3), 100164.
+
+**Mode A — keyword + semantic re-rank.** Candidate lines are produced by
+the deterministic concordancer (`search_concordance`, unchanged). Each
+line's context window (left + node + right, default ±6 tokens) is embedded
+with a local sentence-embedding model, and lines are re-ranked by the
+cosine similarity between the context vector and the embedding of the
+user's research query:
+
+$$\text{sim}(q, L) = \cos(\mathbf{e}_q, \mathbf{e}_L)
+= \frac{\mathbf{e}_q \cdot \mathbf{e}_L}{\lVert\mathbf{e}_q\rVert\,\lVert\mathbf{e}_L\rVert}$$
+
+**Mode B — semantic sentence search.** With no node word, the corpus is
+scanned sentence-by-sentence (capped at 6,000 sentences; the cap is echoed
+in the response as `scanned`) and the top-k sentences most similar to the
+query are returned — meaning, not strings.
+
+**Embedding model chain.** request parameter → `CORPUSMIND_EMBEDDING_MODEL`
+setting → default **bge-m3** (BAAI; 100+ languages, strong Arabic). The
+model name is echoed in every response for reproducibility and citability.
+A missing model returns HTTP 409 with a one-click setup hint
+(`ollama pull bge-m3`) that reuses the normal Ollama pull flow.
+
+**Honesty rules.** Similarity is *raw cosine similarity between sentence
+embeddings* — higher means semantically closer to the query, nothing more.
+No confidence percentages, no certainty claims. Vectors are cached in
+`kwic_vector_cache` keyed by (corpus, line, model, window) and reused only
+when the model name matches exactly. Similarities are rounded to 4 decimal
+places; the optional Arabic-normalization toggle normalizes text before
+embedding (see below). Mode A embeds at most 1,500 candidate lines per
+request (reported as `total`).
+
+**Endpoint:** `POST /api/v1/corpora/{cid}/concordance/vector`.
+**Tests:** `tests/test_vector_kwic.py` (deterministic mock embedder).
+
+## Learner Research — new in v1.2.0
+
+Three tools under the "Learner Research" group serve learner-corpus
+research (Contrastive Interlanguage Analysis and CAF measurement).
+
+### CAF battery
+
+Complexity–Accuracy–Fluency indices per corpus, or grouped by the
+corpus-level L1 / CEFR proficiency facets (with per-document overrides via
+`Document.meta`):
+
+- **Complexity (lexical):** TTR, MATTR (window 50), MTLD, HD-D (all above),
+  Guiraud's Root TTR.
+- **Complexity (syntactic, EN):** mean sentence length, mean clause length
+  and clauses per sentence, where a clause is counted from the dependency
+  layer (tokens headed by `acl`, `advcl`, `ccomp`, `xcomp`, `csubj`,
+  `acl:relcl`, `conj` with VERB/AUX pos). When no parser layer is
+  available (Arabic pipeline placeholder), clause indices are `null` —
+  never 0. Arabic complexity proxies: mean word length and root-type ratio
+  (distinct roots ÷ tokens from the CAMeL morph layer).
+- **Fluency/length:** mean sentence length, SD, and a sentence-length
+  histogram (1–5, 6–10, 11–15, 16–20, 21+ tokens).
+- **Accuracy (heuristic, honestly labelled):** the error-free-sentence
+  ratio counts sentences with no rule candidate from the error-pattern
+  finder below; the AR spelling-candidate rate counts spelling-candidate
+  tokens ÷ tokens. These are *proxies*, not validated error counts.
+
+Formulas and citations are served with every response (`formulas`,
+`citations`) and shown in the UI. Exportable index table.
+
+**References:** Housen, A., & Kuiken, F. (2009). Complexity, accuracy and
+fluency in second language acquisition. *Applied Linguistics*, 30(4),
+461–473; Housen, A., Kuiken, F., & Vedder, I. (Eds.) (2012/2022 CAF
+lineage); Lu, X. (2012). The relationship of lexical richness to the
+quality of ESL learners' oral narratives. *The Modern Language Journal*,
+96(2), 190–208; and the automation work cited per-index above.
+
+### CIA Compare
+
+Contrastive Interlanguage Analysis (Granger, 1998) in two guided moves:
+(1) **learner corpus vs reference corpus** — keyness with a
+language-matched reference (engine corpus or bundled frequency list,
+reusing the §Keyness machinery) plus CAF deltas; (2) **L1 group vs L1
+group** — a second learner corpus compared on the same battery. Output is
+one combined, exportable report (over-/under-used keywords + CAF deltas +
+citations).
+
+**Reference:** Granger, S. (1998). The computer learner corpus: A versatile
+new source of data for SLA research. In S. Granger (Ed.), *Learner English
+on Computer* (pp. 3–18). Longman.
+
+### Error-pattern candidates
+
+Rule-based *candidate* detection, deliberately framed like the metaphor
+finder: candidates carry a stable `line_ref` (`doc:sent:idx`), a reason,
+and `verified_count: 0` — only the human (or a later LLM triage step) can
+confirm an error. Seed rules — English: article choice (a/an, orthographic
+heuristic), lexical preposition confusions, subject–verb agreement bigrams,
+curated common misspellings; Arabic (matched on dediacritized text):
+hamza variants, ة/ه, ى/ي confusions against curated wrong→right maps.
+This follows the ERRANT lineage (Bryant & Ng 2024–25 multilingual
+extensions) without claiming its performance.
+
+### AI-vs-learner comparator
+
+`POST /api/v1/learner/caf-text` runs the same CAF battery over a pasted
+AI-produced text and returns per-index deltas against the selected learner
+corpus — a light, local response to the 2025 LLM-vs-student-writing
+studies. The text is parsed with the same pipeline (no corpus ingestion,
+nothing persisted).
+
+## Arabic normalization in search & aggregation — new in v1.2.0
+
+The "Arabic normalization" toggle (Concordancer, Frequency, Collocation,
+Keyness, Vector KWIC) applies the §Phase 3 normalization (أ إ آ → ا,
+ة → ه, ى → ي, plus harakat/tatweel stripping) at *match time* and
+*aggregation time*:
+
+- **Aggregation paths** (frequency, collocation marginals, keyness word
+  lists) group by a SQL scalar function `arnorm()` registered on every
+  SQLite connection in `storage/session.py` — the same normalization the
+  ingestion-time cleaning applies, now available to un-cleaned corpora.
+- **Matching paths** (concordance word/lemma matching incl. phrase
+  verification) use the Python mirror `ar_norm()` in `stats/service.py`;
+  the two implementations are kept deliberately in lockstep and tested.
+- **Regex queries ignore normalization** (they run on raw text) — the
+  response metadata flags this (`normalization_skipped`) rather than
+  failing silently.
+- Normalization is an *orthographic* choice, not a lemmatizer: morphological
+  variation is out of scope, and the raw forms are always displayed in KWIC
+  output.
+
+**Parity note:** n-grams, document statistics, the groups pivot,
+dispersion, LIX/RIX readability and the metadata facets are script-generic
+and work unchanged for Arabic; Arabic readability is reported honestly as
+LIX/RIX + descriptive length statistics (no fake "Arabic Flesch").

@@ -45,6 +45,23 @@ def _get_engine():
 
             dbapi_connection.create_function("REGEXP", 2, _regexp)
 
+            # v1.2.0 (item 6): Arabic normalization as a SQL scalar function so
+            # frequency/collocation/keyness/n-gram aggregations can GROUP BY a
+            # normalized key without streaming every token into Python. Mirrors
+            # the ingestion-time cleaning: strip harakat, unify
+            # أ إ آ → ا, ة → ه, ى → ي (+ lowercase for Latin safety).
+            def _arnorm(value):
+                if value is None:
+                    return None
+                s = str(value).lower()
+                s = _re.sub(r"[\u064B-\u065F\u0670\u0640]", "", s)  # harakat + tatweel
+                s = _re.sub(r"[\u0623\u0625\u0622]", "\u0627", s)  # أ إ آ → ا
+                s = s.replace("\u0629", "\u0647")                 # ة → ه
+                s = s.replace("\u0649", "\u064A")                 # ى → ي
+                return s
+
+            dbapi_connection.create_function("arnorm", 1, _arnorm)
+
         _sessionmaker = async_sessionmaker(_engine, expire_on_commit=False, class_=AsyncSession)
     return _engine
 
@@ -72,6 +89,13 @@ async def _migrate_sqlite(conn) -> None:
     if image_cols and "meta" not in image_cols:
         # JSON columns are TEXT underneath in SQLite; '{}' deserializes to {}.
         await conn.execute(text("ALTER TABLE images ADD COLUMN meta TEXT NOT NULL DEFAULT '{}'"))
+
+    # v1.2.0 (item 5): Learner Research corpus facets (optional L1 + CEFR level).
+    corpus_cols = await _columns("corpora")
+    if corpus_cols and "l1" not in corpus_cols:
+        await conn.execute(text("ALTER TABLE corpora ADD COLUMN l1 VARCHAR(64) NOT NULL DEFAULT ''"))
+    if corpus_cols and "proficiency" not in corpus_cols:
+        await conn.execute(text("ALTER TABLE corpora ADD COLUMN proficiency VARCHAR(16) NOT NULL DEFAULT ''"))
 
 
 async def init_db() -> None:

@@ -1361,10 +1361,13 @@ export const api = {
     jsonFetch<{ deleted: string }>(`/api/v1/projects/${pid}`, { method: "DELETE" }),
 
   listCorpora: (pid: string) => jsonFetch<Corpus[]>(`/api/v1/projects/${pid}/corpora`),
-  createCorpus: (pid: string, name: string, language = "en", genre = "mixed") =>
+  // v1.2.0: optional learner facets (l1, proficiency CEFR A1–C2) at creation.
+  createCorpus: (pid: string, name: string, language = "en", genre = "mixed",
+                 l1 = "", proficiency = "") =>
     jsonFetch<Corpus>(`/api/v1/projects/${pid}/corpora`, {
       method: "POST",
-      body: JSON.stringify({ name, language, genre }),
+      body: JSON.stringify({ name, language, genre,
+        ...(l1 ? { l1 } : {}), ...(proficiency ? { proficiency } : {}) }),
     }),
   getCorpus: (cid: string) => jsonFetch<Corpus>(`/api/v1/corpora/${cid}`),
   deleteCorpus: (cid: string) =>
@@ -1419,7 +1422,8 @@ export const api = {
   concordance: (cid: string, query: string, level: ConcordanceLevel = "word",
                 window = 5, limit = 100, offset = 0, case_sensitive = false,
                 random_sample?: number | null, sample_seed?: number | null,
-                regex = false, sort?: ConcordanceSortSpec[] | null) =>
+                regex = false, sort?: ConcordanceSortSpec[] | null,
+                normalize_arabic = false) =>
     jsonFetch<ConcordanceResult>(`/api/v1/corpora/${cid}/concordance`, {
       method: "POST",
       body: JSON.stringify({
@@ -1427,23 +1431,47 @@ export const api = {
         ...(regex ? { regex: true } : {}),
         ...(sort && sort.length ? { sort } : {}),
         ...(random_sample ? { random_sample, sample_seed } : {}),
+        ...(normalize_arabic ? { normalize_arabic: true } : {}),
       }),
+    }),
+
+  // --- v1.2.0: Vector KWIC (Anthony 2025) ---
+  vectorKwic: (
+    cid: string,
+    req: {
+      query: string;
+      node?: string | null;
+      level?: "word" | "lemma" | "pos";
+      regex?: boolean;
+      case_sensitive?: boolean;
+      window?: number;
+      top_k?: number;
+      min_similarity?: number;
+      normalize_arabic?: boolean;
+      model?: string | null;
+      subcorpus_id?: string | null;
+    },
+  ) =>
+    jsonFetch<VectorKwicResponse>(`/api/v1/corpora/${cid}/concordance/vector`, {
+      method: "POST",
+      body: JSON.stringify(req),
     }),
 
   frequency: (cid: string, unit: ConcordanceLevel = "word",
               min_freq = 1, limit = 1000, include_punct = false,
-              stopword_list_id?: string | null) =>
+              stopword_list_id?: string | null, normalize_arabic = false) =>
     jsonFetch<FrequencyResult>(`/api/v1/corpora/${cid}/frequency`, {
       method: "POST",
       body: JSON.stringify({ unit, min_freq, limit, include_punct,
-        ...(stopword_list_id ? { stopword_list_id } : {}) }),
+        ...(stopword_list_id ? { stopword_list_id } : {}),
+        ...(normalize_arabic ? { normalize_arabic: true } : {}) }),
     }),
 
   collocations: (cid: string, node: string, level: "word" | "lemma" = "word",
                  window = 5, min_freq = 3, measures?: string[], limit = 100,
                  opts?: { span_left?: number | null; span_right?: number | null;
                           pos_include?: string[] | null; pos_exclude?: string[] | null;
-                          stopword_list_id?: string | null }) =>
+                          stopword_list_id?: string | null; normalize_arabic?: boolean }) =>
     jsonFetch<CollocationResult>(`/api/v1/corpora/${cid}/collocations`, {
       method: "POST",
       body: JSON.stringify({
@@ -1453,6 +1481,7 @@ export const api = {
         ...(opts?.pos_include?.length ? { pos_include: opts.pos_include } : {}),
         ...(opts?.pos_exclude?.length ? { pos_exclude: opts.pos_exclude } : {}),
         ...(opts?.stopword_list_id ? { stopword_list_id: opts.stopword_list_id } : {}),
+        ...(opts?.normalize_arabic ? { normalize_arabic: true } : {}),
       }),
     }),
 
@@ -1472,11 +1501,12 @@ export const api = {
     }),
 
   keyness: (cid: string, reference_corpus_id: string, min_freq = 5, limit = 100,
-            stopword_list_id?: string | null) =>
+            stopword_list_id?: string | null, normalize_arabic = false) =>
     jsonFetch<KeynessResult>(`/api/v1/corpora/${cid}/keyness`, {
       method: "POST",
       body: JSON.stringify({ reference_corpus_id, min_freq, limit,
-        ...(stopword_list_id ? { stopword_list_id } : {}) }),
+        ...(stopword_list_id ? { stopword_list_id } : {}),
+        ...(normalize_arabic ? { normalize_arabic: true } : {}) }),
     }),
 
   dispersion: (cid: string, term: string, level: "word" | "lemma" = "word") =>
@@ -2129,8 +2159,13 @@ export const api = {
     }),
 
   // --- Ollama model catalogue + pull ---
-  ollamaCatalogue: () =>
-    jsonFetch<{ models: OllamaModel[] }>("/api/v1/ollama/catalogue"),
+  // v1.2.0: source=curated (built-in, task-filtered) | huggingface (live GGUF
+  // search — only meaningful when a query is typed, the Lens pattern).
+  ollamaCatalogue: (source: "curated" | "huggingface" = "curated",
+                    query = "", task: "any" | "text" | "embedding" = "any") =>
+    jsonFetch<OllamaCatalogueResponse>(
+      `/api/v1/ollama/catalogue?source=${encodeURIComponent(source)}&query=${encodeURIComponent(query)}&task=${encodeURIComponent(task)}`,
+    ),
   ollamaPull: (model: string) =>
     jsonFetch<{ ok: boolean; model: string; message: string }>("/api/v1/ollama/pull", {
       method: "POST",
@@ -2143,6 +2178,39 @@ export const api = {
     }),
   ollamaPullStatus: (model: string) =>
     jsonFetch<OllamaPullStatus>(`/api/v1/ollama/pull/status?model=${encodeURIComponent(model)}`),
+
+  // --- v1.2.0: Learner Research ---
+  learnerCaf: (cid: string, group_by: "none" | "l1" | "proficiency" = "none",
+               subcorpus_id?: string | null) =>
+    jsonFetch<LearnerCafResponse>(`/api/v1/corpora/${cid}/learner/caf`, {
+      method: "POST",
+      body: JSON.stringify({ group_by, ...(subcorpus_id ? { subcorpus_id } : {}) }),
+    }),
+  learnerErrors: (cid: string, language?: string, rule_ids?: string[], limit = 200) =>
+    jsonFetch<LearnerErrorsResponse>(`/api/v1/corpora/${cid}/learner/errors`, {
+      method: "POST",
+      body: JSON.stringify({
+        ...(language ? { language } : {}),
+        ...(rule_ids && rule_ids.length ? { rule_ids } : {}),
+        limit,
+      }),
+    }),
+  learnerCia: (cid: string, req: {
+    reference_corpus_id?: string | null;
+    reference_list?: string | null;
+    compare_corpus_id?: string | null;
+    min_freq?: number;
+    limit?: number;
+  }) =>
+    jsonFetch<LearnerCiaResponse>(`/api/v1/corpora/${cid}/learner/cia`, {
+      method: "POST",
+      body: JSON.stringify(req),
+    }),
+  learnerCafText: (text: string, language: "en" | "ar" = "en", corpus_id?: string | null) =>
+    jsonFetch<LearnerCafTextResponse>(`/api/v1/learner/caf-text`, {
+      method: "POST",
+      body: JSON.stringify({ text, language, ...(corpus_id ? { corpus_id } : {}) }),
+    }),
 
   // --- Research-grade features ---
   prepublicationCheck: (cid: string) =>
@@ -2293,11 +2361,172 @@ export type ExportFormat = "xlsx" | "csv" | "tsv" | "txt" | "json";
 export interface OllamaModel {
   name: string;
   size: string;
+  size_bytes?: number;
   params: string;
   ram: string;
   description: string;
   languages: string[];
   recommended: boolean;
+  /** v1.2.0: task tag driving the Settings filter chips. */
+  task?: "text" | "embedding" | string;
+  embedding?: boolean;
+  /** v1.2.0: machine-aware rule-of-thumb fit badge (curated rows too). */
+  fit?: "gpu" | "cpu" | "tight" | "too-big" | "unknown" | string;
+  fit_note?: string;
+}
+
+// ----------------------------------------------------------------------- //
+// v1.2.0 — HF catalogue, Vector KWIC, Learner Research types
+// ----------------------------------------------------------------------- //
+
+export interface HfQuantVariant {
+  quant: string;
+  filename: string;
+  size_bytes: number;
+  size: string;
+  pull_name: string;
+  fit: string;
+  fit_note: string;
+}
+
+export interface HfModel {
+  repo: string;
+  model: string;
+  author: string;
+  downloads: number;
+  likes: number;
+  pipeline_tag: string;
+  task: "text" | "embedding" | string;
+  last_modified: string;
+  quant_variants: HfQuantVariant[];
+  default_pull: string;
+  best_size: string;
+  rule_of_thumb: boolean;
+}
+
+export interface MachineInfo {
+  ram_total: number;
+  ram_available: number;
+  vram_total: number;
+  vram_available: number;
+  gpu_name: string;
+  ram_total_human: string;
+  ram_available_human: string;
+  vram_total_human: string;
+  source: string;
+}
+
+export interface OllamaCatalogueResponse {
+  models: (OllamaModel | HfModel)[];
+  source: "curated" | "huggingface" | string;
+  task?: string;
+  query?: string;
+  machine?: MachineInfo;
+  note?: string;
+  cached?: boolean;
+}
+
+export interface VectorKwicLine {
+  line_id: string;
+  document_id: string;
+  document_filename: string;
+  sentence_idx: number;
+  token_idx: number;
+  left: string;
+  node: string;
+  right: string;
+  pos: string;
+  lemma: string;
+  similarity: number;
+}
+
+export interface VectorKwicResponse {
+  lines: VectorKwicLine[];
+  total: number;
+  scanned: number;
+  mode: "keyword" | "semantic" | string;
+  model: string;
+  query: Record<string, unknown>;
+  note: string;
+}
+
+export interface CafIndices {
+  documents: number;
+  tokens: number;
+  sentences: number;
+  ttr: number;
+  mattr: number;
+  mtld: number;
+  hd_d: number;
+  guiraud: number;
+  mean_sentence_length: number;
+  sentence_length_stdev: number;
+  mean_clause_length: number | null;
+  clauses_per_sentence: number | null;
+  mean_word_length: number;
+  root_type_ratio: number | null;
+  error_free_sentence_ratio: number | null;
+  error_candidates_per_100: number | null;
+  spelling_candidate_rate: number | null;
+  sentence_length_histogram: Record<string, number>;
+  notes: string[];
+}
+
+export interface LearnerCafGroup {
+  name: string;
+  documents: number;
+  tokens: number;
+  caf: CafIndices;
+}
+
+export interface LearnerCafResponse {
+  corpus: { id: string; name: string; language: string; l1: string; proficiency: string };
+  group_by: string;
+  groups: LearnerCafGroup[];
+  overall: LearnerCafGroup;
+  formulas: Record<string, string>;
+  citations: string[];
+}
+
+export interface LearnerErrorCandidate {
+  rule_id: string;
+  language: string;
+  rule_label: string;
+  word: string;
+  sentence: string;
+  line_ref: string;
+  document_id: string;
+  sentence_idx: number;
+  token_idx: number;
+  reason: string;
+}
+
+export interface LearnerErrorsResponse {
+  corpus: { id: string; language: string };
+  language: string;
+  candidates: LearnerErrorCandidate[];
+  counts: Record<string, number>;
+  total_tokens: number;
+  pipeline: string;
+  verified_count: number;
+  notes: string[];
+}
+
+export interface LearnerCiaResponse {
+  target: { corpus: LearnerCafResponse["corpus"]; caf: CafIndices };
+  reference?: { corpus: Record<string, unknown>; caf: CafIndices } | null;
+  compare?: { corpus: Record<string, unknown>; caf: CafIndices } | null;
+  keyness?: KeynessResult | null;
+  deltas: Record<string, Record<string, number | null>>;
+  warnings: string[];
+  citations: string[];
+}
+
+export interface LearnerCafTextResponse {
+  text_caf: CafIndices;
+  corpus_caf?: CafIndices | null;
+  deltas?: Record<string, number | null> | null;
+  notes: string[];
 }
 
 export interface OllamaPullStatus {

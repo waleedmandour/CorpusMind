@@ -13,11 +13,16 @@ type Theme = "light" | "dark" | "system";
 type Dir = "ltr" | "rtl";
 type Lang = "en" | "ar";
 
+// v1.2.0: the parent-app "vision" tab is gone (the Lens companion owns the
+// vision workbench; the engine vision endpoints stay). Added "vector-kwic"
+// (semantic KWIC, bge-m3) and the three Learner Research tools.
 export type NavTarget =
   | "home" | "corpus-target" | "corpus-reference" | "concordance" | "frequency" | "collocation"
   | "keyness" | "dispersion" | "ngrams" | "pos" | "grammar" | "dependency"
   | "discourse" | "vocab" | "sentiment" | "metaphor"
-  | "arabic" | "vision" | "assistant" | "settings" | "about" | "userguide";
+  | "vector-kwic"
+  | "learner-caf" | "learner-compare" | "learner-errors"
+  | "arabic" | "assistant" | "settings" | "about" | "userguide";
 
 interface UIState {
   theme: Theme;
@@ -71,13 +76,14 @@ function detectLensMode(): boolean {
   return new URLSearchParams(window.location.search).get("shell") === "lens";
 }
 
-/** v1.0.9→v1.1.0: navigation targets the Lens shell actually exposes. Both
- * "corpus-target" and "vision" render the merged Your Vision Corpora
- * workbench in Lens mode — they are kept as valid targets so deep links
- * and the command palette keep working. The guard makes the Lens boundary
- * real: out-of-scope targets are redirected to the merged workbench. */
+/** v1.0.9→v1.1.0: navigation targets the Lens shell actually exposes.
+ * v1.2.0: "vision" is removed — the Lens companion owns the vision
+ * workbench, and a stale persisted "vision" target auto-redirects to the
+ * merged workbench via the guard below (same safe migration as before).
+ * The guard makes the Lens boundary real: out-of-scope targets are
+ * redirected to the merged workbench. */
 const LENS_NAV_TARGETS: ReadonlySet<NavTarget> = new Set<NavTarget>([
-  "home", "corpus-target", "vision", "assistant", "settings", "userguide", "about",
+  "home", "corpus-target", "assistant", "settings", "userguide", "about",
 ]);
 
 export const useUI = create<UIState>()(
@@ -99,8 +105,8 @@ export const useUI = create<UIState>()(
       expandedGroups: {
         corpora: true,
         analyze: true,
+        learner: true, // v1.2.0: new group — expanded so it gets discovered
         arabic: false,
-        vision: false,
         ai: false,
         system: false,
       },

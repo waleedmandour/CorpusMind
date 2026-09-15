@@ -17,6 +17,7 @@ from api import (
     export,
     health,
     hub,
+    learner,
     network,
     open_access,
     phase2,
@@ -159,6 +160,7 @@ def create_app() -> FastAPI:
     app.include_router(visual_corpus.router, prefix="/api/v1", tags=["visual-corpus"])
     app.include_router(phase6.router, prefix="/api/v1", tags=["phase6"])
     app.include_router(export.router, prefix="/api/v1", tags=["export"])
+    app.include_router(learner.router, prefix="/api/v1", tags=["learner"])
     app.include_router(troubleshoot.router, prefix="/api/v1", tags=["troubleshoot"])
     app.include_router(cleaning.router, prefix="/api/v1", tags=["cleaning"])
     app.include_router(hub.router, prefix="/api/v1", tags=["hub"])

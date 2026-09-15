@@ -126,6 +126,12 @@ class CorpusCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     language: str = "en"
     genre: str = "mixed"  # academic, news, spoken, fiction, blog, legal, medical, mixed, etc.
+    # v1.2.0 (item 5) Learner Research facets — optional, ALC-style learner
+    # corpora: the learners' first language and CEFR proficiency level.
+    # Per-document overrides remain possible via Document.meta under the
+    # same keys (no schema migration needed on the document side).
+    l1: str = Field("", max_length=64)
+    proficiency: str = Field("", max_length=16, description="CEFR A1–C2 or empty")
 
 
 class CorpusOut(BaseModel):
@@ -141,6 +147,9 @@ class CorpusOut(BaseModel):
     # v1.1.0 (issue #8): lets the Lens corpus list badge corpora that already
     # carry image sets, and sort them first — additive, defaults to 0.
     image_set_count: int = 0
+    # v1.2.0 learner facets
+    l1: str = ""
+    proficiency: str = ""
 
 
 @router.post("/projects/{pid}/corpora", response_model=CorpusOut)
@@ -151,7 +160,9 @@ async def create_corpus(
     if not p:
         raise HTTPException(404, "Project not found")
     c = Corpus(
-        project_id=pid, name=body.name, language=body.language or p.language, genre=body.genre
+        project_id=pid, name=body.name, language=body.language or p.language, genre=body.genre,
+        l1=(body.l1 or "").strip(),
+        proficiency=(body.proficiency or "").strip().upper(),
     )
     session.add(c)
     await session.flush()
@@ -166,6 +177,8 @@ async def create_corpus(
         created_at=c.created_at,
         document_count=0,
         image_set_count=0,
+        l1=c.l1,
+        proficiency=c.proficiency,
     )
 
 
@@ -209,6 +222,8 @@ async def list_corpora(pid: str, session: AsyncSession = Depends(get_session)) -
             created_at=c.created_at,
             document_count=doc_counts.get(c.id, 0),
             image_set_count=set_counts.get(c.id, 0),
+            l1=getattr(c, "l1", "") or "",
+            proficiency=getattr(c, "proficiency", "") or "",
         )
         for c in corpora
     ]
@@ -235,6 +250,8 @@ async def get_corpus(cid: str, session: AsyncSession = Depends(get_session)) -> 
         created_at=c.created_at,
         document_count=n,
         image_set_count=n_sets,
+        l1=getattr(c, "l1", "") or "",
+        proficiency=getattr(c, "proficiency", "") or "",
     )
 
 

@@ -101,6 +101,30 @@ def _fold(text: str) -> str:
     )
 
 
+def ar_norm(text: str) -> str:
+    """Arabic normalization (v1.2.0, item 6) — the Python mirror of the SQL
+    ``arnorm()`` function registered in storage.session: strip harakat +
+    tatweel, unify أ إ آ → ا, ة → ه, ى → ي (+ lowercase). Used by the
+    ``normalize_arabic`` toggle on concordance/frequency/collocation/keyness
+    so that spelling variants aggregate together (an orthographic choice —
+    documented in METHODOLOGY.md §Arabic normalization)."""
+    import re as _re
+    import unicodedata as _ud
+
+    s = text.lower()
+    s = "".join(c for c in _ud.normalize("NFD", s) if not _ud.combining(c))
+    s = _re.sub("[\u064B-\u065F\u0670\u0640]", "", s)
+    s = _re.sub("[\u0623\u0625\u0622]", "\u0627", s)
+    s = s.replace("\u0629", "\u0647").replace("\u0649", "\u064A")
+    return s
+
+
+def _ar_fold(text: str) -> str:
+    """_fold followed by Arabic normalization — collocation folding under the
+    normalize_arabic toggle."""
+    return ar_norm(_fold(text))
+
+
 def _morph_component_cond(component: str, query: str, case_sensitive: bool):
     """SQL condition matching one morph component (root|pattern).
 
@@ -173,6 +197,7 @@ async def search_concordance(
     sample_seed: int | None = None,
     regex: bool = False,
     sort: list[dict] | None = None,
+    normalize_arabic: bool = False,
 ) -> ConcordanceResult:
     """KWIC search.
 
@@ -185,6 +210,11 @@ async def search_concordance(
       * KWIC sorting: `sort` is a list of up to 3 {side: left|right,
         offset: 1-3} specs applied AntConc-style (1L, 1R, 2L …). Sorting
         happens over the full (capped) match set, then pagination.
+
+    v1.2.0 (item 6): ``normalize_arabic`` unifies Arabic orthography for
+    word/lemma matching (أ إ آ → ا, ة → ه, ى → ي, harakat stripped) via the
+    SQL ``arnorm()`` function. Regex queries ignore normalization (they run
+    on raw text) — flagged in the query metadata.
     """
     if level not in _CONCORDANCE_LEVELS:
         level = "word"
@@ -197,13 +227,20 @@ async def search_concordance(
     parts = query_stripped.split() if level in ("word", "lemma") else [query_stripped]
     phrase = len(parts) > 1
 
+    # v1.2.0: Arabic normalization — match against the normalized column and
+    # normalize the query parts the same way (word/lemma exact/wildcard only).
+    norm_sql = bool(normalize_arabic) and level in ("word", "lemma") and not regex
+    if norm_sql:
+        parts = [ar_norm(p) for p in parts]
+    match_col = func.arnorm(col) if norm_sql else col
+
     # ---- node condition -------------------------------------------------- #
     if level in ("root", "pattern"):
         cond = _morph_component_cond(level, query_stripped, case_sensitive) & _is_real_token()
     elif phrase:
-        cond = _part_condition(col, parts[0], regex=regex, case_sensitive=case_sensitive) & _is_real_token()
+        cond = _part_condition(match_col, parts[0], regex=regex, case_sensitive=case_sensitive) & _is_real_token()
     else:
-        cond = _part_condition(col, query_stripped, regex=regex, case_sensitive=case_sensitive) & _is_real_token()
+        cond = _part_condition(match_col, query_stripped if not norm_sql else ar_norm(query_stripped), regex=regex, case_sensitive=case_sensitive) & _is_real_token()
 
     # ---- count (single-token modes only; phrase totals come from Python) -- #
     if phrase:
@@ -266,6 +303,7 @@ async def search_concordance(
                 seg = values[start : start + len(parts)]
                 ok = True
                 for part, actual in zip(parts, seg, strict=False):
+                    actual_cmp = ar_norm(actual) if norm_sql else actual
                     if regex:
                         import re as _re
 
@@ -277,17 +315,17 @@ async def search_concordance(
                         import fnmatch as _fn
 
                         pat = part  # fnmatch uses * and ? natively
-                        hay = actual if case_sensitive else actual.lower()
+                        hay = actual_cmp if case_sensitive else actual_cmp.lower()
                         needle = pat if case_sensitive else pat.lower()
                         if not _fn.fnmatch(hay, needle):
                             ok = False
                             break
-                    elif case_sensitive:
+                    elif case_sensitive and not norm_sql:
                         if actual != part:
                             ok = False
                             break
                     else:
-                        if actual.lower() != part.lower():
+                        if actual_cmp.lower() != part.lower():
                             ok = False
                             break
                 if ok:
@@ -375,6 +413,13 @@ async def search_concordance(
         "q": query, "level": level, "window": window,
         "case_sensitive": case_sensitive, "regex": regex,
     }
+    if normalize_arabic:
+        query_meta["normalize_arabic"] = True
+        if regex:
+            query_meta["normalization_skipped"] = (
+                "Regex matching runs on raw text — the Arabic normalization "
+                "toggle was ignored for this query."
+            )
     if phrase:
         query_meta["phrase"] = parts
     if sort:
@@ -413,6 +458,7 @@ async def compute_frequency(
     include_punct: bool = False,
     document_ids: list[str] | None = None,
     stopword_set: set[str] | None = None,
+    normalize_arabic: bool = False,
 ) -> FrequencyResult:
     """Word/lemma/POS/root/pattern frequency list.
 
@@ -449,18 +495,30 @@ async def compute_frequency(
 
     if not morph_unit:
         # Aggregate counts + document range in one grouped query
+        # v1.2.0: with normalize_arabic, GROUP BY the SQL-normalized key so
+        # spelling variants (أ/ا, ة/ه, ى/ي) collapse into one row.
+        agg_col = (
+            func.arnorm(func.lower(col))
+            if (normalize_arabic and unit in ("word", "lemma"))
+            else col
+        )
         stmt = _base_where(
             select(
-                col,
+                agg_col,
                 func.count(Token.id).label("freq"),
                 func.count(func.distinct(Token.document_id)).label("rng"),
             )
             .where(Token.version_id == version_id)
-            .group_by(col)
+            .group_by(agg_col)
             .order_by(func.count(Token.id).desc())
             .limit(limit)
         )
         rows_raw = (await session.execute(stmt)).all()
+        if normalize_arabic and stopword_set and unit in ("word", "lemma"):
+            # Post-filter with a normalized stopword set (the SQL stop_cond
+            # only matches raw surface forms).
+            norm_stop = {ar_norm(s) for s in stopword_set}
+            rows_raw = [r for r in rows_raw if ar_norm(str(r[0])) not in norm_stop]
         total_tokens = await _corpus_size(session, version_id, document_ids)
         if stop_cond is not None:
             cnt_stmt = _base_where(
@@ -516,10 +574,11 @@ async def compute_frequency(
         chunk: list[str] = []
         all_tokens: list[str] = []
         chunk_size = 1000
+        norm_stop = {ar_norm(s) for s in stopword_set} if (stopword_set and normalize_arabic) else None
         result = await session.stream(tok_stmt)
         async for row in result.scalars():
-            t = row.text.lower()
-            if stopword_set and t in stopword_set:
+            t = ar_norm(row.text) if normalize_arabic else row.text.lower()
+            if stopword_set and (t in stopword_set or (norm_stop and t in norm_stop)):
                 continue
             chunk.append(t)
             all_tokens.append(t)
@@ -617,6 +676,7 @@ async def compute_collocations(
     pos_include: list[str] | None = None,
     pos_exclude: list[str] | None = None,
     stopword_set: set[str] | None = None,
+    normalize_arabic: bool = False,
 ) -> CollocationResult:
     """Compute collocation measures for `node` against all co-occurring tokens.
 
@@ -653,14 +713,22 @@ async def compute_collocations(
 
     col = {"word": Token.text, "lemma": Token.lemma}[level]
 
+    # v1.2.0 (item 6): normalize_arabic swaps the folding function for the
+    # Arabic-aware one — node, collocates and marginals fold identically.
+    fold = _ar_fold if normalize_arabic else _fold
+    stop_norm = {ar_norm(s) for s in stopword_set} if (stopword_set and normalize_arabic) else None
+
     node_lower = node.lower()
-    node_folded = _fold(node)
+    node_folded = fold(node)
 
     # --- 1. node sentences (window scan scope) ---------------------------- #
-    node_cond = (
-        ((func.lower(col) == node_lower) | (func.lower(col) == node_folded))
-        & _is_real_token()
-    )
+    if normalize_arabic:
+        node_cond = (func.arnorm(func.lower(col)) == ar_norm(node_lower)) & _is_real_token()
+    else:
+        node_cond = (
+            ((func.lower(col) == node_lower) | (func.lower(col) == node_folded))
+            & _is_real_token()
+        )
     node_sent_stmt = (
         select(Token.document_id, Token.sentence_idx)
         .where(Token.version_id == version_id, node_cond)
@@ -686,7 +754,7 @@ async def compute_collocations(
     folded_counts: Counter = Counter()
     for text, cnt in (await session.execute(vocab_stmt)).all():
         if text and not text.isspace():
-            folded_counts[_fold(text)] += cnt
+            folded_counts[fold(text)] += cnt
     N = sum(folded_counts.values())
     fx = folded_counts.get(node_folded, 0)
     if fx == 0:
@@ -731,7 +799,7 @@ async def compute_collocations(
     for toks in sentences.values():
         clean = [(idx, text, pos) for idx, text, pos in toks]
         for i, (_idx, text, _pos) in enumerate(clean):
-            if _fold(text) != node_folded:
+            if fold(text) != node_folded:
                 continue
             lo = max(0, i - sl)
             hi = min(len(clean), i + sr + 1)
@@ -739,12 +807,15 @@ async def compute_collocations(
                 if j == i:
                     continue
                 collocate_text, collocate_pos = clean[j][1], clean[j][2]
-                if stopword_set and collocate_text.lower() in stopword_set:
+                if stopword_set and (
+                    collocate_text.lower() in stopword_set
+                    or (stop_norm and fold(collocate_text) in stop_norm)
+                ):
                     skipped_stop += 1
                     continue
                 if not _pos_allowed(collocate_pos):
                     continue
-                key = _fold(collocate_text)
+                key = fold(collocate_text)
                 O_counter[key] += 1
                 surfaces[key][collocate_text] += 1
 
@@ -843,6 +914,7 @@ async def compute_keyness(
     limit: int = 100,
     target_document_ids: list[str] | None = None,
     stopword_set: set[str] | None = None,
+    normalize_arabic: bool = False,
 ) -> KeynessResult:
     # Issue 2: ``target_document_ids`` optionally restricts the TARGET corpus
     # side of the comparison to a subcorpus (the reference side is unaffected).
@@ -893,7 +965,13 @@ async def compute_keyness(
     # frequency list or an uploaded reference Corpus -- a validity trap for
     # exactly the comparison this feature exists to support.
     async def _freqs(vid: str, document_ids: list[str] | None = None) -> Counter:
-        text_norm = func.lower(Token.text)
+        # v1.2.0 (item 6): normalize_arabic aggregates under the SQL arnorm
+        # key so أ/ا, ة/ه, ى/ي variants count as one type in BOTH corpora.
+        text_norm = (
+            func.arnorm(func.lower(Token.text))
+            if normalize_arabic
+            else func.lower(Token.text)
+        )
         stmt = (
             select(text_norm, func.count(Token.id))
             .where(Token.version_id == vid, _is_real_token())
@@ -905,7 +983,7 @@ async def compute_keyness(
         counter = Counter({text: count for text, count in (await session.execute(stmt)).all()})
         if stopword_set:
             for sw in stopword_set:
-                counter.pop(sw.lower(), None)
+                counter.pop(ar_norm(sw) if normalize_arabic else sw.lower(), None)
         return counter
 
     target_freqs = await _freqs(target_vid, target_document_ids)
@@ -942,8 +1020,8 @@ async def compute_keyness(
         N1=N1,
         N2=N2,
         warnings=(
-            [f"{len(stopword_set)} stopwords excluded from both corpora."]
-            if stopword_set else []
+            ([f"{len(stopword_set)} stopwords excluded from both corpora."] if stopword_set else [])
+            + (["Arabic normalization (أإآ→ا, ة→ه, ى→ي, harakat stripped) applied to both corpora."] if normalize_arabic else [])
         ),
     )
 

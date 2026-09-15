@@ -23,7 +23,8 @@ export function CommandPalette() {
 
   const actions = useMemo<Action[]>(() => {
     // In Lens mode, only show vision-relevant nav actions.
-    const lensNavIds = new Set(["home", "corpus-target", "vision", "assistant", "settings", "userguide", "about"]);
+    // v1.2.0: "vision" removed — the Lens companion owns the vision workbench.
+    const lensNavIds = new Set(["home", "corpus-target", "assistant", "settings", "userguide", "about"]);
     const filterNav = (id: string) => !ui.isLensMode || lensNavIds.has(id);
 
     return [
@@ -43,8 +44,11 @@ export function CommandPalette() {
       ...(filterNav("vocab") ? [{ id: "nav.vocab", label: "Go to Vocabulary", run: () => ui.setActiveNav("vocab" as any) }] : []),
       ...(filterNav("sentiment") ? [{ id: "nav.sentiment", label: "Go to Sentiment", run: () => ui.setActiveNav("sentiment" as any) }] : []),
       ...(filterNav("metaphor") ? [{ id: "nav.metaphor", label: "Go to Metaphor", run: () => ui.setActiveNav("metaphor" as any) }] : []),
+      ...(filterNav("vector-kwic") ? [{ id: "nav.vector-kwic", label: "Go to Vector KWIC", run: () => ui.setActiveNav("vector-kwic" as any) }] : []),
+      ...(filterNav("learner-caf") ? [{ id: "nav.learner-caf", label: "Go to CAF Report", run: () => ui.setActiveNav("learner-caf" as any) }] : []),
+      ...(filterNav("learner-compare") ? [{ id: "nav.learner-compare", label: "Go to CIA Compare", run: () => ui.setActiveNav("learner-compare" as any) }] : []),
+      ...(filterNav("learner-errors") ? [{ id: "nav.learner-errors", label: "Go to Error Patterns", run: () => ui.setActiveNav("learner-errors" as any) }] : []),
       ...(filterNav("arabic") ? [{ id: "nav.arabic", label: "Go to Arabic Tools", run: () => ui.setActiveNav("arabic" as any) }] : []),
-      { id: "nav.vision", label: "Go to Vision Suite", run: () => ui.setActiveNav("vision") },
       { id: "nav.assistant", label: "Go to AI Assistant", run: () => ui.setActiveNav("assistant") },
       { id: "nav.settings", label: "Go to Settings", run: () => ui.setActiveNav("settings") },
       { id: "nav.userguide", label: "Go to User Guide", run: () => ui.setActiveNav("userguide") },

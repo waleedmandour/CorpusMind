@@ -41,6 +41,8 @@ import {
   type CleaningOptions,
 } from "@/lib/api";
 import { useApp } from "@/store/app";
+import { useUI } from "@/store/ui";
+import { t } from "@/lib/i18n";
 
 type CorpusMode = "target" | "reference";
 
@@ -212,8 +214,10 @@ function CorpusListPanel({ mode }: { mode: CorpusMode }) {
         <h2>{isReference ? "Reference Corpora" : "Your Corpora"}</h2>
         {activeProjectId && (
           <NewCorpusDialog
-            onCreate={(name, lang, genre) => {
-              api.createCorpus(activeProjectId, name, lang, genre)
+            onCreate={(name, lang, genre, l1, proficiency) => {
+              // v1.2.0: optional learner facets (L1 + CEFR proficiency) passed
+              // through to the engine (Corpus.l1 / Corpus.proficiency).
+              api.createCorpus(activeProjectId, name, lang, genre, l1, proficiency)
                 .then(() => {
                   qc.invalidateQueries({ queryKey: ["corpora"] });
                 })
@@ -1915,11 +1919,15 @@ function ReferenceUpload() {
 
 // ─── New Corpus Dialog ────────────────────────────────────────────
 
-function NewCorpusDialog({ onCreate }: { onCreate: (name: string, language: string, genre: string) => void }) {
+function NewCorpusDialog({ onCreate }: { onCreate: (name: string, language: string, genre: string, l1: string, proficiency: string) => void }) {
+  const lang = useUI((s) => s.lang);
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [language, setLanguage] = useState("en");
   const [genre, setGenre] = useState("mixed");
+  // v1.2.0: optional learner facets — blank means "not specified".
+  const [l1, setL1] = useState("");
+  const [proficiency, setProficiency] = useState("");
 
   return (
     <>
@@ -1956,12 +1964,33 @@ function NewCorpusDialog({ onCreate }: { onCreate: (name: string, language: stri
                 <option value="medical">Medical</option>
               </select>
             </label>
+            {/* v1.2.0: compact optional learner-facets row (Learner Research) */}
+            <div className="learner-facets-row">
+              <label>
+                {t(lang, "lr_l1")}:
+                <input type="text" value={l1} onChange={(e) => setL1(e.target.value)} placeholder="e.g. Arabic" />
+              </label>
+              <label>
+                {t(lang, "lr_proficiency")}:
+                <select value={proficiency} onChange={(e) => setProficiency(e.target.value)}>
+                  <option value="">—</option>
+                  <option value="A1">A1</option>
+                  <option value="A2">A2</option>
+                  <option value="B1">B1</option>
+                  <option value="B2">B2</option>
+                  <option value="C1">C1</option>
+                  <option value="C2">C2</option>
+                </select>
+              </label>
+            </div>
             <div className="modal-actions">
               <button onClick={() => setOpen(false)}>Cancel</button>
               <button className="primary" disabled={!name.trim()} onClick={() => {
-                onCreate(name, language, genre);
+                onCreate(name, language, genre, l1.trim(), proficiency);
                 setOpen(false);
                 setName("");
+                setL1("");
+                setProficiency("");
               }}>Create</button>
             </div>
           </div>

@@ -9,14 +9,16 @@
  *   - Active corpus card with language badge
  *   - Footer with license + local-first indicator
  *
- * Groups:
- *   Overview      — Home
- *   Corpora       — Your Corpus + Reference Corpus
- *   Analysis Tools — Concordance, Frequency, Collocation, Keyness, etc.
- *   Arabic        — Arabic Tools
- *   Vision        — Vision Suite
- *   AI            — AI Assistant
- *   System        — Settings, User Guide, About
+ * Groups (v1.2.0):
+ *   Overview        — Home
+ *   Corpora         — Your Corpus + Reference Corpus
+ *   Analysis Tools  — Concordance, Vector KWIC, Frequency, Collocation, Keyness, etc.
+ *   Learner Research — CAF Report, CIA Compare, Error Patterns
+ *   Arabic          — Arabic Tools
+ *   AI              — AI Assistant
+ *   System          — Settings, User Guide, About
+ *   (The parent-app "Vision Suite" tab was removed in v1.2.0 — the vision
+ *    workbench lives in the CorpusMind Lens companion.)
  */
 import clsx from "clsx";
 import { useUI, type NavTarget } from "@/store/ui";
@@ -59,6 +61,7 @@ const NAV_GROUPS: NavGroup[] = [
     labelKey: "nav_analyze",
     items: [
       { id: "concordance", labelKey: "nav_concordance", icon: "\u2727" },
+      { id: "vector-kwic", labelKey: "nav_vector_kwic", icon: "\u2739" },
       { id: "frequency", labelKey: "nav_frequency", icon: "\u2111" },
       { id: "collocation", labelKey: "nav_collocation", icon: "\u2726" },
       { id: "keyness", labelKey: "nav_keyness", icon: "\u2605" },
@@ -74,17 +77,22 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
+    // v1.2.0: Learner Research — CAF, Contrastive Interlanguage Analysis and
+    // rule-based error candidates for learner-corpus work (Granger 1998;
+    // CAF volume 2022; Lu 2012; ERRANT-lineage annotation).
+    id: "learner",
+    labelKey: "nav_learner",
+    items: [
+      { id: "learner-caf", labelKey: "nav_learner_caf", icon: "\u03A3" },
+      { id: "learner-compare", labelKey: "nav_learner_compare", icon: "\u21C4" },
+      { id: "learner-errors", labelKey: "nav_learner_errors", icon: "\u2691" },
+    ],
+  },
+  {
     id: "arabic",
     labelKey: "nav_arabic",
     items: [
       { id: "arabic", labelKey: "nav_arabic_tools", icon: "\u0639" },
-    ],
-  },
-  {
-    id: "vision",
-    labelKey: "nav_vision",
-    items: [
-      { id: "vision", labelKey: "nav_vision_suite", icon: "\u25A3" },
     ],
   },
   {

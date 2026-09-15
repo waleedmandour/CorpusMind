@@ -25,8 +25,8 @@ import { VisionCorporaView } from "@/views/VisionCorporaView";
 import { ConcordancerView } from "@/views/ConcordancerView";
 import { AnalysisView } from "@/views/AnalysisView";
 import { ArabicView } from "@/views/ArabicView";
-import { VisionView } from "@/views/VisionView";
 import { SettingsView } from "@/views/SettingsView";
+import { LearnerResearchView } from "@/views/LearnerResearchView";
 import { UserGuideView } from "@/views/UserGuideView";
 import { applyHtmlAttrs, useUI } from "@/store/ui";
 import { useApp } from "@/store/app";
@@ -176,8 +176,19 @@ export default function App() {
           {activeNav === "vocab" && <AnalysisView />}
           {activeNav === "sentiment" && <AnalysisView />}
           {activeNav === "metaphor" && <AnalysisView />}
+          {/* v1.2.0: Vector KWIC (semantic re-ranking, bge-m3) reuses the
+              AnalysisView shell with its own tab. */}
+          {activeNav === "vector-kwic" && <AnalysisView />}
+          {/* v1.2.0: Learner Research — CAF Report, CIA Compare, Error Patterns. */}
+          {activeNav === "learner-caf" && <LearnerResearchView mode="caf" />}
+          {activeNav === "learner-compare" && <LearnerResearchView mode="compare" />}
+          {activeNav === "learner-errors" && <LearnerResearchView mode="errors" />}
           {activeNav === "arabic" && <ArabicView />}
-          {activeNav === "vision" && (isLensMode ? <VisionCorporaView /> : <VisionView />)}
+          {/* v1.2.0: the parent-app "vision" route was removed. VisionView.tsx
+              stays in the codebase because it exports shared panels consumed
+              by VisionCorporaView; the Lens shell renders VisionCorporaView
+              for "corpus-target". Stale persisted "vision" targets are
+              auto-redirected by the Lens guard in store/ui.ts. */}
           {activeNav === "assistant" && <AssistantView />}
           {activeNav === "settings" && <SettingsView />}
           {activeNav === "userguide" && <UserGuideView />}

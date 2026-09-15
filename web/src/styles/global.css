@@ -2168,8 +2168,12 @@ code, pre { font-family: var(--font-mono); }
   inset-block-end: 128px;
   inset-inline-end: 22px;
   z-index: 1500;
-  inline-size: min(390px, calc(100vw - 32px));
-  block-size: min(62vh, 620px);
+  /* v1.2.0 (Issue 7b): the 390px drawer squeezed LLM responses into a narrow
+     column — long words wrapped awkwardly and evidence snippets truncated.
+     Widened to 560px (still viewport-capped), taller, and the message body
+     now wraps long tokens + preserves line breaks (see .ai-drawer-msg). */
+  inline-size: min(560px, calc(100vw - 32px));
+  block-size: min(72vh, 720px);
   display: flex;
   flex-direction: column;
   background: var(--bg-elevated);
@@ -2177,6 +2181,14 @@ code, pre { font-family: var(--font-mono); }
   border-radius: var(--radius-md);
   box-shadow: 0 12px 34px rgba(0, 0, 0, 0.28);
   overflow: hidden;
+}
+/* Small screens keep a comfortable margin instead of the fixed offset. */
+@media (max-width: 640px) {
+  .ai-drawer {
+    inset-inline-end: 16px;
+    inset-block-end: 112px;
+    inline-size: min(480px, calc(100vw - 32px));
+  }
 }
 .ai-drawer-header {
   display: flex;
@@ -2228,6 +2240,22 @@ code, pre { font-family: var(--font-mono); }
      grounded "The tool results indicate…" summaries) were too small. */
   font-size: 14px;
   line-height: 1.6;
+  /* v1.2.0 (Issue 7b): render LLM responses properly — keep the model's
+     line breaks (lists, snippets) and wrap long tokens/URLs instead of
+     overflowing or squeezing the column. */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  min-inline-size: 0;
+}
+.ai-drawer-msg code,
+.ai-drawer-msg pre {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  background: rgba(127, 127, 127, 0.12);
+  border-radius: 4px;
+  padding: 0 3px;
+  overflow-wrap: anywhere;
 }
 .ai-drawer-msg.user {
   align-self: flex-end;
@@ -6411,4 +6439,300 @@ html[dir="rtl"] .toggle-switch input:checked + .toggle-slider::before {
   display: flex;
   gap: var(--space-2);
   margin-block-start: var(--space-2);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   v1.2.0 — Learner Research views, model fit chips, companion cards
+   Appended at the end per the v1.2.0 frontend task (tasks 7-9).
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* Learner Research shell (caf / compare / errors modes) */
+.learner-view {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.learner-header h2 {
+  margin-block-end: var(--space-1);
+}
+.learner-header .hint {
+  margin-block: 0;
+}
+
+/* Index tables: label + value + description rows (overall CAF, keyness,
+   deltas, error candidates). Same visual language as .data-table. */
+.learner-index-table {
+  inline-size: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.learner-index-table th,
+.learner-index-table td {
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+  text-align: start;
+  vertical-align: top;
+}
+.learner-index-table th {
+  background: var(--bg-subtle);
+  font-weight: 600;
+  position: sticky;
+  inset-block-start: 0;
+}
+.learner-index-table td.learner-index-name {
+  font-weight: 600;
+  white-space: nowrap;
+}
+.learner-index-table td.learner-index-value {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+  white-space: nowrap;
+}
+.learner-index-table td.learner-index-desc {
+  color: var(--text-muted, var(--text-subtle));
+  font-size: 12px;
+}
+.learner-index-table td.learner-sentence {
+  max-inline-size: 34ch;
+  overflow-wrap: anywhere;
+}
+
+/* Grouped sub-reports, notes, citations, details blocks */
+.learner-group-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+  padding: var(--space-3);
+}
+.learner-group-card h4 {
+  margin-block: 0 var(--space-2);
+}
+.learner-details {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+}
+.learner-details summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13px;
+}
+.learner-citations,
+.learner-notes {
+  margin: var(--space-2) 0 0;
+  padding-inline-start: var(--space-5);
+  font-size: 12.5px;
+  color: var(--text-muted, var(--text-subtle));
+}
+.learner-notes li,
+.learner-citations li {
+  margin-block: var(--space-1);
+}
+.learner-ai-textarea {
+  inline-size: 100%;
+  min-block-size: 120px;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+}
+
+/* Sentence-length histogram (reuses the .bar-row/.bar-track pattern) */
+.learner-histogram {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+/* Error candidates: rule checkboxes row + per-rule count chips */
+.learner-rules-row {
+  display: inline-flex;
+  gap: var(--space-2);
+  align-items: center;
+  flex-wrap: wrap;
+  font-size: 12.5px;
+}
+.learner-rules-row label {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  white-space: nowrap;
+}
+.learner-counts {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  flex-wrap: wrap;
+}
+.learner-counts-label {
+  font-size: 12px;
+  color: var(--text-muted, var(--text-subtle));
+  font-weight: 600;
+}
+.learner-count-chip {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  font-variant-numeric: tabular-nums;
+}
+
+/* New-corpus dialog: compact optional learner-facets row (L1 + CEFR) */
+.learner-facets-row {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+.learner-facets-row label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12.5px;
+  flex: 1;
+  min-inline-size: 120px;
+}
+
+/* Vector KWIC panel header + 409 embedding-model setup card */
+.vector-kwic-header h3 {
+  margin-block: 0 var(--space-1);
+}
+.vector-kwic-header .hint {
+  margin-block: 0;
+}
+.vector-kwic-setup {
+  border: 1px solid var(--border);
+  border-inline-start: 3px solid var(--brand-500);
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+  padding: var(--space-3);
+  font-size: 13px;
+}
+.vector-kwic-setup-row {
+  margin-block-start: var(--space-2);
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+.vector-kwic-setup .hint {
+  margin-block: var(--space-1) 0;
+}
+
+/* ── Settings: catalogue controls + fit chips + task badges ────────────── */
+.ollama-catalogue-controls {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  flex-wrap: wrap;
+  margin-block: var(--space-2);
+}
+.ollama-source-tabs {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.ollama-source-tab {
+  border: none;
+  background: transparent;
+  padding: 4px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--text-muted, var(--text-subtle));
+}
+.ollama-source-tab.active {
+  background: var(--brand-500);
+  color: #fff;
+  font-weight: 600;
+}
+.ollama-task-chips {
+  display: inline-flex;
+  gap: var(--space-1);
+}
+.ollama-task-chip {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  padding: 2px 10px;
+  font-size: 11.5px;
+  cursor: pointer;
+  color: var(--text-muted, var(--text-subtle));
+}
+.ollama-task-chip.active {
+  border-color: var(--brand-500);
+  color: var(--brand-500);
+  font-weight: 600;
+}
+.ollama-machine-line {
+  margin-block: 0 var(--space-2);
+  font-size: 12px;
+}
+.ollama-quant-select {
+  max-inline-size: 220px;
+  font-size: 12px;
+}
+
+/* Rule-of-thumb fit chip — color variants per machine-memory verdict */
+.fit-chip {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  border: 1px solid transparent;
+  white-space: nowrap;
+  cursor: help;
+}
+.fit-chip.fit-gpu {
+  background: color-mix(in srgb, var(--success, #2d8a4e) 14%, transparent);
+  color: var(--success, #2d8a4e);
+  border-color: color-mix(in srgb, var(--success, #2d8a4e) 45%, transparent);
+}
+.fit-chip.fit-cpu {
+  background: color-mix(in srgb, var(--brand-500) 12%, transparent);
+  color: var(--brand-500);
+  border-color: color-mix(in srgb, var(--brand-500) 40%, transparent);
+}
+.fit-chip.fit-tight {
+  background: color-mix(in srgb, var(--warning, #b7791f) 14%, transparent);
+  color: var(--warning, #b7791f);
+  border-color: color-mix(in srgb, var(--warning, #b7791f) 45%, transparent);
+}
+.fit-chip.fit-toobig {
+  background: color-mix(in srgb, var(--danger, #c53030) 12%, transparent);
+  color: var(--danger, #c53030);
+  border-color: color-mix(in srgb, var(--danger, #c53030) 45%, transparent);
+}
+.fit-chip.fit-unknown {
+  background: var(--bg-subtle);
+  color: var(--text-muted, var(--text-subtle));
+  border-color: var(--border);
+}
+
+/* Model task badge (embedding / text) on catalogue cards */
+.model-task-badge {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 700;
+  background: color-mix(in srgb, var(--brand-500) 12%, transparent);
+  color: var(--brand-500);
+  border: 1px solid color-mix(in srgb, var(--brand-500) 40%, transparent);
+  white-space: nowrap;
+}
+
+/* Companion apps cards (User Guide "Companion Apps" section) */
+.companion-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--space-3);
+  margin-block-start: var(--space-3);
+}
+.companion-cards > * {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+  padding: var(--space-3);
 }

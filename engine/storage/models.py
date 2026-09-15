@@ -66,6 +66,12 @@ class Corpus(Base):
     # Register/genre metadata (academic, news, spoken, fiction, blog, legal, medical, etc.)
     # Used for subcorpus filtering in analysis views + register-aware keyness.
     genre: Mapped[str] = mapped_column(String(64), default="mixed")
+    # v1.2.0 Learner Research: optional learner-corpus facets (ALC-style).
+    # l1 = the learners' first language (e.g. "Arabic", "L1:ar"),
+    # proficiency = CEFR level (A1–C2) when known. Optional, free-form;
+    # per-document overrides live in Document.meta under the same keys.
+    l1: Mapped[str] = mapped_column(String(64), default="")
+    proficiency: Mapped[str] = mapped_column(String(16), default="")
     # The pipeline recipe: tokenizer/tagger/parser + versions (§8.1)
     pipeline_recipe: Mapped[dict] = mapped_column(JSON, default=dict)
     # Aggregate stats cache (token count, type count, etc.) — recomputed on ingestion
@@ -368,3 +374,33 @@ class StopwordList(Base):
     language: Mapped[str] = mapped_column(String(8), default="en")
     words: Mapped[list] = mapped_column(JSON, default=list)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
+class KwicVectorCache(Base):
+    """Sentence-embedding cache for Vector KWIC (v1.2.0).
+
+    Embedding every KWIC context window is expensive (one Ollama call per
+    line), so vectors are cached per (corpus, line key, model). The cache is
+    keyed by the embedding model name as well — switching models (e.g.
+    bge-m3 → nomic-embed-text) invalidates rows naturally because the
+    lookup filters on the exact model. `line_key` embeds the context window
+    size (`{line_id}|w{window}`) so widening the window recomputes rather
+    than reusing mismatched-context vectors.
+    """
+    __tablename__ = "kwic_vector_cache"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    corpus_id: Mapped[str] = mapped_column(String(16), nullable=False, index=True)
+    line_key: Mapped[str] = mapped_column(String(256), nullable=False)
+    model: Mapped[str] = mapped_column(String(128), nullable=False)
+    # JSON-serialized list of floats (bge-m3 = 1024 dims). TEXT under SQLite.
+    vector: Mapped[list] = mapped_column(JSON, default=list)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
+Index(
+    "ix_kwic_vector_cache_lookup",
+    KwicVectorCache.corpus_id,
+    KwicVectorCache.model,
+    KwicVectorCache.line_key,
+)

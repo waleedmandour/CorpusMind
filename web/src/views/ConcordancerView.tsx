@@ -17,6 +17,8 @@ import clsx from "clsx";
 
 import { api, exportWithFeedback, type ExportFormat, type ConcordanceSortSpec } from "@/lib/api";
 import { useApp } from "@/store/app";
+import { useUI } from "@/store/ui";
+import { t } from "@/lib/i18n";
 import { ExportButton } from "@/components/ExportButton";
 
 const LEVELS = ["word", "lemma", "pos", "root", "pattern"] as const;
@@ -29,12 +31,15 @@ const PAGE_SIZE = 200;
 
 export function ConcordancerView() {
   const cid = useApp((s) => s.activeCorpusId);
+  const lang = useUI((s) => s.lang);
   const [query, setQuery] = useState("");
   const [level, setLevel] = useState<typeof LEVELS[number]>("word");
   const [window, setWindow] = useState(5);
   const [caseSensitive, setCaseSensitive] = useState(false);
   const [randomSample, setRandomSample] = useState(false);
   const [regex, setRegex] = useState(false);
+  // v1.2.0: Arabic normalization before matching (alef/ya/ta-marbuta + dediac).
+  const [normalizeArabic, setNormalizeArabic] = useState(false);
   // v1.0.1 KWIC sort: up to 3 levels, each (side, offset)
   const [sortLevels, setSortLevels] = useState<ConcordanceSortSpec[]>([]);
   // Issue 17 fix: the toggle previously did nothing — random_sample was never
@@ -43,13 +48,13 @@ export function ConcordancerView() {
   // the result metadata so the sample is reproducible.
   const [sampleSeed, setSampleSeed] = useState<number | null>(null);
   const [offset, setOffset] = useState(0);
-  const [submitted, setSubmitted] = useState<{ q: string; l: string; w: number; cs: boolean; rs: boolean; seed: number | null; rx: boolean; sort: ConcordanceSortSpec[] } | null>(null);
+  const [submitted, setSubmitted] = useState<{ q: string; l: string; w: number; cs: boolean; rs: boolean; seed: number | null; rx: boolean; sort: ConcordanceSortSpec[]; nm: boolean } | null>(null);
   // Issue 5: visible export status so the user knows what happened
   const [exportStatus, setExportStatus] = useState<{ kind: "success" | "error" | "info"; msg: string } | null>(null);
 
   const result = useQuery({
     queryKey: ["concordance", cid, submitted, offset],
-    queryFn: () => api.concordance(cid!, submitted!.q, submitted!.l as any, submitted!.w, PAGE_SIZE, offset, submitted!.cs, submitted!.rs ? 100 : null, submitted!.seed, submitted!.rx, submitted!.sort),
+    queryFn: () => api.concordance(cid!, submitted!.q, submitted!.l as any, submitted!.w, PAGE_SIZE, offset, submitted!.cs, submitted!.rs ? 100 : null, submitted!.seed, submitted!.rx, submitted!.sort, submitted!.nm),
     enabled: !!cid && !!submitted,
   });
 
@@ -57,7 +62,7 @@ export function ConcordancerView() {
     if (!query.trim()) return;
     setOffset(0);
     setSampleSeed(randomSample ? Math.floor(Math.random() * 1_000_000) : null);
-    setSubmitted({ q: query.trim(), l: level, w: window, cs: caseSensitive, rs: randomSample, seed: sampleSeed, rx: regex, sort: sortLevels });
+    setSubmitted({ q: query.trim(), l: level, w: window, cs: caseSensitive, rs: randomSample, seed: sampleSeed, rx: regex, sort: sortLevels, nm: normalizeArabic });
   };
 
   // Issue 5: wrap in exportWithFeedback so both backend errors (engine
@@ -109,6 +114,10 @@ export function ConcordancerView() {
           <input type="checkbox" checked={randomSample} onChange={(e) => setRandomSample(e.target.checked)} />
           Random sample
         </label>
+        <label title={t(lang, "arb_normalize_hint")}>
+          <input type="checkbox" checked={normalizeArabic} onChange={(e) => setNormalizeArabic(e.target.checked)} />
+          {t(lang, "arb_normalize")}
+        </label>
         <select
           value=""
           onChange={(e) => {
@@ -153,6 +162,7 @@ export function ConcordancerView() {
             {result.data.query.regex ? " (regex)" : ""}
             {query.trim().includes(" ") && !regex && " (phrase)"}
             {caseSensitive && " (case sensitive)"}
+            {submitted?.nm && " (Arabic-normalized)"}
             {submitted?.rs && " (random sample of 100, seed " + (result.data.query.sample_seed ?? submitted.seed) + ")"}
             {submitted?.sort?.length ? " (sorted " + submitted.sort.map((s) => (s.side === "left" ? "L" : "R") + s.offset).join(", ") + ")" : ""}
             {result.data.query.total_capped ? " (match set capped at 20,000 — total is a lower bound)" : ""}

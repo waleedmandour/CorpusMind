@@ -65,6 +65,13 @@ class Settings(BaseSettings):
     # --- Reproducibility ---
     enable_methods_export: bool = True
 
+    # --- Embeddings (v1.2.0 Vector KWIC) ---
+    # Model used by OllamaProvider.embed() when the caller does not name one.
+    # Chain: request model → this setting (env CORPUSMIND_EMBEDDING_MODEL)
+    # → the hardcoded default below. bge-m3 is multilingual (100+ languages,
+    # strong Arabic) and is the recommended model for Vector KWIC.
+    embedding_model: str = "bge-m3"
+
     # --- Privacy / safety ---
     # If True, any request that would route to CloudProvider returns 403.
     # Belt-and-suspenders alongside the UI's cloud indicator (§7.5).

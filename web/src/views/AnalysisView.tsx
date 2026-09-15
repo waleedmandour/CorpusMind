@@ -7,13 +7,14 @@
  * view receives "frequency" as the active tab and renders that panel.
  * The internal tab bar also allows switching between analyses.
  */
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
 
 import { api, exportWithFeedback, type ExportFormat, type ReferenceCorpusEntry, type POSAnalysisResult, type SemanticAnalysisResult } from "@/lib/api";
 import { useApp } from "@/store/app";
 import { useUI } from "@/store/ui";
+import { t } from "@/lib/i18n";
 import { ExportButton } from "@/components/ExportButton";
 import { CollocationNetwork } from "@/components/CollocationNetwork";
 
@@ -152,10 +153,13 @@ function escapeHtml(s: string): string {
 type Tab =
   | "frequency" | "collocation" | "keyness" | "dispersion"
   | "ngrams" | "pos" | "grammar" | "dep" | "discourse" | "vocab" | "sentiment" | "metaphor"
-  | "documents" | "readability" | "groups";
+  | "documents" | "readability" | "groups"
+  // v1.2.0: semantic concordancing (Anthony 2025) lives in the Analysis shell.
+  | "vector";
 
 const NAV_TO_TAB: Record<string, Tab> = {
   frequency: "frequency",
+  "vector-kwic": "vector", // v1.2.0: sidebar entry lands on the Vector KWIC tab
   collocation: "collocation",
   keyness: "keyness",
   dispersion: "dispersion",
@@ -171,6 +175,8 @@ const NAV_TO_TAB: Record<string, Tab> = {
 
 const TABS: { id: Tab; label: string; phase: 1 | 2 }[] = [
   { id: "frequency", label: "Frequency", phase: 1 },
+  // v1.2.0: semantic KWIC right after the classic frequency list.
+  { id: "vector", label: "Vector KWIC", phase: 2 },
   { id: "collocation", label: "Collocation", phase: 1 },
   { id: "keyness", label: "Keyness", phase: 1 },
   { id: "dispersion", label: "Dispersion", phase: 1 },
@@ -215,6 +221,7 @@ export function AnalysisView() {
       </div>
 
       {tab === "frequency" && <FrequencyPanel cid={cid} />}
+      {tab === "vector" && <VectorKwicPanel cid={cid} />}
       {tab === "collocation" && <CollocationPanel cid={cid} />}
       {tab === "keyness" && <KeynessPanel cid={cid} />}
       {tab === "dispersion" && <DispersionPanel cid={cid} />}
@@ -235,17 +242,20 @@ export function AnalysisView() {
 
 
 function FrequencyPanel({ cid }: { cid: string }) {
+  const lang = useUI((s) => s.lang);
   const [unit, setUnit] = useState<"word" | "lemma" | "pos" | "root" | "pattern">("word");
   const [minFreq, setMinFreq] = useState(1);
   const [stopwordListId, setStopwordListId] = useState<string | null>(null);
+  // v1.2.0: Arabic normalization (alef/ya/ta-marbuta unification + dediac) before aggregation.
+  const [normalizeArabic, setNormalizeArabic] = useState(false);
   // v1.0.1: optional stopword filter
   const stopwordLists = useQuery({
     queryKey: ["stopword-lists"],
     queryFn: () => api.stopwordLists.list(),
   });
   const result = useQuery({
-    queryKey: ["frequency", cid, unit, minFreq, stopwordListId],
-    queryFn: () => api.frequency(cid, unit, minFreq, 200, false, stopwordListId),
+    queryKey: ["frequency", cid, unit, minFreq, stopwordListId, normalizeArabic],
+    queryFn: () => api.frequency(cid, unit, minFreq, 200, false, stopwordListId, normalizeArabic),
   });
 
   const exportStatus = useExportStatus();
@@ -284,6 +294,10 @@ function FrequencyPanel({ cid }: { cid: string }) {
             ))}
           </select>
         </label>
+        <label title={t(lang, "arb_normalize_hint")}>
+          <input type="checkbox" checked={normalizeArabic} onChange={(e) => setNormalizeArabic(e.target.checked)} />
+          {t(lang, "arb_normalize")}
+        </label>
         <ExportButton onExport={onExport} disabled={!result.data} />
       </div>
       {exportStatus.el}
@@ -314,6 +328,7 @@ function FrequencyPanel({ cid }: { cid: string }) {
 
 
 function CollocationPanel({ cid }: { cid: string }) {
+  const lang = useUI((s) => s.lang);
   const [node, setNode] = useState("");
   const [level, setLevel] = useState<"word" | "lemma">("lemma");
   const [window, setWindow] = useState(5);
@@ -322,7 +337,9 @@ function CollocationPanel({ cid }: { cid: string }) {
   const [posExclude, setPosExclude] = useState<string>("");
   const [stopwordListId, setStopwordListId] = useState<string | null>(null);
   const [minFreq, setMinFreq] = useState(3);
-  const [submitted, setSubmitted] = useState<{ n: string; l: string; w: number; mf: number; sl: number | null; sr: number | null; pe: string[]; sw: string | null } | null>(null);
+  // v1.2.0: Arabic normalization toggle, folded into the submitted snapshot.
+  const [normalizeArabic, setNormalizeArabic] = useState(false);
+  const [submitted, setSubmitted] = useState<{ n: string; l: string; w: number; mf: number; sl: number | null; sr: number | null; pe: string[]; sw: string | null; nm: boolean } | null>(null);
 
   const stopwordLists = useQuery({
     queryKey: ["stopword-lists"],
@@ -335,6 +352,7 @@ function CollocationPanel({ cid }: { cid: string }) {
       span_left: submitted!.sl, span_right: submitted!.sr,
       pos_exclude: submitted!.pe.length ? submitted!.pe : null,
       stopword_list_id: submitted!.sw,
+      normalize_arabic: submitted!.nm,
     }),
     enabled: !!submitted,
   });
@@ -346,6 +364,7 @@ function CollocationPanel({ cid }: { cid: string }) {
       sl: spanLeft, sr: spanRight,
       pe: posExclude.split(/[\s,]+/).map((s) => s.trim().toUpperCase()).filter(Boolean),
       sw: stopwordListId,
+      nm: normalizeArabic,
     });
   };
 
@@ -426,6 +445,10 @@ function CollocationPanel({ cid }: { cid: string }) {
             ))}
           </select>
         </label>
+        <label title={t(lang, "arb_normalize_hint")}>
+          <input type="checkbox" checked={normalizeArabic} onChange={(e) => setNormalizeArabic(e.target.checked)} />
+          {t(lang, "arb_normalize")}
+        </label>
         <button onClick={onSearch} disabled={!node.trim()}>Compute</button>
         <ExportButton onExport={onExport} disabled={!result.data} />
         <ExportButton
@@ -468,7 +491,7 @@ function CollocationPanel({ cid }: { cid: string }) {
                 level={submitted!.l as "word" | "lemma"}
                 window={submitted!.w}
                 minFreq={submitted!.mf}
-                onSetCenter={(word) => { setNode(word); setSubmitted({ n: word, l: level, w: window, mf: minFreq, sl: spanLeft, sr: spanRight, pe: posExclude.split(/[\s,]+/).map((s) => s.trim().toUpperCase()).filter(Boolean), sw: stopwordListId }); }}
+                onSetCenter={(word) => { setNode(word); setSubmitted({ n: word, l: level, w: window, mf: minFreq, sl: spanLeft, sr: spanRight, pe: posExclude.split(/[\s,]+/).map((s) => s.trim().toUpperCase()).filter(Boolean), sw: stopwordListId, nm: normalizeArabic }); }}
               />
             </>
           )}
@@ -482,11 +505,16 @@ function CollocationPanel({ cid }: { cid: string }) {
 
 
 function KeynessPanel({ cid }: { cid: string }) {
+  const lang = useUI((s) => s.lang);
   const referenceCorpusId = useApp((s) => s.referenceCorpusId);
   const setReferenceCorpus = useApp((s) => s.setReferenceCorpus);
   const selectedReferenceName = useApp((s) => s.selectedReferenceName);
   const [minFreq, setMinFreq] = useState(5);
   const [stopwordListId, setStopwordListId] = useState<string | null>(null);
+  // v1.2.0: Arabic normalization for the engine-corpus keyness path (bundled
+  // frequency lists are pre-normalized upstream, so the flag only applies to
+  // the /keyness endpoint).
+  const [normalizeArabic, setNormalizeArabic] = useState(false);
   const stopwordLists = useQuery({
     queryKey: ["stopword-lists"],
     queryFn: () => api.stopwordLists.list(),
@@ -508,10 +536,10 @@ function KeynessPanel({ cid }: { cid: string }) {
 
   // Use the uploaded reference corpus if set, otherwise the selected bundled reference
   const result = useQuery({
-    queryKey: ["keyness", cid, referenceCorpusId, selectedReferenceName, minFreq, stopwordListId],
+    queryKey: ["keyness", cid, referenceCorpusId, selectedReferenceName, minFreq, stopwordListId, normalizeArabic],
     queryFn: () => {
       if (referenceCorpusId) {
-        return api.keyness(cid, referenceCorpusId, minFreq, 200, stopwordListId);
+        return api.keyness(cid, referenceCorpusId, minFreq, 200, stopwordListId, normalizeArabic);
       } else if (selectedReferenceName) {
         return api.keynessWithReference(cid, selectedReferenceName, minFreq, 200) as any;
       }
@@ -603,6 +631,10 @@ function KeynessPanel({ cid }: { cid: string }) {
               <option key={sw.id} value={sw.id}>{sw.name}</option>
             ))}
           </select>
+        </label>
+        <label title={t(lang, "arb_normalize_hint")}>
+          <input type="checkbox" checked={normalizeArabic} onChange={(e) => setNormalizeArabic(e.target.checked)} />
+          {t(lang, "arb_normalize")}
         </label>
         <ExportButton onExport={onExport} disabled={!result.data} />
         <button onClick={onMethodsPdf}>Methods PDF</button>
@@ -1505,6 +1537,255 @@ function GroupFrequencyPanel({ cid }: { cid: string }) {
             normalized so groups of different sizes are directly comparable.
             Documents without the field are grouped under "(uncategorised)".
           </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+
+// =========================================================================
+// v1.2.0 — Vector KWIC (semantic concordancing; Anthony 2025, ACL 5(3))
+//
+// Mode A: a keyword concordance (regex/case toggles omitted — the node word
+// is re-ranked by embedding similarity). Mode B: whole-sentence semantic
+// search when no node is given. The engine decides and reports `mode`.
+// Requires a local embedding model (bge-m3 recommended); when it is missing
+// the engine answers 409 with {error:"embedding_model_missing", model, ...}
+// and we render a one-click `ollama pull` setup card with live progress.
+// =========================================================================
+
+/** Body of the engine's HTTP 409 (embedding_model_missing) response. */
+interface VectorKwicSetup {
+  error: string;
+  model: string;
+  hint?: string;
+  note?: string;
+  settings_url?: string;
+}
+
+function VectorKwicPanel({ cid }: { cid: string }) {
+  const lang = useUI((s) => s.lang);
+  const [query, setQuery] = useState("");
+  const [node, setNode] = useState("");
+  const [window, setWindow] = useState(6);
+  const [topK, setTopK] = useState(50);
+  const [minSim, setMinSim] = useState(0);
+  const [normalizeArabic, setNormalizeArabic] = useState(false);
+
+  const exportStatus = useExportStatus();
+
+  // 409 setup-card state: the missing model + pull progress + "re-run" state.
+  const [setup, setSetup] = useState<VectorKwicSetup | null>(null);
+  const [pulledModel, setPulledModel] = useState<string | null>(null);
+  const [pullState, setPullState] = useState<{ pct: number; status: string } | null>(null);
+  const pullIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Never leak an in-flight pull poll past unmount (same guard as SettingsView).
+  useEffect(() => () => {
+    if (pullIntervalRef.current) clearInterval(pullIntervalRef.current);
+  }, []);
+
+  const runMutation = useMutation({
+    mutationFn: () =>
+      api.vectorKwic(cid, {
+        query: query.trim(),
+        ...(node.trim() ? { node: node.trim() } : {}),
+        level: "word",
+        window,
+        top_k: topK,
+        min_similarity: minSim,
+        normalize_arabic: normalizeArabic,
+      }),
+    onSuccess: () => setSetup(null),
+    onError: (e: Error) => {
+      if (e.message.startsWith("HTTP 409:")) {
+        try {
+          const detail = JSON.parse(e.message.slice("HTTP 409:".length)) as VectorKwicSetup;
+          if (detail?.error === "embedding_model_missing") {
+            setSetup(detail);
+            setPulledModel(null);
+          }
+        } catch {
+          // Malformed 409 body — fall through to the generic error display.
+        }
+      }
+    },
+  });
+
+  const pullSetupModel = async () => {
+    if (!setup?.model) return;
+    const model = setup.model;
+    // Overlapping pulls stop the previous poll (Issue 21.3 pattern).
+    if (pullIntervalRef.current) clearInterval(pullIntervalRef.current);
+    setPullState({ pct: 0, status: "starting" });
+    try {
+      await api.ollamaPull(model);
+      const poll = setInterval(async () => {
+        try {
+          const status = await api.ollamaPullStatus(model);
+          const pct = status.total > 0 ? Math.round((status.completed / status.total) * 100) : 0;
+          setPullState({ pct, status: status.status });
+          if (status.status === "success" || status.status === "error") {
+            clearInterval(poll);
+            pullIntervalRef.current = null;
+            if (status.status === "success") {
+              setPulledModel(model); // → "re-run" state on the setup card
+            }
+            setPullState(null);
+          }
+        } catch {
+          clearInterval(poll);
+          pullIntervalRef.current = null;
+          setPullState(null);
+        }
+      }, 2000);
+      pullIntervalRef.current = poll;
+    } catch {
+      setPullState(null);
+    }
+  };
+
+  const data = runMutation.data;
+
+  // Defensive guard (same pattern as the other panels); AnalysisView normally
+  // blocks this panel until a corpus is active.
+  if (!cid) return <div className="empty-state">{t(lang, "vk_need_corpus")}</div>;
+
+  return (
+    <div className="panel-content">
+      <div className="vector-kwic-header">
+        <h3>{t(lang, "vk_title")}</h3>
+        <p className="hint">{t(lang, "vk_sub")}</p>
+      </div>
+
+      <div className="toolbar">
+        <label style={{ flex: 2, minWidth: 240 }}>
+          {t(lang, "vk_query")}
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && query.trim() && runMutation.mutate()}
+            placeholder={t(lang, "vk_query_ph")}
+          />
+        </label>
+        <label style={{ flex: 1, minWidth: 160 }}>
+          {t(lang, "vk_node")}
+          <input
+            type="text"
+            value={node}
+            onChange={(e) => setNode(e.target.value)}
+            placeholder={t(lang, "vk_node_ph")}
+          />
+        </label>
+        <label>
+          {t(lang, "vk_window")}
+          <input type="number" min={1} max={20} value={window}
+                 onChange={(e) => setWindow(Number(e.target.value))} />
+        </label>
+        <label>
+          {t(lang, "vk_topk")}
+          <input type="number" min={1} value={topK}
+                 onChange={(e) => setTopK(Number(e.target.value))} />
+        </label>
+        <label>
+          {t(lang, "vk_minsim")}
+          <input type="number" min={0} max={1} step={0.05} value={minSim}
+                 onChange={(e) => setMinSim(Number(e.target.value))} />
+        </label>
+        <label title={t(lang, "arb_normalize_hint")}>
+          <input type="checkbox" checked={normalizeArabic}
+                 onChange={(e) => setNormalizeArabic(e.target.checked)} />
+          {t(lang, "vk_arabic_normalize")}
+        </label>
+        <button onClick={() => runMutation.mutate()} disabled={!query.trim() || runMutation.isPending}>
+          {runMutation.isPending ? t(lang, "vk_running") : t(lang, "vk_run")}
+        </button>
+        <ExportButton
+          onExport={(fmt) => { if (data) downloadJsonResult(data, `vector_kwic.${fmt}`, exportStatus.set); }}
+          disabled={!data}
+        />
+      </div>
+      {exportStatus.el}
+
+      {/* 409 → one-click embedding-model setup card */}
+      {setup && (
+        <div className="vector-kwic-setup" role="status">
+          <strong>{t(lang, "vk_setup_hint")}</strong>{" "}
+          <code>{setup.model}</code>
+          {setup.hint && <div className="hint">{setup.hint}</div>}
+          {setup.note && <div className="hint">{t(lang, "vk_note")}: {setup.note}</div>}
+          {pulledModel === setup.model ? (
+            <div className="vector-kwic-setup-row">
+              <span className="ollama-ready-text">{"\u2713"} {setup.model}</span>
+              <button className="btn-small" onClick={() => runMutation.mutate()}
+                      disabled={runMutation.isPending}>
+                {runMutation.isPending ? t(lang, "vk_running") : t(lang, "vk_run")}
+              </button>
+            </div>
+          ) : pullState ? (
+            <div className="ollama-pull-progress">
+              <div className="ollama-progress-bar" style={{ width: `${pullState.pct}%` }} />
+              <span className="ollama-progress-text">
+                {t(lang, "vk_setup_pulling").replace("{m}", setup.model)}
+                {pullState.status !== "starting" ? ` ${pullState.pct}%` : ""}
+              </span>
+            </div>
+          ) : (
+            <div className="vector-kwic-setup-row">
+              <button className="btn-small" onClick={pullSetupModel}>
+                {t(lang, "vk_setup_run").replace("{m}", setup.model)}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {runMutation.isPending && <div className="empty-state">{t(lang, "vk_running")}</div>}
+      {runMutation.isError && !setup && (
+        <div className="error">Error: {String(runMutation.error)}</div>
+      )}
+
+      {data && (
+        <>
+          <div className="result-meta">
+            <span className="pos-tag pos-other">
+              {data.mode === "semantic" ? t(lang, "vk_mode_semantic") : t(lang, "vk_mode_keyword")}
+            </span>
+            {" "}{t(lang, "vk_model").replace("{m}", data.model)}
+            {" · "}{t(lang, "vk_scanned").replace("{n}", String(data.scanned))}
+            {data.note ? <span className="hint"> — {data.note}</span> : null}
+          </div>
+
+          {data.lines.length === 0 ? (
+            <div className="empty-state">{t(lang, "vk_no_lines")}</div>
+          ) : (
+            <table className="kwic-table">
+              <thead>
+                <tr>
+                  <th>Line ID</th>
+                  <th>Document</th>
+                  <th className="right-align">Left context</th>
+                  <th>Node</th>
+                  <th>Right context</th>
+                  <th>{t(lang, "vk_similarity")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.lines.map((l) => (
+                  <tr key={l.line_id}>
+                    <td className="line-id" title={l.line_id}>{l.line_id.slice(-12)}</td>
+                    <td className="doc" title={l.document_filename}>{l.document_filename}</td>
+                    <td className="left">{l.left}</td>
+                    <td className="node">{l.node}</td>
+                    <td className="right">{l.right}</td>
+                    <td className="similarity" title="Raw cosine similarity">{l.similarity.toFixed(3)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </>
       )}
     </div>

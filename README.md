@@ -34,12 +34,14 @@ run entirely on the researcher's own machine.
 
 ## Status
 
-**Current release: v1.1.0** — both suites are fully functional.
+**Current release: v1.2.0** — both suites are fully functional.
 
 **Suite A (Text):** complete — cleaning (16 options), corpus hub, concordance,
-frequency, collocations, keyness, dispersion, subcorpus filtering, deterministic
-grounded-AI layer, Ollama/LM Studio auto-detection, multi-format + diagram
-export, bilingual (EN/AR) UI, research workflow tools.
+**Vector KWIC** (semantic re-ranking, bge-m3), frequency, collocations, keyness,
+dispersion, subcorpus filtering, deterministic grounded-AI layer, Ollama/LM
+Studio auto-detection, multi-format + diagram export, bilingual (EN/AR) UI,
+research workflow tools, and the **Learner Research** suite (CAF battery, CIA
+compare, error-pattern candidates, L1/CEFR facets, AI-vs-learner comparator).
 
 **Suite B (Vision):** complete — image ingestion with OCR, Visual Grammar
 (Kress & van Leeuwen), multimodal image–text alignment, Vision-LM describe
@@ -47,7 +49,7 @@ with a consent-gated ethical guardrail (§18), batch analysis with recurring
 themes, and image thumbnails.
 
 **Both suites:** installable PWA + two Tauri 2 desktop shells (CorpusMind and
-CorpusMind Lens), 230+ backend tests, ruff-clean, self-hosted Docker image.
+CorpusMind Lens), 400+ backend tests, ruff-clean, self-hosted Docker image.
 
 <details>
 <summary><strong>Phase history (Phase 0 → 6)</strong></summary>
@@ -179,7 +181,7 @@ Health check:
 
 ```bash
 curl http://127.0.0.1:8765/api/v1/health
-# {"status":"ok","engine":"corpusmind-engine","version":"1.1.0"}
+# {"status":"ok","engine":"corpusmind-engine","version":"1.2.0"}
 ```
 
 ### 2. Run the web frontend (PWA)
@@ -415,7 +417,7 @@ If you use CorpusMind in your research, please cite it as:
 
 > Mandour, W., & Ibrahim, W. (2026). *CorpusMind: A local-first, AI-native
 > research environment for corpus linguistics and multimodal discourse
-> analysis* (Version 1.1.0) [Computer software]. Zenodo.
+> analysis* (Version 1.2.0) [Computer software]. Zenodo.
 > https://doi.org/10.5281/zenodo.21226650
 >
 > Dr. Waleed Mandour, Sultan Qaboos University, ORCID: 0000-0002-9262-5993
@@ -430,7 +432,7 @@ If you use CorpusMind in your research, please cite it as:
                    for corpus linguistics and multimodal discourse analysis}},
   month        = jul,
   year         = 2026,
-  version      = {1.1.0},
+  version      = {1.2.0},
   publisher    = {Zenodo},
   doi          = {10.5281/zenodo.21226650},
   url          = {https://doi.org/10.5281/zenodo.21226650}

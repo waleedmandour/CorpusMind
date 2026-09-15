@@ -6,6 +6,134 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
+## [1.2.0] — 2026-09-15 — Learner Research, Vector KWIC, and the companion-first redesign
+
+With v1.1.0 out, the vision workbench moves fully into its home in the
+**CorpusMind Lens** companion, and the main app gains what it was missing
+for learner-corpus research: a **Learner Research** suite (CAF battery,
+Contrastive Interlanguage Analysis, rule-based error candidates), a
+**Vector KWIC** tool grounded in Anthony (2025), a **Hugging Face GGUF
+explorer** in Settings, and Arabic normalization as a first-class toggle
+across the search tools. The welcome flow is now companion-first and fully
+bilingual.
+
+### Added
+
+- **Learner Research** — a new sidebar group (`أبحاث لغة المتعلم`) with three
+  tools grounded in current literature (Housen & Kuiken 2009; the CAF volume
+  2022; Lu 2012; Granger 1998; ERRANT-lineage annotation incl. 2024–25
+  multilingual work):
+  * **CAF Report** (`learner-caf`): Complexity–Accuracy–Fluency battery per
+    corpus or per learner facet. Lexical diversity: TTR + MATTR, MTLD, and
+    the new **HD-D** (McCarthy & Jarvis 2010, exact hypergeometric
+    recurrence) in `stats/measures.py`. Syntactic complexity (EN, via the
+    dependency parser): mean sentence/clause length, clauses per sentence;
+    AR: sentence-length + morphological-richness proxies. Accuracy is an
+    honestly-labelled heuristic proxy (error-free-sentence rate from the
+    rule detectors; AR spelling-candidate rate). Sentence-length
+    distribution histogram. Exportable index table with formulas +
+    citations.
+  * **CIA Compare** (`learner-compare`): guided Contrastive Interlanguage
+    Analysis — learner corpus vs reference corpus (reusing the
+    language-matched keyness machinery, DB or bundled reference), L1 group
+    vs L1 group, and CAF deltas — one combined, exportable report.
+  * **Error-pattern finder** (`learner-errors`): rule-based error
+    *candidates* (framed like metaphor candidates — human verification
+    required, `verified_count` stays 0): EN articles/prepositions/
+    agreement/spelling; AR hamza variants, ة/ه and ى/ي confusions. Candidate
+    lines + counts + export.
+  * **Learner metadata facets**: optional `L1` + CEFR `proficiency`
+    (A1–C2) fields at corpus creation (idempotent column migration);
+    group-by L1/level across all three panels; document-level overrides via
+    the existing `Document.meta` mechanism (ALC-style corpora).
+  * **AI-vs-learner comparator (light)**: paste an AI-produced text → the
+    same CAF battery runs on it → side-by-side delta table
+    (`POST /api/v1/learner/caf-text`), responding to the 2025
+    LLM-vs-learner-writing literature.
+- **Vector KWIC** (`POST /api/v1/corpora/{cid}/concordance/vector`) —
+  semantic concordancing following Anthony, L. (2025). "Concordancing with
+  AI: Applications of word and sentence embeddings." *Applied Corpus
+  Linguistics* 5(3), 100164. Mode A: keyword KWIC re-ranked by cosine
+  similarity between each line's context embedding and the query. Mode B:
+  no node word → top-k most similar sentences (scan capped at 6,000, cap
+  reported). Model chain request → setting → env → **bge-m3** (multilingual,
+  strong Arabic). Missing model → HTTP **409** with a one-click setup hint
+  that pulls the model through the normal Ollama flow. Vectors cached in a
+  new `kwic_vector_cache` table, reused only per exact model + context
+  window. Pure-Python cosine, similarities rounded to 4; the response
+  carries an explicit "raw cosine, no confidence claim" note. New
+  **Vector KWIC** tab in Analysis Tools with a Similarity column and
+  similarity-aware export. `tests/test_vector_kwic.py` runs the full
+  pipeline against a deterministic mock embedder (7 tests).
+- **Hugging Face GGUF explorer** (Settings → Models): live HF search
+  (`GET /api/v1/ollama/catalogue?source=huggingface&query=…&task=…`,
+  sorted by downloads; results only after a query is typed — the Lens
+  pattern), real per-quant file sizes via the blobs API, quant-variant
+  picker (Q4_K_M → Q4_K_S → Q4_0 → Q5_K_M → Q8_0 …), machine-aware
+  rule-of-thumb **fit badges** (gpu / cpu / tight / too-big) computed from
+  actual RAM (stdlib probe) and VRAM (nvidia-smi when present), task filter
+  chips (all / text / embedding), empty-state hint. Pulls reuse the
+  existing `/ollama/pull` progress flow — `hf.co/<user>/<repo>:<quant>`
+  resolves natively through Ollama. Ported from CorpusMind Lens v0.3.2
+  (`engine/ai/hf_catalog.py`).
+- **Arabic normalization everywhere** (item 6): an "Arabic normalization"
+  toggle on the Concordancer, Frequency, Collocation, and Keyness tools
+  (strip diacritics; unify أ إ آ → ا, ة → ه, ى → ي). Implemented twice, in
+  lockstep: a SQL `arnorm()` scalar function (registered on every
+  connection) for aggregation paths, and a Python `ar_norm()` mirror for
+  matching paths — documented in METHODOLOGY.md. Vector KWIC accepts the
+  same flag before embedding.
+- **Companion-first onboarding**: a 4th welcome page ("Go multimodal &
+  audio") presenting **CorpusMind Lens** (vision-LM multimodal discourse
+  analysis) and **CorpusMind Voice** (audio-to-corpus) with buttons opening
+  their pages on waleedmandour.org in the system browser (AboutView's
+  plain-anchor mechanism). All main-app onboarding pages were hardcoded
+  English — they are now fully i18n (`onb_main_*`) with complete Arabic
+  translations, and the stale "Click Projects in the sidebar" step is
+  rewritten to "Open Corpus and upload texts" (no such nav item existed).
+- **Floating AI assistant improvements**: the assistant drawer is widened
+  from 390 px to 560 px (720 px tall, viewport-capped; small-screen media
+  query) and now renders responses with `pre-wrap` + long-token wrapping so
+  LLM output is readable instead of squeezed into a narrow column. The
+  FAB is available on the new Learner Research and Vector KWIC screens
+  automatically (global mount), and the view-context labeler now maps
+  hyphenated nav ids to their i18n keys (it previously displayed raw ids
+  like "corpus-target").
+- **2-page PDF quick-start guide** (`download/CorpusMind_User_Guide_v1.2.0.pdf`,
+  regenerated via `scripts/generate_user_guide_pdf_v120.py`) covering
+  corpora, analysis tools incl. Vector KWIC, Learner Research, companion
+  apps, and the HF explorer.
+
+### Changed
+
+- **Vision Suite tab removed (thorough)**: the parent-app sidebar group +
+  item, the `vision` nav target/route, the Home quick card, and the
+  "Go to Vision Suite" palette command are gone; the User Guide section is
+  replaced by "Companion Apps". Stale persisted targets auto-redirect via
+  the Lens guard (same safe migration as v1.1.0). **Kept**: `VisionView.tsx`
+  (it exports shared panels consumed by `VisionCorporaView`), every engine
+  vision endpoint (the Lens companion depends on them), and all `vision_*`
+  i18n content keys.
+- **Settings model catalogue**: vision models (qwen3-vl, moondream,
+  llama3.2-vision) are de-surfaced from `RECOMMENDED_OLLAMA_MODELS` — they
+  remain in Lens's own catalogue; **bge-m3** is added as the recommended
+  embedding model (feeding Vector KWIC) alongside nomic-embed-text; every
+  entry carries a `task` tag. The Facial-Analysis ethics card stays (it is
+  consent, not a model card).
+- Readability stays honest for Arabic: LIX/RIX (script-generic) plus
+  word-length / average-sentence-length descriptive stats, labelled as
+  such rather than dressed up as validated Arabic readability formulas.
+- Version strings synchronized across engine, web, desktop shells, docker
+  image tag and CITATION.cff.
+
+### Fixed
+
+- Floating-assistant context labels synthesized non-existent i18n keys for
+  hyphenated nav ids (`nav_corpus-target`) — ids are now normalized to the
+  underscore key convention.
+- Onboarding step 1 referenced a "Projects" sidebar item that does not
+  exist (see above).
+
 ## [1.1.0] — 2026-09-07 — Your Vision Corpora: the merged workbench + the visual-linguistics battery
 
 Lens's two top-level tabs ("Your Corpora" and "Your Vision") split one
