@@ -50,7 +50,7 @@ export function ConfirmDialog({ state, onClose }: { state: ConfirmState | null; 
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        <p style={{ margin: "0 0 16px 0", fontSize: "14px", lineHeight: 1.5, color: theme === "dark" ? "#e6e9ec" : "#1c1f1d" }}>
+        <p style={{ margin: "0 0 16px 0", fontSize: "15px", lineHeight: 1.5, color: theme === "dark" ? "#e6e9ec" : "#1c1f1d" }}>
           {state.msg}
         </p>
         <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
@@ -63,7 +63,7 @@ export function ConfirmDialog({ state, onClose }: { state: ConfirmState | null; 
               border: "none",
               padding: "6px 16px",
               borderRadius: "4px",
-              fontSize: "13px",
+              fontSize: "14px",
               cursor: "pointer",
             }}
           >
@@ -81,7 +81,7 @@ export function ConfirmDialog({ state, onClose }: { state: ConfirmState | null; 
               border: "none",
               padding: "6px 16px",
               borderRadius: "4px",
-              fontSize: "13px",
+              fontSize: "14px",
               cursor: "pointer",
             }}
           >

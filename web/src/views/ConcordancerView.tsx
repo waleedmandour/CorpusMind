@@ -213,7 +213,7 @@ export function ConcordancerView() {
                   >
                     {"\u25C0"} Previous {PAGE_SIZE}
                   </button>
-                  <span style={{ fontSize: "12px", color: "var(--text-subtle)" }}>
+                  <span style={{ fontSize: "13px", color: "var(--text-subtle)" }}>
                     Page {Math.floor(offset / PAGE_SIZE) + 1} of {Math.ceil(total / PAGE_SIZE)}
                   </span>
                   <button

@@ -234,7 +234,12 @@ def _fmt_size(n: float) -> str:
     return f"{n:.1f} TB"  # pragma: no cover
 
 
-_QUANT_RE = re.compile(r"\b(I?Q\d(?:_K(?:_S|M|L|XL|XXS)?)?|Q\d_\d|F16|BF16|F32)\b", re.IGNORECASE)
+# v1.2.1: the old pattern missed the most common K-quants (Q4_K_M, Q5_K_M,
+# Q6_K, IQ4_XS, …) — its `_K` group could not consume the trailing `_M`/`_S`
+# suffix, so only Q8_0-style and F16/BF16 matched and most Hugging Face
+# variants lost their quant label (pulling the repo default instead of the
+# user's chosen quantisation).
+_QUANT_RE = re.compile(r"\b(I?Q\d(?:_[A-Z0-9]+)*|F16|BF16|FP16|F32)\b", re.IGNORECASE)
 
 
 def _quant_of(filename: str) -> str | None:
@@ -272,30 +277,38 @@ async def search_gguf(
     task: str = "any",
     limit: int = 20,
     timeout: float = 15.0,
+    transport: httpx.AsyncBaseTransport | None = None,
 ) -> dict[str, Any]:
     """Search Hugging Face for GGUF models matching *query*.
 
     Returns {"models": [...], "machine": {...}, "note": "..."}.
     Results are sorted by downloads (the API does the sorting) and the top
     repos are enriched with real per-quant file sizes (blobs=true).
+
+    v1.2.1: an empty query now BROWSES the most-downloaded GGUF repos
+    (instead of returning nothing), and the embedding task chip seeds a
+    default ``embed`` search so the Hugging Face tab is useful before the
+    user types anything.
     """
     query = (query or "").strip()
-    if not query:
-        return {"models": [], "note": "Type a search query to browse Hugging Face.", "machine": _machine_dict()}
+    if not query and task == "embedding":
+        query = "embed"
 
     cache_key = f"{query.lower()}|{task}|{limit}"
     cached = _search_cache.get(cache_key)
     if cached and (time.monotonic() - cached[0]) < _SEARCH_TTL:
         return {"models": cached[1], "note": _RESULT_NOTE, "machine": _machine_dict(), "cached": True}
 
-    params = {
-        "search": query,
+    params: dict[str, Any] = {
         "filter": "gguf",
         "sort": "downloads",
         "direction": -1,
         "limit": min(max(limit * 2, 20), 60),
     }
-    async with httpx.AsyncClient(timeout=timeout, trust_env=False) as client:
+    if query:
+        params["search"] = query
+
+    async with httpx.AsyncClient(timeout=timeout, trust_env=False, transport=transport) as client:
         r = await client.get(HUGGINGFACE_API, params=params)
         r.raise_for_status()
         results = r.json()
@@ -363,22 +376,29 @@ async def search_gguf(
             "rule_of_thumb": True,
         }
 
-    for item in results:
-        if kept >= limit:
-            break
-        repo_id = item.get("modelId") or item.get("id") or ""
-        if not repo_id:
-            continue
-        item_task = classify_task(
-            repo_id, item.get("pipeline_tag"), item.get("tags") or []
-        )
-        if task in ("text", "embedding") and item_task != task:
-            continue
-        enriched = await enrich(repo_id)
-        if enriched is None:
-            continue
-        models.append(enriched)
-        kept += 1
+    # v1.2.1 FIX: the enrichment phase reuses the closure variable `client`,
+    # but the search client above was already CLOSED by the time enrich()
+    # ran — every detail fetch raised "Cannot send a request, as the client
+    # has been been closed", was swallowed as 'repo vanished', and the
+    # Hugging Face tab stayed empty no matter what the user searched.
+    # A dedicated live client now owns the enrichment loop.
+    async with httpx.AsyncClient(timeout=timeout, trust_env=False, transport=transport) as client:
+        for item in results:
+            if kept >= limit:
+                break
+            repo_id = item.get("modelId") or item.get("id") or ""
+            if not repo_id:
+                continue
+            item_task = classify_task(
+                repo_id, item.get("pipeline_tag"), item.get("tags") or []
+            )
+            if task in ("text", "embedding") and item_task != task:
+                continue
+            enriched = await enrich(repo_id)
+            if enriched is None:
+                continue
+            models.append(enriched)
+            kept += 1
 
     _search_cache[cache_key] = (time.monotonic(), models)
     return {"models": models, "note": _RESULT_NOTE, "machine": _machine_dict()}

@@ -43,17 +43,21 @@ Studio auto-detection, multi-format + diagram export, bilingual (EN/AR) UI,
 research workflow tools, and the **Learner Research** suite (CAF battery, CIA
 compare, error-pattern candidates, L1/CEFR facets, AI-vs-learner comparator).
 
-**Suite B (Vision):** complete — image ingestion with OCR, Visual Grammar
-(Kress & van Leeuwen), multimodal image–text alignment, Vision-LM describe
-with a consent-gated ethical guardrail (§18), batch analysis with recurring
-themes, and image thumbnails.
+**Suite B (Vision):** lives in the companion repo — the vision workbench
+(image ingestion with OCR, Visual Grammar, multimodal alignment, Vision-LM
+describe with a consent-gated ethical guardrail, batch analysis) is now
+maintained as **CorpusMind Lens** at
+[waleedmandour/CorpusMind-Lens](https://github.com/waleedmandour/CorpusMind-Lens);
+this repository ships only the CorpusMind text-analysis app.
 
-**Both suites:** installable PWA + two Tauri 2 desktop shells (CorpusMind and
-CorpusMind Lens), 400+ backend tests, ruff-clean, self-hosted Docker image.
+**Both apps:** installable PWA + a Tauri 2 desktop shell (CorpusMind here,
+CorpusMind Lens in its own repo), 400+ backend tests, ruff-clean,
+self-hosted Docker image. The two apps connect via the versioned
+Companion-Mode API when both are installed.
 
 **Desktop installers** for every release — Windows (NSIS `.exe` + `.msi`),
 Linux (`.deb` + `.AppImage`) and macOS (Apple Silicon + Intel `.dmg`) — are
-built automatically from the v1.2.0 tag on and attached to
+built automatically for every release tag and attached to
 [GitHub Releases](https://github.com/waleedmandour/CorpusMind/releases)
 together with the 2-page User Guide PDF. Each installer bundles the
 analysis engine as a local sidecar, so the desktop apps run fully offline.

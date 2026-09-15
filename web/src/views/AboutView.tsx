@@ -2,21 +2,16 @@
  * AboutView -- project info, authors, license, acknowledgements.
  */
 import { useEngineVersion } from "@/hooks/useEngineVersion";
-import { useUI } from "@/store/ui";
 
 export function AboutView() {
   const version = useEngineVersion();
-  const isLensMode = useUI((s) => s.isLensMode);
-  const appName = isLensMode ? "CorpusMind Lens" : "CorpusMind";
-  const tagline = isLensMode
-    ? "Vision-LM-powered multimodal discourse analysis. Runs fully against a local Ollama or LM Studio instance with zero cloud calls."
-    : "Local-first, AI-native research environment for corpus linguistics and multimodal discourse analysis.";
+  const appName = "CorpusMind";
+  const tagline = "Local-first, AI-native research environment for corpus linguistics and multimodal discourse analysis.";
   return (
     <div className="about-view">
       <div className="about-hero">
-        {/* v1.0.10: switch the logo with the shell (see Sidebar.tsx). */}
         <img
-          src={isLensMode ? "/icon-512-lens.png" : "/icon-512.png"}
+          src="/icon-512.png"
           alt={appName}
           width="96"
           height="96"
@@ -48,7 +43,7 @@ export function AboutView() {
         <p>
           If you use CorpusMind in your research, please cite it as:
         </p>
-        <div style={{ background: "var(--bg-subtle)", padding: "var(--space-3)", borderRadius: "var(--radius-md)", fontSize: "13px", lineHeight: 1.6 }}>
+        <div style={{ background: "var(--bg-subtle)", padding: "var(--space-3)", borderRadius: "var(--radius-md)", fontSize: "14px", lineHeight: 1.6 }}>
           Mandour, W., &amp; Ibrahim, W. (2026). <em>CorpusMind: A local-first,
           AI-native research environment for corpus linguistics and multimodal
           discourse analysis</em> (Version {version}) [Computer software]. Zenodo.

@@ -32,11 +32,6 @@ interface UIState {
   /** v1.2.0: floating AI assistant drawer (Issue 7b) */
   floatingAssistantOpen: boolean;
   activeNav: NavTarget;
-  /** Whether we're running inside the CorpusMind Lens shell (vs the
-   * main CorpusMind app). Detected from the ?shell=lens URL query param
-   * that the Lens Tauri shell passes. In Lens mode, the sidebar shows
-   * only vision-relevant items and the app defaults to the Vision view. */
-  isLensMode: boolean;
   onboardingComplete: boolean;
   onboardingOpen: boolean;
   /** Which sidebar groups are expanded. Persisted so the user's
@@ -66,25 +61,10 @@ interface UIState {
   setStudentMode: (enabled: boolean) => void;
 }
 
-/** Detect whether we're running inside the Lens Tauri shell by checking
- * the ?shell=lens URL query param. The Lens shell's tauri.conf.json sets
- * the window URL to "index.html?shell=lens" so this works in both dev
- * and production. In browser/PWA mode (no ?shell param), this returns
- * false — the full CorpusMind UI is shown. */
-function detectLensMode(): boolean {
-  if (typeof window === "undefined") return false;
-  return new URLSearchParams(window.location.search).get("shell") === "lens";
-}
-
-/** v1.0.9→v1.1.0: navigation targets the Lens shell actually exposes.
- * v1.2.0: "vision" is removed — the Lens companion owns the vision
- * workbench, and a stale persisted "vision" target auto-redirects to the
- * merged workbench via the guard below (same safe migration as before).
- * The guard makes the Lens boundary real: out-of-scope targets are
- * redirected to the merged workbench. */
-const LENS_NAV_TARGETS: ReadonlySet<NavTarget> = new Set<NavTarget>([
-  "home", "corpus-target", "assistant", "settings", "userguide", "about",
-]);
+/** v1.2.1: the CorpusMind Lens shell now lives in its own repository
+ * (waleedmandour/CorpusMind-Lens) with its own frontend, so the
+ * ?shell=lens mode, LENS_NAV_TARGETS guard, and isLensMode flag have been
+ * removed from this codebase. This app is always the main CorpusMind app. */
 
 export const useUI = create<UIState>()(
   persist(
@@ -94,10 +74,7 @@ export const useUI = create<UIState>()(
       lang: "en",
       commandPaletteOpen: false,
       floatingAssistantOpen: false,
-      // In Lens mode, default to the merged "Your Vision Corpora" workbench
-      // (v1.1.0 — was "vision" before the tab merge).
-      activeNav: detectLensMode() ? "corpus-target" : "home",
-      isLensMode: detectLensMode(),
+      activeNav: "home",
       onboardingComplete: false,
       onboardingOpen: false,
       // Default expand state: Corpora + Analyze expanded; others collapsed.
@@ -129,14 +106,7 @@ export const useUI = create<UIState>()(
       },
       setCommandPaletteOpen: (open) => set({ commandPaletteOpen: open }),
       setFloatingAssistantOpen: (open) => set({ floatingAssistantOpen: open }),
-      setActiveNav: (activeNav) => {
-        // v1.1.0: enforce the Lens navigation boundary (see LENS_NAV_TARGETS).
-        if (get().isLensMode && !LENS_NAV_TARGETS.has(activeNav)) {
-          set({ activeNav: "corpus-target" });
-          return;
-        }
-        set({ activeNav });
-      },
+      setActiveNav: (activeNav) => set({ activeNav }),
       setOnboardingComplete: (onboardingComplete) => set({ onboardingComplete }),
       setOnboardingOpen: (onboardingOpen) => set({ onboardingOpen }),
       toggleGroup: (groupId) =>
@@ -170,11 +140,9 @@ export const useUI = create<UIState>()(
         return p as unknown as UIState;
       },
       partialize: (state) => {
-        // Don't persist isLensMode — it's always re-detected from the URL
-        // query param (?shell=lens) on each load. activeNav is likewise
-        // never persisted (see version note above).
-        const { isLensMode, activeNav, ...rest } = state;
-        void isLensMode;
+        // activeNav is never persisted — the app must open on its default
+        // view (Home) at every launch (see version note above).
+        const { activeNav, ...rest } = state;
         void activeNav;
         return rest;
       },

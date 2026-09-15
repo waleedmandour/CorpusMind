@@ -116,15 +116,21 @@ async def _embed_texts(provider, texts: list[str], model: str) -> list[list[floa
     the model is missing so the API layer can return HTTP 409 + setup hint."""
     # Pre-flight: is the model installed? (Ollama list_models hits /api/tags;
     # other providers implement it too.) Cheap 30s-cached call.
+    # v1.2.1: compare canonical names — Ollama reports 'bge-m3:latest' for an
+    # untagged 'bge-m3' pull, and exact matching used to 409 forever.
     try:
         installed = await provider.list_models()
     except Exception:
         installed = None  # probe failed — let the real embed call decide
-    if installed is not None and model not in installed:
-        raise EmbeddingModelError(
-            model,
-            f"Embedding model '{model}' is not installed. Run: ollama pull {model}",
-        )
+    if installed is not None:
+        from ai.providers import canonical_model_name
+
+        installed_canon = {canonical_model_name(m) for m in installed}
+        if canonical_model_name(model) not in installed_canon:
+            raise EmbeddingModelError(
+                model,
+                f"Embedding model '{model}' is not installed. Run: ollama pull {model}",
+            )
     vectors: list[list[float]] = []
     for t in texts:
         try:

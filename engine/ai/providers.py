@@ -95,6 +95,24 @@ def _debug_raw(data: Any) -> str:
     return "(raw response withheld — set CORPUSMIND_DEBUG_RAW=1 to include)"
 
 
+def canonical_model_name(name: str) -> str:
+    """Canonical form for model-name comparisons (v1.2.1 fix).
+
+    Ollama reports models WITH their tag (``bge-m3:latest``); untagged pulls
+    are registered under the implicit ``:latest``. Comparisons against the
+    catalogue (whose embedding entries are untagged: ``bge-m3``,
+    ``nomic-embed-text``) must strip that implicit tag, while explicit tags
+    (``llama3.2:3b``, ``hf.co/user/repo:Q4_K_M``) still match exactly.
+    Previously the Settings "Installed" badge and the Vector KWIC pre-flight
+    did exact string matching, so a *successful* pull could never be
+    recognised and the UI kept saying the model was missing.
+    """
+    n = (name or "").strip()
+    if n.endswith(":latest"):
+        n = n[: -len(":latest")]
+    return n
+
+
 class ModelProviderError(RuntimeError):
     """Base error for any provider failure (network, auth, model-missing, ...)."""
 

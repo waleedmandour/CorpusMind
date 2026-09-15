@@ -21,7 +21,6 @@ import { HomeView } from "@/views/HomeView";
 import { AboutView } from "@/views/AboutView";
 import { AssistantView } from "@/views/AssistantView";
 import { CorpusSelectionView } from "@/views/CorpusSelectionView";
-import { VisionCorporaView } from "@/views/VisionCorporaView";
 import { ConcordancerView } from "@/views/ConcordancerView";
 import { AnalysisView } from "@/views/AnalysisView";
 import { ArabicView } from "@/views/ArabicView";
@@ -37,7 +36,6 @@ export default function App() {
   const theme = useUI((s) => s.theme);
   const lang = useUI((s) => s.lang);
   const dir = useUI((s) => s.dir);
-  const isLensMode = useUI((s) => s.isLensMode);
   const toggleLang = useUI((s) => s.toggleLang);
   const setCommandPaletteOpen = useUI((s) => s.setCommandPaletteOpen);
   const onboardingComplete = useUI((s) => s.onboardingComplete);
@@ -62,12 +60,6 @@ export default function App() {
 
   useEffect(() => {
     applyHtmlAttrs();
-    // Set data-shell="lens" on <html> when running inside the Lens
-    // Tauri shell. This triggers the blue brand-color override in CSS.
-    const isLens = useUI.getState().isLensMode;
-    if (isLens) {
-      document.documentElement.dataset.shell = "lens";
-    }
   }, [theme, dir, lang]);
 
   useEffect(() => {
@@ -106,16 +98,14 @@ export default function App() {
 
       <header className="app-topbar" role="banner">
         <div className="app-brand">
-          {/* v1.0.10: switch the logo with the shell (see Sidebar.tsx). */}
           <img
-            src={isLensMode ? "/icon-32-lens.png" : "/icon-32.png"}
-            alt={isLensMode ? "CorpusMind Lens" : "CorpusMind"}
+            src="/icon-32.png"
+            alt="CorpusMind"
             width="28"
             height="28"
             className="app-brand-icon"
           />
-          {/* v1.2.0: show the real app name in Lens (was hardcoded CorpusMind) */}
-          <span className="app-name">{isLensMode ? "CorpusMind Lens" : "CorpusMind"}</span>
+          <span className="app-name">CorpusMind</span>
         </div>
         {activeCorpusId && (
           <div
@@ -156,12 +146,7 @@ export default function App() {
         <Sidebar />
         <main className="app-main" id="main-content" role="main">
           {activeNav === "home" && <HomeView />}
-          {/* v1.1.0: Lens renders the merged "Your Vision Corpora" workbench
-              (former Your Corpora + Your Vision) for both nav targets — the
-              main app's text-corpus and vision views are untouched. */}
-          {activeNav === "corpus-target" && (isLensMode
-            ? <VisionCorporaView />
-            : <CorpusSelectionView mode="target" />)}
+          {activeNav === "corpus-target" && <CorpusSelectionView mode="target" />}
           {activeNav === "corpus-reference" && <CorpusSelectionView mode="reference" />}
           {activeNav === "concordance" && <ConcordancerView />}
           {activeNav === "frequency" && <AnalysisView />}
@@ -184,11 +169,6 @@ export default function App() {
           {activeNav === "learner-compare" && <LearnerResearchView mode="compare" />}
           {activeNav === "learner-errors" && <LearnerResearchView mode="errors" />}
           {activeNav === "arabic" && <ArabicView />}
-          {/* v1.2.0: the parent-app "vision" route was removed. VisionView.tsx
-              stays in the codebase because it exports shared panels consumed
-              by VisionCorporaView; the Lens shell renders VisionCorporaView
-              for "corpus-target". Stale persisted "vision" targets are
-              auto-redirected by the Lens guard in store/ui.ts. */}
           {activeNav === "assistant" && <AssistantView />}
           {activeNav === "settings" && <SettingsView />}
           {activeNav === "userguide" && <UserGuideView />}
@@ -201,13 +181,13 @@ export default function App() {
         <DownloadProgressBar />
         <QueryStatusIndicator />
         <span className="status-sep">|</span>
-        <span>{isLensMode ? "CorpusMind Lens" : "CorpusMind"} {versionDisplay}</span>
+        <span>CorpusMind {versionDisplay}</span>
         <span className="status-sep">|</span>
         <span>AGPL-3.0</span>
         <span className="status-sep">|</span>
         <span>Press Ctrl/Cmd+K for commands</span>
         <span className="status-sep">|</span>
-        <span>{isLensMode ? "Lens · Local Desktop App" : "Local Desktop App"}</span>
+        <span>Local Desktop App</span>
         <div className="statusbar-spacer" />
         <TroubleshootingBar />
       </footer>
@@ -256,7 +236,7 @@ function DownloadProgressBar() {
   return (
     <div style={{
       display: "flex", alignItems: "center", gap: "6px",
-      padding: "0 8px", fontSize: "11px", color: "var(--text-muted)",
+      padding: "0 8px", fontSize: "12px", color: "var(--text-muted)",
     }}>
       <span style={{ fontWeight: 600, color }}>{activeDownload.status === "installed" ? "✓" : activeDownload.status === "failed" ? "✗" : "⏳"}</span>
       <span>{activeDownload.displayName}</span>
@@ -271,11 +251,11 @@ function DownloadProgressBar() {
           }} />
         </div>
       )}
-      <span style={{ fontSize: "10px" }}>{activeDownload.message}</span>
+      <span style={{ fontSize: "11px" }}>{activeDownload.message}</span>
       {isDone && (
         <button
           onClick={clearDownloadProgress}
-          style={{ background: "none", border: "none", color: "var(--text-subtle)", cursor: "pointer", fontSize: "11px" }}
+          style={{ background: "none", border: "none", color: "var(--text-subtle)", cursor: "pointer", fontSize: "12px" }}
           title="Dismiss"
         >✕</button>
       )}

@@ -417,6 +417,26 @@ class OllamaPullRequest(BaseModel):
     model: str = Field(..., description="Model name, e.g. 'llama3.2:3b'")
 
 
+def _pull_error_from_body(body: str) -> str:
+    """Extract a human-readable error from an Ollama error response body.
+
+    Ollama reports pull failures either as a JSON body ({"error": "..."})
+    with a non-200 status, or inline in the NDJSON progress stream. This
+    helper normalises both so the UI can show WHY a download failed
+    (v1.2.1 — errors used to be silently swallowed and reported as success).
+    """
+    text = (body or "").strip()
+    if not text:
+        return ""
+    try:
+        data = json.loads(text.splitlines()[0])
+        if isinstance(data, dict) and data.get("error"):
+            return str(data["error"])
+    except Exception:
+        pass
+    return text[:200]
+
+
 @router.post("/ollama/pull")
 async def ollama_pull(req: OllamaPullRequest) -> dict:
     """Pull (download) an Ollama model.
@@ -432,9 +452,11 @@ async def ollama_pull(req: OllamaPullRequest) -> dict:
     if not model:
         raise HTTPException(400, "Model name is required")
 
-    # Check Ollama is running
+    # Check Ollama is running. NOTE: trust_env=False + proxy=None — loopback
+    # traffic must never be routed through a system proxy (same policy as
+    # OllamaProvider; corporate VPNs silently intercept otherwise).
     try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
+        async with httpx.AsyncClient(timeout=5.0, trust_env=False, proxy=None) as client:
             r = await client.get(f"{base_url}/api/tags")
             if r.status_code != 200:
                 raise HTTPException(503, "Ollama is not responding. Is `ollama serve` running?")
@@ -444,22 +466,40 @@ async def ollama_pull(req: OllamaPullRequest) -> dict:
     # Start the pull in the background
     async def _do_pull():
         try:
-            async with httpx.AsyncClient(timeout=600.0) as client:
-                # Ollama's /api/pull streams NDJSON progress lines
-                async with client.stream("POST", f"{base_url}/api/pull", json={"name": model}) as r:
+            async with httpx.AsyncClient(timeout=600.0, trust_env=False, proxy=None) as client:
+                # Ollama's /api/pull streams NDJSON progress lines.
+                # v1.2.1: send the modern "model" field ("name" is deprecated)
+                # and an explicit stream=true.
+                async with client.stream(
+                    "POST", f"{base_url}/api/pull", json={"model": model, "stream": True}
+                ) as r:
+                    if r.status_code != 200:
+                        body = (await r.aread()).decode("utf-8", errors="replace")
+                        raise RuntimeError(
+                            _pull_error_from_body(body) or f"Ollama returned HTTP {r.status_code}"
+                        )
                     async for line in r.aiter_lines():
                         if not line:
                             continue
                         try:
                             data = json.loads(line)
-                            _pull_status[model] = {
-                                "status": data.get("status", "pulling"),
-                                "completed": data.get("completed", 0),
-                                "total": data.get("total", 0),
-                                "error": None,
-                            }
                         except Exception:
                             continue
+                        # v1.2.1: surface Ollama's error lines instead of
+                        # swallowing them — a failed pull must NOT end as
+                        # "success" (this masked every download failure).
+                        if data.get("error"):
+                            raise RuntimeError(str(data["error"]))
+                        # Preserve the last known progress when a line lacks
+                        # totals (e.g. the final {"status":"success"} line
+                        # would otherwise reset the bar to 0%).
+                        prev = _pull_status.get(model, {})
+                        _pull_status[model] = {
+                            "status": data.get("status", "pulling"),
+                            "completed": data.get("completed", prev.get("completed", 0)),
+                            "total": data.get("total", prev.get("total", 0)),
+                            "error": None,
+                        }
             _pull_status[model] = {
                 "status": "success",
                 "completed": _pull_status.get(model, {}).get("total", 0),
@@ -475,6 +515,8 @@ async def ollama_pull(req: OllamaPullRequest) -> dict:
                 "error": str(e),
             }
             log.error("ollama_pull_failed", model=model, error=str(e))
+            # Drop the finished task handle (keep the LAST status so the UI
+            # can still poll the error).
 
     # Store status before starting
     _pull_status[model] = {

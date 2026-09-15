@@ -797,7 +797,7 @@ function DataTable({ headers, rows }: { headers: string[]; rows: (string | numbe
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
         placeholder="Filter results..."
-        style={{ marginBottom: "var(--space-2)", padding: "4px 8px", fontSize: "12px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", inlineSize: "100%", maxWidth: "300px" }}
+        style={{ marginBottom: "var(--space-2)", padding: "4px 8px", fontSize: "13px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", inlineSize: "100%", maxWidth: "300px" }}
       />
       <table className="data-table">
         <thead>
@@ -815,7 +815,7 @@ function DataTable({ headers, rows }: { headers: string[]; rows: (string | numbe
           ))}
         </tbody>
       </table>
-      {filter.trim() && <p style={{ fontSize: "11px", color: "var(--text-subtle)", marginTop: "var(--space-1)" }}>Showing {filtered.length} of {rows.length} rows</p>}
+      {filter.trim() && <p style={{ fontSize: "12px", color: "var(--text-subtle)", marginTop: "var(--space-1)" }}>Showing {filtered.length} of {rows.length} rows</p>}
     </div>
   );
 }
@@ -1212,7 +1212,7 @@ function VocabPanel({ cid }: { cid: string }) {
           )}
           {result.data.rare_words.length > 0 && (
             <>
-              <h3>Rare words (frequency {"\u2264"} 1) {result.data.rare_words.length > 50 && <span style={{ fontSize: "11px", fontWeight: "normal", color: "var(--text-subtle)" }}>(showing top 50 of {result.data.rare_words.length})</span>}</h3>
+              <h3>Rare words (frequency {"\u2264"} 1) {result.data.rare_words.length > 50 && <span style={{ fontSize: "12px", fontWeight: "normal", color: "var(--text-subtle)" }}>(showing top 50 of {result.data.rare_words.length})</span>}</h3>
               <DataTable
                 headers={["Word", "Frequency"]}
                 rows={result.data.rare_words.slice(0, 50).map((w) => [w.word, w.freq])}
@@ -1268,7 +1268,7 @@ function SentimentPanel({ cid }: { cid: string }) {
               <span className="bar-value">{result.data.negative}</span>
             </div>
           </div>
-          <h3>Sentiment timeline (per sentence) {result.data.timeline.length > 100 && <span style={{ fontSize: "11px", fontWeight: "normal", color: "var(--text-subtle)" }}>(showing first 100 of {result.data.timeline.length})</span>}</h3>
+          <h3>Sentiment timeline (per sentence) {result.data.timeline.length > 100 && <span style={{ fontSize: "12px", fontWeight: "normal", color: "var(--text-subtle)" }}>(showing first 100 of {result.data.timeline.length})</span>}</h3>
           <div className="sentiment-timeline">
             {result.data.timeline.slice(0, 100).map((t, i) => (
               <div key={i} className="timeline-bar"

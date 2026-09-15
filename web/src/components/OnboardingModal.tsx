@@ -12,7 +12,9 @@
  *     workbench itself lives in the Lens companion since v1.2.0).
  *   - Step 1 stale copy fixed: it said "Click Projects in the sidebar" but
  *     no such nav item exists — now "Open Corpus and upload texts".
- * Lens shell: unchanged 3-page i18n flow (onb_lens_*).
+ * v1.2.1: the Lens shell lives in its own repository — the lensPages
+ * flow and isLensMode were removed; this modal always shows the
+ * main-app pages.
  *
  * Shown when onboardingComplete is false. Can be re-opened from Settings.
  */
@@ -31,7 +33,6 @@ export function OnboardingModal() {
   const onboardingComplete = useUI((s) => s.onboardingComplete);
   const setOnboardingOpen = useUI((s) => s.setOnboardingOpen);
   const setOnboardingComplete = useUI((s) => s.setOnboardingComplete);
-  const isLensMode = useUI((s) => s.isLensMode);
   const lang = useUI((s) => s.lang);
   const [page, setPage] = useState(0);
 
@@ -188,123 +189,8 @@ export function OnboardingModal() {
     },
   ];
 
-  // v1.2.0 — CorpusMind Lens onboarding: mirrors what the Lens sidebar
-  // actually contains (no Projects / analysis-tool steps).
-  // v1.0.9: the Lens pages were previously hardcoded English — the only
-  // Lens surface that broke the app's en/ar parity. All strings now come
-  // from i18n (onb_lens_* keys) and describe the v1.0.9 Image Corpora
-  // workflow.
-  const lensPages = [
-    {
-      title: t(lang, "onb_lens_w_title"),
-      subtitle: t(lang, "onb_lens_w_sub"),
-      content: (
-        <div className="onboarding-content">
-          <p>{t(lang, "onb_lens_w_intro")}</p>
-          <div className="onboarding-features">
-            <div className="onboarding-feature">
-              <div className="feature-badge">1</div>
-              <div>
-                <strong>{t(lang, "onb_lens_f1_t")}</strong>
-                <p>{t(lang, "onb_lens_f1_d")}</p>
-              </div>
-            </div>
-            <div className="onboarding-feature">
-              <div className="feature-badge">2</div>
-              <div>
-                <strong>{t(lang, "onb_lens_f2_t")}</strong>
-                <p>{t(lang, "onb_lens_f2_d")}</p>
-              </div>
-            </div>
-            <div className="onboarding-feature">
-              <div className="feature-badge">3</div>
-              <div>
-                <strong>{t(lang, "onb_lens_f3_t")}</strong>
-                <p>{t(lang, "onb_lens_f3_d")}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      ),
-    },
-    {
-      title: t(lang, "onb_lens_s_title"),
-      subtitle: t(lang, "onb_lens_s_sub"),
-      content: (
-        <div className="onboarding-content">
-          <div className="onboarding-steps">
-            <div className="onboarding-step">
-              <div className="step-number">1</div>
-              <div className="step-body">
-                <strong>{t(lang, "onb_lens_s1_t")}</strong>
-                <p>{t(lang, "onb_lens_s1_d")}</p>
-              </div>
-            </div>
-            <div className="onboarding-step">
-              <div className="step-number">2</div>
-              <div className="step-body">
-                <strong>{t(lang, "onb_lens_s2_t")}</strong>
-                <p>{t(lang, "onb_lens_s2_d")}</p>
-              </div>
-            </div>
-            <div className="onboarding-step">
-              <div className="step-number">3</div>
-              <div className="step-body">
-                <strong>{t(lang, "onb_lens_s3_t")}</strong>
-                <p>{t(lang, "onb_lens_s3_d")}</p>
-              </div>
-            </div>
-          </div>
-          <div className="onboarding-tip">
-            <strong>{t(lang, "onb_lens_tip")}</strong>
-          </div>
-        </div>
-      ),
-    },
-    {
-      title: t(lang, "onb_lens_p_title"),
-      subtitle: t(lang, "onb_lens_p_sub"),
-      content: (
-        <div className="onboarding-content">
-          <div className="onboarding-privacy">
-            <div className="privacy-item">
-              <div className="privacy-check-mark">Yes</div>
-              <div>
-                <strong>{t(lang, "onb_lens_p1_t")}</strong>
-                <p>{t(lang, "onb_lens_p1_d")}</p>
-              </div>
-            </div>
-            <div className="privacy-item">
-              <div className="privacy-check-mark">Yes</div>
-              <div>
-                <strong>{t(lang, "onb_lens_p2_t")}</strong>
-                <p>{t(lang, "onb_lens_p2_d")}</p>
-              </div>
-            </div>
-            <div className="privacy-item">
-              <div className="privacy-check-mark">Yes</div>
-              <div>
-                <strong>{t(lang, "onb_lens_p3_t")}</strong>
-                <p>{t(lang, "onb_lens_p3_d")}</p>
-              </div>
-            </div>
-            <div className="privacy-item">
-              <div className="privacy-check-mark">Yes</div>
-              <div>
-                <strong>{t(lang, "onb_lens_p4_t")}</strong>
-                <p>{t(lang, "onb_lens_p4_d")}</p>
-              </div>
-            </div>
-          </div>
-          <div className="onboarding-cta">
-            <p>{t(lang, "onb_lens_cta")}</p>
-          </div>
-        </div>
-      ),
-    },
-  ];
 
-  const pages = isLensMode ? lensPages : mainAppPages;
+  const pages = mainAppPages;
 
   const currentPage = pages[page];
   const isLast = page === pages.length - 1;

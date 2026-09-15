@@ -6,6 +6,70 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
+## [1.2.1] — 2026-09-15 — Model-download fixes, HF catalogue repair, UI polish
+
+A patch release driven by first-run feedback on v1.2.0: the two new
+embedding models could not actually be downloaded through the app, the new
+Hugging Face explorer showed nothing, and several UI details were below
+the app's usual polish bar. This release also completes the Lens
+separation: **CorpusMind Lens is no longer built, shipped, or referenced
+as a shell in this repository** — it lives in its own repository
+(`waleedmandour/CorpusMind-Lens`) and stays fully functional there.
+
+### Fixed
+
+- **Embedding-model downloads (bge-m3, nomic-embed-text)** — a successful
+  pull could never be recognised by the app:
+  * Ollama registers untagged pulls as `bge-m3:latest`, but every
+    "is it installed?" comparison used exact string matching against the
+    catalogue's bare `bge-m3`, so Settings never showed the model as
+    *Installed* and the Vector KWIC pre-flight kept returning HTTP 409
+    ("Run: ollama pull bge-m3") even right after a successful download.
+    Comparisons now go through a canonical name helper that strips the
+    implicit `:latest` tag (engine pre-flight + the Settings model list).
+  * The pull endpoint swallowed every Ollama error: `{"error": ...}`
+    progress lines were ignored, non-200 responses were never checked, and
+    the stream always ended as `status: "success"`. Failed downloads now
+    surface the real error message in Settings, and the progress bar no
+    longer resets to 0% on the final stream line.
+  * The pull request now uses the modern `{"model": ..., "stream": true}`
+    payload (the `name` field is deprecated) and bypasses system proxies
+    for loopback traffic, matching the Ollama provider's behaviour.
+- **Hugging Face models not showing at all** — three compounding bugs in
+  the new `hf_catalog` explorer:
+  * the per-repo detail fetches ran on an already-closed HTTP client, so
+    every repo was silently skipped and the tab stayed empty no matter
+    what the user searched;
+  * an empty search box short-circuited to "no results" — the tab now
+    *browses* the most-downloaded GGUF repositories on open (and seeds an
+    `embed` search for the Embedding task chip);
+  * the quantisation regex missed the most common K-quants (Q4_K_M, Q6_K,
+    IQ4_XS, …), so most variants lost their quant label and would have
+    pulled the repo default instead of the selected quantisation.
+
+### Changed
+
+- **Typography scaled up professionally** — every explicit font size in
+  the stylesheet (411 rules) and all inline component sizes (70) were
+  increased by one consistent +10% step (e.g. 14→15px, 12→13px, 16→18px),
+  preserving the entire type hierarchy.
+- **Corpus list: the bare "✕" next to the Active/Reference badge is now a
+  proper, labelled *Delete* button** (danger-outlined, localised EN/AR,
+  same confirmation dialog, same action) on both the Your Corpus and
+  Reference Corpus pages; the badge itself is now styled.
+
+### Removed
+
+- **CorpusMind Lens is no longer part of this repository**: the
+  `desktop-lens/` Tauri shell, its three release jobs and CI job, the
+  `?shell=lens` frontend mode (`isLensMode`, `LENS_NAV_TARGETS`, lens
+  onboarding pages, lens branding/icons), and the orphaned vision views
+  (`VisionView`, `VisionCorporaView`) are gone. Release pages now contain
+  ONLY CorpusMind installers — no more Lens/companion `.exe` confusion.
+  The engine's Companion-Mode contract with the separate Lens app
+  (`GET /corpora/{id}`, `GET /corpora/{id}/frequency`, `GET /health`) is
+  untouched, and the app icon no longer carries the green border.
+
 ## [1.2.0] — 2026-09-15 — Learner Research, Vector KWIC, and the companion-first redesign
 
 With v1.1.0 out, the vision workbench moves fully into its home in the

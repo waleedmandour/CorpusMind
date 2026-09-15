@@ -20,7 +20,6 @@ import { t } from "@/lib/i18n";
 export function HomeView() {
   const setActiveNav = useUI((s) => s.setActiveNav);
   const lang = useUI((s) => s.lang);
-  const isLensMode = useUI((s) => s.isLensMode);
   const versionDisplay = useEngineVersionDisplay();
   const activeProjectId = useApp((s) => s.activeProjectId);
   const activeCorpusId = useApp((s) => s.activeCorpusId);
@@ -49,17 +48,9 @@ export function HomeView() {
     ? (nativeHealth.data?.ollama.healthy ?? false)
     : (providers.data?.providers.find((p) => p.name === "ollama")?.healthy ?? false);
 
-  // v1.0.9: quick actions are shell-aware. In Lens, text-analysis cards
-  // (Concordance, Frequency, Collocation, Keyness, Arabic Tools) previously
-  // still showed here and opened views the sidebar hides — they are replaced
-  // by the Lens workflow (image corpora → vision → assistant). The main app's
-  // card list is unchanged.
-  const quickActions = isLensMode ? [
-    { label: lang === "ar" ? "دخائر الصور" : "Image Corpora", nav: "corpus-target" as const, icon: "\u25A3", desc: lang === "ar" ? "أنشئ مجموعات الصور ووثّقها وأدر بياناتها الوصفية" : "Create and document image sets, metadata, and OCR corpora" },
-    { label: lang === "ar" ? "مساحة عمل الرؤية" : "Vision Workbench", nav: "corpus-target" as const, icon: "\u2728", desc: lang === "ar" ? "التحليل البصري، القواعد البصرية، عدسات الخطاب" : "Image analysis, Visual Grammar, discourse lenses" },
-    { label: lang === "ar" ? "المساعد الذكي" : "AI Assistant", nav: "assistant" as const, icon: "\u272B", desc: lang === "ar" ? "اسأل عن صورك ونصوصك معاً بأدلة مبرهنة" : "Ask about your images and texts with grounded evidence" },
-    { label: lang === "ar" ? "دليل المستخدم" : "User Guide", nav: "userguide" as const, icon: "\u25B6", desc: lang === "ar" ? "كيف تبني دخيرة صور خطوة بخطوة" : "How to build an image corpus, step by step" },
-  ] : [
+  // v1.2.1: the Lens-specific quick-action list is gone (Lens lives in its
+  // own repository) — this is always the main-app card list.
+  const quickActions = [
     { label: "Create Project", nav: "corpus-target" as const, icon: "\u2630", desc: "Set up a new research project and upload texts" },
     { label: "Concordance Search", nav: "concordance" as const, icon: "\u2727", desc: "Search your corpus with KWIC view" },
     { label: "Frequency Analysis", nav: "frequency" as const, icon: "\u2727", desc: "Word, lemma, and POS frequency with STTR" },
@@ -149,87 +140,25 @@ export function HomeView() {
         </div>
       )}
 
-      {/* v1.2.0 Lens: cross-modal overview — the main app's text corpora
-          share the same engine, so show BOTH sides of the active corpus. */}
-      {isLensMode && activeCorpusId && <LensCrossModalCard corpusId={activeCorpusId} />}
-
-      {/* v1.0.9: the hardcoded suite-wide tiles ("28 AI Tools / 97 Tests"…)
-          were misleading in Lens (and drifted from reality); Lens gets no
-          fake counters. The main app keeps its tiles unchanged. */}
-      {!isLensMode && (
-        <div className="home-stats">
-          <div className="home-stat">
-            <span className="home-stat-num">28</span>
-            <span className="home-stat-label">AI Tools</span>
-          </div>
-          <div className="home-stat">
-            <span className="home-stat-num">20</span>
-            <span className="home-stat-label">Stat Formulas</span>
-          </div>
-          <div className="home-stat">
-            <span className="home-stat-num">12</span>
-            <span className="home-stat-label">Frameworks</span>
-          </div>
-          <div className="home-stat">
-            <span className="home-stat-num">97</span>
-            <span className="home-stat-label">Tests</span>
-          </div>
+      <div className="home-stats">
+        <div className="home-stat">
+          <span className="home-stat-num">28</span>
+          <span className="home-stat-label">AI Tools</span>
         </div>
-      )}
-    </div>
-  );
-}
-
-
-// ---------------------------------------------------------------------------
-// LensCrossModalCard — v1.2.0: shows the text side (documents ingested in
-// the MAIN CorpusMind app — same engine, same data dir) next to the vision
-// side (image sets), so the user sees what the assistant can interpret
-// together. Zero new endpoints: composes getCorpus + listImageSets.
-// ---------------------------------------------------------------------------
-
-function LensCrossModalCard({ corpusId }: { corpusId: string }) {
-  const lang = useUI((s) => s.lang);
-  const setActiveNav = useUI((s) => s.setActiveNav);
-  const corpusQuery = useQuery({
-    queryKey: ["corpus", corpusId],
-    queryFn: () => api.getCorpus(corpusId),
-    retry: 1,
-  });
-  const setsQuery = useQuery({
-    queryKey: ["image-sets", corpusId],
-    queryFn: () => api.listImageSets(corpusId),
-    retry: 1,
-  });
-
-  const corpus = corpusQuery.data;
-  const sets = setsQuery.data ?? [];
-  const totalImages = sets.reduce((n, s) => n + (s.image_count ?? 0), 0);
-
-  return (
-    <div className="home-callout lens-crossmodal">
-      <h3>{t(lang, "home_crossmodal_h")}</h3>
-      {corpus && (
-        <p>
-          <strong>{corpus.name}</strong> ({corpus.language}) —{" "}
-          {corpus.document_count} {t(lang, "home_crossmodal_docs")}
-        </p>
-      )}
-      <p>
-        {sets.length} {t(lang, "home_crossmodal_sets")} · {totalImages}{" "}
-        {t(lang, "home_crossmodal_images")}
-      </p>
-      <p className="hint">{t(lang, "home_crossmodal_hint")}</p>
-      <div className="lens-crossmodal-actions">
-        {/* v1.2.0: the parent-app vision tab is gone — the merged vision
-            workbench now lives under "corpus-target". */}
-        <button className="btn-secondary" onClick={() => setActiveNav("corpus-target")}>
-          {t(lang, "nav_vision_corpora")}
-        </button>
-        <button className="btn-secondary" onClick={() => setActiveNav("assistant")}>
-          {t(lang, "nav_ai")}
-        </button>
+        <div className="home-stat">
+          <span className="home-stat-num">20</span>
+          <span className="home-stat-label">Stat Formulas</span>
+        </div>
+        <div className="home-stat">
+          <span className="home-stat-num">12</span>
+          <span className="home-stat-label">Frameworks</span>
+        </div>
+        <div className="home-stat">
+          <span className="home-stat-num">97</span>
+          <span className="home-stat-label">Tests</span>
+        </div>
       </div>
     </div>
   );
 }
+

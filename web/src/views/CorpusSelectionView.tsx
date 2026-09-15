@@ -185,6 +185,7 @@ export function ProjectSelector() {
 function CorpusListPanel({ mode }: { mode: CorpusMode }) {
   const qc = useQueryClient();
   const isReference = mode === "reference";
+  const lang = useUI((s) => s.lang);
   const activeCorpusId = useApp((s) => isReference ? s.referenceCorpusId : s.activeCorpusId);
   const setActive = useApp((s) => isReference ? s.setReferenceCorpus : s.setActiveCorpus);
   const activeProjectId = useApp((s) => s.activeProjectId);
@@ -259,10 +260,16 @@ function CorpusListPanel({ mode }: { mode: CorpusMode }) {
               </span>
             )}
             {/* Issue 18 fix: corpora could never be deleted from the UI —
-                api.deleteCorpus existed but had zero call sites. */}
+                api.deleteCorpus existed but had zero call sites.
+                v1.2.1: the bare ✕ glyph read as "close/unload" and looked
+                unprofessional next to the Active/Reference badge — replaced
+                with an explicit, labelled Delete button (same confirm flow,
+                same action, localised via the shared `delete` key). */}
             <button
               className="corpus-delete-btn"
-              title="Delete this corpus (and all its documents) — cannot be undone"
+              title={isReference
+                ? "Delete this reference corpus — cannot be undone"
+                : "Delete this corpus (and all its documents) — cannot be undone"}
               aria-label={`Delete corpus ${c.name}`}
               onClick={(e) => {
                 e.stopPropagation();
@@ -273,7 +280,7 @@ function CorpusListPanel({ mode }: { mode: CorpusMode }) {
               }}
               disabled={deleteCorpus.isPending}
             >
-              ✕
+              {t(lang, "delete")}
             </button>
           </li>
         ))}
@@ -1018,7 +1025,7 @@ function BundledReferences() {
                 ) : isDownloading ? (
                   <>
                     <span className="status-spinner" />
-                    <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>Downloading…</span>
+                    <span style={{ fontSize: "13px", color: "var(--text-muted)" }}>Downloading…</span>
                     <button
                       className="btn-small"
                       onClick={() => handleCancel(r.name)}
@@ -1524,17 +1531,17 @@ function DocumentList({ cid }: { cid: string }) {
         <div style={{
           marginBottom: "var(--space-2)", padding: "var(--space-3)",
           background: "var(--bg-subtle)", borderRadius: "var(--radius-sm)",
-          border: "1px solid var(--border)", fontSize: "12px",
+          border: "1px solid var(--border)", fontSize: "13px",
         }}>
           <strong>Tag All Files ({docCount})</strong>
-          <p style={{ fontSize: "11px", color: "var(--text-muted)", margin: "4px 0 8px" }}>
+          <p style={{ fontSize: "12px", color: "var(--text-muted)", margin: "4px 0 8px" }}>
             Apply the same metadata to every file in the corpus, then recompile.
             Leave a field empty to keep each file's existing value.
           </p>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr auto", gap: "var(--space-2)", marginBottom: "var(--space-2)" }}>
-            <input placeholder="Genre (e.g. news)" value={bulkForm.genre} onChange={(e) => setBulkForm({ ...bulkForm, genre: e.target.value })} style={{ fontSize: "12px" }} />
-            <input placeholder="Register (e.g. academic)" value={bulkForm.register} onChange={(e) => setBulkForm({ ...bulkForm, register: e.target.value })} style={{ fontSize: "12px" }} />
-            <input placeholder="Year (e.g. 2024)" value={bulkForm.year} onChange={(e) => setBulkForm({ ...bulkForm, year: e.target.value })} style={{ fontSize: "12px" }} />
+            <input placeholder="Genre (e.g. news)" value={bulkForm.genre} onChange={(e) => setBulkForm({ ...bulkForm, genre: e.target.value })} style={{ fontSize: "13px" }} />
+            <input placeholder="Register (e.g. academic)" value={bulkForm.register} onChange={(e) => setBulkForm({ ...bulkForm, register: e.target.value })} style={{ fontSize: "13px" }} />
+            <input placeholder="Year (e.g. 2024)" value={bulkForm.year} onChange={(e) => setBulkForm({ ...bulkForm, year: e.target.value })} style={{ fontSize: "13px" }} />
             <button className="btn-small btn-primary" onClick={handleBulkTag} disabled={bulkTagging}>
               {bulkTagging ? "Applying…" : `Apply to all ${docCount}`}
             </button>
@@ -1546,17 +1553,17 @@ function DocumentList({ cid }: { cid: string }) {
       {/* v0.1.19: Subcorpus list */}
       {subcorpora.data && subcorpora.data.length > 0 && (
         <div style={{ marginBottom: "var(--space-2)", display: "flex", gap: "var(--space-2)", flexWrap: "wrap" }}>
-          <span style={{ fontSize: "11px", color: "var(--text-muted)", alignSelf: "center" }}>Subcorpora:</span>
+          <span style={{ fontSize: "12px", color: "var(--text-muted)", alignSelf: "center" }}>Subcorpora:</span>
           {subcorpora.data.map((sc) => (
             <span key={sc.id} style={{
               display: "inline-flex", alignItems: "center", gap: "4px",
               background: "var(--bg-subtle)", border: "1px solid var(--border)",
-              borderRadius: "12px", padding: "2px 8px", fontSize: "11px",
+              borderRadius: "12px", padding: "2px 8px", fontSize: "12px",
             }}>
               {sc.name}
               <button
                 onClick={() => handleDeleteSubcorpus(sc.id, sc.name)}
-                style={{ background: "none", border: "none", color: "var(--danger)", cursor: "pointer", fontSize: "11px", padding: "0" }}
+                style={{ background: "none", border: "none", color: "var(--danger)", cursor: "pointer", fontSize: "12px", padding: "0" }}
                 title="Delete subcorpus"
               >✕</button>
             </span>
@@ -1569,17 +1576,17 @@ function DocumentList({ cid }: { cid: string }) {
         <div style={{
           marginBottom: "var(--space-2)", padding: "var(--space-3)",
           background: "var(--bg-subtle)", borderRadius: "var(--radius-sm)",
-          border: "1px solid var(--border)", fontSize: "12px",
+          border: "1px solid var(--border)", fontSize: "13px",
         }}>
           <strong>Create Subcorpus</strong>
-          <p style={{ fontSize: "11px", color: "var(--text-muted)", margin: "4px 0 8px" }}>
+          <p style={{ fontSize: "12px", color: "var(--text-muted)", margin: "4px 0 8px" }}>
             A subcorpus is a saved filter over document metadata. Only documents matching the filter will be included in analyses that use this subcorpus.
           </p>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "var(--space-2)", marginBottom: "var(--space-2)" }}>
-            <input placeholder="Name (e.g. News only)" value={subcorpusForm.name} onChange={(e) => setSubcorpusForm({...subcorpusForm, name: e.target.value})} style={{ fontSize: "12px" }} />
-            <input placeholder="Genre (e.g. news)" value={subcorpusForm.genre} onChange={(e) => setSubcorpusForm({...subcorpusForm, genre: e.target.value})} style={{ fontSize: "12px" }} />
-            <input placeholder="Register (e.g. academic)" value={subcorpusForm.register} onChange={(e) => setSubcorpusForm({...subcorpusForm, register: e.target.value})} style={{ fontSize: "12px" }} />
-            <input placeholder="Year range (e.g. 2010-2020)" value={subcorpusForm.yearMin} onChange={(e) => setSubcorpusForm({...subcorpusForm, yearMin: e.target.value})} style={{ fontSize: "12px" }} />
+            <input placeholder="Name (e.g. News only)" value={subcorpusForm.name} onChange={(e) => setSubcorpusForm({...subcorpusForm, name: e.target.value})} style={{ fontSize: "13px" }} />
+            <input placeholder="Genre (e.g. news)" value={subcorpusForm.genre} onChange={(e) => setSubcorpusForm({...subcorpusForm, genre: e.target.value})} style={{ fontSize: "13px" }} />
+            <input placeholder="Register (e.g. academic)" value={subcorpusForm.register} onChange={(e) => setSubcorpusForm({...subcorpusForm, register: e.target.value})} style={{ fontSize: "13px" }} />
+            <input placeholder="Year range (e.g. 2010-2020)" value={subcorpusForm.yearMin} onChange={(e) => setSubcorpusForm({...subcorpusForm, yearMin: e.target.value})} style={{ fontSize: "13px" }} />
           </div>
           <div style={{ display: "flex", gap: "var(--space-2)" }}>
             <button className="btn-small btn-primary" onClick={handleCreateSubcorpus} disabled={!subcorpusForm.name.trim()}>Create</button>
@@ -1589,7 +1596,7 @@ function DocumentList({ cid }: { cid: string }) {
       )}
 
       {docs.data && docs.data.length > 0 ? (
-        <table className="document-table" style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>
+        <table className="document-table" style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
           <thead>
             <tr style={{ textAlign: "left", borderBottom: "1px solid var(--border)" }}>
               <th style={{ padding: "var(--space-2)", fontWeight: 600 }}>Filename</th>
@@ -1608,10 +1615,10 @@ function DocumentList({ cid }: { cid: string }) {
                 {editingMetaId === d.id ? (
                   <>
                     <td style={{ padding: "var(--space-2)" }}>
-                      <input value={metaForm.genre} onChange={(e) => setMetaForm({...metaForm, genre: e.target.value})} placeholder="genre" style={{ fontSize: "11px", width: "80px", padding: "2px 4px" }} />
+                      <input value={metaForm.genre} onChange={(e) => setMetaForm({...metaForm, genre: e.target.value})} placeholder="genre" style={{ fontSize: "12px", width: "80px", padding: "2px 4px" }} />
                     </td>
                     <td style={{ padding: "var(--space-2)" }}>
-                      <input value={metaForm.register} onChange={(e) => setMetaForm({...metaForm, register: e.target.value})} placeholder="register" style={{ fontSize: "11px", width: "80px", padding: "2px 4px" }} />
+                      <input value={metaForm.register} onChange={(e) => setMetaForm({...metaForm, register: e.target.value})} placeholder="register" style={{ fontSize: "12px", width: "80px", padding: "2px 4px" }} />
                     </td>
                   </>
                 ) : (
@@ -1625,17 +1632,17 @@ function DocumentList({ cid }: { cid: string }) {
                   <div style={{ display: "flex", gap: "4px" }}>
                     {editingMetaId === d.id ? (
                       <>
-                        <button className="btn-small" onClick={() => handleSaveMeta(d.id)} style={{ fontSize: "11px", padding: "2px 6px" }}>Save</button>
-                        <button className="btn-small" onClick={() => setEditingMetaId(null)} style={{ fontSize: "11px", padding: "2px 6px" }}>Cancel</button>
+                        <button className="btn-small" onClick={() => handleSaveMeta(d.id)} style={{ fontSize: "12px", padding: "2px 6px" }}>Save</button>
+                        <button className="btn-small" onClick={() => setEditingMetaId(null)} style={{ fontSize: "12px", padding: "2px 6px" }}>Cancel</button>
                       </>
                     ) : (
                       <>
-                        <button className="btn-small" onClick={() => handleEditMeta(d)} style={{ fontSize: "11px", padding: "2px 6px" }} title="Edit metadata (genre, register, year)">✎ Tag</button>
+                        <button className="btn-small" onClick={() => handleEditMeta(d)} style={{ fontSize: "12px", padding: "2px 6px" }} title="Edit metadata (genre, register, year)">✎ Tag</button>
                         <button
                           className="btn-small"
                           onClick={() => handleDelete(d.id, d.filename)}
                           disabled={deletingId === d.id}
-                          style={{ background: "var(--danger)", fontSize: "11px", padding: "2px 6px" }}
+                          style={{ background: "var(--danger)", fontSize: "12px", padding: "2px 6px" }}
                           title="Remove this file from the corpus"
                         >
                           {deletingId === d.id ? "…" : "✕"}
@@ -1786,7 +1793,7 @@ function ReferenceUpload() {
       </p>
 
       {/* v1.0.7: max-size guidance based on engine limits + machine specs */}
-      <div className="reference-upload-section" style={{ fontSize: "11px", color: "var(--text-muted)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", padding: "var(--space-2)" }}>
+      <div className="reference-upload-section" style={{ fontSize: "12px", color: "var(--text-muted)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", padding: "var(--space-2)" }}>
         <strong style={{ color: "var(--text)" }}>Size limits on this machine</strong>
         <div>• Maximum file size: <strong>50 MB per file</strong> (engine-enforced — larger files are rejected).</div>
         {(() => {

@@ -37,8 +37,6 @@ export function AssistantView() {
   const cid = useApp((s) => s.activeCorpusId);
   const storeModel = useApp((s) => s.selectedOllamaModel);
   const setActiveNav = useUI((s) => s.setActiveNav);
-  const isLensMode = useUI((s) => s.isLensMode);
-  const langUI = useUI((s) => s.lang);
   const studentMode = useUI((s) => s.studentMode);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -171,10 +169,8 @@ export function AssistantView() {
   // panel with the "Suggestions" button in the sidebar.
   const [showSuggestions, setShowSuggestions] = useState(true);
   const suggestions = useQuery({
-    // v1.0.9: Lens passes shell=lens so the vision-oriented catalogue
-    // (image sets, OCR vocabulary, cross-modal) is served first.
-    queryKey: ["query-suggestions", cid, provider, selectedModel, isLensMode],
-    queryFn: () => api.getQuerySuggestions("en", cid, isLensMode ? "lens" : "main"),
+    queryKey: ["query-suggestions", cid, provider, selectedModel],
+    queryFn: () => api.getQuerySuggestions("en", cid, "main"),
     enabled: true,
     staleTime: 60_000, // don't refetch on every render
   });
@@ -260,7 +256,7 @@ export function AssistantView() {
           Suggested questions
           <button
             className="btn-small"
-            style={{ marginLeft: "var(--space-2)", fontSize: "10px", padding: "1px 6px" }}
+            style={{ marginLeft: "var(--space-2)", fontSize: "11px", padding: "1px 6px" }}
             onClick={() => setShowSuggestions(!showSuggestions)}
           >
             {showSuggestions ? "Hide" : "Show"}
@@ -286,11 +282,11 @@ export function AssistantView() {
             )}
             {dynamic.length > 0 && (
               <>
-                <h4 style={{ fontSize: "11px", marginTop: "var(--space-2)", color: "var(--text-muted)" }}>
+                <h4 style={{ fontSize: "12px", marginTop: "var(--space-2)", color: "var(--text-muted)" }}>
                   Dynamic ({dynamic.length})
                   <button
                     className="btn-small"
-                    style={{ marginLeft: "var(--space-1)", fontSize: "10px", padding: "1px 4px" }}
+                    style={{ marginLeft: "var(--space-1)", fontSize: "11px", padding: "1px 4px" }}
                     onClick={() => regenerateDynamic.mutate()}
                     disabled={regenerateDynamic.isPending || !providerHealthy || !cid}
                     title="Regenerate LLM-powered suggestions based on your corpus"
@@ -314,13 +310,13 @@ export function AssistantView() {
               </>
             )}
             {dynamic.length === 0 && cid && providerHealthy && (
-              <p className="hint" style={{ fontSize: "11px" }}>
+              <p className="hint" style={{ fontSize: "12px" }}>
                 No dynamic suggestions yet. Click ↻ to generate LLM-powered
                 follow-ups based on your corpus.
               </p>
             )}
-            {!cid && <p className="hint" style={{ fontSize: "11px" }}>Set an active corpus to enable dynamic suggestions.</p>}
-            {!providerHealthy && <p className="hint" style={{ fontSize: "11px" }}>Start Ollama or LM Studio for dynamic suggestions.</p>}
+            {!cid && <p className="hint" style={{ fontSize: "12px" }}>Set an active corpus to enable dynamic suggestions.</p>}
+            {!providerHealthy && <p className="hint" style={{ fontSize: "12px" }}>Start Ollama or LM Studio for dynamic suggestions.</p>}
           </>
         )}
       </aside>
@@ -468,7 +464,7 @@ export function AssistantView() {
                           value={editText}
                           onChange={(e) => setEditText(e.target.value)}
                           rows={4}
-                          style={{ width: "100%", fontSize: "13px", padding: "var(--space-2)", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)" }}
+                          style={{ width: "100%", fontSize: "14px", padding: "var(--space-2)", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)" }}
                         />
                         <div style={{ display: "flex", gap: "var(--space-2)", marginTop: "var(--space-1)" }}>
                           <button className="btn-primary btn-small" onClick={submitEdit}>Save Edit</button>
@@ -498,11 +494,7 @@ export function AssistantView() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={onKeyDown}
-            placeholder={isLensMode
-              ? (langUI === "ar"
-                ? "اسأل المساعد عن صورك ونصوصك… (Enter للإرسال، Shift+Enter لسطر جديد)"
-                : "Ask the Assistant about your images and texts… (Enter to send, Shift+Enter for newline)")
-              : "Ask the Assistant about your corpus… (Enter to send, Shift+Enter for newline)"}
+            placeholder="Ask the Assistant about your corpus… (Enter to send, Shift+Enter for newline)"
             rows={2}
           />
           <button onClick={send} disabled={!input.trim() || chat.isPending}>

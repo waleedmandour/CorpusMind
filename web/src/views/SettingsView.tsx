@@ -500,7 +500,7 @@ export function SettingsView() {
             persisted next to your data; delete the marker or toggle off to revoke.
           </p>
           <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
-            <label style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", fontSize: "13px" }}>
+            <label style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", fontSize: "14px" }}>
               <input
                 type="checkbox"
                 checked={facial.data?.enabled ?? false}
@@ -956,7 +956,12 @@ function OllamaModelManager({ ollamaHealthy }: { ollamaHealthy: boolean }) {
     },
   });
 
-  const installedSet = new Set(installedModels.data?.models ?? []);
+  // v1.2.1: compare canonical names — Ollama reports an untagged pull as
+  // 'bge-m3:latest', which never matched the catalogue's bare 'bge-m3', so
+  // freshly downloaded embedding models never showed as Installed.
+  const installedSet = new Set(
+    (installedModels.data?.models ?? []).map((n) => n.replace(/:latest$/, "")),
+  );
 
   const pullModel = async (modelName: string) => {
     if (!ollamaHealthy) {
@@ -1371,7 +1376,7 @@ function CloudProviderConfig() {
       <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-2)" }}>
         <strong>Cloud AI Provider</strong>
         {isConfigured && (
-          <span style={{ background: "var(--warning)", color: "var(--text-on-brand)", padding: "2px 8px", borderRadius: "4px", fontSize: "11px", fontWeight: 600 }}>
+          <span style={{ background: "var(--warning)", color: "var(--text-on-brand)", padding: "2px 8px", borderRadius: "4px", fontSize: "12px", fontWeight: 600 }}>
             {"\u2601"} Cloud active - data leaves device
           </span>
         )}
@@ -1394,17 +1399,17 @@ function CloudProviderConfig() {
               ))}
             </select>
             <div style={{ position: "relative", flex: 1 }}>
-              <input type={showKey ? "text" : "password"} value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder="API key" style={{ width: "100%", padding: "4px 8px", fontSize: "12px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }} />
-              <button onClick={() => setShowKey(!showKey)} style={{ position: "absolute", right: "4px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", fontSize: "11px" }}>{showKey ? "Hide" : "Show"}</button>
+              <input type={showKey ? "text" : "password"} value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder="API key" style={{ width: "100%", padding: "4px 8px", fontSize: "13px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }} />
+              <button onClick={() => setShowKey(!showKey)} style={{ position: "absolute", right: "4px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", fontSize: "12px" }}>{showKey ? "Hide" : "Show"}</button>
             </div>
           </div>
-          <input type="text" value={model} onChange={(e) => setModel(e.target.value)} placeholder={meta.modelPlaceholder} style={{ padding: "4px 8px", fontSize: "12px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }} />
+          <input type="text" value={model} onChange={(e) => setModel(e.target.value)} placeholder={meta.modelPlaceholder} style={{ padding: "4px 8px", fontSize: "13px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }} />
           <input
             type="text"
             value={baseUrl}
             onChange={(e) => setBaseUrl(e.target.value)}
             placeholder={baseUrlRequired ? "Base URL (required, e.g. https://api.deepseek.com/v1)" : "Base URL override (optional)"}
-            style={{ padding: "4px 8px", fontSize: "12px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }}
+            style={{ padding: "4px 8px", fontSize: "13px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }}
           />
           <div className="settings-text-muted" style={{ fontSize: 11, lineHeight: 1.5 }}>
             {meta.hint}
@@ -1412,7 +1417,7 @@ function CloudProviderConfig() {
               <> <a href={meta.keyUrl} target="_blank" rel="noreferrer" style={{ color: "var(--brand, #1b4d3e)" }}>Get a key ↗</a></>
             )}
           </div>
-          <label style={{ display: "flex", alignItems: "center", gap: "var(--space-1)", fontSize: "12px", color: "var(--warning, #c77b0e)" }}>
+          <label style={{ display: "flex", alignItems: "center", gap: "var(--space-1)", fontSize: "13px", color: "var(--warning, #c77b0e)" }}>
             <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
             I understand that enabling this sends data to a third-party cloud API.
           </label>

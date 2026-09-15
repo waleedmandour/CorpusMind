@@ -121,27 +121,13 @@ export function Sidebar() {
   const toggleGroup = useUI((s) => s.toggleGroup);
   const sidebarCollapsed = useUI((s) => s.sidebarCollapsed);
   const toggleSidebar = useUI((s) => s.toggleSidebar);
-  const isLensMode = useUI((s) => s.isLensMode);
   const activeCorpusId = useApp((s) => s.activeCorpusId);
   const versionDisplay = useEngineVersionDisplay();
 
-  // In Lens mode the sidebar shows the merged workbench (v1.1.0):
-  // the "corpora" group carries a single "Your Vision Corpora" item (the
-  // former Your Corpora + Your Vision tabs), and the separate vision
-  // group is gone. Reference corpora remain a text-only concept — hidden.
-  // Analysis Tools (text-only) and Arabic stay hidden as before.
-  const LENS_GROUP_IDS = ["overview", "corpora", "ai", "system"];
-  const visibleGroups = isLensMode
-    ? NAV_GROUPS.filter(g => LENS_GROUP_IDS.includes(g.id))
-        .map(g =>
-          g.id === "corpora"
-            ? {
-                ...g,
-                items: [{ id: "corpus-target", labelKey: "nav_vision_corpora", icon: "\u25A4" }] as NavItem[],
-              }
-            : g,
-        )
-    : NAV_GROUPS;
+  // v1.2.1: the Lens shell lives in its own repository now, so the
+  // Lens-specific group filtering (LENS_GROUP_IDS) is gone — this sidebar
+  // always shows the full main-app navigation.
+  const visibleGroups = NAV_GROUPS;
 
   const activeCorpus = useQuery({
     queryKey: ["corpus", activeCorpusId],
@@ -158,19 +144,16 @@ export function Sidebar() {
       {/* Logo + collapse toggle */}
       <div className="sidebar-header">
         <div className="sidebar-logo">
-          {/* v1.0.10: switch the logo with the shell — Lens gets its own blue
-              icon so the two apps are distinguishable side by side (taskbar,
-              Alt-Tab). Mirrors the text label switch directly below. */}
           <img
-            src={isLensMode ? "/icon-32-lens.png" : "/icon-32.png"}
-            alt={isLensMode ? "CorpusMind Lens" : "CorpusMind"}
+            src="/icon-32.png"
+            alt="CorpusMind"
             width="28"
             height="28"
           />
           {!sidebarCollapsed && (
             <div className="sidebar-logo-text-group">
               <span className="sidebar-logo-text">
-                {isLensMode ? "CorpusMind Lens" : "CorpusMind"}
+                CorpusMind
               </span>
               <span className="sidebar-logo-version">{versionDisplay}</span>
             </div>
