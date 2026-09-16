@@ -251,6 +251,22 @@ async def test_vector_kwic_missing_model_409_with_hint(client_missing_model):
     assert detail["model"]
 
 
+async def test_vector_kwic_untagged_pull_matches_bare_model(client):
+    """Regression (v1.2.2): real Ollama registers an untagged pull as
+    'bge-m3:latest' in /api/tags. Both the API-layer pre-flight and the
+    engine-internal check must compare canonical names, so a bare 'bge-m3'
+    request succeeds when the ':latest' variant is installed. The v1.2.1
+    fix canonicalized only the engine-internal check; this API pre-flight
+    kept returning 409 right after a successful download."""
+    ac, cid, fake = client
+    fake.installed = ["llama3.2:3b", "bge-m3:latest"]  # what real Ollama reports
+    r = await ac.post(f"/api/v1/corpora/{cid}/concordance/vector", json={
+        "query": "climate policy", "node": "climate", "model": "bge-m3",
+    })
+    assert r.status_code == 200, r.text
+    assert r.json()["model"] == "bge-m3"
+
+
 async def test_vector_kwic_corpus_missing_404(client):
     ac, _cid, _fake = client
     r = await ac.post("/api/v1/corpora/does-not-exist/concordance/vector", json={

@@ -130,23 +130,32 @@ async def concordance_vector(cid: str, body: VectorKwicRequest, request: Request
 
     # Cheap pre-flight so a missing model returns the actionable 409 BEFORE
     # any long-running scan (model chain: request → setting → bge-m3).
+    # v1.2.2: compare canonical names — Ollama registers an untagged pull as
+    # 'bge-m3:latest' while the model chain resolves to bare 'bge-m3'. This
+    # API-layer copy of the pre-flight was missed by the v1.2.1 fix (only
+    # semantic/vector_kwic.py and the Settings list were canonicalized), so
+    # Vector KWIC kept returning 409 even right after a successful pull.
     embed_model = resolve_embed_model(body.model)
     try:
         installed = await provider.list_models()
     except Exception:
         installed = None
-    if installed is not None and embed_model not in installed:
-        raise HTTPException(
-            409,
-            detail={
-                "error": "embedding_model_missing",
-                "model": embed_model,
-                "hint": f"Run: ollama pull {embed_model}",
-                "note": "Vector KWIC embeds lines with a local sentence-embedding model. "
-                        "bge-m3 is recommended (multilingual, strong Arabic).",
-                "settings_url": "/settings",
-            },
-        )
+    if installed is not None:
+        from ai.providers import canonical_model_name
+
+        installed_canon = {canonical_model_name(m) for m in installed}
+        if canonical_model_name(embed_model) not in installed_canon:
+            raise HTTPException(
+                409,
+                detail={
+                    "error": "embedding_model_missing",
+                    "model": embed_model,
+                    "hint": f"Run: ollama pull {embed_model}",
+                    "note": "Vector KWIC embeds lines with a local sentence-embedding model. "
+                            "bge-m3 is recommended (multilingual, strong Arabic).",
+                    "settings_url": "/settings",
+                },
+            )
 
     try:
         r = await vector_kwic(
