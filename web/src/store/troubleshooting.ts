@@ -135,8 +135,14 @@ interface TroubleshootState {
   /** Whether the user has muted Smart Troubleshooting notifications.
    * When muted, errors are still captured silently (stored in the issues
    * list) but the taskbar badge does NOT appear and the panel does NOT
-   * auto-open. The user can still open the panel manually from Settings.
-   * Persisted to localStorage so it survives app restarts. */
+   * auto-open. The user can still open the panel manually from Settings
+   * or via the Command Palette. Persisted to localStorage so it survives
+   * app restarts.
+   * v1.2.3: default is now UNMUTED (false). The old muted-by-default made
+   * the feature invisible: no badge, no auto-open, and the only unmute
+   * control lived inside Settings. Existing installs are migrated once via
+   * the persist-version bump below; a later explicit user choice is still
+   * respected forever. */
   muted: boolean;
 
   captureError: (params: {
@@ -191,7 +197,11 @@ export const useTroubleshoot = create<TroubleshootState>()(
       geminiAvailable: false,
       panelOpen: false,
       detailedViewOpen: false,
-      muted: true,  // Notifications OFF by default — user can unmute in Settings
+      // v1.2.3: notifications ON by default — muted:true made Smart
+      // Troubleshooting invisible (no badge, no auto-open, Settings-only
+      // unmute). Users can still mute here, in Settings, or via the
+      // Command Palette; that choice persists.
+      muted: false,
 
   captureError: (params) => {
     const code = params.code ?? extractCode(params.message);
@@ -356,6 +366,16 @@ export const useTroubleshoot = create<TroubleshootState>()(
     }),
     {
       name: "corpusmind-troubleshooting",
+      // v1.2.3: persist version 1 — flips EXISTING installs to the new
+      // unmuted default exactly once (they carry muted:true from the old
+      // default, so a plain default change would never reach them). After
+      // the migration, the user's own mute/unmute choice always wins.
+      version: 1,
+      migrate: (persisted, version) => {
+        const state = (persisted ?? {}) as { muted?: boolean };
+        if (version < 1) return { muted: false };
+        return { muted: state.muted ?? false };
+      },
       // Only persist the muted preference — issues are session-scoped
       partialize: (state) => ({ muted: state.muted }),
     },

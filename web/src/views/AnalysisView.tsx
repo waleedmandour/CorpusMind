@@ -13,8 +13,8 @@ import clsx from "clsx";
 
 import { api, exportWithFeedback, type ExportFormat, type ReferenceCorpusEntry, type POSAnalysisResult, type SemanticAnalysisResult } from "@/lib/api";
 import { useApp } from "@/store/app";
-import { useUI } from "@/store/ui";
-import { t } from "@/lib/i18n";
+import { useUI, type NavTarget } from "@/store/ui";
+import { t, type TranslationKey } from "@/lib/i18n";
 import { ExportButton } from "@/components/ExportButton";
 import { CollocationNetwork } from "@/components/CollocationNetwork";
 
@@ -173,29 +173,59 @@ const NAV_TO_TAB: Record<string, Tab> = {
   metaphor: "metaphor",
 };
 
-const TABS: { id: Tab; label: string; phase: 1 | 2 }[] = [
-  { id: "frequency", label: "Frequency", phase: 1 },
-  // v1.2.0: semantic KWIC right after the classic frequency list.
-  { id: "vector", label: "Vector KWIC", phase: 2 },
-  { id: "collocation", label: "Collocation", phase: 1 },
-  { id: "keyness", label: "Keyness", phase: 1 },
-  { id: "dispersion", label: "Dispersion", phase: 1 },
-  { id: "documents", label: "Documents", phase: 1 },
-  { id: "readability", label: "Readability", phase: 1 },
-  { id: "groups", label: "Compare groups", phase: 1 },
-  { id: "ngrams", label: "N-grams", phase: 2 },
-  { id: "pos", label: "POS", phase: 2 },
-  { id: "grammar", label: "Grammar", phase: 2 },
-  { id: "dep", label: "Dependency", phase: 2 },
-  { id: "discourse", label: "Discourse", phase: 2 },
-  { id: "vocab", label: "Vocabulary", phase: 2 },
-  { id: "sentiment", label: "Sentiment", phase: 2 },
-  { id: "metaphor", label: "Metaphor", phase: 2 },
+// ---------------------------------------------------------------------------
+// v1.2.3 — Analysis tool CARDS (replace the flat text tab strip).
+//
+// - Order mirrors the sidebar “Analyze” group EXACTLY (Concordance first,
+//   then Vector KWIC … Metaphor), so the top strip and the sidebar never
+//   disagree. Concordance renders its own view, so its card simply jumps
+//   there (same as clicking it in the sidebar).
+// - Documents / Readability / Compare groups have NO sidebar entry (they are
+//   reachable only from this shell), so they trail after the sidebar tools.
+// - Icons are the same glyphs the sidebar uses; hues come from an 8-color
+//   theme-matched palette (tool-hue-1…8 in global.css, light + dark values).
+// - Clicking a card also syncs the sidebar highlight (setActiveNav) so the
+//   two navigation surfaces stay in lockstep.
+// - Labels reuse the sidebar i18n keys, so the strip is bilingual like the
+//   rest of the app (the old tab strip was English-only).
+// ---------------------------------------------------------------------------
+interface ToolCard {
+  /** AnalysisView tab to activate (null for the Concordance jump card). */
+  id: Tab | null;
+  /** Sidebar counterpart whose highlight should follow the card. */
+  nav: NavTarget | null;
+  labelKey?: TranslationKey;
+  label?: string; // fallback for tools without a sidebar i18n key
+  icon: string;
+  hue: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+}
+
+const TOOL_CARDS: ToolCard[] = [
+  { id: null, nav: "concordance", labelKey: "nav_concordance", icon: "\u2727", hue: 1 },
+  { id: "vector", nav: "vector-kwic", labelKey: "nav_vector_kwic", icon: "\u2739", hue: 2 },
+  { id: "frequency", nav: "frequency", labelKey: "nav_frequency", icon: "\u2111", hue: 3 },
+  { id: "collocation", nav: "collocation", labelKey: "nav_collocation", icon: "\u2726", hue: 4 },
+  { id: "keyness", nav: "keyness", labelKey: "nav_keyness", icon: "\u2605", hue: 5 },
+  { id: "dispersion", nav: "dispersion", labelKey: "nav_dispersion", icon: "\u2234", hue: 6 },
+  { id: "ngrams", nav: "ngrams", labelKey: "nav_ngrams", icon: "\u224B", hue: 7 },
+  { id: "pos", nav: "pos", labelKey: "nav_pos", icon: "\u2135", hue: 8 },
+  { id: "grammar", nav: "grammar", labelKey: "nav_grammar", icon: "\u2699", hue: 1 },
+  { id: "dep", nav: "dependency", labelKey: "nav_dependency", icon: "\u2192", hue: 4 },
+  { id: "discourse", nav: "discourse", labelKey: "nav_discourse", icon: "\u201D", hue: 5 },
+  { id: "vocab", nav: "vocab", labelKey: "nav_vocab", icon: "\u4E00", hue: 6 },
+  { id: "sentiment", nav: "sentiment", labelKey: "nav_sentiment", icon: "\u263A", hue: 7 },
+  { id: "metaphor", nav: "metaphor", labelKey: "nav_metaphor", icon: "\u2248", hue: 8 },
+  // Corpus-level metrics — this shell only (no sidebar entry), kept last.
+  { id: "documents", nav: null, label: "Documents", icon: "\u25A4", hue: 3 },
+  { id: "readability", nav: null, label: "Readability", icon: "\u25D0", hue: 1 },
+  { id: "groups", nav: null, label: "Compare groups", icon: "\u21C4", hue: 2 },
 ];
 
 export function AnalysisView() {
   const cid = useApp((s) => s.activeCorpusId);
+  const lang = useUI((s) => s.lang);
   const activeNav = useUI((s) => s.activeNav);
+  const setActiveNav = useUI((s) => s.setActiveNav);
   const [tab, setTab] = useState<Tab>("frequency");
 
   // Sync the internal tab with the sidebar navigation
@@ -206,18 +236,36 @@ export function AnalysisView() {
 
   if (!cid) return <div className="empty-state">Select a corpus to analyze. Go to <strong>Corpora Selection → Your Corpus</strong> in the sidebar to create a corpus and upload texts.</div>;
 
+  const onCard = (c: ToolCard) => {
+    if (c.id === null) {
+      // Concordance card → jump to the dedicated concordancer view (the
+      // sidebar's first Analyze entry); App routes it to ConcordancerView.
+      setActiveNav("concordance");
+      return;
+    }
+    setTab(c.id);
+    // Keep the sidebar highlight in lockstep with the cards.
+    if (c.nav && c.nav !== activeNav) setActiveNav(c.nav);
+  };
+
   return (
     <div className="analysis">
-      <div className="tabs">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            className={clsx("tab", { active: tab === t.id, "phase-2": t.phase === 2 })}
-            onClick={() => setTab(t.id)}
-          >
-            {t.label}
-          </button>
-        ))}
+      <div className="tool-cards" role="tablist" aria-label={lang === "ar" ? "أدوات التحليل" : "Analysis tools"}>
+        {TOOL_CARDS.map((c) => {
+          const active = c.id !== null && tab === c.id;
+          return (
+            <button
+              key={c.labelKey ?? c.label}
+              className={clsx("tool-card", `tool-hue-${c.hue}`, { active })}
+              role="tab"
+              aria-selected={active}
+              onClick={() => onCard(c)}
+            >
+              <span className="tool-card-icon" aria-hidden="true">{c.icon}</span>
+              <span className="tool-card-label">{c.labelKey ? t(lang, c.labelKey) : c.label}</span>
+            </button>
+          );
+        })}
       </div>
 
       {tab === "frequency" && <FrequencyPanel cid={cid} />}
@@ -1545,7 +1593,8 @@ function GroupFrequencyPanel({ cid }: { cid: string }) {
 
 
 // =========================================================================
-// v1.2.0 — Vector KWIC (semantic concordancing; Anthony 2025, ACL 5(3))
+// v1.2.0 — Vector KWIC (semantic concordancing; Anthony 2025,
+// Applied Corpus Linguistics 5(3):100164)
 //
 // Mode A: a keyword concordance (regex/case toggles omitted — the node word
 // is re-ranked by embedding similarity). Mode B: whole-sentence semantic

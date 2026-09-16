@@ -139,7 +139,9 @@ camel_data -i morphology-db-msa-r13`}</pre>
           A local embedding model is required. Run <code>ollama pull bge-m3</code> (multilingual,
           strong Arabic performance); it is also installable via{" "}
           <strong>Settings → Models → Embedding</strong>. When the model is missing, the panel offers
-          a one-click pull.
+          a one-click pull. The <em>first</em> search after Ollama starts loads the model into memory
+          (1–2 minutes); if that load exceeds the wait limit the panel explains it and asks you to
+          retry — the model stays warm afterwards.
         </p>
         <h4>Reading the scores</h4>
         <p>
@@ -150,7 +152,8 @@ camel_data -i morphology-db-msa-r13`}</pre>
         </p>
         <p className="hint">
           Citation: Anthony, L. (2025). Concordancing with AI: Applications of word and sentence
-          embeddings. <em>Applied Corpus Linguistics, 5</em>(3), 100164.
+          embeddings. <em>Applied Corpus Linguistics, 5</em>(3), 100164.{" "}
+          <a href="https://doi.org/10.1016/j.acorp.2025.100164">https://doi.org/10.1016/j.acorp.2025.100164</a>
         </p>
       </>
     ),

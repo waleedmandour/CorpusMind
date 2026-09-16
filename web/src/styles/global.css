@@ -98,6 +98,19 @@
   --vg-representational: #1565c0;
   --vg-interactive: #c2185b;
   --vg-compositional: #7b1fa2;
+  /* Tool-card hue palette — light theme (v1.2.3 analysis tool cards).
+     Accents are tuned dark enough for white active-fill text (WCAG AA);
+     soft/border values are gentle tints of the same hue. Hue 1 is the brand
+     green and hue 2 the accent gold so the strip stays on-theme. */
+  --tool-on-accent: #ffffff;
+  --tool1-accent: #0b6e4f;  --tool1-soft: #e6f2ed;  --tool1-border: #bcdccd;
+  --tool2-accent: #8a6410;  --tool2-soft: #f8efd8;  --tool2-border: #e3d0a0;
+  --tool3-accent: #1d4ed8;  --tool3-soft: #e5eefb;  --tool3-border: #c3d5f2;
+  --tool4-accent: #b01355;  --tool4-soft: #fbe7ef;  --tool4-border: #f0c3d6;
+  --tool5-accent: #6d1f96;  --tool5-soft: #f3e8f9;  --tool5-border: #dcc2ec;
+  --tool6-accent: #0f6e78;  --tool6-soft: #e0f2f4;  --tool6-border: #b8dbdf;
+  --tool7-accent: #c2570a;  --tool7-soft: #fdeee0;  --tool7-border: #f2d2b4;
+  --tool8-accent: #475569;  --tool8-soft: #eaeef3;  --tool8-border: #ccd5de;
 }
 
 /* Dark theme */
@@ -182,6 +195,20 @@
   --vg-representational: #64b5f6;
   --vg-interactive: #f06292;
   --vg-compositional: #ba68c8;
+  /* Tool-card hue palette — dark theme (v1.2.3 analysis tool cards).
+     Accents brighten (as with the status colors above) so icons/active
+     fills stay readable on the dark surface; soft tints become deep
+     translucent-feel washes. Active fill text flips to near-black
+     (--tool-on-accent) because dark-theme accents are bright. */
+  --tool-on-accent: #0e1116;
+  --tool1-accent: #4ec99a;  --tool1-soft: #12291f;  --tool1-border: #1e4a38;
+  --tool2-accent: #e8b339;  --tool2-soft: #2d2410;  --tool2-border: #4d3d18;
+  --tool3-accent: #7aa7f7;  --tool3-soft: #14202f;  --tool3-border: #24395a;
+  --tool4-accent: #f278a8;  --tool4-soft: #2b1520;  --tool4-border: #54243a;
+  --tool5-accent: #c883e8;  --tool5-soft: #251531;  --tool5-border: #43285c;
+  --tool6-accent: #4cc4d4;  --tool6-soft: #0f272b;  --tool6-border: #1d444b;
+  --tool7-accent: #f59a52;  --tool7-soft: #2b1c0f;  --tool7-border: #4f3220;
+  --tool8-accent: #a3b6c9;  --tool8-soft: #1a212a;  --tool8-border: #2c3a49;
 }
 
 /* =========================================================================
@@ -1729,6 +1756,77 @@ code, pre { font-family: var(--font-mono); }
 
 .tab.phase-2 { color: var(--text-muted); }
 .tab.phase-2.active { color: var(--brand-500); }
+
+/* -------------------------------------------------------------------------
+   v1.2.3 — Analysis tool cards (interactive colored replacements for the
+   flat text tab strip at the top of the Analysis view).
+
+   Each card carries one of 8 theme-matched hues via .tool-hue-N, which maps
+   three local custom properties consumed by the card rules below:
+     --tool-accent        strong color (icon, hover/active border, active fill)
+     --tool-soft          idle card tint
+     --tool-soft-border   idle card border
+   The hue palettes are defined per theme in the :root light block and the
+   [data-theme="dark"] block (see "Tool-card hue palette" markers); the
+   active card's foreground uses --tool-on-accent so every hue stays WCAG
+   readable in both themes.
+   ------------------------------------------------------------------------- */
+.tool-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+  gap: var(--space-2);
+}
+.tool-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: 42px;
+  padding: var(--space-1) var(--space-3);
+  background: var(--tool-soft);
+  border: 1px solid var(--tool-soft-border);
+  border-radius: var(--radius-md);
+  font-size: 13.5px;
+  color: var(--text);
+  text-align: start;
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.1s, background 0.15s,
+    color 0.15s, box-shadow 0.15s;
+}
+.tool-card:hover {
+  border-color: var(--tool-accent);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 8%);
+}
+.tool-card:focus-visible {
+  outline: 2px solid var(--tool-accent);
+  outline-offset: 2px;
+}
+.tool-card-icon {
+  font-size: 17px;
+  line-height: 1;
+  color: var(--tool-accent);
+  flex-shrink: 0;
+}
+.tool-card.active {
+  background: var(--tool-accent);
+  border-color: var(--tool-accent);
+  color: var(--tool-on-accent);
+  font-weight: 600;
+}
+.tool-card.active .tool-card-icon { color: var(--tool-on-accent); }
+.tool-card-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tool-hue-1 { --tool-accent: var(--tool1-accent); --tool-soft: var(--tool1-soft); --tool-soft-border: var(--tool1-border); }
+.tool-hue-2 { --tool-accent: var(--tool2-accent); --tool-soft: var(--tool2-soft); --tool-soft-border: var(--tool2-border); }
+.tool-hue-3 { --tool-accent: var(--tool3-accent); --tool-soft: var(--tool3-soft); --tool-soft-border: var(--tool3-border); }
+.tool-hue-4 { --tool-accent: var(--tool4-accent); --tool-soft: var(--tool4-soft); --tool-soft-border: var(--tool4-border); }
+.tool-hue-5 { --tool-accent: var(--tool5-accent); --tool-soft: var(--tool5-soft); --tool-soft-border: var(--tool5-border); }
+.tool-hue-6 { --tool-accent: var(--tool6-accent); --tool-soft: var(--tool6-soft); --tool-soft-border: var(--tool6-border); }
+.tool-hue-7 { --tool-accent: var(--tool7-accent); --tool-soft: var(--tool7-soft); --tool-soft-border: var(--tool7-border); }
+.tool-hue-8 { --tool-accent: var(--tool8-accent); --tool-soft: var(--tool8-soft); --tool-soft-border: var(--tool8-border); }
 
 .checkbox { display: inline-flex; align-items: center; gap: var(--space-1); font-size: 13px; }
 .checkbox input { inline-size: auto; }

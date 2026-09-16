@@ -62,6 +62,19 @@ class EmbeddingModelError(RuntimeError):
         super().__init__(detail)
 
 
+class EmbeddingModelTimeoutError(RuntimeError):
+    """v1.2.3: the embedding call TIMED OUT — raised separately from
+    EmbeddingModelError so the API layer can answer 503 embedding_timeout
+    ("model is loading / host is slow — try again") instead of the
+    misleading 409 embedding_model_missing ("run ollama pull", which is
+    wrong advice when the model is installed but cold)."""
+
+    def __init__(self, model: str, detail: str):
+        self.model = model
+        self.detail = detail
+        super().__init__(detail)
+
+
 def resolve_embed_model(requested: str | None) -> str:
     """Model chain: request → settings (env-prefixed) → default bge-m3."""
     if requested and requested.strip():
@@ -111,9 +124,21 @@ def cosine(a: list[float], b: list[float]) -> float:
 # --------------------------------------------------------------------------- #
 
 
+# Timeout for embedding HTTP calls (v1.2.3: was an implicit 30 s that cold
+# model loads — bge-m3 ≈ 1.2 GB paged into RAM on first use — blew through,
+# and httpx timeout strings are empty so it surfaced as a bare
+# "Embedding failed with model 'bge-m3': "). 120 s covers a cold load;
+# the provider additionally retries once before giving up.
+EMBED_TIMEOUT_S = 120.0
+
 async def _embed_texts(provider, texts: list[str], model: str) -> list[list[float]]:
-    """Embed texts via the Ollama provider; raise EmbeddingModelError when
-    the model is missing so the API layer can return HTTP 409 + setup hint."""
+    """Embed texts via the provider; raise EmbeddingModelError when the model
+    is missing and EmbeddingModelTimeoutError when the call times out, so the API layer
+    can return HTTP 409 (setup hint) / HTTP 503 (warm-up hint) respectively.
+
+    v1.2.3: uses provider.embed_batch (one batched request for Ollama
+    /api/embed) instead of one HTTP call per line — the per-line loop used to
+    multiply exposure to the cold-load timeout and hammer /api/embeddings."""
     # Pre-flight: is the model installed? (Ollama list_models hits /api/tags;
     # other providers implement it too.) Cheap 30s-cached call.
     # v1.2.1: compare canonical names — Ollama reports 'bge-m3:latest' for an
@@ -131,22 +156,39 @@ async def _embed_texts(provider, texts: list[str], model: str) -> list[list[floa
                 model,
                 f"Embedding model '{model}' is not installed. Run: ollama pull {model}",
             )
-    vectors: list[list[float]] = []
-    for t in texts:
-        try:
-            resp = await provider.embed(t, model=model)
-        except Exception as e:
-            msg = str(e)
-            if "not found" in msg.lower() or "404" in msg:
-                raise EmbeddingModelError(
-                    model,
-                    f"Embedding model '{model}' is not installed. Run: ollama pull {model}",
-                ) from e
+
+    # v1.2.3: batch path when the provider offers it (Ollama does); fall back
+    # to the per-text loop for providers/fakes that only implement embed().
+    batch = getattr(provider, "embed_batch", None)
+    try:
+        if batch is not None:
+            responses = await batch(texts, model=model, timeout=EMBED_TIMEOUT_S)
+        else:
+            responses = [
+                await provider.embed(t, model=model, timeout=EMBED_TIMEOUT_S) for t in texts
+            ]
+    except EmbeddingModelTimeoutError:
+        # This module's own error — re-raise untouched (defensive).
+        raise
+    except Exception as e:
+        # ai.providers.EmbeddingTimeoutError (timeout after provider-side
+        # retries) → this module's EmbeddingModelTimeoutError; everything else
+        # keeps the old mapping. The import is aliased so it cannot shadow
+        # the module-level class used by the except clause above.
+        from ai.providers import EmbeddingTimeoutError as ProviderTimeoutError
+
+        if isinstance(e, ProviderTimeoutError):
+            raise EmbeddingModelTimeoutError(model, str(e)) from e
+        msg = str(e)
+        if "not found" in msg.lower() or "404" in msg:
             raise EmbeddingModelError(
-                model, f"Embedding failed with model '{model}': {msg}"
+                model,
+                f"Embedding model '{model}' is not installed. Run: ollama pull {model}",
             ) from e
-        vectors.append(list(resp.vector))
-    return vectors
+        raise EmbeddingModelError(
+            model, f"Embedding failed with model '{model}': {msg}"
+        ) from e
+    return [list(r.vector) for r in responses]
 
 
 # --------------------------------------------------------------------------- #

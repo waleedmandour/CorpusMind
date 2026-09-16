@@ -6,6 +6,7 @@
  */
 import { useEffect, useMemo, useState } from "react";
 import { useUI } from "@/store/ui";
+import { useTroubleshoot } from "@/store/troubleshooting";
 import clsx from "clsx";
 
 interface Action {
@@ -54,6 +55,24 @@ export function CommandPalette() {
       { id: "theme.system", label: "Theme: System", run: () => ui.setTheme("system") },
       { id: "dir.ltr", label: "Direction: LTR", run: () => ui.setDir("ltr") },
       { id: "dir.rtl", label: "Direction: RTL", run: () => ui.setDir("rtl") },
+      // v1.2.3: Smart Troubleshooting was Settings-only while muted — surface
+      // it here too (open the panel and flip notifications in one action).
+      {
+        id: "troubleshoot.panel",
+        label: "Open Smart Troubleshooting",
+        run: () => useTroubleshoot.getState().setPanelOpen(true),
+      },
+      {
+        id: "troubleshoot.mute",
+        label: useTroubleshoot.getState().muted
+          ? "Smart Troubleshooting: Unmute Notifications"
+          : "Smart Troubleshooting: Mute Notifications",
+        run: () => {
+          const ts = useTroubleshoot.getState();
+          ts.setMuted(!ts.muted);
+          if (ts.muted) ts.setPanelOpen(true); // unmuting → reveal the panel
+        },
+      },
     ];
   }, [ui]);
 

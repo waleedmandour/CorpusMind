@@ -121,6 +121,22 @@ class CloudDisabledError(ModelProviderError):
     """Raised when cloud is hard-disabled in settings (§13.2 belt-and-suspenders)."""
 
 
+class EmbeddingTimeoutError(ModelProviderError):
+    """v1.2.3: the embedding call timed out — almost always a COLD model load.
+
+    The first embed request after Ollama starts must page the model (~1.2 GB
+    for bge-m3) into memory, which routinely exceeds the old 30 s timeout.
+    httpx timeouts stringify to an EMPTY message, so this used to surface as
+    the misleading "[ollama] embed failed: " → misclassified downstream as
+    embedding_model_missing (409, "run ollama pull"). Raised as its own class
+    so callers can answer 503 embedding_timeout with a warm-up hint instead.
+    """
+
+    def __init__(self, message: str, *, timeout_s: float | None = None):
+        super().__init__(message)
+        self.timeout_s = timeout_s
+
+
 # --------------------------------------------------------------------------- #
 # Interface
 # --------------------------------------------------------------------------- #
@@ -191,6 +207,21 @@ class ModelProvider(abc.ABC):
         model: str | None = None,
         timeout: float | None = 30.0,
     ) -> EmbeddingResponse: ...
+
+    async def embed_batch(
+        self,
+        texts: list[str],
+        *,
+        model: str | None = None,
+        timeout: float | None = 30.0,
+    ) -> list[EmbeddingResponse]:
+        """Embed several texts in one logical call (v1.2.3).
+
+        Default: sequential embed() loop — correct for every provider. Backends
+        with a true batch endpoint (Ollama /api/embed) override this to cut
+        per-line HTTP round-trips (vector_kwic used to issue one request per
+        line, multiplying exposure to the cold-load timeout)."""
+        return [await self.embed(t, model=model, timeout=timeout) for t in texts]
 
     @abc.abstractmethod
     async def list_models(self) -> list[str]:
@@ -1099,28 +1130,149 @@ class OllamaProvider(ModelProvider):
         except httpx.HTTPError as e:
             raise ModelProviderError(f"[ollama] stream failed: {e}") from e
 
-    # --- embed (native /api/embeddings) ---
+    # --- v1.2.3: embed via the modern batch endpoint /api/embed ---
+    #
+    # History: this used to POST one legacy /api/embeddings (single "prompt")
+    # per text with a 30 s timeout and no retry. The FIRST call after Ollama
+    # starts must load the model into memory (bge-m3 ≈ 1.2 GB), which alone
+    # can exceed 30 s — and httpx timeouts stringify to an EMPTY message, so
+    # users saw the opaque "[ollama] embed failed: " and the API layer
+    # misclassified it as embedding_model_missing (409 → "run ollama pull",
+    # which fixes nothing because the model IS installed). Now: batch
+    # /api/embed + request-level keep_alive (model stays resident between
+    # calls), 120 s default timeout, ONE automatic retry on timeout, and
+    # timeouts raise EmbeddingTimeoutError (→ API 503 embedding_timeout)
+    # instead of being indistinguishable from every other failure. Every
+    # error message includes the exception type so it can never be empty.
+    _EMBED_TIMEOUT_S = 120.0
+    _EMBED_ATTEMPTS = 2
+
+    @staticmethod
+    def _embed_keep_alive() -> str:
+        """Request-level keep_alive so the model stays resident after each call.
+
+        Override with CORPUSMIND_OLLAMA_EMBED_KEEP_ALIVE (Ollama duration
+        string, e.g. "5m" / "1h"). Without this, Ollama unloads an idle model
+        and every burst after a pause pays the cold load again.
+        """
+        import os
+
+        return os.environ.get("CORPUSMIND_OLLAMA_EMBED_KEEP_ALIVE", "30m")
+
+    def _embed_timeout(self, timeout: float | None) -> float:
+        return self._EMBED_TIMEOUT_S if timeout is None else float(timeout)
+
+    async def _post_embed_with_retry(
+        self, url: str, payload: dict[str, Any], timeout_s: float, model_name: str
+    ) -> httpx.Response:
+        """POST an embed payload, retrying ONCE on timeout (cold-load slack).
+
+        httpx.TimeoutException → EmbeddingTimeoutError after the final attempt.
+        httpx.HTTPStatusError / other HTTPError propagate to the caller (the
+        404 fallback and generic wrapping live in embed_batch/_embed_legacy).
+        """
+        last: Exception | None = None
+        for attempt in range(1, self._EMBED_ATTEMPTS + 1):
+            try:
+                r = await self._client.post(url, json=payload, timeout=timeout_s)
+                r.raise_for_status()
+                return r
+            except httpx.TimeoutException as e:
+                last = e
+                log.warning(
+                    "ollama_embed_timeout",
+                    attempt=attempt,
+                    attempts=self._EMBED_ATTEMPTS,
+                    timeout_s=timeout_s,
+                    model=model_name,
+                    hint="first call after startup loads the model into RAM; "
+                    "keep_alive keeps it resident for follow-up calls",
+                )
+        raise EmbeddingTimeoutError(
+            f"[ollama] embed timed out: {type(last).__name__} after {timeout_s:.0f}s "
+            f"x{self._EMBED_ATTEMPTS} attempts (model '{model_name}'). The first call "
+            "after Ollama starts loads the model into memory and can take 1-2 minutes; "
+            "the automatic retry also timed out, so the host may be slow or low on RAM.",
+            timeout_s=timeout_s,
+        ) from last
+
     async def embed(
         self,
         text: str,
         *,
         model: str | None = None,
-        timeout: float | None = 30.0,
+        timeout: float | None = 120.0,
     ) -> EmbeddingResponse:
-        payload = {"model": model or "nomic-embed-text", "prompt": text}
+        return (await self.embed_batch([text], model=model, timeout=timeout))[0]
+
+    async def embed_batch(
+        self,
+        texts: list[str],
+        *,
+        model: str | None = None,
+        timeout: float | None = 120.0,
+    ) -> list[EmbeddingResponse]:
+        model_name = model or "nomic-embed-text"
+        timeout_s = self._embed_timeout(timeout)
+        payload: dict[str, Any] = {
+            "model": model_name,
+            "input": list(texts),
+            "keep_alive": self._embed_keep_alive(),
+        }
         try:
-            r = await self._client.post("/api/embeddings", json=payload, timeout=timeout)
-            r.raise_for_status()
+            r = await self._post_embed_with_retry("/api/embed", payload, timeout_s, model_name)
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 404:
+                # Ollama < 0.1.32 has no /api/embed — fall back to the legacy
+                # single-prompt endpoint (per text; same timeout/retry rules).
+                return await self._embed_legacy(texts, model_name, timeout_s)
+            raise ModelProviderError(
+                f"[ollama] embed failed: {type(e).__name__}: {e}"
+            ) from e
         except httpx.HTTPError as e:
-            raise ModelProviderError(f"[ollama] embed failed: {e}") from e
+            raise ModelProviderError(f"[ollama] embed failed: {type(e).__name__}: {e}") from e
         data = r.json()
-        try:
-            vec = data["embedding"]
-        except KeyError as e:
-            raise ModelProviderError(f"[ollama] unexpected embedding shape: {data}") from e
-        return EmbeddingResponse(
-            vector=vec, model=data.get("model", payload["model"]), provider=self.name
-        )
+        embs = data.get("embeddings")
+        if not isinstance(embs, list) or len(embs) != len(texts):
+            raise ModelProviderError(
+                f"[ollama] unexpected batch embedding shape: expected {len(texts)} "
+                f"vector(s), got {_debug_raw(embs)}"
+            )
+        return [
+            EmbeddingResponse(
+                vector=list(vec), model=data.get("model", model_name), provider=self.name
+            )
+            for vec in embs
+        ]
+
+    async def _embed_legacy(
+        self, texts: list[str], model_name: str, timeout_s: float
+    ) -> list[EmbeddingResponse]:
+        """Pre-0.1.32 fallback: one /api/embeddings call per text."""
+        out: list[EmbeddingResponse] = []
+        for t in texts:
+            payload = {"model": model_name, "prompt": t}
+            try:
+                r = await self._post_embed_with_retry(
+                    "/api/embeddings", payload, timeout_s, model_name
+                )
+            except httpx.HTTPError as e:
+                raise ModelProviderError(
+                    f"[ollama] embed failed: {type(e).__name__}: {e}"
+                ) from e
+            data = r.json()
+            try:
+                vec = data["embedding"]
+            except KeyError as e:
+                raise ModelProviderError(
+                    f"[ollama] unexpected embedding shape: {_debug_raw(data)}"
+                ) from e
+            out.append(
+                EmbeddingResponse(
+                    vector=vec, model=data.get("model", model_name), provider=self.name
+                )
+            )
+        return out
 
     # --- list models (native /api/tags) ---
     async def list_models(self) -> list[str]:

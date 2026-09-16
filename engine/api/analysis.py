@@ -120,7 +120,12 @@ async def concordance_vector(cid: str, body: VectorKwicRequest, request: Request
         if body.subcorpus_id
         else None
     )
-    from semantic.vector_kwic import EmbeddingModelError, resolve_embed_model, vector_kwic
+    from semantic.vector_kwic import (
+        EmbeddingModelError,
+        EmbeddingModelTimeoutError,
+        resolve_embed_model,
+        vector_kwic,
+    )
 
     # Resolve the embedding provider up front so a cold Ollama fails loudly.
     try:
@@ -177,6 +182,29 @@ async def concordance_vector(cid: str, body: VectorKwicRequest, request: Request
                 "model": e.model,
                 "hint": f"Run: ollama pull {e.model}",
                 "note": e.detail,
+                "settings_url": "/settings",
+            },
+        ) from e
+    except EmbeddingModelTimeoutError as e:
+        # v1.2.3: timeouts are NOT "model missing" — the model passed the
+        # pre-flight and the embed call itself timed out (almost always the
+        # cold first load paging ~1.2 GB into RAM, or an overloaded host).
+        # Answer 503 embedding_timeout with a warm-up hint instead of the
+        # misleading 409 "run ollama pull" (v1.2.2 misclassification).
+        raise HTTPException(
+            503,
+            detail={
+                "error": "embedding_timeout",
+                "model": e.model,
+                "hint": "The embedding model did not respond in time — the first "
+                        "call after Ollama starts must load it into memory "
+                        "(1-2 minutes). Wait a moment and run the search again; "
+                        "once warm, it stays resident.",
+                "note": e.detail,
+                "warmup_cmd": (
+                    "curl http://localhost:11434/api/embed "
+                    f"-d '{{\"model\":\"{e.model}\",\"input\":[\"warmup\"]}}'"
+                ),
                 "settings_url": "/settings",
             },
         ) from e

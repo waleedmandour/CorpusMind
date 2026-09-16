@@ -664,7 +664,9 @@ export const translations = {
 
     // --- v1.2.0: Vector KWIC ------------------------------------------------
     vk_title: "Vector KWIC",
-    vk_sub: "Semantic concordancing (Anthony 2025): keyword lines re-ranked by meaning, or whole-sentence semantic search.",
+    // v1.2.3: the old "Anthony 2025" alone read like the ACL conference —
+    // spell out the journal (Applied Corpus Linguistics) and give the DOI.
+    vk_sub: "Semantic concordancing (Anthony 2025, Applied Corpus Linguistics 5(3): 100164 — doi.org/10.1016/j.acorp.2025.100164): keyword lines re-ranked by meaning, or whole-sentence semantic search.",
     vk_query: "Semantic query",
     vk_query_ph: "e.g. effects of climate change on farming",
     vk_node: "Node word (optional — leave empty for semantic search)",
@@ -1455,7 +1457,8 @@ export const translations = {
 
     // --- v1.2.0: KWIC المتجهي ---
     vk_title: "KWIC المتجهي",
-    vk_sub: "توكوب دلالي (Anthony 2025): إعادة ترتيب أسطر الكلمة المفتاحية بالمعنى، أو بحث دلالي في الجمل كاملة.",
+    // v1.2.3: ذكر اسم المجلة كاملًا و DOI بدل الاختصار الغامض.
+    vk_sub: "توكوب دلالي (Anthony 2025، Applied Corpus Linguistics 5(3): 100164 — doi.org/10.1016/j.acorp.2025.100164): إعادة ترتيب أسطر الكلمة المفتاحية بالمعنى، أو بحث دلالي في الجمل كاملة.",
     vk_query: "الاستعلام الدلالي",
     vk_query_ph: "مثال: أثر التغير المناخي على الزراعة",
     vk_node: "الكلمة المحورية (اختياري — اتركها فارغة للبحث الدلالي)",

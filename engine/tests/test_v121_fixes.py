@@ -43,7 +43,7 @@ def test_vector_preflight_accepts_latest_tagged_install():
         async def list_models(self):
             return list(self._installed)
 
-        async def embed(self, text, *, model=None):
+        async def embed(self, text, *, model=None, timeout=None):
             from ai.providers import EmbeddingResponse
 
             return EmbeddingResponse(vector=[0.1, 0.2, 0.3], model=model or "", provider="fake")

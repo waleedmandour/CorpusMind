@@ -124,7 +124,11 @@ export function AboutView() {
           Fairclough, van Dijk, Wodak, Machin and Mayr, Barthes, Peirce,
           Lakoff and Johnson, Martin and White, Toulmin, Aristotle, Hyland,
           Biber, Gabrielatos and Marchi, Hardie, Kilgarriff, Church and Hanks,
-          Dunning, Rychly, Gries, and Juilland.
+          Dunning, Rychly, Gries, Juilland, and Laurence Anthony. The semantic
+          search behind Vector KWIC follows: Anthony, L. (2025). Concordancing
+          with AI: Applications of word and sentence embeddings. <em>Applied
+          Corpus Linguistics, 5</em>(3), 100164.
+          <a href="https://doi.org/10.1016/j.acorp.2025.100164">doi.org/10.1016/j.acorp.2025.100164</a>.
         </p>
       </section>
 
