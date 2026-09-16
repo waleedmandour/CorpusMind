@@ -6,6 +6,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
+## [1.2.2] — 2026-09-16 — Vector KWIC 409 after a successful model pull
+
+A one-fix patch release: on v1.2.1, Vector KWIC could still reject a
+request with HTTP 409 `embedding_model_missing` immediately after the
+embedding model had been pulled successfully through Settings.
+
+### Fixed
+
+- **Vector KWIC 409 after a successful pull (`bge-m3`, `nomic-embed-text`)** —
+  v1.2.1 taught the engine-internal check and the Settings model list to
+  compare model names canonically (so a request for `bge-m3` matches
+  Ollama's installed `bge-m3:latest`), but one exact-string comparison
+  was missed: the cheap pre-flight in the API layer, which runs before
+  the engine code and can answer 409 on its own. A real Ollama reports
+  installed models with the implicit `:latest` tag, so requesting the
+  bare catalogue name still failed there with `embedding_model_missing`
+  ("Run: ollama pull bge-m3") even right after a successful download —
+  the same 409-after-successful-pull symptom v1.2.1 was meant to fix.
+  The pre-flight now canonicalises both sides of the comparison,
+  mirroring the v1.2.1 fix. A regression test with a tag-reporting
+  provider double (`test_vector_kwic_untagged_pull_matches_bare_model`)
+  locks the behaviour in; the in-app model download really did succeed,
+  so no re-download is needed after updating.
+
 ## [1.2.1] — 2026-09-15 — Model-download fixes, HF catalogue repair, UI polish
 
 A patch release driven by first-run feedback on v1.2.0: the two new
