@@ -6,6 +6,77 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
+## [1.2.3] — 2026-09-17 — Vector KWIC cold-start timeouts, Smart Troubleshooting out of the box, citation clarity, analysis tool cards
+
+A follow-up patch release to v1.2.2, driven by more first-run feedback:
+Vector KWIC could still fail with the familiar 409 even when the model
+was correctly installed — this time from a different code path — and
+three usability issues were addressed at the same time.
+
+### Fixed
+
+- **Vector KWIC 409 on a cold embedding model (the second 409 path)** —
+  on v1.2.2, a request for `bge-m3` could pass the fixed pre-flight and
+  then *still* fail with 409 `embedding_model_missing` and the note
+  "[ollama] embed failed: " (empty error). Root cause: the provider's
+  embed call used the legacy `/api/embeddings` endpoint with a 30-second
+  timeout, no retry, and one text per HTTP call. The *first* embed on a
+  cold Ollama has to load the ~1.2 GB model into RAM, which frequently
+  exceeds 30 seconds; httpx timeout exceptions stringify to an empty
+  message, and the engine misclassified the resulting failure as
+  "model missing" with a misleading "ollama pull" hint. The provider now
+  uses the modern batch `POST /api/embed` endpoint with a request-level
+  `keep_alive` (default 30 minutes, tunable via
+  `CORPUSMIND_OLLAMA_EMBED_KEEP_ALIVE`), a 120-second timeout, and one
+  automatic retry on timeout; Ollama versions older than 0.1.32 fall
+  back to the legacy endpoint. Timeout failures are now typed end to end
+  and answered as HTTP 503 `embedding_timeout` with an actionable hint
+  and a ready-to-run warm-up command, while a genuinely missing model
+  still returns 409. Vector KWIC embeds whole batches per call instead
+  of one request per text. Regression-tested with a real-TCP fake Ollama
+  (`tests/test_v123_embed_timeout.py`): batch payload + keep-alive,
+  retry-then-succeed, typed non-empty timeout errors, legacy fallback,
+  and the API-level 503 mapping.
+  *Immediate workaround on any version:* warm the model once with
+  `curl http://localhost:11434/api/embed -d '{"model":"bge-m3","input":"warmup"}'`
+  (first call loads it, 1–2 minutes), or set `OLLAMA_KEEP_ALIVE=30m`.
+
+### Changed
+
+- **Smart Troubleshooting is now visible out of the box** — the
+  troubleshooting bar ships muted by default (a default inherited from
+  the repository's history), so the badge never appeared and the panel
+  had no reachable entry point while muted, even though errors were
+  still being captured silently. New installs now start unmuted, and
+  existing installs are migrated once on upgrade (a plain default change
+  would never reach them through persisted localStorage state). The
+  Command Palette gains "Open Smart Troubleshooting" and a mute/unmute
+  toggle, so the bar can always be summoned or silenced from the
+  keyboard.
+
+### Added
+
+- **Analysis tools as interactive colored cards** — the horizontal tool
+  strip at the top of the Analyze view (Concordance, Vector KWIC,
+  Frequency, Keywords, N-grams, Collocations, Dispersion, Readability,
+  …) is now a grid of colored, theme-aware cards instead of flat tabs.
+  Card colors come from 24 new hue tokens per theme (light and dark), so
+  they match the rest of the interface in both themes; labels reuse the
+  sidebar's bilingual (EN/AR) i18n keys; and the card order mirrors the
+  Analyze group in the sidebar one-to-one. Clicking a card switches
+  tools and syncs the sidebar highlight; the Concordance card navigates
+  to the full Concordancer view.
+
+### Documentation
+
+- **Anthony (2025) citation spelled out** — the Vector KWIC footnote
+  abbreviated the journal as "ACL 5(3)", which reads like the ACL
+  conference. The citation now reads "Anthony 2025, Applied Corpus
+  Linguistics 5(3): 100164" with the DOI
+  (doi.org/10.1016/j.acorp.2025.100164) in the UI (EN/AR), the About
+  acknowledgements (adding Laurence Anthony), the User Guide, and the
+  project homepage.
+
 ## [1.2.2] — 2026-09-16 — Vector KWIC 409 after a successful model pull
 
 A one-fix patch release: on v1.2.1, Vector KWIC could still reject a
