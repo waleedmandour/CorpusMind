@@ -99,7 +99,7 @@ def test_embed_timeout_retries_once_then_succeeds():
         def log_message(self, *a):  # silence test output
             pass
 
-        def do_POST(self):  # noqa: N802 — BaseHTTPRequestHandler protocol name
+        def do_POST(self):  # stdlib BaseHTTPRequestHandler protocol name, not our choice
             calls["n"] += 1
             length = int(self.headers.get("Content-Length", 0))
             self.rfile.read(length)
@@ -143,7 +143,7 @@ def test_embed_timeout_after_retry_raises_typed_nonempty_error():
         def log_message(self, *a):  # silence test output
             pass
 
-        def do_POST(self):  # noqa: N802 — BaseHTTPRequestHandler protocol name
+        def do_POST(self):  # stdlib BaseHTTPRequestHandler protocol name, not our choice
             length = int(self.headers.get("Content-Length", 0))
             self.rfile.read(length)
             import time
