@@ -288,6 +288,25 @@ async def test_delete_endpoint_requires_model_name(client_vk):
 # --------------------------------------------------------------------------- #
 
 
+@pytest.fixture(autouse=True)
+def _warmup_state_guard():
+    """Isolate api.system's module-level warm-up state around EVERY test here.
+
+    _warmup_status/_warmup_tasks are process-wide dicts; any residue (from a
+    prior test, a starved background task, or async-fixture finalisation
+    quirks on loaded CI runners) must not leak into the next test's
+    assertions. Clearing the dicts is loop-agnostic and safe: a task whose
+    event loop is gone can never run again.
+    """
+    import api.system as system_mod
+
+    system_mod._warmup_status.clear()
+    system_mod._warmup_tasks.clear()
+    yield
+    system_mod._warmup_status.clear()
+    system_mod._warmup_tasks.clear()
+
+
 class _FakeOllamaHTTP(BaseHTTPRequestHandler):
     """Tiny Ollama double for _do_warmup's real HTTP calls."""
 
@@ -316,14 +335,15 @@ async def fake_ollama_url():
 
 
 async def test_warmup_endpoint_reaches_warm(client_vk, fake_ollama_url, monkeypatch):
-    """POST /ollama/warmup → status warming → (coroutine run) → status warm.
+    """POST /ollama/warmup → task scheduled → (coroutine run) → status warm.
 
     The endpoint schedules _do_warmup as a background task; on loaded CI
-    runners that task can starve past a fixed polling window (observed as a
-    flake: status stuck at 'warming'), so the test cancels the scheduled
-    task and awaits the very same coroutine directly — deterministic, real
-    TCP to the fake Ollama, no scheduling race. The endpoint wiring
-    (POST → task + warming status → GET status shape) is still asserted.
+    runners that task can starve past any fixed polling window (observed as
+    a flake: status stuck at 'warming'), so the test awaits the very same
+    coroutine directly — deterministic, real TCP to the fake Ollama, no
+    scheduling race. Branch contracts (fresh POST → already_running False;
+    POST while warming → True) are asserted with explicitly seeded state so
+    no pre-existing module state can skew them.
     """
     import asyncio
 
@@ -335,18 +355,35 @@ async def test_warmup_endpoint_reaches_warm(client_vk, fake_ollama_url, monkeypa
         lambda: SimpleNamespace(ollama_base_url=fake_ollama_url),
     )
     ac, _ = client_vk
+
+    # Fresh state for THIS model (the autouse guard already cleared the
+    # dicts; belt-and-suspenders against anything racing the fixture).
+    system_mod._warmup_status.pop("bge-m3", None)
+    system_mod._warmup_tasks.pop("bge-m3", None)
+
     r = await ac.post("/api/v1/ollama/warmup", json={"model": "bge-m3"})
     assert r.status_code == 200, r.text
-    body = r.json()
-    assert body["ok"] is True
-    assert body["already_running"] is False
+    assert r.json()["ok"] is True
 
-    # Status endpoint reports the warm-up (warming now, or already warm when
-    # the background task finished within the response's own yields).
+    # Drive the warm-up coroutine directly: immune to task starvation.
+    await system_mod._do_warmup("bge-m3")
     s = await ac.get("/api/v1/ollama/warmup/status", params={"model": "bge-m3"})
-    assert s.json()["status"] in ("warming", "warm"), s.json()
+    body = s.json()
+    assert body["status"] == "warm", body
+    assert body["error"] is None
+    assert body["seconds"] >= 0
 
-    # Replace scheduling with a deterministic await of the same coroutine.
+    # Branch contract: POST while a warm-up is pending → already_running.
+    system_mod._warmup_status["bge-m3"] = {"status": "warming", "seconds": 0, "error": None}
+    r2 = await ac.post("/api/v1/ollama/warmup", json={"model": "bge-m3"})
+    assert r2.status_code == 200, r2.text
+    assert r2.json()["already_running"] is True
+
+    # Branch contract: clean slate → a new background task is scheduled.
+    system_mod._warmup_status.pop("bge-m3", None)
+    r3 = await ac.post("/api/v1/ollama/warmup", json={"model": "bge-m3"})
+    assert r3.status_code == 200, r3.text
+    assert r3.json()["already_running"] is False
     task = system_mod._warmup_tasks.get("bge-m3")
     assert task is not None
     if not task.done():
@@ -355,20 +392,6 @@ async def test_warmup_endpoint_reaches_warm(client_vk, fake_ollama_url, monkeypa
             await task
         except asyncio.CancelledError:
             pass
-    await system_mod._do_warmup("bge-m3")
-
-    s = await ac.get("/api/v1/ollama/warmup/status", params={"model": "bge-m3"})
-    body = s.json()
-    assert body["status"] == "warm", body
-    assert body["error"] is None
-    assert body["seconds"] >= 0
-
-    # A POST while a warm-up is already running reports it, not a restart.
-    system_mod._warmup_status.pop("bge-m3", None)
-    system_mod._warmup_status["bge-m3"] = {"status": "warming", "seconds": 0, "error": None}
-    r2 = await ac.post("/api/v1/ollama/warmup", json={"model": "bge-m3"})
-    assert r2.status_code == 200, r2.text
-    assert r2.json()["already_running"] is True
 
 
 async def test_warmup_status_not_started(client_vk):
