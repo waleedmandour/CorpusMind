@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 import json
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -507,6 +508,11 @@ async def ollama_pull(req: OllamaPullRequest) -> dict:
                 "error": None,
             }
             log.info("ollama_pull_success", model=model)
+            # v1.2.4: embedding models are auto-warmed right after download so
+            # the first real search never pays the cold load (the exact pain
+            # from the v1.2.3 field reports). Text LLMs are NOT auto-warmed —
+            # loading a multi-GB chat model into RAM uninvited would be rude.
+            _start_warmup_if_embedding(model)
         except Exception as e:
             _pull_status[model] = {
                 "status": "error",
@@ -544,6 +550,188 @@ async def ollama_pull_status(model: str) -> dict:
     if model not in _pull_status:
         return {"model": model, "status": "not_started", "completed": 0, "total": 0, "error": None}
     return {"model": model, **_pull_status[model]}
+
+
+# --------------------------------------------------------------------------- #
+# v1.2.4: Warm up an embedding model (load it into Ollama's memory)
+# --------------------------------------------------------------------------- #
+# The cold load pages the model into RAM (bge-m3 ≈ 1.2 GB) and can take
+# minutes on slow/low-RAM hosts — longer than any reasonable embed timeout
+# (v1.2.3 answers that case with 503 embedding_timeout + a curl warm-up
+# command). The warm-up endpoint moves that into the app: background task +
+# status polling, the same pattern as the pull flow.
+
+
+class OllamaWarmupRequest(BaseModel):
+    model: str = Field(..., min_length=1, description="Model to load into memory (e.g. 'bge-m3')")
+
+
+# In-memory warm-up status tracker (per model) + task references.
+_warmup_status: dict[str, dict] = {}
+_warmup_tasks: dict[str, asyncio.Task] = {}
+
+# Single-attempt client timeout for the warm-up POST — no retry needed here:
+# Ollama is either loading (keep waiting) or the host is hopeless.
+_WARMUP_TIMEOUT_S = 1800.0
+
+
+def _embedding_model_names() -> set[str]:
+    """Canonical names of models that should be auto-warmed after a pull:
+    the curated embedding catalogue + the configured default embed model."""
+    from ai.providers import canonical_model_name
+
+    names = {m["name"] for m in RECOMMENDED_OLLAMA_MODELS if m.get("task") == "embedding"}
+    try:
+        default_embed = get_settings().embedding_model
+        if default_embed and default_embed.strip():
+            names.add(default_embed.strip())
+    except Exception:  # pragma: no cover — settings always load in practice
+        pass
+    return {canonical_model_name(n) for n in names}
+
+
+def _start_warmup_if_embedding(model: str) -> bool:
+    """Kick off a background warm-up when `model` is a known embedding model.
+
+    Returns True when a warm-up was started (or is already running/warm).
+    Called fire-and-forget from the pull success path, so it must never
+    raise into the pull flow.
+    """
+    try:
+        from ai.providers import canonical_model_name
+
+        if canonical_model_name(model) not in _embedding_model_names():
+            return False
+        prev = _warmup_status.get(model, {})
+        if prev.get("status") in ("warming", "warm"):
+            return True
+        # Reuse the public endpoint's task starter; on failure just log —
+        # the user can always warm up manually from the Vector KWIC panel.
+        _warmup_status[model] = {"status": "warming", "seconds": 0, "error": None,
+                                 "auto": True}
+        _warmup_tasks[model] = asyncio.create_task(_do_warmup(model))
+        log.info("ollama_autowarm_started", model=model)
+        return True
+    except Exception as e:  # pragma: no cover — defensive
+        log.warning("ollama_autowarm_failed", model=model, error=str(e))
+        return False
+
+
+async def _do_warmup(model: str) -> None:
+    """POST one tiny /api/embed request so Ollama pages the model into RAM.
+
+    Direct HTTP call (mirrors the pull flow's style) with a single generous
+    timeout — a cold load legitimately takes minutes and needs no retry:
+    Ollama keeps loading between our attempts anyway.
+    """
+    settings = get_settings()
+    base_url = settings.ollama_base_url.rstrip("/")
+    started = time.monotonic()
+    try:
+        async with httpx.AsyncClient(timeout=_WARMUP_TIMEOUT_S, trust_env=False, proxy=None) as client:
+            r = await client.post(
+                f"{base_url}/api/embed",
+                json={"model": model, "input": ["warmup"], "keep_alive": "30m"},
+            )
+        if r.status_code == 404:
+            # Ollama < 0.1.32: no /api/embed — legacy single-prompt endpoint.
+            async with httpx.AsyncClient(timeout=_WARMUP_TIMEOUT_S, trust_env=False, proxy=None) as client:
+                r = await client.post(
+                    f"{base_url}/api/embeddings",
+                    json={"model": model, "prompt": "warmup"},
+                )
+        if r.status_code != 200:
+            body = ""
+            try:
+                body = str(r.json().get("error", ""))
+            except Exception:
+                body = r.text[:200]
+            raise RuntimeError(body or f"Ollama returned HTTP {r.status_code}")
+        _warmup_status[model] = {
+            "status": "warm",
+            "seconds": round(time.monotonic() - started, 1),
+            "error": None,
+            "auto": _warmup_status.get(model, {}).get("auto", False),
+        }
+        log.info("ollama_warmup_success", model=model,
+                 seconds=_warmup_status[model]["seconds"])
+    except Exception as e:
+        _warmup_status[model] = {
+            "status": "error",
+            "seconds": round(time.monotonic() - started, 1),
+            "error": str(e),
+            "auto": _warmup_status.get(model, {}).get("auto", False),
+        }
+        log.error("ollama_warmup_failed", model=model, error=str(e))
+
+
+@router.post("/ollama/warmup")
+async def ollama_warmup(req: OllamaWarmupRequest) -> dict:
+    """Load an embedding model into Ollama's memory (non-blocking).
+
+    v1.2.4 companion to the 503 embedding_timeout answer: instead of asking
+    the user to run a curl command, the Vector KWIC panel (and Settings)
+    can start the warm-up from the app and poll /ollama/warmup/status.
+    """
+    model = req.model.strip()
+    if not model:
+        raise HTTPException(400, "Model name is required")
+    prev = _warmup_status.get(model, {})
+    if prev.get("status") == "warming":
+        return {"ok": True, "model": model, "already_running": True,
+                "message": f"Warm-up for {model} is already running."}
+    _warmup_status[model] = {"status": "warming", "seconds": 0, "error": None}
+    # Store the task reference so it's not garbage-collected mid-load.
+    _warmup_tasks[model] = asyncio.create_task(_do_warmup(model))
+    return {"ok": True, "model": model, "already_running": False,
+            "message": f"Warming up {model}. Poll /api/v1/ollama/warmup/status?model={model} for progress."}
+
+
+@router.get("/ollama/warmup/status")
+async def ollama_warmup_status(model: str) -> dict:
+    """Get the warm-up progress for a model."""
+    if model not in _warmup_status:
+        return {"model": model, "status": "not_started", "seconds": 0, "error": None}
+    return {"model": model, **_warmup_status[model]}
+
+
+# --------------------------------------------------------------------------- #
+# v1.2.4: Delete a downloaded model from Ollama
+# --------------------------------------------------------------------------- #
+
+
+class OllamaDeleteRequest(BaseModel):
+    model: str = Field(..., min_length=1, description="Model name to delete, e.g. 'bge-m3' or 'hf.co/user/repo:Q4_K_M'")
+
+
+@router.delete("/ollama/models")
+async def ollama_delete_model(req: OllamaDeleteRequest, request: Request) -> dict:
+    """Delete a downloaded model from Ollama (frees its disk space).
+
+    The UI shows a confirmation dialog before calling this. Any downloaded
+    model can be removed — embedding models and chat LLMs alike; it can
+    always be re-downloaded from the catalogue.
+    """
+    model = req.model.strip()
+    if not model:
+        raise HTTPException(400, "Model name is required")
+    try:
+        provider = request.app.state.providers.get("ollama")
+    except Exception as e:
+        raise HTTPException(503, f"Ollama provider unavailable: {e}") from e
+    from ai.providers import OllamaModelNotFoundError
+
+    try:
+        await provider.delete_model(model)
+    except OllamaModelNotFoundError as e:
+        raise HTTPException(404, str(e)) from e
+    except Exception as e:
+        raise HTTPException(502, f"Delete failed: {e}") from e
+    return {
+        "ok": True,
+        "model": model,
+        "message": f"Model '{model}' deleted from Ollama. You can re-download it anytime.",
+    }
 
 
 # --------------------------------------------------------------------------- #

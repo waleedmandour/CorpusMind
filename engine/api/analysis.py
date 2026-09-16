@@ -198,8 +198,9 @@ async def concordance_vector(cid: str, body: VectorKwicRequest, request: Request
                 "model": e.model,
                 "hint": "The embedding model did not respond in time — the first "
                         "call after Ollama starts must load it into memory "
-                        "(1-2 minutes). Wait a moment and run the search again; "
-                        "once warm, it stays resident.",
+                        "(1-2 minutes). Press “Warm up model” in the Vector KWIC "
+                        "panel to load it first, or wait a moment and run the "
+                        "search again; once warm, it stays resident.",
                 "note": e.detail,
                 "warmup_cmd": (
                     "curl http://localhost:11434/api/embed "

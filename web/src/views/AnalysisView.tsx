@@ -1630,9 +1630,60 @@ function VectorKwicPanel({ cid }: { cid: string }) {
   const [pullState, setPullState] = useState<{ pct: number; status: string } | null>(null);
   const pullIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // v1.2.4: embedding model choice (bge-m3 default; nomic-embed-text for fast
+  // English-only loads) + in-app warm-up (load model into memory, no terminal).
+  const [embedModel, setEmbedModel] = useState("bge-m3");
+  const [warm, setWarm] = useState<{ status: string; seconds?: number } | null>(null);
+  const [warmError, setWarmError] = useState<string | null>(null);
+  const warmIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // v1.2.4: 503 embedding_timeout → friendly card with a Warm-up button
+  // (previously the raw HTTP 503 JSON leaked into the error line).
+  const [timeoutInfo, setTimeoutInfo] = useState<{ model: string; hint?: string } | null>(null);
+
+  const changeEmbedModel = (m: string) => {
+    setEmbedModel(m);
+    setSetup(null);
+    setPulledModel(null);
+    setTimeoutInfo(null);
+    setWarm(null);
+    setWarmError(null);
+    if (warmIntervalRef.current) clearInterval(warmIntervalRef.current);
+    if (pullIntervalRef.current) clearInterval(pullIntervalRef.current);
+  };
+
+  const startWarmup = async (model: string) => {
+    if (warmIntervalRef.current) clearInterval(warmIntervalRef.current);
+    setWarmError(null);
+    setWarm({ status: "warming" });
+    try {
+      await api.ollamaWarmup(model);
+      const poll = setInterval(async () => {
+        try {
+          const s = await api.ollamaWarmupStatus(model);
+          setWarm({ status: s.status, seconds: s.seconds });
+          if (s.status === "warm" || s.status === "error") {
+            clearInterval(poll);
+            warmIntervalRef.current = null;
+            if (s.status === "error") setWarmError(s.error || "unknown error");
+          }
+        } catch {
+          clearInterval(poll);
+          warmIntervalRef.current = null;
+          setWarm(null);
+          setWarmError("status poll failed");
+        }
+      }, 2000);
+      warmIntervalRef.current = poll;
+    } catch (e) {
+      setWarm(null);
+      setWarmError(e instanceof Error ? e.message : String(e));
+    }
+  };
+
   // Never leak an in-flight pull poll past unmount (same guard as SettingsView).
   useEffect(() => () => {
     if (pullIntervalRef.current) clearInterval(pullIntervalRef.current);
+    if (warmIntervalRef.current) clearInterval(warmIntervalRef.current);
   }, []);
 
   const runMutation = useMutation({
@@ -1645,8 +1696,12 @@ function VectorKwicPanel({ cid }: { cid: string }) {
         top_k: topK,
         min_similarity: minSim,
         normalize_arabic: normalizeArabic,
+        model: embedModel,
       }),
-    onSuccess: () => setSetup(null),
+    onSuccess: () => {
+      setSetup(null);
+      setTimeoutInfo(null);
+    },
     onError: (e: Error) => {
       if (e.message.startsWith("HTTP 409:")) {
         try {
@@ -1657,6 +1712,18 @@ function VectorKwicPanel({ cid }: { cid: string }) {
           }
         } catch {
           // Malformed 409 body — fall through to the generic error display.
+        }
+      } else if (e.message.startsWith("HTTP 503:")) {
+        // v1.2.4: cold-load timeout → actionable warm-up card instead of raw JSON.
+        try {
+          const detail = JSON.parse(e.message.slice("HTTP 503:".length)) as VectorKwicSetup & {
+            error: string;
+          };
+          if (detail?.error === "embedding_timeout") {
+            setTimeoutInfo({ model: detail.model, hint: detail.hint });
+          }
+        } catch {
+          // Malformed 503 body — fall through to the generic error display.
         }
       }
     },
@@ -1733,6 +1800,13 @@ function VectorKwicPanel({ cid }: { cid: string }) {
           <input type="number" min={1} max={20} value={window}
                  onChange={(e) => setWindow(Number(e.target.value))} />
         </label>
+        <label style={{ flex: 1, minWidth: 200 }}>
+          {t(lang, "vk_model_select")}
+          <select value={embedModel} onChange={(e) => changeEmbedModel(e.target.value)}>
+            <option value="bge-m3">{t(lang, "vk_model_bge")}</option>
+            <option value="nomic-embed-text">{t(lang, "vk_model_nomic")}</option>
+          </select>
+        </label>
         <label>
           {t(lang, "vk_topk")}
           <input type="number" min={1} value={topK}
@@ -1751,12 +1825,42 @@ function VectorKwicPanel({ cid }: { cid: string }) {
         <button onClick={() => runMutation.mutate()} disabled={!query.trim() || runMutation.isPending}>
           {runMutation.isPending ? t(lang, "vk_running") : t(lang, "vk_run")}
         </button>
+        <button className="btn-small" title={t(lang, "vk_warmup_hint")}
+                onClick={() => startWarmup(embedModel)}
+                disabled={warm?.status === "warming" || runMutation.isPending}>
+          {t(lang, "vk_warmup")}
+        </button>
         <ExportButton
           onExport={(fmt) => { if (data) downloadJsonResult(data, `vector_kwic.${fmt}`, exportStatus.set); }}
           disabled={!data}
         />
       </div>
       {exportStatus.el}
+
+      {/* v1.2.4: warm-up state (loading the model into memory, no terminal) */}
+      {warm?.status === "warming" && <div className="empty-state">{t(lang, "vk_warming")}</div>}
+      {warm?.status === "warm" && (
+        <div className="result-meta">
+          {"\u2713"} {t(lang, "vk_warm_done")}
+          {typeof warm.seconds === "number" ? ` (${warm.seconds}s)` : ""}
+        </div>
+      )}
+      {warmError && <div className="error">{t(lang, "vk_warm_fail")}: {warmError}</div>}
+
+      {/* 503 → warm-up card (cold model load, v1.2.4) */}
+      {timeoutInfo && (
+        <div className="vector-kwic-setup" role="status">
+          <strong>{t(lang, "vk_timeout_card")}</strong>
+          {timeoutInfo.hint && <div className="hint">{timeoutInfo.hint}</div>}
+          <div className="hint">{t(lang, "vk_timeout_switch")}</div>
+          <div className="vector-kwic-setup-row">
+            <button className="btn-small" onClick={() => startWarmup(timeoutInfo.model)}
+                    disabled={warm?.status === "warming"}>
+              {warm?.status === "warming" ? t(lang, "vk_warming") : t(lang, "vk_warmup")}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 409 → one-click embedding-model setup card */}
       {setup && (

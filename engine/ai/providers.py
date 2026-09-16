@@ -137,6 +137,16 @@ class EmbeddingTimeoutError(ModelProviderError):
         self.timeout_s = timeout_s
 
 
+class OllamaModelNotFoundError(ModelProviderError):
+    """v1.2.4: Ollama reports the model is not installed (HTTP 404).
+
+    Raised by delete_model() when the user asks to remove a model that
+    Ollama does not have (already deleted, or never downloaded) so the API
+    layer can answer 404 with an actionable message instead of a generic
+    500.
+    """
+
+
 # --------------------------------------------------------------------------- #
 # Interface
 # --------------------------------------------------------------------------- #
@@ -1160,7 +1170,21 @@ class OllamaProvider(ModelProvider):
         return os.environ.get("CORPUSMIND_OLLAMA_EMBED_KEEP_ALIVE", "30m")
 
     def _embed_timeout(self, timeout: float | None) -> float:
-        return self._EMBED_TIMEOUT_S if timeout is None else float(timeout)
+        if timeout is not None:
+            return float(timeout)
+        # v1.2.4: honour CORPUSMIND_EMBED_TIMEOUT_S (seconds) so hosts that
+        # need longer than the 120 s default for a cold model load can raise
+        # it without a rebuild. Shared with semantic/vector_kwic.py, which
+        # passes the same value explicitly on every Vector KWIC embed call.
+        import os
+
+        raw = os.environ.get("CORPUSMIND_EMBED_TIMEOUT_S", "").strip()
+        if raw:
+            try:
+                return max(30.0, float(raw))
+            except ValueError:
+                log.warning("bad_CORPUSMIND_EMBED_TIMEOUT_S", value=raw)
+        return self._EMBED_TIMEOUT_S
 
     async def _post_embed_with_retry(
         self, url: str, payload: dict[str, Any], timeout_s: float, model_name: str
@@ -1285,6 +1309,33 @@ class OllamaProvider(ModelProvider):
         data = r.json()
         models = data.get("models", [])
         return [m.get("name", "") for m in models if m.get("name")]
+
+    # --- v1.2.4: model management (delete downloaded models) ---
+    async def delete_model(self, name: str) -> None:
+        """Delete a downloaded model from Ollama (POST /api/delete)."""
+        try:
+            r = await self._client.request(
+                "DELETE", "/api/delete", json={"model": name}, timeout=30.0
+            )
+        except httpx.HTTPError as e:
+            raise ModelProviderError(
+                f"[ollama] delete failed: {type(e).__name__}: {e}"
+            ) from e
+        if r.status_code == 404:
+            raise OllamaModelNotFoundError(
+                f"Model '{name}' is not installed in Ollama (already deleted "
+                "or never downloaded)."
+            )
+        if r.status_code != 200:
+            body = ""
+            try:
+                body = str(r.json().get("error", ""))
+            except Exception:
+                body = r.text[:200]
+            raise ModelProviderError(
+                f"[ollama] delete failed: HTTP {r.status_code}: {body or 'unknown error'}"
+            )
+        log.info("ollama_model_deleted", model=name)
 
     # --- v1.2.0: model capability lookups (tool support) ---
     async def _tags_models(self) -> list[dict[str, Any]]:

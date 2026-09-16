@@ -2179,6 +2179,20 @@ export const api = {
   ollamaPullStatus: (model: string) =>
     jsonFetch<OllamaPullStatus>(`/api/v1/ollama/pull/status?model=${encodeURIComponent(model)}`),
 
+  // --- v1.2.4: model management (delete) + embedding warm-up ---
+  ollamaDeleteModel: (model: string) =>
+    jsonFetch<{ ok: boolean; model: string; message: string }>("/api/v1/ollama/models", {
+      method: "DELETE",
+      body: JSON.stringify({ model }),
+    }),
+  ollamaWarmup: (model: string) =>
+    jsonFetch<{ ok: boolean; model: string; already_running: boolean; message: string }>(
+      "/api/v1/ollama/warmup",
+      { method: "POST", body: JSON.stringify({ model }) },
+    ),
+  ollamaWarmupStatus: (model: string) =>
+    jsonFetch<OllamaWarmupStatus>(`/api/v1/ollama/warmup/status?model=${encodeURIComponent(model)}`),
+
   // --- v1.2.0: Learner Research ---
   learnerCaf: (cid: string, group_by: "none" | "l1" | "proficiency" = "none",
                subcorpus_id?: string | null) =>
@@ -2535,6 +2549,15 @@ export interface OllamaPullStatus {
   completed: number;
   total: number;
   error: string | null;
+}
+
+// v1.2.4 — warm an embedding model (load it into Ollama's memory)
+export interface OllamaWarmupStatus {
+  model: string;
+  status: "warming" | "warm" | "error" | "not_started" | string;
+  seconds: number;
+  error: string | null;
+  auto?: boolean;
 }
 
 // ----------------------------------------------------------------------- //

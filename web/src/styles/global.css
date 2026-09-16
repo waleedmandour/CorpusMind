@@ -4627,6 +4627,22 @@ html[dir="rtl"] .toggle-switch input:checked + .toggle-slider::before {
   color: var(--success);
   font-weight: 500;
 }
+/* v1.2.4: X button to delete a downloaded model (with confirmation dialog).
+   Uses --danger (theme-aware) and tightens the padding for a compact ✕. */
+.ollama-delete-btn {
+  align-self: center;
+  color: var(--danger);
+  border: 1px solid var(--danger);
+  background: transparent;
+  font-size: 12px;
+  line-height: 1.2;
+  padding: 2px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.ollama-delete-btn:hover {
+  background: var(--danger-bg, rgba(192, 57, 43, 0.12));
+}
 .ollama-pull-progress {
   position: relative;
   inline-size: 100%;

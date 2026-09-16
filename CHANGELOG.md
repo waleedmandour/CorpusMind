@@ -6,6 +6,51 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
+## [1.2.4] — 2026-09-17 — Embedding model management: warm-up in the app, model deletion, nomic-embed-text for Vector KWIC, tunable timeout
+
+A follow-up to v1.2.3's honest `503 embedding_timeout`: a host whose cold
+bge-m3 load exceeds even the 120 s × 2 attempts got truthful advice but had
+to open a terminal to act on it. This release moves all of that into the
+app and adds the model-management basics users expect.
+
+### Added
+
+- **In-app "Warm up model"** — the Vector KWIC panel gains a Warm up button
+  (with a progress state: "Loading model into memory… first run can take
+  several minutes"). Backed by `POST /api/v1/ollama/warmup` +
+  `/ollama/warmup/status` (background task + polling, the pull-flow
+  pattern) with a single generous 1800 s attempt — no retry needed, Ollama
+  keeps loading between attempts. When a search still times out, the panel
+  no longer dumps the raw 503 JSON: it shows a friendly card explaining
+  the cold load, with the warm-up button right inside it.
+  *Downloading an embedding model now auto-warms it on success*, so the
+  first real search never pays the cold load (text LLMs are deliberately
+  NOT auto-warmed — loading a multi-GB chat model into RAM uninvited would
+  be rude).
+- **Delete downloaded models** — Settings → Models shows an ✕ button next
+  to every Installed model (curated and Hugging Face rows alike). A
+  confirmation dialog ("Delete {model} from Ollama? This frees its disk
+  space. You can re-download it anytime.") guards the action, backed by
+  `DELETE /api/v1/ollama/models` → Ollama `DELETE /api/delete`; deleting
+  an already-removed model answers 404 instead of a generic error.
+- **Vector KWIC embedding-model selector** — the panel's form now includes
+  a model dropdown: **bge-m3** (multilingual, strong Arabic, ~1.2 GB) or
+  **nomic-embed-text** (English-focused, ~0.27 GB, loads several times
+  faster) — the engine's request → settings → bge-m3 chain has accepted
+  an explicit model since v1.2.0; the UI just never exposed it. Selecting
+  nomic-embed-text on an English-only corpus is the fastest fix for
+  slow-to-load hosts; the 409 setup card pulls whatever model is selected.
+- **`CORPUSMIND_EMBED_TIMEOUT_S`** — the embed timeout is now tunable via
+  environment variable (seconds, 30 s floor, default 120) in both the
+  Ollama provider and the Vector KWIC embed path, for hosts whose cold
+  load legitimately needs more than the default (field report: >4 minutes
+  on a low-RAM machine).
+
+### Changed
+
+- The 503 `embedding_timeout` hint now points at the in-app Warm up
+  button first (the `warmup_cmd` remains for terminal users).
+
 ## [1.2.3] — 2026-09-17 — Vector KWIC cold-start timeouts, Smart Troubleshooting out of the box, citation clarity, analysis tool cards
 
 A follow-up patch release to v1.2.2, driven by more first-run feedback:

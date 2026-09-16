@@ -124,12 +124,32 @@ def cosine(a: list[float], b: list[float]) -> float:
 # --------------------------------------------------------------------------- #
 
 
-# Timeout for embedding HTTP calls (v1.2.3: was an implicit 30 s that cold
-# model loads — bge-m3 ≈ 1.2 GB paged into RAM on first use — blew through,
-# and httpx timeout strings are empty so it surfaced as a bare
+# Default timeout for embedding HTTP calls (v1.2.3: was an implicit 30 s that
+# cold model loads — bge-m3 ≈ 1.2 GB paged into RAM on first use — blew
+# through, and httpx timeout strings are empty so it surfaced as a bare
 # "Embedding failed with model 'bge-m3': "). 120 s covers a cold load;
 # the provider additionally retries once before giving up.
 EMBED_TIMEOUT_S = 120.0
+
+
+def embed_timeout_s() -> float:
+    """Effective embedding timeout (v1.2.4).
+
+    Override with CORPUSMIND_EMBED_TIMEOUT_S (seconds) for hosts whose cold
+    model load legitimately exceeds the 120 s default (low RAM, slow disk —
+    user reports of >4-minute loads). Floor of 30 s: below that even warm
+    small models on a busy host fail spuriously. Kept as a function (not a
+    constant) so tests and long-lived processes pick up env changes.
+    """
+    import os
+
+    raw = os.environ.get("CORPUSMIND_EMBED_TIMEOUT_S", "").strip()
+    if raw:
+        try:
+            return max(30.0, float(raw))
+        except ValueError:
+            pass  # bad value → silent fallback to the default
+    return EMBED_TIMEOUT_S
 
 async def _embed_texts(provider, texts: list[str], model: str) -> list[list[float]]:
     """Embed texts via the provider; raise EmbeddingModelError when the model
@@ -160,12 +180,13 @@ async def _embed_texts(provider, texts: list[str], model: str) -> list[list[floa
     # v1.2.3: batch path when the provider offers it (Ollama does); fall back
     # to the per-text loop for providers/fakes that only implement embed().
     batch = getattr(provider, "embed_batch", None)
+    timeout_s = embed_timeout_s()  # v1.2.4: env-tunable, see embed_timeout_s()
     try:
         if batch is not None:
-            responses = await batch(texts, model=model, timeout=EMBED_TIMEOUT_S)
+            responses = await batch(texts, model=model, timeout=timeout_s)
         else:
             responses = [
-                await provider.embed(t, model=model, timeout=EMBED_TIMEOUT_S) for t in texts
+                await provider.embed(t, model=model, timeout=timeout_s) for t in texts
             ]
     except EmbeddingModelTimeoutError:
         # This module's own error — re-raise untouched (defensive).

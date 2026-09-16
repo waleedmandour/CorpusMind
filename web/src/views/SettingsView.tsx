@@ -36,6 +36,7 @@ import { useTroubleshoot } from "@/store/troubleshooting";
 import { useUI } from "@/store/ui";
 import { useApp } from "@/store/app";
 import { t } from "@/lib/i18n";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 export function SettingsView() {
   const qc = useQueryClient();
@@ -923,6 +924,26 @@ function OllamaModelManager({ ollamaHealthy }: { ollamaHealthy: boolean }) {
   const [importPath, setImportPath] = useState("");
   const [importError, setImportError] = useState("");
 
+  // v1.2.4: delete a downloaded model (X button + confirmation dialog).
+  // Deleting frees the model's disk space; it can always be re-downloaded
+  // from the catalogue. The engine forwards the request to Ollama
+  // (DELETE /api/delete) and invalidating ["ollama-models"] refreshes the
+  // Installed badges everywhere.
+  const [deleteCandidate, setDeleteCandidate] = useState<string | null>(null);
+  const deleteMutation = useMutation({
+    mutationFn: (modelName: string) => api.ollamaDeleteModel(modelName),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["ollama-models"] });
+      setDeleteCandidate(null);
+      setLoadModelMsg(t(lang, "set_models_deleted"));
+      setTimeout(() => setLoadModelMsg(""), 5000);
+    },
+    onError: (e: Error) => {
+      setDeleteCandidate(null);
+      setLoadModelMsg(`${t(lang, "set_models_delete_failed")}: ${e.message}`);
+    },
+  });
+
   /** Open the native file picker to select a .gguf file. */
   const browseForModel = async () => {
     try {
@@ -1211,7 +1232,16 @@ function OllamaModelManager({ ollamaHealthy }: { ollamaHealthy: boolean }) {
                   </button>
                 )}
                 {isInstalled && !isPulling && (
-                  <span className="ollama-ready-text">{"\u2713"} Installed</span>
+                  <div style={{ display: "flex", gap: "var(--space-1)", alignItems: "center" }}>
+                    <span className="ollama-ready-text">{"\u2713"} Installed</span>
+                    <button
+                      className="btn-small ollama-delete-btn"
+                      title={t(lang, "set_models_delete")}
+                      onClick={() => setDeleteCandidate(selectedPull)}
+                    >
+                      {"\u2715"}
+                    </button>
+                  </div>
                 )}
               </div>
             );
@@ -1269,12 +1299,28 @@ function OllamaModelManager({ ollamaHealthy }: { ollamaHealthy: boolean }) {
                   >
                     Load
                   </button>
+                  <button
+                    className="btn-small ollama-delete-btn"
+                    title={t(lang, "set_models_delete")}
+                    onClick={() => setDeleteCandidate(m.name)}
+                  >
+                    {"\u2715"}
+                  </button>
                 </div>
               )}
             </div>
           );
         })}
       </div>
+
+      {/* v1.2.4: confirmation dialog for deleting a downloaded model */}
+      <ConfirmDialog
+        state={deleteCandidate ? {
+          msg: t(lang, "set_models_delete_confirm").replace("{m}", deleteCandidate),
+          onConfirm: () => deleteMutation.mutate(deleteCandidate),
+        } : null}
+        onClose={() => setDeleteCandidate(null)}
+      />
 
       {source === "huggingface" && !catalogue.isFetching && (catalogue.data?.models.length ?? 0) === 0 && (
         <p className="settings-text-muted">{t(lang, "set_hf_empty")}</p>
