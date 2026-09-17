@@ -6,6 +6,34 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
+## [1.2.5] — 2026-09-17 — The engine and Ollama no longer die when the window closes (macOS)
+
+Shipped less than a day after v1.2.4, driven by a field report that "the
+engine and Ollama keep disconnecting from the app". The cause turned out
+to be a process-lifecycle bug in the desktop shell, not anything flaky
+in the engine, in Ollama, or on the network.
+
+### Fixed
+
+- **Desktop shell killed the engine and Ollama whenever the window was
+  closed (macOS)** — a process-lifecycle bug, not a network one. The
+  Tauri shell registered two shutdown hooks: one on
+  `WindowEvent::Destroyed` (kept from earlier as a "fallback") and one on
+  the run-loop's `ExitRequested`/`Exit` events. On macOS, closing the
+  window destroys the window while the app itself keeps running in the
+  dock — the framework neither exits nor fires the exit events — so the
+  `Destroyed` fallback silently killed a live engine AND a live
+  `ollama serve`, leaving the app with a dead backend until a full quit +
+  relaunch. That is why "the engine and Ollama keep disconnecting" hit
+  Vector KWIC and every other feature at once, and only "from time to
+  time": it followed how the window was closed, not anything flaky in
+  the engine or in Ollama. The `Destroyed` hook is gone; real quits
+  (Cmd+Q, Quit menu, programmatic exit) still clean up via the run-loop
+  handler on every platform. New on macOS: clicking the dock icon with
+  no window recreates the main window and, only if a backend is
+  actually down (health-probe first), restarts it — so a plain
+  dock-click can never flush a warm bge-m3 from memory.
+
 ## [1.2.4] — 2026-09-17 — Embedding model management: warm-up in the app, model deletion, nomic-embed-text for Vector KWIC, tunable timeout
 
 A follow-up to v1.2.3's honest `503 embedding_timeout`: a host whose cold
@@ -50,27 +78,6 @@ app and adds the model-management basics users expect.
 
 - The 503 `embedding_timeout` hint now points at the in-app Warm up
   button first (the `warmup_cmd` remains for terminal users).
-
-### Fixed
-
-- **Desktop shell killed the engine and Ollama whenever the window was
-  closed (macOS)** — a process-lifecycle bug, not a network one. The
-  Tauri shell registered two shutdown hooks: one on
-  `WindowEvent::Destroyed` (kept from earlier as a "fallback") and one on
-  the run-loop's `ExitRequested`/`Exit` events. On macOS, closing the
-  window destroys the window while the app itself keeps running in the
-  dock — the framework neither exits nor fires the exit events — so the
-  `Destroyed` fallback silently killed a live engine AND a live
-  `ollama serve`, leaving the app with a dead backend until a full quit +
-  relaunch. That is why "the engine and Ollama keep disconnecting" hit
-  Vector KWIC and every other feature at once, and only "from time to
-  time": it followed how the window was closed, not anything flaky in
-  the engine or in Ollama. The `Destroyed` hook is gone; real quits
-  (Cmd+Q, Quit menu, programmatic exit) still clean up via the run-loop
-  handler on every platform. New on macOS: clicking the dock icon with
-  no window recreates the main window and, only if a backend is
-  actually down (health-probe first), restarts it — so a plain
-  dock-click can never flush a warm bge-m3 from memory.
 
 ## [1.2.3] — 2026-09-17 — Vector KWIC cold-start timeouts, Smart Troubleshooting out of the box, citation clarity, analysis tool cards
 
