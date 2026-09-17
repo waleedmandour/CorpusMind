@@ -6,12 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
-## [1.2.5] — 2026-09-17 — The engine and Ollama no longer die when the window closes (macOS)
+## [1.2.5] — 2026-09-17 — Engine/Ollama lifecycle fix (macOS) + CPU-friendly embedding batches
 
-Shipped less than a day after v1.2.4, driven by a field report that "the
-engine and Ollama keep disconnecting from the app". The cause turned out
-to be a process-lifecycle bug in the desktop shell, not anything flaky
-in the engine, in Ollama, or on the network.
+Two field reports, two fixes. First: "the engine and Ollama keep
+disconnecting from the app" — a process-lifecycle bug in the desktop
+shell, not anything flaky in the engine, in Ollama, or on the network.
+Second (reported from Windows 11 minutes after release): a search could
+still time out even right after a successful warm-up — a batch-size
+problem that only hosts running Ollama on CPU could hit.
 
 ### Fixed
 
@@ -33,6 +35,23 @@ in the engine, in Ollama, or on the network.
   no window recreates the main window and, only if a backend is
   actually down (health-probe first), restarts it — so a plain
   dock-click can never flush a warm bge-m3 from memory.
+
+- **A warm model + a big search could still time out on CPU-only hosts
+  (Windows 11 field report)** — Vector KWIC embeds up to 1500 context
+  windows, and they all went out as ONE `/api/embed` request. On a
+  CPU-only Ollama (the common case on Windows machines without GPU
+  compute) that single request needs minutes to answer even when the
+  model is resident in RAM, so the client ReadTimeout fired — and the
+  automatic retry queued behind the still-running first attempt,
+  guaranteeing a second timeout and a misleading "press Warm up model"
+  hint. Large batches are now split into sequential sub-requests of 64
+  texts each (override with `CORPUSMIND_EMBED_BATCH`, floor 1), keeping
+  every request in the seconds range on CPU, with results concatenated
+  in unchanged order. The timeout error now reports the request size
+  and names both causes (cold load vs warm-large-batch-on-CPU), and the
+  503 hint offers narrowing the search or raising
+  `CORPUSMIND_EMBED_TIMEOUT_S` instead of telling a user who just
+  warmed the model to warm it again.
 
 ## [1.2.4] — 2026-09-17 — Embedding model management: warm-up in the app, model deletion, nomic-embed-text for Vector KWIC, tunable timeout
 

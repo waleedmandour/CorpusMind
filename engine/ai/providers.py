@@ -1156,6 +1156,9 @@ class OllamaProvider(ModelProvider):
     # error message includes the exception type so it can never be empty.
     _EMBED_TIMEOUT_S = 120.0
     _EMBED_ATTEMPTS = 2
+    # v1.2.5: texts per /api/embed request when a large batch is chunked —
+    # see _embed_chunk_size() and embed_batch().
+    _EMBED_BATCH_CHUNK = 64
 
     @staticmethod
     def _embed_keep_alive() -> str:
@@ -1186,6 +1189,27 @@ class OllamaProvider(ModelProvider):
                 log.warning("bad_CORPUSMIND_EMBED_TIMEOUT_S", value=raw)
         return self._EMBED_TIMEOUT_S
 
+    def _embed_chunk_size(self) -> int:
+        """v1.2.5: texts per /api/embed request when chunking large batches.
+
+        Vector KWIC embeds up to 1500 context windows; sent as ONE request,
+        a CPU-only Ollama needs minutes to answer it and the client
+        ReadTimeout fires even with the model warm (the common case on
+        Windows hosts without GPU compute — user field report). 64 texts
+        keep each request in the seconds range on CPU while still
+        amortising HTTP round-trips. Override with CORPUSMIND_EMBED_BATCH
+        (integer, floor 1; a bad value silently keeps the default).
+        """
+        import os
+
+        raw = os.environ.get("CORPUSMIND_EMBED_BATCH", "").strip()
+        if raw:
+            try:
+                return max(1, int(raw))
+            except ValueError:
+                log.warning("bad_CORPUSMIND_EMBED_BATCH", value=raw)
+        return self._EMBED_BATCH_CHUNK
+
     async def _post_embed_with_retry(
         self, url: str, payload: dict[str, Any], timeout_s: float, model_name: str
     ) -> httpx.Response:
@@ -1212,11 +1236,19 @@ class OllamaProvider(ModelProvider):
                     hint="first call after startup loads the model into RAM; "
                     "keep_alive keeps it resident for follow-up calls",
                 )
+        # v1.2.5: report the request size and name BOTH failure modes. The
+        # message used to assume a cold model load, which mislead users who
+        # had already warmed the model and were timing out on a large batch
+        # against a CPU-only Ollama (Windows 11 field report).
+        n_texts = len(payload.get("input") or [payload.get("prompt", "")])
         raise EmbeddingTimeoutError(
             f"[ollama] embed timed out: {type(last).__name__} after {timeout_s:.0f}s "
-            f"x{self._EMBED_ATTEMPTS} attempts (model '{model_name}'). The first call "
-            "after Ollama starts loads the model into memory and can take 1-2 minutes; "
-            "the automatic retry also timed out, so the host may be slow or low on RAM.",
+            f"x{self._EMBED_ATTEMPTS} attempts (model '{model_name}', {n_texts} "
+            "text(s) in the request). If the model was already warm, the batch is "
+            "likely too large for CPU-only inference — narrow the search or raise "
+            "CORPUSMIND_EMBED_TIMEOUT_S. Otherwise the first call after Ollama "
+            "starts loads the model into memory and can take 1-2 minutes; the "
+            "automatic retry also timed out, so the host may be slow or low on RAM.",
             timeout_s=timeout_s,
         ) from last
 
@@ -1236,6 +1268,36 @@ class OllamaProvider(ModelProvider):
         model: str | None = None,
         timeout: float | None = 120.0,
     ) -> list[EmbeddingResponse]:
+        """Embed texts, chunking large batches into bounded /api/embed requests.
+
+        v1.2.5: a single huge batch (Vector KWIC embeds up to 1500 windows)
+        can outlast the client timeout on CPU-only hosts even when the model
+        is warm. Batches larger than _embed_chunk_size() are split into
+        sequential sub-requests of that size; results are concatenated in
+        input order, so callers see identical output either way. Each chunk
+        gets the same timeout and one automatic retry, and keep_alive pins
+        the model across chunks.
+        """
+        chunk = self._embed_chunk_size()
+        if len(texts) <= chunk:
+            return await self._embed_batch_single(texts, model=model, timeout=timeout)
+        out: list[EmbeddingResponse] = []
+        for i in range(0, len(texts), chunk):
+            out.extend(
+                await self._embed_batch_single(
+                    texts[i : i + chunk], model=model, timeout=timeout
+                )
+            )
+        return out
+
+    async def _embed_batch_single(
+        self,
+        texts: list[str],
+        *,
+        model: str | None = None,
+        timeout: float | None = 120.0,
+    ) -> list[EmbeddingResponse]:
+        """One /api/embed request (≤ chunk size) — the pre-1.2.5 embed_batch."""
         model_name = model or "nomic-embed-text"
         timeout_s = self._embed_timeout(timeout)
         payload: dict[str, Any] = {
