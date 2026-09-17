@@ -1668,14 +1668,19 @@ pub fn run() {
 
             Ok(())
         })
-        .on_window_event(|window, event| {
-            if let tauri::WindowEvent::Destroyed = event {
-                let sidecar: State<EngineSidecar> = window.state();
-                sidecar.shutdown();
-                let ollama: State<OllamaManager> = window.state();
-                ollama.shutdown();
-            }
-        })
+        // NOTE (Issue 22, v1.2.4): there used to be an `.on_window_event`
+        // hook here that called sidecar.shutdown() / ollama.shutdown() on
+        // `WindowEvent::Destroyed`, kept "as a fallback" next to the
+        // RunEvent-based cleanup below. That fallback WAS the bug: on macOS,
+        // closing the window fires `Destroyed` while the app itself keeps
+        // running (dock icon stays up, native macOS convention — verified in
+        // Tauri source: `on_window_close` only deregisters the window, no
+        // exit, no ExitRequested). So every plain window-close silently
+        // killed a live engine AND a live `ollama serve`, which then stayed
+        // dead until a full Cmd+Q quit + relaunch. Do NOT re-add a shutdown
+        // call on `WindowEvent::Destroyed` — real quits are covered by the
+        // RunEvent handler below, and window-reopen recovery is handled by
+        // RunEvent::Reopen.
         .invoke_handler(tauri::generate_handler![
             engine_health,
             sidecar_status,
@@ -1695,19 +1700,88 @@ pub fn run() {
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
         .run(|app_handle, event| {
-            // Issue 21.5 fix: cleanup previously ran ONLY on
-            // WindowEvent::Destroyed — the wrong lifecycle hook. On macOS,
-            // closing the window destroys it while the app keeps running
-            // (killing the engine under a live app), and programmatic exit
-            // paths (AppHandle::exit) never emit Destroyed at all, skipping
-            // cleanup entirely. Handle the run-loop exit events here; the
-            // window hook remains as a fallback.
+            // Issue 21.5 + Issue 22 (v1.2.4): the RunEvent handler is now the
+            // ONLY place that kills the engine/Ollama on shutdown. History:
+            // cleanup originally ran on WindowEvent::Destroyed — the wrong
+            // hook (macOS keeps the app alive after the last window closes,
+            // so every window-close killed a live backend under a live app;
+            // programmatic AppHandle::exit() never emits Destroyed at all).
+            // Issue 21.5 added these RunEvent arms but left the window hook
+            // as a "fallback", preserving the bug; v1.2.4 removes the window
+            // hook entirely and adds macOS Reopen recovery below.
             use tauri::RunEvent;
-            if let RunEvent::ExitRequested { .. } | RunEvent::Exit = event {
-                let sidecar: State<EngineSidecar> = app_handle.state();
-                sidecar.shutdown();
-                let ollama: State<OllamaManager> = app_handle.state();
-                ollama.shutdown();
+            match event {
+                RunEvent::ExitRequested { .. } | RunEvent::Exit => {
+                    // Fires reliably on a real quit: Cmd+Q / Quit menu item,
+                    // or a programmatic app_handle.exit(). On Windows/Linux
+                    // it also fires when the last window closes (platform
+                    // convention is to exit). shutdown() is a no-op when
+                    // there is no child, so double-firing is harmless.
+                    let sidecar: State<EngineSidecar> = app_handle.state();
+                    sidecar.shutdown();
+                    let ollama: State<OllamaManager> = app_handle.state();
+                    ollama.shutdown();
+                }
+                // macOS only: fires when the user clicks the dock icon while
+                // the app has no visible windows — exactly the state left
+                // behind after closing the window. Recreate the main window
+                // if it is gone, then make sure the engine + Ollama are
+                // actually ALIVE before restarting anything: restart_engine()
+                // and restart_ollama() are force-restarts (each begins with
+                // shutdown()), so calling them on healthy backends would
+                // flush a warm bge-m3 out of memory and recreate the very
+                // cold-start latency this handler exists to avoid.
+                #[cfg(target_os = "macos")]
+                RunEvent::Reopen { has_visible_windows, .. } => {
+                    if !has_visible_windows && app_handle.get_webview_window("main").is_none() {
+                        if let Some(cfg) = app_handle.config().app.windows.first().cloned() {
+                            match tauri::WebviewWindowBuilder::from_config(app_handle, &cfg)
+                                .and_then(|builder| builder.build())
+                            {
+                                Ok(_) => info!(target: "lifecycle", "main window recreated on reopen"),
+                                Err(e) => error!(target: "lifecycle", "failed to recreate main window on reopen: {e}"),
+                            }
+                        }
+                    }
+                    if !has_visible_windows {
+                        let handle = app_handle.clone();
+                        tauri::async_runtime::spawn(async move {
+                            let client = reqwest::Client::builder()
+                                .no_proxy()
+                                .timeout(Duration::from_secs(3))
+                                .build();
+                            let engine_ok = match &client {
+                                Ok(c) => c
+                                    .get(format!("http://{ENGINE_HOST}:{ENGINE_PORT}/api/v1/health"))
+                                    .send()
+                                    .await
+                                    .map(|r| r.status().is_success())
+                                    .unwrap_or(false),
+                                Err(_) => false,
+                            };
+                            if !engine_ok {
+                                info!(target: "lifecycle", "reopen: engine down — restarting it");
+                                let msg = restart_engine(handle.clone()).await;
+                                info!(target: "lifecycle", "reopen: engine restart result: {msg}");
+                            }
+                            let ollama_ok = match &client {
+                                Ok(c) => c
+                                    .get("http://127.0.0.1:11434/api/tags")
+                                    .send()
+                                    .await
+                                    .map(|r| r.status().is_success())
+                                    .unwrap_or(false),
+                                Err(_) => false,
+                            };
+                            if !ollama_ok {
+                                info!(target: "lifecycle", "reopen: Ollama down — restarting it");
+                                let msg = restart_ollama(handle).await;
+                                info!(target: "lifecycle", "reopen: Ollama restart result: {msg}");
+                            }
+                        });
+                    }
+                }
+                _ => {}
             }
         });
 }
