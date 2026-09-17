@@ -400,6 +400,15 @@ export function SettingsView() {
           </span>
         </div>
         <div className="settings-card-body">
+          {/* v1.2.5: the Gemini interpretation block moved ABOVE the Smart
+              Troubleshooting explanation (user request) so the API key is
+              the first thing seen on the card. */}
+          <GeminiKeyInput
+            available={troubleshoot.data?.available ?? false}
+            source={troubleshoot.data?.source ?? "none"}
+            model={troubleshoot.data?.model ?? "gemini-2.5-flash"}
+          />
+
           <p className="settings-text">
             When a backend error occurs during use, CorpusMind captures it and shows
             the details in the taskbar at the bottom of the window. If a Gemini API
@@ -407,13 +416,6 @@ export function SettingsView() {
             Gemini model — you get a plain-language explanation, the likely cause,
             and a suggested fix.
           </p>
-
-          {/* Gemini API key input */}
-          <GeminiKeyInput
-            available={troubleshoot.data?.available ?? false}
-            source={troubleshoot.data?.source ?? "none"}
-            model={troubleshoot.data?.model ?? "gemini-2.5-flash"}
-          />
 
           {/* Mute toggle */}
           <MuteToggle />

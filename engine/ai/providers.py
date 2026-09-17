@@ -137,6 +137,20 @@ class EmbeddingTimeoutError(ModelProviderError):
         self.timeout_s = timeout_s
 
 
+class EmbeddingConnectionError(ModelProviderError):
+    """v1.2.5: Ollama dropped or refused the connection — NOT a missing model.
+
+    Raised after the retry budget is spent on connection-level transport
+    errors (RemoteProtocolError "Server disconnected without sending a
+    response", ConnectError, ReadError). Field report (Windows 11, CPU-only):
+    Ollama crashed/restarted under RAM pressure mid-embed and the failure
+    fell into the generic ModelProviderError bucket, which the semantic
+    layer misclassified as embedding_model_missing → 409 "run ollama pull"
+    — wrong advice when the model IS installed. Raised as its own class so
+    the API layer can answer 502 embedding_unreachable with a restart hint.
+    """
+
+
 class OllamaModelNotFoundError(ModelProviderError):
     """v1.2.4: Ollama reports the model is not installed (HTTP 404).
 
@@ -1213,9 +1227,16 @@ class OllamaProvider(ModelProvider):
     async def _post_embed_with_retry(
         self, url: str, payload: dict[str, Any], timeout_s: float, model_name: str
     ) -> httpx.Response:
-        """POST an embed payload, retrying ONCE on timeout (cold-load slack).
+        """POST an embed payload, retrying ONCE on transport errors.
 
-        httpx.TimeoutException → EmbeddingTimeoutError after the final attempt.
+        v1.2.5: the retryable set widened from timeouts-only to ANY
+        httpx.TransportError — Ollama dropping the connection
+        (RemoteProtocolError) or being momentarily unreachable
+        (ConnectError) is often transient (crash + auto-restart under RAM
+        pressure), and one cheap retry recovers it.
+
+        httpx.TimeoutException → EmbeddingTimeoutError after the final
+        attempt; other TransportErrors → EmbeddingConnectionError.
         httpx.HTTPStatusError / other HTTPError propagate to the caller (the
         404 fallback and generic wrapping live in embed_batch/_embed_legacy).
         """
@@ -1225,31 +1246,42 @@ class OllamaProvider(ModelProvider):
                 r = await self._client.post(url, json=payload, timeout=timeout_s)
                 r.raise_for_status()
                 return r
-            except httpx.TimeoutException as e:
+            except httpx.TransportError as e:
                 last = e
                 log.warning(
-                    "ollama_embed_timeout",
+                    "ollama_embed_transport_error",
                     attempt=attempt,
                     attempts=self._EMBED_ATTEMPTS,
                     timeout_s=timeout_s,
                     model=model_name,
-                    hint="first call after startup loads the model into RAM; "
-                    "keep_alive keeps it resident for follow-up calls",
+                    error_type=type(e).__name__,
+                    hint="cold loads exceed the timeout; dropped connections "
+                    "and refused dials are often transient — keep_alive keeps "
+                    "a warm model resident between attempts",
                 )
         # v1.2.5: report the request size and name BOTH failure modes. The
         # message used to assume a cold model load, which mislead users who
         # had already warmed the model and were timing out on a large batch
         # against a CPU-only Ollama (Windows 11 field report).
         n_texts = len(payload.get("input") or [payload.get("prompt", "")])
-        raise EmbeddingTimeoutError(
-            f"[ollama] embed timed out: {type(last).__name__} after {timeout_s:.0f}s "
-            f"x{self._EMBED_ATTEMPTS} attempts (model '{model_name}', {n_texts} "
-            "text(s) in the request). If the model was already warm, the batch is "
-            "likely too large for CPU-only inference — narrow the search or raise "
-            "CORPUSMIND_EMBED_TIMEOUT_S. Otherwise the first call after Ollama "
-            "starts loads the model into memory and can take 1-2 minutes; the "
-            "automatic retry also timed out, so the host may be slow or low on RAM.",
-            timeout_s=timeout_s,
+        if isinstance(last, httpx.TimeoutException):
+            raise EmbeddingTimeoutError(
+                f"[ollama] embed timed out: {type(last).__name__} after {timeout_s:.0f}s "
+                f"x{self._EMBED_ATTEMPTS} attempts (model '{model_name}', {n_texts} "
+                "text(s) in the request). If the model was already warm, the batch is "
+                "likely too large for CPU-only inference — narrow the search or raise "
+                "CORPUSMIND_EMBED_TIMEOUT_S. Otherwise the first call after Ollama "
+                "starts loads the model into memory and can take 1-2 minutes; the "
+                "automatic retry also timed out, so the host may be slow or low on RAM.",
+                timeout_s=timeout_s,
+            ) from last
+        raise EmbeddingConnectionError(
+            f"[ollama] embed connection failed: {type(last).__name__} after "
+            f"{self._EMBED_ATTEMPTS} attempts (model '{model_name}', {n_texts} "
+            "text(s) in the request). Ollama dropped or refused the connection — "
+            "it may have crashed, restarted, or is not running. Check Ollama "
+            "(system tray or `ollama serve`), then press 'Warm up model' and run "
+            "the search again. The model is installed; no pull is needed."
         ) from last
 
     async def embed(

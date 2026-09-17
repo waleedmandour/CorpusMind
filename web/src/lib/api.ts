@@ -146,6 +146,48 @@ export async function nativeRestartEngine(): Promise<{
   return JSON.parse(raw);
 }
 
+/**
+ * v1.2.5: ask the shell to probe the engine and restart it ONLY if it is
+ * actually down. Used by jsonFetch's connection-error self-heal so a dead
+ * or still-booting engine recovers without user intervention (and without
+ * restarting a healthy engine — the shell probes health first).
+ */
+export async function ensureEngine(): Promise<{
+  restarted: boolean;
+  engine_running: boolean;
+  message: string;
+}> {
+  if (!isTauriRuntime()) {
+    throw new Error("Engine self-heal is only available in the desktop app.");
+  }
+  const invoke = await getInvoke();
+  const raw = (await invoke("ensure_engine")) as string;
+  return JSON.parse(raw);
+}
+
+/**
+ * v1.2.5: map raw connection-level failures (the Tauri HTTP plugin's
+ * reqwest "error sending request for url …", browser "Failed to fetch", …)
+ * to an actionable message instead of leaking plugin internals into error
+ * cards. HTTP-status errors ("HTTP 502: {…}") pass through untouched —
+ * callers parse those bodies into friendly cards.
+ */
+function friendlyEngineError(e: unknown): Error {
+  const msg = e instanceof Error ? e.message : String(e);
+  if (
+    /error sending request|Failed to fetch|NetworkError|ECONNREFUSED|connection refused|load failed/i.test(
+      msg,
+    )
+  ) {
+    return new Error(
+      "The analysis engine is not responding. It was restarted automatically — " +
+        "try again in a few seconds. If this persists, open Settings → System and " +
+        "click 'Restart engine', then check the engine logs there.",
+    );
+  }
+  return e instanceof Error ? e : new Error(msg);
+}
+
 /** Restart Ollama from Rust. Returns the result message + path. */
 export async function nativeRestartOllama(): Promise<{
   ok: boolean;
@@ -1305,8 +1347,37 @@ async function jsonFetch<T>(path: string, init?: RequestInit): Promise<T> {
   // Only retry on /health and /version endpoints — other endpoints
   // should fail fast so the user sees errors, not silent retries.
   const isStartupEndpoint = path.includes("/health") || path.includes("/version");
-  const maxRetries = isStartupEndpoint ? 5 : 0;
+  try {
+    return await jsonFetchAttempt<T>(path, init, isStartupEndpoint ? 5 : 0);
+  } catch (e: any) {
+    const isConnError = !!e?.message && !e.message.includes("HTTP ");
+    if (!isConnError) throw e;
+    // v1.2.5: the engine may have died mid-session or still be starting up
+    // (PyInstaller one-file extraction + antivirus can outrun any fixed
+    // health-wait). Ask the shell to probe-and-restart — it restarts ONLY a
+    // genuinely down engine — then retry the request once. Startup
+    // endpoints keep their own fast retry budget instead (boot polling
+    // expects quick answers, not a blocking restart).
+    if (isTauriRuntime() && !isStartupEndpoint) {
+      try {
+        const st = await ensureEngine();
+        if (st.engine_running) {
+          return await jsonFetchAttempt<T>(path, init, 2);
+        }
+      } catch {
+        // Shell unavailable too — fall through to the friendly error.
+      }
+    }
+    throw friendlyEngineError(e);
+  }
+}
 
+/** One budgeted attempt loop — the pre-1.2.5 jsonFetch body, unchanged. */
+async function jsonFetchAttempt<T>(
+  path: string,
+  init: RequestInit | undefined,
+  maxRetries: number,
+): Promise<T> {
   let lastError: Error | null = null;
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {

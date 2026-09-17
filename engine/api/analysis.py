@@ -123,6 +123,7 @@ async def concordance_vector(cid: str, body: VectorKwicRequest, request: Request
     from semantic.vector_kwic import (
         EmbeddingModelError,
         EmbeddingModelTimeoutError,
+        EmbeddingModelUnreachableError,
         resolve_embed_model,
         vector_kwic,
     )
@@ -174,6 +175,25 @@ async def concordance_vector(cid: str, body: VectorKwicRequest, request: Request
             model=body.model,
             document_ids=document_ids,
         )
+    except EmbeddingModelUnreachableError as e:
+        # v1.2.5: Ollama dropped/refused the connection (crash, restart, or
+        # down) — the model IS installed (the /api/tags pre-flight passed).
+        # MUST precede the EmbeddingModelError handler: this error subclasses
+        # it, and a 409 "run ollama pull" would be wrong advice.
+        raise HTTPException(
+            502,
+            detail={
+                "error": "embedding_unreachable",
+                "model": e.model,
+                "hint": "Ollama dropped or refused the connection — it may have "
+                        "crashed, restarted, or is not running. Start (or restart) "
+                        "Ollama, press “Warm up model” in the Vector KWIC panel, "
+                        "then run the search again. The model is installed; no "
+                        "pull is needed.",
+                "note": e.detail,
+                "settings_url": "/settings",
+            },
+        ) from e
     except EmbeddingModelError as e:
         raise HTTPException(
             409,

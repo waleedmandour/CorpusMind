@@ -1639,12 +1639,17 @@ function VectorKwicPanel({ cid }: { cid: string }) {
   // v1.2.4: 503 embedding_timeout → friendly card with a Warm-up button
   // (previously the raw HTTP 503 JSON leaked into the error line).
   const [timeoutInfo, setTimeoutInfo] = useState<{ model: string; hint?: string } | null>(null);
+  // v1.2.5: 502 embedding_unreachable → Ollama dropped/refused the connection
+  // (crashed / restarted / down). The model IS installed — no pull card here,
+  // just the restart hint and a re-run button.
+  const [unreachInfo, setUnreachInfo] = useState<{ model: string; hint?: string } | null>(null);
 
   const changeEmbedModel = (m: string) => {
     setEmbedModel(m);
     setSetup(null);
     setPulledModel(null);
     setTimeoutInfo(null);
+    setUnreachInfo(null);
     setWarm(null);
     setWarmError(null);
     if (warmIntervalRef.current) clearInterval(warmIntervalRef.current);
@@ -1701,6 +1706,7 @@ function VectorKwicPanel({ cid }: { cid: string }) {
     onSuccess: () => {
       setSetup(null);
       setTimeoutInfo(null);
+      setUnreachInfo(null);
     },
     onError: (e: Error) => {
       if (e.message.startsWith("HTTP 409:")) {
@@ -1724,6 +1730,19 @@ function VectorKwicPanel({ cid }: { cid: string }) {
           }
         } catch {
           // Malformed 503 body — fall through to the generic error display.
+        }
+      } else if (e.message.startsWith("HTTP 502:")) {
+        // v1.2.5: Ollama dropped/refused the connection — the model is
+        // installed, so no 409/pull card; show the restart hint instead.
+        try {
+          const detail = JSON.parse(e.message.slice("HTTP 502:".length)) as VectorKwicSetup & {
+            error: string;
+          };
+          if (detail?.error === "embedding_unreachable") {
+            setUnreachInfo({ model: detail.model, hint: detail.hint });
+          }
+        } catch {
+          // Malformed 502 body — fall through to the generic error display.
         }
       }
     },
@@ -1857,6 +1876,21 @@ function VectorKwicPanel({ cid }: { cid: string }) {
             <button className="btn-small" onClick={() => startWarmup(timeoutInfo.model)}
                     disabled={warm?.status === "warming"}>
               {warm?.status === "warming" ? t(lang, "vk_warming") : t(lang, "vk_warmup")}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 502 → Ollama-unreachable card (dropped/refused connection, v1.2.5) */}
+      {unreachInfo && (
+        <div className="vector-kwic-setup" role="status">
+          <strong>{t(lang, "vk_unreach_card")}</strong>
+          {unreachInfo.hint && <div className="hint">{unreachInfo.hint}</div>}
+          <div className="hint">{t(lang, "vk_unreach_retry")}</div>
+          <div className="vector-kwic-setup-row">
+            <button className="btn-small" onClick={() => runMutation.mutate()}
+                    disabled={runMutation.isPending}>
+              {runMutation.isPending ? t(lang, "vk_running") : t(lang, "vk_run")}
             </button>
           </div>
         </div>

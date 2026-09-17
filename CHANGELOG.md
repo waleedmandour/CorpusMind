@@ -6,14 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
-## [1.2.5] — 2026-09-17 — Engine/Ollama lifecycle fix (macOS) + CPU-friendly embedding batches
+## [1.2.5] — 2026-09-17 — Engine/Ollama lifecycle fix (macOS), CPU-friendly embedding, connection self-healing
 
-Two field reports, two fixes. First: "the engine and Ollama keep
+Three field reports, three fronts. First: "the engine and Ollama keep
 disconnecting from the app" — a process-lifecycle bug in the desktop
 shell, not anything flaky in the engine, in Ollama, or on the network.
-Second (reported from Windows 11 minutes after release): a search could
-still time out even right after a successful warm-up — a batch-size
-problem that only hosts running Ollama on CPU could hit.
+Second (Windows 11, CPU-only): a search could still time out even right
+after a successful warm-up — a batch-size problem that only hosts running
+Ollama on CPU could hit. Third (same machine): a dropped Ollama connection
+surfaced as the misleading 409 "Run: ollama pull bge-m3" while the engine
+itself intermittently failed with a raw reqwest error and no recovery.
 
 ### Fixed
 
@@ -52,6 +54,40 @@ problem that only hosts running Ollama on CPU could hit.
   503 hint offers narrowing the search or raising
   `CORPUSMIND_EMBED_TIMEOUT_S` instead of telling a user who just
   warmed the model to warm it again.
+
+- **A dropped Ollama connection masqueraded as a missing model (409
+  "Run: ollama pull bge-m3")** — when Ollama crashes or restarts under
+  RAM pressure mid-embed, the client sees `RemoteProtocolError: Server
+  disconnected without sending a response`. That is neither a timeout
+  nor a 404, so it fell into the generic error bucket and the API
+  answered 409 `embedding_model_missing` — wrong advice when the model
+  IS installed (the `/api/tags` pre-flight had already passed). Embeds
+  now retry once on ANY connection-level transport error (dropped
+  connection, refused dial, read error — not just timeouts), and an
+  exhausted budget raises a typed error the API answers as **502
+  `embedding_unreachable`**: "Ollama may have crashed, restarted, or is
+  not running — start it, press Warm up model, run the search again;
+  the model is installed, no pull is needed." The Vector KWIC panel
+  renders it as a friendly card with a re-run button, mirroring the
+  503 warm-up card.
+
+- **The engine now self-heals on every platform** — a connection
+  failure from the webview ("error sending request for url
+  http://127.0.0.1:8765/…") used to surface raw and stay broken until
+  the user clicked Restart engine. A new `ensure_engine` shell command
+  probes `/api/v1/health` and restarts the sidecar ONLY if it is
+  genuinely down; the frontend asks for it automatically on any
+  connection error and retries the request once, showing an actionable
+  message instead of plugin internals. The boot health-wait also rose
+  from 60 s to 120 s — on Windows, real-time antivirus scanning the
+  ~700-file PyInstaller one-file tree can outrun a minute on slow
+  disks, and every click during that window used to fail.
+
+### Changed
+
+- **Settings**: the “Gemini interpretation” block (API key + consent)
+  moved above the Smart Troubleshooting explanation, so the key input is
+  the first thing on the card (user request).
 
 ## [1.2.4] — 2026-09-17 — Embedding model management: warm-up in the app, model deletion, nomic-embed-text for Vector KWIC, tunable timeout
 

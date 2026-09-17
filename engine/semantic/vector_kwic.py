@@ -75,6 +75,19 @@ class EmbeddingModelTimeoutError(RuntimeError):
         super().__init__(detail)
 
 
+class EmbeddingModelUnreachableError(EmbeddingModelError):
+    """v1.2.5: the provider DROPPED or REFUSED the connection.
+
+    Distinct from a missing model: the pre-flight against /api/tags had
+    already passed, so the model IS installed — Ollama crashed, restarted,
+    or is down (field report: "Server disconnected without sending a
+    response" landing in the generic EmbeddingModelError bucket → 409
+    "run ollama pull", wrong advice). Subclasses EmbeddingModelError so
+    older callers degrade gracefully; the API layer answers 502
+    embedding_unreachable with a restart hint before the 409 handler runs.
+    """
+
+
 def resolve_embed_model(requested: str | None) -> str:
     """Model chain: request → settings (env-prefixed) → default bge-m3."""
     if requested and requested.strip():
@@ -188,18 +201,24 @@ async def _embed_texts(provider, texts: list[str], model: str) -> list[list[floa
             responses = [
                 await provider.embed(t, model=model, timeout=timeout_s) for t in texts
             ]
-    except EmbeddingModelTimeoutError:
-        # This module's own error — re-raise untouched (defensive).
+    except (EmbeddingModelTimeoutError, EmbeddingModelUnreachableError):
+        # This module's own errors — re-raise untouched (defensive).
         raise
     except Exception as e:
         # ai.providers.EmbeddingTimeoutError (timeout after provider-side
-        # retries) → this module's EmbeddingModelTimeoutError; everything else
-        # keeps the old mapping. The import is aliased so it cannot shadow
-        # the module-level class used by the except clause above.
+        # retries) → this module's EmbeddingModelTimeoutError;
+        # ai.providers.EmbeddingConnectionError (dropped/refused connection,
+        # v1.2.5) → EmbeddingModelUnreachableError — NOT the 409 bucket,
+        # which would tell the user to pull a model that is installed.
+        # Everything else keeps the old mapping. The imports are aliased so
+        # they cannot shadow the module-level classes used above.
+        from ai.providers import EmbeddingConnectionError as ProviderConnectionError
         from ai.providers import EmbeddingTimeoutError as ProviderTimeoutError
 
         if isinstance(e, ProviderTimeoutError):
             raise EmbeddingModelTimeoutError(model, str(e)) from e
+        if isinstance(e, ProviderConnectionError):
+            raise EmbeddingModelUnreachableError(model, str(e)) from e
         msg = str(e)
         if "not found" in msg.lower() or "404" in msg:
             raise EmbeddingModelError(

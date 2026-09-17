@@ -29,9 +29,11 @@ const ENGINE_PORT: u16 = 8765;
 // 60s: on the FIRST run after installing, Windows Defender scans the entire
 // ~700-file PyInstaller sidecar tree before the engine can finish booting.
 // A 30s budget made the shell report "engine offline" on slower machines
-// even though the engine came up seconds later. 60s covers the cold start;
-// the frontend keeps polling independently and auto-recovers.
-const HEALTH_TIMEOUT: Duration = Duration::from_secs(60);
+// even though the engine came up seconds later. 120s (v1.2.5, was 60s)
+// covers cold starts on slow disks where real-time antivirus stretches the
+// one-file extraction past a minute; the frontend keeps polling
+// independently and ensure_engine self-heals anything that still misses.
+const HEALTH_TIMEOUT: Duration = Duration::from_secs(120);
 const HEALTH_POLL_INTERVAL: Duration = Duration::from_millis(500);
 
 // ─── Ollama auto-start manager ──────────────────────────────────────
@@ -838,6 +840,36 @@ async fn ollama_health() -> String {
             }).to_string()
         }
     }
+}
+
+/// Probe the engine and restart it ONLY if it is actually down (v1.2.5).
+/// Callable from the webview whenever a request fails at the connection
+/// level ("error sending request"): boot races (the webview is interactive
+/// while the sidecar is still extracting/booting) and mid-session deaths
+/// both heal here, on every platform, without user intervention. Reuses the
+/// full restart path (shutdown → spawn → wait_for_health → diagnostics) so
+/// the result carries the same fields as restart_engine.
+#[tauri::command]
+async fn ensure_engine(app: tauri::AppHandle) -> String {
+    let health_url = format!("http://{ENGINE_HOST}:{ENGINE_PORT}/api/v1/health");
+    let probe = reqwest::Client::builder()
+        .timeout(Duration::from_secs(3))
+        .no_proxy()
+        .build();
+    if let Ok(client) = probe {
+        if let Ok(r) = client.get(&health_url).send().await {
+            if r.status().is_success() {
+                return serde_json::json!({
+                    "restarted": false,
+                    "engine_running": true,
+                    "message": "Engine is healthy"
+                })
+                .to_string();
+            }
+        }
+    }
+    info!(target: "sidecar", "ensure_engine: health probe failed — restarting engine");
+    restart_engine(app).await
 }
 
 /// Restart the engine sidecar — callable from the UI "Recheck" button.
@@ -1688,6 +1720,7 @@ pub fn run() {
             system_status,
             all_providers_health,
             restart_engine,
+            ensure_engine,
             restart_ollama,
             check_lmstudio,
             pick_model_file,
