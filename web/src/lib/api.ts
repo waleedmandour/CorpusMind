@@ -739,12 +739,26 @@ export interface DiscourseCategory {
   freq: number;
   per_million: number;
   examples: Array<{ cue: string; evidence_id: string; sentence_preview: string }>;
+  // v1.2.6: USAS semantic lens only — top-level label + discourse group
+  label?: string;
+  group?: string;
+}
+
+export interface DiscourseTaxonomyInfo {
+  key: string;
+  name: string;
+  citation: string;
+  categories: string[];
 }
 
 export interface DiscourseResult {
   categories: Record<string, DiscourseCategory>;
   total_tokens: number;
   taxonomy: string;
+  // v1.2.6: multi-taxonomy support
+  taxonomy_key: string;
+  citation: string;
+  unmatched_percent?: number | null;
 }
 
 export interface VocabBand {
@@ -1651,8 +1665,16 @@ export const api = {
       body: JSON.stringify({ relation, limit }),
     }),
 
-  discourse: (cid: string) =>
-    jsonFetch<DiscourseResult>(`/api/v1/corpora/${cid}/discourse`, { method: "POST" }),
+  discourse: (cid: string, taxonomy = "hyland2005") =>
+    jsonFetch<DiscourseResult>(`/api/v1/corpora/${cid}/discourse`, {
+      method: "POST",
+      body: JSON.stringify({ taxonomy }),
+    }),
+
+  discourseTaxonomies: (cid: string) =>
+    jsonFetch<{ taxonomies: DiscourseTaxonomyInfo[] }>(
+      `/api/v1/corpora/${cid}/discourse/taxonomies`,
+    ),
 
   vocabProfile: (cid: string, rare_threshold = 1, limit = 100) =>
     jsonFetch<VocabProfileResult>(`/api/v1/corpora/${cid}/vocab-profile`, {

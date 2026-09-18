@@ -1,6 +1,6 @@
 # CorpusMind User Guide
 
-> Version 0.1.0 | AGPL-3.0-only
+> Version 1.2.6 | AGPL-3.0-only
 >
 > Authors: Dr. Waleed Mandour (Sultan Qaboos University, ORCID: 0000-0002-9262-5993)
 > and Prof. Wesam Ibrahim (Princess Nourah Bint Abdulrahman University, ORCID: 0000-0003-0710-6038)
@@ -13,63 +13,60 @@ If you use CorpusMind in your research, please cite it as:
 
 > Mandour, W., & Ibrahim, W. (2026). *CorpusMind: A local-first, AI-native
 > research environment for corpus linguistics and multimodal discourse
-> analysis* (Version 0.1.0) [Computer software]. Zenodo.
+> analysis* (Version 1.2.6) [Computer software]. Zenodo.
 > https://doi.org/10.5281/zenodo.21226650
 
 ---
 
 ## 1. What is CorpusMind?
 
-CorpusMind is a research tool for corpus linguists and discourse analysts. It
-lets you upload texts, run concordance searches, compute collocations and
-keyness, analyze grammar and discourse features, and work with Arabic
-corpora using CAMeL Tools. It also includes a Vision suite for multimodal
-discourse analysis of images using Kress and van Leeuwen's Visual Grammar.
+CorpusMind is a research tool for corpus linguists and discourse analysts.
+It lets you upload texts, run concordance searches, compute collocations,
+keyness, dispersion, and vocabulary profiles, analyse grammar and discourse
+features under named academic taxonomies, research learner language, and
+work with Arabic corpora using CAMeL Tools. A Vision Suite (and the
+companion **CorpusMind Lens** app) extends the same workflow to images
+using Kress and van Leeuwen's Visual Grammar and eight discourse lenses.
 
-The AI Assistant answers your questions about the corpus by calling the
-analysis tools and citing specific evidence (concordance line IDs, computed
-statistics). Every answer is either "grounded" (backed by a tool call) or
-clearly flagged as "ungrounded."
+The AI Assistant answers questions about your corpus by calling the
+analysis tools and citing specific evidence (concordance line IDs,
+computed statistics). Every answer is either **grounded** (backed by a
+tool call) or clearly flagged as **ungrounded** — never silently presented
+as fact. A floating version of the same assistant is available from every
+analysis screen.
 
-Everything runs on your own machine. No data leaves your computer unless you
-explicitly choose to use a cloud AI provider.
+Everything runs on your own machine. No data leaves your computer unless
+you explicitly choose to use a cloud AI provider or the optional Gemini
+error-interpretation feature.
 
 ---
 
 ## 2. Installation
 
-### Option A: Desktop App (Windows — recommended)
+### Option A: Desktop App (recommended)
 
-1. Install [Ollama](https://ollama.com) (the app auto-starts it — you don't need to open it manually)
-2. Clone the repo and build:
-```
-cd C:\Users\<YourUser>\Documents
-git clone https://github.com/waleedmandour/CorpusMind.git
-cd CorpusMind
-powershell -ExecutionPolicy Bypass -File scripts\build-corpusmind-windows.ps1
-```
-3. Launch from Start Menu → CorpusMind
+Download the installer for your platform from the
+[releases page](https://github.com/waleedmandour/CorpusMind/releases):
+Windows (EXE/MSI), macOS Apple Silicon and Intel (DMG), Linux (AppImage/deb).
+Install [Ollama](https://ollama.com) as well — the app starts it
+automatically and downloads recommended models with one click from
+**Settings → Model Providers**.
 
 The desktop app automatically:
-- Starts the Python engine in the background
+- Starts the Python engine in the background (and waits until it is healthy)
 - Starts Ollama in the background (if installed)
-- Connects to both without you opening a terminal
+- Restarts either backend if it goes down while the app is running (v1.2.6 self-heal)
+- On macOS, closing the window no longer stops the backends (v1.2.5)
 
 ### Option B: Development Mode
 
-You need three things:
-
-1. **Python 3.12** from python.org
-2. **Node.js 20** from nodejs.org
-3. **Ollama** from ollama.com (for the AI Assistant to work locally)
-
-After installing Ollama, open a terminal and run:
+You need **Python 3.12**, **Node.js 20**, and **Ollama**.
 
 ```
 ollama pull llama3.2:3b
 ```
 
-### Set Up the Engine
+Set up the engine:
 
 ```
 cd CorpusMind/engine
@@ -80,9 +77,7 @@ python -m spacy download en_core_web_sm
 corpusmind-engine
 ```
 
-### Set Up the Web App
-
-Open a new terminal:
+Set up the web app (new terminal):
 
 ```
 cd CorpusMind/web
@@ -90,15 +85,8 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5173 in your browser. The engine runs on port 8765.
-
-### Desktop App (macOS Apple Silicon)
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/waleedmandour/CorpusMind/main/scripts/build-corpusmind-mac.sh -o build.sh
-chmod +x build.sh
-./build-corpusmind-mac.sh
-```
+Open http://localhost:5173. The engine listens on `127.0.0.1:8765`
+(override with `CORPUSMIND_PORT` / `CORPUSMIND_HOST`).
 
 ### Optional: Arabic Support
 
@@ -113,589 +101,417 @@ camel_data -i dialectid-model6
 ## 3. Creating a Project and Uploading Texts
 
 1. Click **Corpora Selection → Your Corpus** in the sidebar.
-2. Select an existing project from the dropdown at the top, or click **+ New Project**.
-3. Click **+ New** under Corpora to create a corpus. Enter a name, language, and genre.
+2. Select an existing project from the dropdown, or click **+ New Project**.
+3. Click **+ New** under Corpora to create a corpus (name, language, genre).
 4. Click your corpus to select it.
-5. Click the upload area (or drag and drop) to select text files.
+5. Click the upload area (or drag and drop) to add text files.
 
-Supported formats: TXT, DOCX, PDF, HTML, XML, CSV, Markdown.
-
-The engine automatically detects encoding, cleans the text, tokenizes,
-tags with POS, lemmatizes, and parses dependencies. For Arabic corpora,
-the engine uses CAMeL Tools (if installed) for morphology, root extraction,
-and dialect identification. The pipeline recipe (model name and version)
-is visible and exportable for reproducibility.
+Supported formats: TXT, DOCX, PDF, HTML, XML, CSV, Markdown. The engine
+detects encoding, cleans the text, tokenizes, tags POS, lemmatizes, and
+parses dependencies. For Arabic corpora it uses CAMeL Tools (if installed)
+for morphology, root extraction, and dialect identification. The pipeline
+recipe (model names and versions) is visible and exportable.
 
 ### Corpus Cleaning
 
-Each corpus has a **Clean** button that opens a dialog with 16 options:
-collapse whitespace, remove URLs/emails, lowercase, remove punctuation/
-numbers/emoji, remove stopwords, min token length, and Arabic-specific
-options (normalize alef variants, strip diacritics, remove tatweel).
+Each corpus has a **Clean** button with 16 options: collapse whitespace,
+remove URLs/emails, lowercase, remove punctuation/numbers/emoji, remove
+stopwords, minimum token length, and Arabic-specific normalization (alef
+variants, diacritics, tatweel). Cleaning is destructive — it re-processes
+every document.
 
 ### Reference Corpus
 
-Click **Corpora Selection → Reference Corpus** to choose or download a
-reference corpus for keyness comparison. Three options:
-- **Download**: search HuggingFace + Wikipedia + OPUS
-- **Upload**: upload your own reference files
-- **Bundled**: use the built-in BE06 frequency list
+**Corpora Selection → Reference Corpus** offers three options: **Download**
+(HuggingFace + Wikipedia + OPUS), **Upload** your own, or the **bundled**
+BE06 frequency list.
 
 ---
 
 ## 4. Concordance Search (KWIC)
 
-1. Select a corpus.
-2. Click **Concordance** in the sidebar.
-3. Type a search query.
-4. Choose the level: word, lemma, or POS tag.
-5. Set the context window (how many words to show left and right).
-6. Click **Search**.
+1. Select a corpus and open **Concordance**.
+2. Type a query (`*` works as a wildcard); choose word, lemma, or POS level.
+3. Set the context window and click **Search**.
 
-Each result line has a stable ID (for example, `doc:0:3`) that the AI
-Assistant can cite as evidence. Use `*` for wildcards.
+Each line has a stable ID (`doc:0:3`) that the AI Assistant can cite as
+evidence. Results export to five formats.
 
-Click **Export Excel** to download results.
+### Vector KWIC (Semantic Search)
+
+**Vector KWIC** finds lines by *meaning*, not just form: pick an embedding
+model (`bge-m3`, multilingual, or `nomic-embed-text`, English), download it
+with one click, and search with natural-language queries (e.g. *"sentences
+about economic hardship"*). Ranking is raw cosine similarity over a local
+SQLite vector cache — no external API. On CPU-only machines the first
+search embeds the corpus in small batches and can take a while; see
+Troubleshooting §13.4.
 
 ---
 
 ## 5. Frequency, Collocation, Keyness, and Dispersion
 
-**Frequency**: Click any analysis tool in the sidebar. Choose word, lemma,
-or POS. The table shows frequency, per-million, and percent. STTR
-(Standardized Type-Token Ratio) is displayed at the top.
+**Frequency**: word/lemma/POS lists with per-million and percent; STTR at
+the top.
 
-**Collocation**: Type a node word, set the window size (default 5 tokens
-each side), and click Compute. All 7 measures are shown: MI, T-score,
-log-likelihood, Dice, LogDice, chi-square, and Delta P (both directions).
+**Collocation**: node word + window size; all 7 measures (MI, T-score,
+log-likelihood, Dice, LogDice, chi-square, Delta P) plus the interactive
+collocation network graph (exportable as SVG/PNG/JSON).
 
-**Keyness**: Select your target corpus, then choose a reference corpus.
-Results show both significance tests (log-likelihood, chi-square) and
-effect-size measures (Log Ratio, %DIFF, Simple Maths, Odds Ratio) side by
-side. Click **Methods PDF** to auto-draft a methodology paragraph for your
+**Keyness**: target vs reference corpus; significance (log-likelihood,
+chi-square) beside effect size (Log Ratio, %DIFF, Simple Maths, Odds
+Ratio). **Methods PDF** auto-drafts a methodology paragraph for your
 manuscript.
 
-**Dispersion**: Type a term. Results show Juilland's D (0 to 1, higher is
-more even) and Gries' DP (0 to n-1/n, lower is more even) across
-documents.
+**Dispersion**: Juilland's D and Gries' DP across documents.
 
 ---
 
 ## 6. Advanced Analysis Tools
 
-**N-grams**: Choose n (2 to 10). Set minimum frequency and minimum range
-(number of distinct documents the n-gram must appear in). This follows the
-Biber et al. (1999) frequency-and-range criterion for lexical bundles.
+**N-grams**: n = 2–10 with Biber et al.-style frequency-and-range criteria
+for lexical bundles.
 
-**POS Analysis**: View POS distribution or POS n-grams (bigrams, trigrams,
-etc.) for stylistic analysis.
+**POS Analysis**: distributions and POS n-grams; switch tagsets (UPOS,
+Penn Treebank, CLAWS7, CAMeL for Arabic) from Settings.
 
-**Grammar**: Detect passive voice, modals, negation, relative clauses,
-complex noun phrases, and tense from the dependency parse.
+**Grammar**: passive voice, modals, negation, relative clauses, complex
+NPs, and tense from the dependency parse.
 
-**Dependency**: Query specific relations (nsubj, obj, iobj, obl, etc.) to
-find common governor-dependent pairs.
+**Dependency**: query any UD relation (nsubj, obj, obl, ...) for common
+governor–dependent pairs.
 
-**Discourse**: Run Hyland's (2005) metadiscourse taxonomy across your
-corpus: transitions, frame markers, hedges, boosters, attitude markers,
-self-mentions, engagement markers, and more.
+**Discourse**: a user-selectable, citable taxonomy of discursive features:
 
-**Vocabulary**: Profile your corpus into frequency bands (K1, K2-K9, AWL,
-Off-list). Identify rare words and academic words.
+- **Hyland (2005) metadiscourse** — interactive (transitions, frame
+  markers, endophorics, evidentials, code glosses) and interactional
+  (hedges, boosters, attitude markers, self-mentions, engagement) categories.
+- **Halliday & Hasan (1976) cohesion** — reference pronouns, the four
+  conjunction classes, and lexical repetition chains across adjacent
+  sentences (substitution/ellipsis are not covered).
+- **Martin & White (2005) Appraisal** — engagement (entertain, attribute,
+  deny, counter, proclaim), graduation-force intensifiers, and an inscribed
+  affect starter set (invoked attitude is not covered).
+- **CLAWS/USAS semantic tagset (top-level)** — the bundled USAS lexicon
+  maps every word onto one of 24 semantic categories (communication,
+  cognition, emotion, politics...), each annotated with its
+  discourse-functional group. Lexicon-based lookup — where the lexicon has
+  no entry, tokens are honestly reported as *unmatched*; this is not the
+  licensed CLAWS/USAS tagger.
 
-**Sentiment**: Per-sentence sentiment scores (-1 to +1) with a timeline
-visualization.
+Every result names and cites its taxonomy, so findings are reportable and
+comparable across studies.
 
-**Metaphor**: Generates metaphor candidates (verbs with abstract subjects).
-These are candidates only. The LLM triages them, and a human must verify
-before any candidate counts as a confirmed metaphor.
+**Vocabulary**: frequency bands (K1, K2–K9, AWL, Off-list), rare and
+academic words.
 
----
+**Sentiment**: per-sentence scores (−1 to +1) with a timeline.
 
-## 7. Arabic Analysis
-
-Click **Arabic Tools** in the sidebar. Available tools:
-
-- **Morphology**: Full analysis with root (al-jizr), pattern (al-wazn),
-  lemma, POS, stem, Buckwalter transliteration, number, gender, and
-  broken-plural flag. Uses CAMeL Tools (calima-msa-r13).
-- **Roots**: Extracts triliteral roots. For example, all words sharing the
-  root k.t.b: kitab, maktaba, katib, yaktub.
-- **Dialect ID**: Identifies MSA, Egyptian, Gulf, or Levantine using the
-  full CAMeL DIDModel6 (6 city dialects).
-- **Buckwalter**: Transliterates Arabic script to ASCII Latin.
-- **Dediacritize**: Removes harakat (diacritics).
-- **Normalize**: Unifies alef variants, teh marbuta, alef maksura.
-- **Register**: Detects Classical, MSA, or Dialectal.
-- **Translate**: Looks up Arabic-to-English translation equivalents.
+**Metaphor**: verb-based metaphor *candidates*; LLM triage and human
+verification required before counting any as confirmed.
 
 ---
 
-## 8. Vision Suite and CorpusMind Lens (Multimodal Analysis)
+## 7. Learner Research Suite
 
-The Vision Suite is fully shipped, both inside the main CorpusMind app and in
-the dedicated **CorpusMind Lens** desktop app (the image-corpus workbench of
-the suite). It implements the multimodal analysis workflow of current corpus
-practice: images are treated as corpus documents with their own metadata,
-provenance documentation, and query tools, and analysed against explicit
-theoretical frameworks rather than by ad-hoc inspection.
+Purpose-built for learner-corpus studies (Granger 1998; Housen & Kuiken
+2009):
 
-### 8.1 Building an image corpus
-
-1. Create a project and a corpus (shared with the text side of the suite).
-2. In **Your Corpus** (in Lens) or the **Vision Suite** (in the main app),
-   create an **image set** and document its provenance — source, period
-   covered, and selection criteria. Corpus-construction norms apply to image
-   corpora just as they do to text corpora.
-3. Drag images in (PNG, JPEG, WebP, GIF, TIFF, BMP; max 25 MB per image,
-   50 per batch). On upload the engine extracts **OCR text**, colour and
-   composition features, and any embedded **EXIF/XMP metadata** (GPS
-   coordinates are deliberately never extracted — research-ethics default).
-
-### 8.2 Image metadata (IPTC-Core-aligned)
-
-Each image carries researcher-editable descriptive metadata aligned with the
-IPTC Core schema: source/publication, date, licence/rights, genre, language
-of embedded text, and free notes. Use **Tag All Images** to apply the same
-fields to a whole set, and filter the grid by genre to build subsets. Set
-level statistics report formats, orientation mix, resolution and date ranges,
-and OCR coverage.
-
-### 8.3 Per-image analysis
-
-Select an image and use the analysis drawer:
-
-**Analyse**: Colour analysis (dominant colours, warm/cold balance,
-brightness, contrast, saturation, symbolism notes), composition analysis
-(information value: Given/New, Ideal/Real, centre/margin, salience,
-visual balance, framing), and OCR text extraction.
-
-**Visual Grammar**: Analyses the image against Kress and van Leeuwen's
-(2006) three metafunctions: Representational, Interactive, and
-Compositional. Every claim is phrased as a hypothesis with evidence and a
-confidence score.
-
-**Align**: Multimodal image-text alignment. Type the co-occurring text and
-click Align. The engine extracts image regions and text spans, then matches
-them with confidence scores (heuristic or vision-LM mode).
-
-**Discourse lenses**: 8 framework-lensed analyses: Social Semiotic, CDA (4
-frameworks: Fairclough, van Dijk, Wodak, Machin and Mayr), Persuasion,
-Framing, Narrative, Visual Metaphor, Emotion appeal, and Cultural analysis.
-Results carry provenance badges (heuristic vs vision-LM, model, confidence).
-
-**Facial analysis** (opt-in, off by default): descriptive visual cues only
-(estimated age group, gender presentation, expression, gaze). It never
-performs identity recognition. Enable it in Settings → Ethics → Facial
-Analysis.
-
-### 8.4 Set-level analysis and the OCR corpus
-
-- **Vision-LM descriptions**: a local vision model (e.g. `qwen3-vl`) can
-  describe each image; the batch runner analyses the whole set at once.
-- **Recurring themes**: aggregated framework claims across the set.
-- **OCR Corpus Tools**: query the set's text like any corpus — KWIC-style
-  search over OCR text and captions, a word-frequency list with the shared
-  English/Arabic stopword lists, and set-vs-set keyword comparison ranked by
-  log-likelihood (Rayson and Garside's standard measure), with the full
-  keyness battery per term.
-- **Export**: spreadsheets (xlsx/csv/tsv/txt/json) with per-image analysis
-  and full model provenance, plus **Export OCR corpus** — the set's text as
-  a `<doc>`-marked corpus file (with filename, caption and metadata
-  attributes) that can be loaded into the main app's text tools, closing the
-  cross-modal loop between the visual and textual sides.
+- **CAF Report**: complexity, accuracy, and fluency indicators for the
+  active corpus, including HD-D (heterogeneous hapax-based diversity).
+- **CIA Compare**: compare two corpora (e.g. learner vs expert writing)
+  across the CAF battery with effect sizes.
+- **Error Patterns**: candidate learner-error patterns surfaced from POS
+  and dependency signals, ranked for manual inspection — candidates, not
+  verdicts.
+- **AI-vs-learner comparator**: inspect how AI-generated text differs
+  from learner text on the same indicators (research ethics: disclose
+  AI use; see the Assistant's audit trail).
 
 ---
 
-## 9. The AI Assistant
+## 8. Arabic Analysis
 
-Click **AI Assistant** in the sidebar. The Assistant is a tool-using agent,
-not a chatbot. When you ask a question, it selects and calls the
-appropriate analysis tool, then writes its answer based on the tool's
-output.
+**Arabic Tools** in the sidebar:
 
-If the Assistant calls a tool, the answer is marked **grounded** (green
-badge). If no tool was called, the answer is marked **ungrounded** (orange
-badge). The UI never silently presents an ungrounded answer as fact.
+- **Morphology**: root (al-jizr), pattern (al-wazn), lemma, POS, stem,
+  Buckwalter transliteration, number, gender, broken plurals (CAMeL
+  calima-msa-r13).
+- **Roots**: all words sharing a triliteral root (k.t.b → kitab, maktaba,
+  katib, yaktub).
+- **Dialect ID**: MSA, Egyptian, Gulf, or Levantine (CAMeL DIDModel6).
+- **Buckwalter / Dediacritize / Normalize**: script utilities.
+- **Register**: Classical / MSA / Dialectal detection.
+- **Translate**: Arabic–English lookup equivalents.
 
-### Confidence Layer
-
-After producing an answer, the Assistant assesses its own confidence
-(0-100%) based on how well the cited evidence supports the interpretation.
-- If confidence is high (70%+): the answer is shown with a green confidence bar.
-- If confidence is low (<70%): the user must answer 2-3 multiple-choice
-  questions (MCQs) to verify the key claims before the answer is revealed.
-
-### Human Verification
-
-Each AI answer has three buttons: **Accept**, **Reject**, and **Edit**.
-The verification state is recorded in the audit trail and included in
-the AI usage disclosure for your Methods section.
-
-### Student Mode
-
-In Settings → Research & Reproducibility, toggle Student Mode to hide
-the AI's interpretation until the student writes their own. The student
-then clicks "Reveal AI answer" to compare their interpretation with the
-AI's for learning.
-
-Example questions:
-- "What are the top 10 most frequent words in this corpus?"
-- "Find all occurrences of 'research' and show me their contexts."
-- "What are the strongest collocates of 'dog' within 5 tokens?"
-- "Compare this corpus against the reference. What are the top keywords?"
-- "What hedges does this author use?"
+Arabic normalization is also available inside corpus cleaning, and Arabic
+is supported end-to-end in Vector KWIC via the multilingual bge-m3 model.
 
 ---
 
-## 10. Export, Collaboration, and Privacy
+## 9. Vision Suite and CorpusMind Lens (Multimodal Analysis)
 
-**Export — multi-format**: Every analysis result (concordance, frequency,
-collocation, keyness) can be exported in **five formats** via the Export
-dropdown button in each analysis view:
+Images are treated as corpus documents with metadata, provenance, and
+query tools, analysed against explicit frameworks. The same suite lives in
+the main app and in the dedicated **CorpusMind Lens** app.
 
-| Format | Extension | Use case |
-| --- | --- | --- |
-| Excel | `.xlsx` | Styled spreadsheet — opens in Excel or Google Sheets |
-| CSV | `.csv` | Universal comma-separated — any tool (R, Python, SPSS) |
-| TSV | `.tsv` | Tab-separated — paste into Excel/Sheets |
-| Plain text | `.txt` | Fixed-width table — emails, quick inspection |
-| JSON | `.json` | Structured — programmatic use / re-import |
+### 9.1 Building an image corpus
 
-**Diagram export**: The Collocation view has a separate **Export diagram**
-dropdown that produces a collocation network diagram:
-- **SVG** (`.svg`) — vector graphics, scales to any size. Best for papers,
-  posters, slides. Open in a browser, Inkscape, or Adobe Illustrator.
-- **PNG** (`.png`) — raster 1600×1200. Best for Word documents, social
-  media. Requires `pip install -e ".[export]"` + libcairo.
+Create a project and corpus, then in **Your Corpus** (Lens) or the
+**Vision Suite** (main app) create an **image set**, document provenance
+(source, period, selection criteria), and drag images in (PNG, JPEG, WebP,
+GIF, TIFF, BMP; ≤ 25 MB each, 50 per batch). Upload extracts OCR text,
+colour and composition features, and EXIF/XMP metadata — GPS coordinates
+are deliberately never extracted.
 
-**Methods PDF**: The Keyness view has a **Methods PDF** button that auto-drafts
-a methodology paragraph naming the exact tools, model versions, and formulas
-used. Paste it into a manuscript's Methods section so peer reviewers can
-verify your workflow.
+### 9.2 Metadata and per-image analysis
 
-**Corpus Cleaning**: Each corpus in the Projects view has a **Clean** button
-that opens a modal with 16 cleaning options: collapse whitespace, remove
-URLs/emails/HTML entities, lowercase, remove punctuation/numbers/emoji,
-remove stopwords (English or Arabic), min token length, and Arabic-specific
-normalization (alef variants, diacritics, tatweel). The cleaning is
-destructive — it re-cleans every document and re-runs the NLP pipeline.
+Each image carries IPTC-Core-aligned fields (source, date, licence, genre,
+language, notes); **Tag All Images** applies fields set-wide. Per image:
 
-**Corpus Hub**: The Reference Corpus view lets you search and download
-open-access corpora in Arabic and English from three hubs:
-- **HuggingFace Datasets** — Wikipedia (ar/en), OSCAR, CC-100, Arabic Pile,
-  Arabic Billion Words, OSIAN, Arabic Text Classification, and more
-- **Wikipedia (live)** — fresh article fetch, CC-BY-SA 3.0
-- **OPUS** — 1,200+ parallel corpora (ar-en translation pairs)
+- **Analyse** — colour, composition (information value, salience,
+  balance, vectors), OCR.
+- **Visual Grammar** — Kress & van Leeuwen (2006) metafunctions, each
+  claim a scored hypothesis.
+- **Align** — image-region ↔ text-span alignment with confidence.
+- **Discourse lenses** — 8 frameworks: Social Semiotic, CDA (Fairclough,
+  van Dijk, Wodak, Machin & Mayr), Persuasion, Framing, Narrative, Visual
+  Metaphor, Emotion, Cultural. Provenance badges show heuristic vs
+  vision-LM mode.
+- **Facial analysis** (opt-in, off by default) — descriptive cues only,
+  never identity recognition.
 
-Downloaded files land in your browser's download folder; upload them into a
-corpus via Your Corpus. All searches are proxied through the engine — your
-existing corpus data never leaves your machine.
+### 9.3 Set-level tools
 
-**Smart Troubleshooting**: When a backend error occurs during use, it appears
-in the taskbar at the bottom of the window. Notifications are OFF by default
-— you can enable them in Settings. If you configure a Gemini API key in
-Settings, the error is auto-interpreted by Google's Gemini model — you get
-a plain-language explanation, likely cause, and suggested fix. A "Report to
-developer" button opens a pre-filled email to `w.abumandour@squ.edu.om`.
+Vision-LM descriptions with a local vision model, recurring-theme
+aggregation, OCR corpus tools (KWIC over OCR text, frequency lists, set-vs-
+set keyness by log-likelihood), spreadsheet export with provenance, and
+**Export OCR corpus** — the set's text as a `<doc>`-marked corpus file for
+the main text tools.
 
-**Saved Searches and Bookmarks**: Save queries with parameters for re-use.
-Bookmark specific concordance lines or statistics with notes.
+---
 
-**Project Sharing**: Mark a project as shared (public or private) with a
-share token. Sync events are logged in an audit trail.
+## 10. The AI Assistant
 
-**At-Rest Encryption**: Optional AES-256-GCM encryption for image files on
-disk. Enable by setting the `CORPUSMIND_ENCRYPTION_KEY` environment
-variable. The key is never stored on disk.
+**AI Assistant** in the sidebar opens a tool-using agent (not a chatbot):
+it selects and calls analysis tools, then answers from their output. Tool
+use ⇒ **grounded** (green badge); otherwise **ungrounded** (orange). A
+**floating assistant** button (bottom-right) offers the same grounded chat
+from every analysis screen, with context about the view you are on.
 
-**Accessibility**: WCAG 2.1 AA target. Visible focus indicators,
-skip-to-content link, high contrast mode, reduced motion support, 44px
-minimum touch targets, and full RTL mirroring for Arabic.
+**Confidence layer**: the Assistant self-assesses confidence; below 70%
+you answer 2–3 verification MCQs before the answer is revealed.
 
-## 11. PWA versus Desktop Application
+**Human verification**: Accept / Reject / Edit every answer; the decision
+is recorded in the audit trail and the AI-usage disclosure for your
+Methods section.
 
-CorpusMind ships in two forms that share the same user interface, the same
-project file format, and the same analytical engine. The two forms differ in
-how the engine is delivered, where the data lives, and which platform
-features are available. This section documents the differences precisely so
-that researchers can choose the form that fits their workflow and their
-institutional data-governance constraints.
+**Student mode** (Settings → Research & Reproducibility): hides the AI
+answer until the student writes their own interpretation.
 
-### 11.1 What the PWA Is
+Example questions: *"What are the top 10 content words?"*; *"Find
+'however' in context"*; *"What are the strongest collocates of 'patient'?"*;
+*"What hedges does this author use?"*; *"Compare this corpus against the
+reference."*
 
-The Progressive Web App (PWA) is a browser-based version of CorpusMind
-hosted at https://corpus-mind-web.vercel.app/. It can be installed on
-Chrome, Edge, Safari, and Firefox by clicking the install icon in the
-address bar. Once installed, it runs in its own window, works offline after
-the first visit, and appears in the operating system's application list.
+---
 
-In the PWA configuration, the analytical engine runs either as a remote
-service (when the researcher has access to a self-hosted CorpusMind engine
-on a lab server) or as a process the researcher starts locally with the
-`corpusmind-engine` command and then connects to from the browser. The
-browser itself does not run Python; it talks to the engine over HTTP on
-`127.0.0.1:8765` or on a remote address the researcher configures.
+## 11. Export, Collaboration, and Privacy
 
-### 11.2 What the Desktop Application Is
+**Export**: every analysis exports as Excel (`.xlsx`), CSV, TSV, plain
+text, or JSON via the Export dropdown. The Collocation network exports as
+SVG/PNG/JSON. **Methods PDF** (Keyness view) drafts the methodology
+paragraph with exact tools, versions, and formulas.
 
-The desktop application is a Tauri 2 binary for Windows, macOS (Apple
-Silicon and Intel), and Linux. It bundles the web interface, the Rust
-supervisor process, and (when built with the sidecar spec) the PyInstaller-
-bundled engine into a single installable package. On launch, the Rust
-supervisor spawns the engine as a child process, polls its health endpoint
-until it is ready, redirects its stdout and stderr to log files, and kills
-it cleanly on application exit.
+**Corpus Hub**: the Reference Corpus view searches open-access corpora —
+HuggingFace Datasets, live Wikipedia (CC-BY-SA), and 1,200+ OPUS
+parallel corpora. Downloads land in your browser; searches are proxied
+through the engine, so your own data never leaves the machine.
 
-### 11.3 Feature Comparison Table
+**Saved searches and bookmarks**: save queries with parameters; bookmark
+lines/statistics with notes.
 
-| Capability | PWA | Desktop Application |
+**Project sharing**: mark a project shared (public/private) with a share
+token; sync events are audited.
+
+**At-rest encryption**: optional AES-256-GCM for image files via
+`CORPUSMIND_ENCRYPTION_KEY` (the key is never stored on disk).
+
+**Accessibility**: WCAG 2.1 AA target — focus indicators, skip link, high
+contrast mode, reduced motion, 44px touch targets, full RTL mirroring.
+
+**Smart Troubleshooting**: backend errors appear in the taskbar. With a
+Gemini API key configured (Settings → Smart Troubleshooting, off by
+default), errors are auto-interpreted in plain language with a likely
+cause and suggested fix; error context leaves the device only with your
+explicit acknowledgment. **Report to developer** opens a pre-filled email.
+
+---
+
+## 12. PWA versus Desktop Application
+
+Both forms share the same UI, project format, and engine. The **PWA**
+(hosted at https://corpus-mind-web.vercel.app/) runs in the browser —
+installable, offline-capable after first visit, with the engine started
+by you or on a lab server. The **desktop application** (Tauri 2, Windows/
+macOS/Linux) bundles UI + supervisor + engine sidecar: the supervisor
+spawns and health-waits the engine, auto-starts Ollama, self-heals
+backends, and writes `engine.stdout.log` / `engine.stderr.log` to the OS
+log directory.
+
+| Capability | PWA | Desktop |
 |---|---|---|
-| Analytical tools (concordance, collocation, keyness, etc.) | Identical | Identical |
-| Vision Suite (multimodal analysis) | Identical | Identical |
-| AI Assistant (local LLM via Ollama) | Requires the researcher to run Ollama locally and configure the engine URL | The supervisor can spawn Ollama automatically if it is on the system PATH |
-| AI Assistant (remote LLM via OpenAI / Anthropic) | Supported, opt-in | Supported, opt-in |
-| Engine delivery | Researcher starts the engine manually, or connects to a lab-server engine | Supervisor spawns and supervises the engine automatically |
-| At-rest encryption (AES-256-GCM) | Supported, with the encryption key set via environment variable | Supported, with the key set via the desktop settings dialog or the environment |
-| File system access | Limited to files the researcher uploads through the browser dialog; no access to arbitrary paths on disk | Full access to files the researcher opens through the desktop dialog; can read from the project's data directory |
-| Offline operation | After the first visit, the PWA shell loads from cache; the engine still needs to be running locally for analysis | Fully offline after installation; no network connection required for any analytical operation |
-| Process lifecycle | The researcher starts and stops the engine manually; if the browser tab is closed, the engine keeps running until killed | The supervisor starts the engine on app launch and kills it on app exit; no orphaned processes |
-| Log files | Engine logs go to wherever the researcher started the engine; the PWA does not manage them | Engine stdout and stderr are redirected to `engine.stdout.log` and `engine.stderr.log` in the OS log directory |
-| Cross-platform consistency | Identical on every operating system because the browser is the runtime | Identical UI, but the supervisor and sidecar binary are platform-specific (one build per OS) |
-| Installation | One click (install icon in the browser) | Download and run the platform installer (.dmg, .exe, .msi, .AppImage, .deb) |
-| Update mechanism | Transparent; the PWA updates on next visit when the server ships a new version | Manual; the researcher downloads the new installer or builds from source |
-| Sandboxing | The browser sandbox restricts file system and network access to what the CSP allows | The Tauri shell enforces the same CSP, but the Rust supervisor has full process-control privileges |
-| Institutional deployment | Easy: point the PWA at a lab-server engine URL and share the URL with the team | Each researcher installs the desktop app; a lab server is optional |
-| Data residency | If the engine runs on a lab server, the corpus data lives on that server; if the engine runs locally, the data lives on the researcher's machine | The corpus data always lives on the researcher's machine; no data leaves the device unless a remote LLM provider is configured |
-
-### 11.4 Which Form to Choose
-
-Choose the **PWA** if you want to try CorpusMind without installing
-anything, if your institution already hosts a shared engine on a lab
-server, or if you work across many machines and want your project state
-to follow you. The PWA is also the only option on ChromeOS and on locked-
-down corporate machines where you cannot install native applications.
-
-Choose the **desktop application** if you work with sensitive or
-unpublished corpora and need a strict local-only default, if you want the
-engine to start and stop automatically with the application, if you want
-the engine logs managed for you, or if you need the full offline
-experience with no browser in the loop. The desktop application is also
-the recommended form for classroom deployment where the instructor
-pre-installs the application on lab machines and students do not need to
-manage the engine lifecycle.
+| Analytical tools & Vision Suite | Identical | Identical |
+| Engine delivery | Manual start / lab server | Automatic (supervised, self-healing) |
+| Ollama | Run locally yourself | Auto-spawned if on PATH |
+| Offline | Shell cached; engine needed for analysis | Fully offline |
+| File access | Browser dialog uploads | Native dialogs + data dir |
+| Logs | Managed by you | Managed for you |
+| Data residency | Local or lab server | Always local |
+| Updates | Automatic on next visit | New installer |
+| Best for | Trying it out, lab-server teams, locked-down machines | Sensitive corpora, classrooms, full offline |
 
 ---
 
-## 12. CorpusMind Compared with Other Corpus Tools
+## 13. Troubleshooting Common Issues
 
-CorpusMind is not a replacement for every existing corpus tool. Each tool
-in this section was designed for a different audience and a different
-era of computing. This section compares CorpusMind with four widely used
-corpus analysis tools: AntConc, Sketch Engine, #LancsBox, and Voyant
-Tools. The comparison is based on the official documentation of each
-tool as of 2025, and every claim is sourced to the tool's own website or
-to a peer-reviewed publication about it.
+Most issues are environmental (a backend that is down, a missing model, or
+another application interfering with local connections) rather than bugs.
+Work through this list before reporting a problem; the Smart
+Troubleshooting panel (taskbar → error → Details) may already name the
+cause.
 
-### 12.1 AntConc
+### 13.1 Security or grammar software intercepting Ollama (HTTP 500)
 
-AntConc is a freeware corpus analysis toolkit developed by Laurence
-Anthony at Waseda University and first released in 2002. It is a desktop
-application written in Perl and compiled to a native binary for Windows,
-macOS, and Linux. It is distributed at no cost from
-https://www.laurenceanthony.net/software/antconc/.
+**Symptom**: "HTTP 500 Internal Server Error" when chatting or running AI
+features, often on a fresh installation, even though Ollama is installed
+and the model exists.
 
-AntConc provides a concordancer (KWIC), a cluster and n-gram tool, a
-collocate tool, a word list tool, and a keyword tool. It supports
-regular-expression search, user-defined tag handling, and a range of
-output sort options. It does not include a lemmatiser, a POS tagger, or
-a dependency parser; the researcher is expected to pre-process the
-corpus with an external tool if lemmatised or POS-tagged search is
-required. It does not include an AI assistant, a vision pipeline, or
-multimodal analysis. Arabic support is limited because AntConc does not
-bundle an Arabic morphological analyser; researchers working with Arabic
-typically pre-process the corpus with a separate tool such as
-Farasa or CAMeL Tools and then import the tagged text into AntConc.
+**Known cause**: desktop applications that inspect or proxy local HTTP
+traffic can intercept CorpusMind's requests to Ollama
+(`127.0.0.1:11434`). Confirmed real-world case: **Grammarly** running in
+the background caused exactly this; quitting it made the errors stop.
+Antivirus "web shields", VPNs, and corporate proxies can do the same.
 
-CorpusMind differs from AntConc in four respects. First, CorpusMind
-bundles spaCy and CAMeL Tools, so tokenisation, lemmatisation, POS
-tagging, dependency parsing, and Arabic morphology are available without
-any pre-processing step. Second, CorpusMind implements all seven
-collocation measures documented in the methodology literature (MI,
-T-score, log-likelihood, Dice, LogDice, chi-square, Delta P) and both
-keyness measures (log-likelihood ratio and Burrows's Zeta) in a single
-interface, whereas AntConc's collocate tool reports a single statistic
-selected by the user. Third, CorpusMind includes a Vision Suite for
-multimodal discourse analysis and an AI assistant with a citation-
-enforced contract, neither of which AntConc provides. Fourth, CorpusMind
-emits a YAML provenance record for every analytical operation, whereas
-AntConc does not record the pipeline configuration or the software
-version with the output. AntConc remains an excellent choice for
-teaching corpus linguistics at the introductory level, for quick
-concordance searches on pre-processed corpora, and for researchers who
-prefer a single-purpose desktop tool without network dependencies.
+**Fix**: quit or temporarily disable the interfering application (e.g.
+right-click the Grammarly tray icon → Quit), or add CorpusMind and Ollama
+to its exclusions/allow-list, then retry. If your organisation manages
+the machine, ask IT to exempt loopback (`127.0.0.1`) traffic from
+inspection.
 
-### 12.2 Sketch Engine
+### 13.2 "Ollama is not running" (503)
 
-Sketch Engine is a commercial corpus management and analysis platform
-developed by Lexical Computing Limited and first released in 2003. It is
-a web-based service available at https://www.sketchengine.eu/. It
-requires a paid subscription; academic personal accounts start at
-approximately 7.09 EUR per month, and institutional licences are priced
-per user. A free tier called SKELL is available for language learners
-but does not include the full analysis toolset.
+The engine cannot reach Ollama on `127.0.0.1:11434`. Start Ollama (the
+desktop app tries to start it automatically), verify with
+`curl http://127.0.0.1:11434/api/tags`, and make sure at least one chat
+model is pulled (Settings → Model Providers offers one-click downloads).
+In browser/PWA mode you must start both the engine (`corpusmind-engine`)
+and Ollama yourself.
 
-Sketch Engine's signature feature is the Word Sketch: a one-page,
-automatically generated grammatical collocation profile of a word, built
-by parsing the corpus with a language-specific sketch grammar and
-grouping collocates by grammatical relation (subject-of, object-of,
-modifier-of, etc.). It also offers a distributional thesaurus,
-concordance, word list, keyword, n-grams, and term extraction. Sketch
-Engine hosts a large collection of ready-made corpora (British National
-Corpus, English Web Corpus 2021, enTenTen, and many others) and allows
-researchers to upload their own corpora up to a size limit determined by
-the subscription tier. It supports over 100 languages, with language-
-specific taggers and sketch grammars for most of them.
+### 13.3 "Model not found — run ollama pull" (409)
 
-CorpusMind differs from Sketch Engine in three respects. First,
-CorpusMind is local-first and free (AGPL-3.0-only); the researcher's
-corpus never leaves their machine unless they explicitly configure a
-remote LLM provider. Sketch Engine is a cloud service; the corpus is
-uploaded to the Sketch Engine servers for processing. This makes Sketch
-Engine unsuitable for unpublished or confidential corpora unless the
-researcher has an institutional licence with a data-processing
-agreement. Second, CorpusMind does not currently implement the Word
-Sketch grammatical collocation profile; this is a feature on the roadmap
-for a later release. Sketch Engine's Word Sketch remains the reference
-implementation for grammatical collocation summarisation, and
-researchers who need it should use Sketch Engine. Third, CorpusMind
-includes a Vision Suite for multimodal discourse analysis and an AI
-assistant with a citation-enforced contract; Sketch Engine does not
-offer either. Sketch Engine is the better choice for researchers who
-need ready-made large reference corpora, for lexicographers who rely on
-Word Sketches, and for teams that prefer a managed cloud service over a
-local installation.
+The selected model is not installed. Download it in **Settings → Model
+Providers** (one click) or run `ollama pull <model>`. If the model *is*
+installed, update to the latest release — v1.2.2 fixed a tag-matching bug
+(`bge-m3` vs `bge-m3:latest`) that caused a false 409 after a successful
+download; no re-download is needed.
 
-### 12.3 #LancsBox
+### 13.4 Vector KWIC is slow or times out (CPU-only machines)
 
-#LancsBox is a free corpus analysis toolbox developed at Lancaster
-University by Vaclav Brezina and colleagues and first released in 2015.
-The current version, #LancsBox X, is available at
-https://lancsbox.lancs.ac.uk/. It is a desktop application for Windows,
-macOS, and Linux and is distributed at no cost for non-commercial
-academic use.
+Embedding a large corpus on CPU takes minutes of compute. Since v1.2.5
+requests are chunked into small batches (override with
+`CORPUSMIND_EMBED_BATCH`), and since v1.2.4 the timeout is configurable
+(`CORPUSMIND_EMBED_TIMEOUT_S`). Warm the model first (Warm-up button),
+expect the first search to be the slowest (the vector cache persists), and
+prefer the smaller `nomic-embed-text` model for English-only corpora. If
+the engine reports `502 embedding_unreachable`, the Ollama connection
+dropped mid-request — check §13.1/§13.2 and retry; the desktop app will
+also offer to restart the backend (v1.2.6).
 
-#LancsBox provides concordancing, collocation analysis, frequency
-lists, keyword analysis, dispersion plots, and a distinctive "Graph
-Coll" visualisation that shows collocational relationships as a network
-graph with the node word at the centre. It includes built-in support
-for BNC and BNC64 reference corpora and allows researchers to upload
-their own corpora. It supports multiple languages for tokenisation but
-does not bundle language-specific POS taggers or morphological analysers
-beyond English.
+### 13.5 The engine is not reachable (PWA / manual mode)
 
-CorpusMind differs from #LancsBox in three respects. First, CorpusMind
-implements the full seven-measure collocation suite and the four-measure
-dispersion suite (Juilland's D, Gries's DP, average reduced frequency,
-and average wait time) with provenance records, whereas #LancsBox
-focuses on a smaller set of measures with richer visualisation. Second,
-CorpusMind includes the Vision Suite and the AI assistant; #LancsBox
-does not. Third, CorpusMind bundles CAMeL Tools for Arabic morphology,
-dialect identification, and named-entity recognition, whereas #LancsBox
-treats Arabic as a plain-text corpus without morphological analysis.
-#LancsBox is the better choice for researchers who value the Graph Coll
-network visualisation, for classroom use where the visual immediacy of
-the tool supports teaching, and for researchers working primarily with
-English reference corpora.
+Start it with `corpusmind-engine` and check
+`http://127.0.0.1:8765/api/v1/health`. If the port is busy, set
+`CORPUSMIND_PORT`. If the firewall prompted on first run, allow the
+engine. Desktop builds health-wait for up to 120 s at boot — on very slow
+disks or with aggressive antivirus, first launch can take that long.
 
-### 12.4 Voyant Tools
+### 13.6 macOS: window closed and now nothing responds
 
-Voyant Tools is a free, web-based text analysis environment developed
-by Stéfan Sinclair and Geoffrey Rockwell and first released in 2012. It
-is available at https://voyant-tools.org/. It is open source and can be
-self-hosted, but most researchers use the public hosted instance.
+Since v1.2.5 closing the window keeps the engine and Ollama alive; click
+the dock icon to reopen. If a backend actually died, the app probes and
+restarts only what is down when you reopen (v1.2.6). If you are on an
+older version, closing the window stopped the backends — quit and relaunch
+instead.
 
-Voyant Tools provides a multi-panel interface with a reader, a word
-cloud, a trends graph, a contexts tool, a collocates tool, a
-correlations tool, a scatterplot, and a dreamcatcher visualisation. It
-is designed for digital-humanities work on small to medium corpora and
-emphasises visual exploration over statistical rigour. It does not
-bundle a POS tagger, a lemmatiser, or a dependency parser; it works on
-raw token frequency. It does not implement the standard collocation
-measures (MI, t-score, log-likelihood, etc.) and does not emit a
-provenance record. It does not support Arabic morphology.
+### 13.7 Arabic tools are missing or fail
 
-CorpusMind differs from Voyant Tools in four respects. First, CorpusMind
-implements the full statistical suite (seven collocation measures, four
-dispersion measures, two keyness measures) with formal definitions and
-primary-literature citations, whereas Voyant Tools focuses on visual
-exploration. Second, CorpusMind bundles spaCy and CAMeL Tools for
-linguistic annotation, whereas Voyant Tools works on raw tokens. Third,
-CorpusMind includes the Vision Suite and the AI assistant; Voyant Tools
-does not. Fourth, CorpusMind emits a YAML provenance record for every
-operation; Voyant Tools does not. Voyant Tools is the better choice for
-digital-humanities researchers who want a quick visual overview of a
-text, for teaching introductory text analysis, and for researchers who
-do not need linguistic annotation or statistical rigour.
+CAMeL Tools is optional. Install it (see §2) and download the two data
+files. If only some tools fail, check the engine log for the specific
+model (e.g. the dialect-ID model) and run the matching `camel_data -i`
+command.
 
-### 12.5 Summary Comparison Table
+### 13.8 Where are the logs? How do I report a problem?
 
-| Feature | CorpusMind | AntConc | Sketch Engine | #LancsBox | Voyant Tools |
+Desktop logs live in the OS log directory as `engine.stdout.log` and
+`engine.stderr.log` (macOS: `~/Library/Logs/CorpusMind`; Windows:
+`%APPDATA%\CorpusMind\logs`; Linux: `~/.local/share/CorpusMind/logs` —
+names per platform convention). The taskbar error panel and **Settings →
+Diagnostics** (Run Diagnostics) summarise backend health. Use **Report to
+developer** in the error panel to open a pre-filled email to
+`w.abumandour@squ.edu.om`, or file an issue at
+https://github.com/waleedmandour/CorpusMind/issues with the log excerpt
+and your OS, app version, and Ollama model list.
+
+---
+
+## 14. CorpusMind Compared with Other Corpus Tools
+
+CorpusMind complements rather than replaces existing tools. Claims below
+are sourced to each tool's own documentation/publications (2025).
+
+**AntConc** (Anthony, free, desktop) — excellent for teaching and quick
+KWIC on pre-processed corpora, but has no POS tagger, lemmatiser, or
+parser, one user-selected collocation statistic, and no Arabic morphology,
+AI assistant, or multimodal support. CorpusMind bundles the full
+annotation pipeline and the seven-measure collocation suite with
+provenance records.
+
+**Sketch Engine** (Lexical Computing, subscription, cloud) — the reference
+implementation of Word Sketches with ready-made 100+ language corpora.
+Cloud processing makes it unsuitable for confidential corpora without a
+data-processing agreement. CorpusMind is local-first and free, but does
+not (yet) implement Word Sketches.
+
+**#LancsBox** (Lancaster, free, desktop) — strong visualisation (Graph
+Coll) and BNC/BNC64 support; lighter on statistics and without Arabic
+morphology or AI assistance. CorpusMind implements the full seven-measure
+collocation and four-measure dispersion suites (Juilland's D, DP, ARF,
+AWT) with provenance.
+
+**Voyant Tools** (Sinclair & Rockwell, free, web) — fast visual
+exploration for digital humanities; raw-token only, no standard
+collocation statistics or annotation. CorpusMind adds linguistic
+annotation, formal statistics, and reproducibility.
+
+| Feature | CorpusMind | AntConc | Sketch Engine | #LancsBox | Voyant |
 |---|---|---|---|---|---|
-| Licence | AGPL-3.0-only (free, open source) | Freeware (closed source) | Commercial (subscription) | Free for academic use (closed source) | Open source (GPL) |
-| Price | Free | Free | From 7.09 EUR/month (academic) | Free | Free |
-| Deployment | Local-first desktop + PWA | Desktop only | Cloud only | Desktop only | Web only |
-| Concordance (KWIC) | Yes | Yes | Yes | Yes | Yes (Contexts) |
-| Collocation measures | 7 (MI, t-score, LL, Dice, LogDice, chi-square, Delta P) | 1 (user-selected) | Multiple (Word Sketch grammar-based) | Several | 1 (raw co-occurrence) |
-| Keyness | Yes (LL, chi-square, Log Ratio, %DIFF, Simple Maths, Odds Ratio) | Yes (LL, chi-square) | Yes | Yes | No |
-| Dispersion | Yes (Juilland's D, Gries's DP, ARF, AWT) | No | Yes | Yes (visual) | No |
-| POS tagging | Yes (spaCy) | No (pre-process externally) | Yes (language-specific) | Limited | No |
-| Lemmatisation | Yes (spaCy, CAMeL Tools) | No | Yes | Limited | No |
-| Dependency parsing | Yes (spaCy) | No | No | No | No |
-| Arabic morphology | Yes (CAMeL Tools: root, pattern, lemma, dialect ID) | No | Yes (Arabic sketch grammar) | No | No |
-| Multimodal / Vision analysis | Yes (Kress and van Leeuwen Visual Grammar, OCR, object detection) | No | No | No | No |
-| AI assistant | Yes (grounded, citation-enforced, local LLM via Ollama) | No | No | No | No |
-| Provenance records (YAML) | Yes (every operation) | No | No | No | No |
-| At-rest encryption | Yes (AES-256-GCM) | No | No (cloud-hosted) | No | No (cloud-hosted) |
-| Ready-made reference corpora | No (researcher supplies corpus) | No | Yes (BNC, enTenTen, 100+ languages) | Yes (BNC, BNC64) | No |
-| Word Sketch (grammatical collocation profile) | No (on roadmap) | No | Yes (reference implementation) | No | No |
-| Network collocation visualisation | No (table-based) | No | No | Yes (Graph Coll) | No |
-| Word cloud | No | No | No | No | Yes |
-| Offline operation | Yes (desktop) / partial (PWA) | Yes | No (cloud) | Yes | No (web) |
-| Data residency | Local by default | Local | Cloud (uploaded) | Local | Cloud (uploaded, or self-host) |
-| Reproducibility for peer review | Yes (YAML provenance + methods.pdf export) | Manual | Limited | Manual | Manual |
+| Licence | AGPL-3.0 (free) | Freeware | Subscription | Free (academic) | Open source |
+| Deployment | Desktop + PWA (local-first) | Desktop | Cloud | Desktop | Web |
+| Collocation measures | 7 | 1 | Multiple (Word Sketch) | Several | 1 (raw) |
+| Keyness (LL + effect sizes) | Yes | LL, chi-square | Yes | Yes | No |
+| Dispersion | D, DP, ARF, AWT | No | Yes | Visual | No |
+| POS / lemma / dependency | Yes (bundled) | No | Yes | Limited | No |
+| Arabic morphology | Yes (CAMeL) | No | Yes | No | No |
+| Multimodal (images) | Yes | No | No | No | No |
+| Grounded AI assistant | Yes (local LLM) | No | No | No | No |
+| Provenance per operation | Yes (YAML) | No | Limited | No | No |
+| Data residency | Local by default | Local | Cloud | Local | Cloud |
 
-### 12.6 When to Use Which Tool
-
-Use **CorpusMind** when you need local-first, reproducible, framework-
-grounded analysis of English or Arabic corpora, when you need multimodal
-discourse analysis of images alongside text, or when you need an AI
-assistant that grounds its claims in corpus evidence.
-
-Use **AntConc** when you need a quick concordance on a pre-processed
-corpus in a classroom or workshop setting, when you do not need
-lemmatisation or POS tagging, or when you are on a machine where you
-cannot install Python.
-
-Use **Sketch Engine** when you need ready-made large reference corpora,
-when you need the Word Sketch grammatical collocation profile, or when
-your team prefers a managed cloud service and your data-governance
-policy permits uploading the corpus to a third-party server.
-
-Use **#LancsBox** when you value the Graph Coll network visualisation,
-when you are teaching corpus linguistics and want a visually intuitive
-tool, or when you work primarily with the BNC or BNC64.
-
-Use **Voyant Tools** when you want a quick visual overview of a text in
-a digital-humanities context, when you do not need linguistic annotation
-or statistical rigour, or when you are working in a browser-only
-environment.
-
-These tools are complementary, not mutually exclusive. Many researchers
-will use more than one: for example, Voyant Tools for an initial visual
-overview, CorpusMind for the rigorous statistical and multimodal
-analysis, and Sketch Engine for the Word Sketch when a grammatical
-collocation profile is required.
+**Rule of thumb**: Voyant for a quick visual overview; AntConc/#LancsBox
+for teaching and quick searches; Sketch Engine for Word Sketches and
+ready-made corpora; CorpusMind for reproducible, framework-grounded,
+local-first analysis of text and images.
 
 ---
 

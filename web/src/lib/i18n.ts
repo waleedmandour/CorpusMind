@@ -163,6 +163,13 @@ export const translations = {
     ai_thinking: "Thinking…",
     ai_grounded: "grounded",
     ai_ungrounded: "ungrounded",
+    // v1.2.6: Discourse page multi-taxonomy selector
+    discourse_taxonomy: "Taxonomy",
+    discourse_note_intro:
+      "Categories follow the selected named taxonomy, so results are citable and comparable across studies.",
+    discourse_unmatched: "not covered by the lexicon",
+    discourse_unmatched_hint:
+      "Share of tokens the bundled USAS lexicon could not tag — expected for a lexicon lookup (this is not the licensed CLAWS/USAS tagger).",
     ai_input_placeholder: "Ask about this analysis…",
 
     // Settings
@@ -976,6 +983,13 @@ export const translations = {
     ai_thinking: "يفكّر…",
     ai_grounded: "موثّق",
     ai_ungrounded: "غير موثّق",
+    // v1.2.6: منتقي التصنيفات في صفحة الخطاب
+    discourse_taxonomy: "التصنيف",
+    discourse_note_intro:
+      "تتبع الفئات التصنيف المسمّى المختار، وهذا يجعل النتائج قابلة للتوثيق والمقارنة بين الدراسات.",
+    discourse_unmatched: "غير مشمول في المعجم",
+    discourse_unmatched_hint:
+      "نسبة الكلمات التي لم يتمكن معجم USAS المرفق من وسملها — أمر متوقع في البحث المعجمي (هذه ليست الوسّام المرخّص CLAWS/USAS).",
     ai_input_placeholder: "اسأل عن هذا التحليل…",
 
     // Settings

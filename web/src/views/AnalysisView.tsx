@@ -1175,21 +1175,53 @@ function DependencyPanel({ cid }: { cid: string }) {
 
 
 function DiscoursePanel({ cid }: { cid: string }) {
+  const lang = useUI((s) => s.lang);
+  // v1.2.6: multi-taxonomy support — the lens is user-selectable and each
+  // result names + cites its taxonomy. Default stays Hyland 2005.
+  const [taxonomy, setTaxonomy] = useState("hyland2005");
   const result = useQuery({
-    queryKey: ["discourse", cid],
-    queryFn: () => api.discourse(cid),
+    queryKey: ["discourse", cid, taxonomy],
+    queryFn: () => api.discourse(cid, taxonomy),
+  });
+  const taxonomies = useQuery({
+    queryKey: ["discourse-taxonomies", cid],
+    queryFn: () => api.discourseTaxonomies(cid),
+    staleTime: 5 * 60 * 1000,
   });
   const exportStatus = useExportStatus();
+
+  const opts: Array<{ key: string; name: string }> =
+    taxonomies.data?.taxonomies.map((tx) => ({ key: tx.key, name: tx.name })) ?? [
+      { key: "hyland2005", name: "Hyland 2005" },
+      { key: "hallidayhasan1976", name: "Halliday & Hasan 1976" },
+      { key: "martinwhite2005", name: "Martin & White 2005" },
+      { key: "usas", name: "CLAWS/USAS semantic tagset (top-level)" },
+    ];
+  const isUsas = result.data?.taxonomy_key === "usas";
 
   return (
     <div className="panel-content">
       {exportStatus.el}
       <div className="toolbar">
+        <label htmlFor="discourse-taxonomy" style={{ fontWeight: 600 }}>
+          {t(lang, "discourse_taxonomy")}:{" "}
+        </label>
+        <select
+          id="discourse-taxonomy"
+          value={taxonomy}
+          onChange={(e) => setTaxonomy(e.target.value)}
+        >
+          {opts.map((o) => (
+            <option key={o.key} value={o.key}>
+              {o.name}
+            </option>
+          ))}
+        </select>
         <ExportButton onExport={(fmt) => { if (result.data) { downloadJsonResult(result.data, `discourse.${fmt}`, exportStatus.set); } } } disabled={!result.data} />
       </div>
       <div className="grounding-notice">
-        <strong>Note:</strong> Metadiscourse categories follow Hyland's interactive/interactional
-        taxonomy (Hyland 2005) - this makes results citable and comparable across studies.
+        <strong>Note:</strong> {t(lang, "discourse_note_intro")}{" "}
+        {result.data?.citation && <em>{result.data.citation}</em>}
       </div>
 
       {result.data && (
@@ -1197,16 +1229,28 @@ function DiscoursePanel({ cid }: { cid: string }) {
           <div className="result-meta">
             Taxonomy: <strong>{result.data.taxonomy}</strong> ·
             <strong>{result.data.total_tokens.toLocaleString()}</strong> tokens
+            {isUsas && result.data.unmatched_percent != null && (
+              <> · <span title={t(lang, "discourse_unmatched_hint")}>{t(lang, "discourse_unmatched")}: <strong>{result.data.unmatched_percent}%</strong></span></>
+            )}
           </div>
           {Object.entries(result.data.categories).map(([cat, info]) => (
             <div key={cat} className="discourse-cat">
-              <h3>{cat} <span className="cat-meta">freq={info.freq} · {info.per_million}/M</span></h3>
+              <h3>
+                {cat}{" "}
+                {isUsas && (info.label || info.group) && (
+                  <span className="cat-meta">
+                    {info.label}
+                    {info.group ? ` — ${info.group}` : ""}
+                  </span>
+                )}
+                <span className="cat-meta">freq={info.freq} · {info.per_million}/M</span>
+              </h3>
               <ul className="discourse-examples">
                 {info.examples.map((ex, i) => (
                   <li key={i}>
-                    <code className="evidence-ref">{ex.evidence_id}</code>
+                    {ex.evidence_id && <code className="evidence-ref">{ex.evidence_id}</code>}
                     <strong>{ex.cue}</strong>
-                    <em>"{ex.sentence_preview}…"</em>
+                    {ex.sentence_preview && <em>"{ex.sentence_preview}…"</em>}
                   </li>
                 ))}
               </ul>

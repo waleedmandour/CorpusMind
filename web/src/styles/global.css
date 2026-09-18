@@ -1863,6 +1863,9 @@ code, pre { font-family: var(--font-mono); }
   align-items: baseline;
 }
 .discourse-examples em { color: var(--text-muted); flex: 1; }
+/* v1.2.6: USAS semantic examples have no sentence preview — without this,
+   the flex-grow evidence id pushed the cue word to the far edge. */
+.discourse-examples li .evidence-ref { flex: 0 0 auto; }
 
 .sentiment-bars { margin: var(--space-3) 0; }
 .sentiment-timeline {
@@ -2349,12 +2352,19 @@ code, pre { font-family: var(--font-mono); }
   padding: 0 3px;
   overflow-wrap: anywhere;
 }
-.ai-drawer-msg.user {
+/* v1.2.6: role modifiers were previously `.user` / `.assistant` — the bare
+   `.assistant` class ALSO matched the AssistantView page-layout rule
+   (.assistant { display: grid; grid-template-columns: 260px 1fr; height: 100% }),
+   so every AI response in this drawer was laid out as a two-column grid:
+   header squeezed into a 260px column, the response text into the leftover
+   column, and height:100% clipping the bubble under its own text. Namespaced
+   to .ai-role-* so the drawer no longer participates in page-level classes. */
+.ai-drawer-msg.ai-role-user {
   align-self: flex-end;
   background: var(--brand-500);
   color: var(--text-on-brand);
 }
-.ai-drawer-msg.assistant {
+.ai-drawer-msg.ai-role-assistant {
   align-self: flex-start;
   background: var(--bg-subtle);
   border: 1px solid var(--border);

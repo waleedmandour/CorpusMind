@@ -170,7 +170,7 @@ export function FloatingAssistant() {
               <div className="ai-drawer-empty">{t(lang, "ai_drawer_empty")}</div>
             )}
             {messages.map((m, i) => (
-              <article key={i} className={`ai-drawer-msg ${m.role} ${m.error ? "error" : ""}`}>
+              <article key={i} className={`ai-drawer-msg ai-role-${m.role} ${m.error ? "error" : ""}`}>
                 <div className="ai-drawer-msg-head">
                   <strong>{m.role === "user" ? t(lang, "ai_you") : t(lang, "ai_assistant")}</strong>
                   {m.role === "assistant" && !m.error && (

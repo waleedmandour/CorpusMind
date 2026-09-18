@@ -173,16 +173,55 @@ async def dependencies(
 
 
 # --------------------------------------------------------------------------- #
-# §8.15 Discourse analysis
+# §8.15 Discourse analysis — multi-taxonomy (v1.2.6)
 # --------------------------------------------------------------------------- #
 
 
+class DiscourseRequest(BaseModel):
+    taxonomy: str = Field(
+        "hyland2005",
+        description=(
+            "hyland2005 (default) | hallidayhasan1976 | martinwhite2005 | "
+            "usas (CLAWS/USAS top-level semantic tagset)"
+        ),
+    )
+
+
+@router.get("/corpora/{cid}/discourse/taxonomies")
+async def discourse_taxonomies(cid: str) -> dict:
+    """Registry of supported discourse taxonomies (keys, names, citations)."""
+    from discourse.service import discourse_taxonomy_list
+
+    return {"taxonomies": discourse_taxonomy_list()}
+
+
 @router.post("/corpora/{cid}/discourse")
-async def discourse(cid: str, session: AsyncSession = Depends(get_session)) -> dict:
-    """Hyland's metadiscourse taxonomy (§8.15)."""
+async def discourse(
+    cid: str,
+    body: DiscourseRequest | None = None,
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    """Discourse analysis under a named taxonomy (§8.15).
+
+    Body is OPTIONAL for backward compatibility: a bodyless POST keeps the
+    default Hyland 2005 metadiscourse lens.
+    """
     if not await session.get(Corpus, cid):
         raise HTTPException(404, "Corpus not found")
-    r = await compute_discourse_analysis(session, cid)
+    taxonomy = (body.taxonomy if body else "hyland2005") or "hyland2005"
+    try:
+        r = await compute_discourse_analysis(session, cid, taxonomy=taxonomy)
+    except ValueError as e:
+        msg = str(e)
+        if msg.startswith("usas_lexicon_missing:"):
+            lang = msg.split(":", 1)[1]
+            raise HTTPException(
+                503,
+                f"The USAS semantic lexicon for '{lang}' is not installed. "
+                "See reference-data/tagsets/ in the repository, or use the "
+                "Grammatical tagsets setting to check availability.",
+            ) from e
+        raise HTTPException(400, msg) from e
     return asdict(r)
 
 

@@ -615,23 +615,55 @@ camel_data -i morphology-db-msa-r13`}</pre>
           backend errors during normal use. It only fires when something actually goes wrong —
           you won't see it when everything is working.
         </p>
-        <h4>How it works</h4>
+        <h4>Common issues (v1.2.6)</h4>
+        <ul>
+          <li><strong>HTTP 500 errors on AI features — security or grammar software intercepting Ollama.</strong>{" "}
+            Desktop apps that inspect local HTTP traffic can hijack CorpusMind's requests to Ollama
+            (<code>127.0.0.1:11434</code>). Confirmed real-world case: <strong>Grammarly</strong> running in the
+            background caused exactly this — quitting it stopped the errors. Antivirus web shields, VPNs and
+            corporate proxies can do the same. Quit/disable the interfering app or add CorpusMind and Ollama
+            to its exclusions, then retry.</li>
+          <li><strong>"Ollama is not running" (503).</strong> Start Ollama (the desktop app tries to start it
+            automatically) and pull a model: <code>ollama pull llama3.2:3b</code> — or use one-click downloads
+            in Settings → Model Providers.</li>
+          <li><strong>"Model not found — run ollama pull" (409).</strong> The selected model is not installed.
+            Download it from Settings → Model Providers. If it <em>is</em> installed, update the app: v1.2.2
+            fixed a false 409 after successful downloads (tag mismatch).</li>
+          <li><strong>Vector KWIC slow or timing out (CPU-only machines).</strong> Embedding a large corpus on
+            CPU takes minutes. Warm the model first, expect the first search to be the slowest (results are
+            cached), prefer <code>nomic-embed-text</code> for English-only corpora. Batching is automatic since
+            v1.2.5 (<code>CORPUSMIND_EMBED_BATCH</code>, <code>CORPUSMIND_EMBED_TIMEOUT_S</code>).</li>
+          <li><strong>Engine not reachable (browser/PWA mode).</strong> Start it with <code>corpusmind-engine</code>
+            and check <code>http://127.0.0.1:8765/api/v1/health</code>. Busy port: set <code>CORPUSMIND_PORT</code>.
+            Allow the engine through the firewall if prompted.</li>
+          <li><strong>macOS: closed the window and nothing responds.</strong> Since v1.2.5 the engine and Ollama
+            stay alive when the window closes — click the dock icon to reopen; a dead backend is restarted
+            automatically on reopen (v1.2.6).</li>
+          <li><strong>Arabic tools missing.</strong> Install CAMeL Tools and its data
+            (<code>camel_data -i morphology-db-msa-r13</code>, <code>camel_data -i dialectid-model6</code>).</li>
+        </ul>
+        <h4>How Smart Troubleshooting works</h4>
         <ol>
           <li>When a backend request fails (a 4xx/5xx response or a network error), the error is
             captured automatically. Duplicate errors within a 5-second window are suppressed so
             you're not spammed.</li>
           <li>The error appears in the <strong>taskbar</strong> at the bottom of the window. Click
             it to see the full details.</li>
-          <li>If you've configured a <strong>Gemini API key</strong> in the engine environment
-            (via <code>CORPUSMIND_GEMINI_API_KEY</code>), the error is sent to Google's Gemini
-            model for interpretation. Gemini returns a plain-language explanation of what went
-            wrong, the likely cause, and a suggested fix.</li>
+          <li>If a <strong>Gemini API key</strong> is configured (Settings → Smart Troubleshooting, or the
+            engine environment), the error is sent to Google's Gemini model for interpretation. Gemini returns
+            a plain-language explanation of what went wrong, the likely cause, and a suggested fix. Error
+            context leaves the device only after your explicit acknowledgment.</li>
           <li>If the error looks like a real bug, a <strong>Report to Developer</strong> button
             appears. Clicking it opens your email client with a pre-filled message to
             <code> w.abumandour@squ.edu.om</code> containing the error details and Gemini's
             interpretation.</li>
         </ol>
         <h4>Configuring Gemini interpretation (optional)</h4>
+        <p>
+          The easiest way is in-app: <strong>Settings → Smart Troubleshooting → Gemini interpretation</strong>
+          {" "}— enter your key there (it is stored in-memory in the engine, never written to disk, and never
+          sent back to the browser). For environment-based setup:
+        </p>
         <pre>{`# In the engine environment (e.g. engine/.env or your shell):
 export CORPUSMIND_GEMINI_API_KEY="your-key-from-aistudio.google.com/apikey"
 export CORPUSMIND_GEMINI_MODEL="gemini-2.5-flash"  # optional, this is the default

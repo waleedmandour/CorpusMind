@@ -99,6 +99,7 @@ def escape_xml(text):
 
 def format_inline(text):
     text = re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', text)
+    text = re.sub(r'(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)', r'<i>\1</i>', text)
     text = re.sub(r'`(.+?)`', r'<font face="LibMono" size="10" color="#0b6e4f">\1</font>', text)
     def replace_link(m):
         t, url = m.group(1), m.group(2)
@@ -228,7 +229,7 @@ def build_pdf(md_path, pdf_path, is_arabic=False):
     story.append(meta_table)
     story.append(Spacer(1, 1 * cm))
 
-    story.append(Paragraph("v0.1.0", style_cover_label))
+    story.append(Paragraph("v1.2.6", style_cover_label))
     story.append(Spacer(1, 0.5 * cm))
     story.append(Paragraph("Dr. Waleed Mandour", style_cover_author))
     story.append(Paragraph("Sultan Qaboos University | ORCID: 0000-0002-9262-5993", style_cover_author))
@@ -319,7 +320,7 @@ def build_pdf(md_path, pdf_path, is_arabic=False):
             canvas.setFont("LibMono", 7)
             canvas.setFillColor(TEXT_MUTED)
             canvas.drawCentredString(A4[0] / 2, 1.2 * cm,
-                f"CORPUSMIND / v0.1.0 / USER GUIDE / PAGE {page_num - 1}")
+                f"CORPUSMIND / v1.2.6 / USER GUIDE / PAGE {page_num - 1}")
             # Top accent line
             canvas.setStrokeColor(BRAND)
             canvas.setLineWidth(1)
@@ -350,7 +351,7 @@ def build_pdf(md_path, pdf_path, is_arabic=False):
             canvas.setFont("LibMono", 7)
             canvas.setFillColor(TEXT_MUTED)
             canvas.drawCentredString(A4[0] / 2, 1.2 * cm,
-                f"CORPUSMIND / v0.1.0 / USER GUIDE / PAGE {canvas.getPageNumber() - 1}")
+                f"CORPUSMIND / v1.2.6 / USER GUIDE / PAGE {canvas.getPageNumber() - 1}")
             canvas.setStrokeColor(BRAND)
             canvas.setLineWidth(1)
             canvas.line(2.5 * cm, A4[1] - 1.5 * cm, A4[0] - 2.5 * cm, A4[1] - 1.5 * cm)
@@ -363,9 +364,9 @@ def build_pdf(md_path, pdf_path, is_arabic=False):
         rightMargin=2.5 * cm,
         topMargin=2.5 * cm,
         bottomMargin=2.5 * cm,
-        title="CorpusMind User Guide v0.1.0",
+        title="CorpusMind User Guide v1.2.6",
         author="Dr. Waleed Mandour and Prof. Wesam Ibrahim",
-        subject="User Guide for CorpusMind v0.1.0",
+        subject="User Guide for CorpusMind v1.2.6",
         creator="CorpusMind",
     )
 

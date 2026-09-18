@@ -1,7 +1,8 @@
 """
 Phase 2 corpus-analysis services: n-grams, POS patterns, grammar queries,
-dependency queries, discourse (Hyland's metadiscourse), vocabulary profiling,
-sentiment.
+dependency queries, discourse (multi-taxonomy: Hyland's metadiscourse,
+Halliday & Hasan cohesion, Martin & White Appraisal, CLAWS/USAS semantics),
+vocabulary profiling, sentiment.
 
 All functions take an async SQLAlchemy session and return plain Python data
 structures. Every result includes reproducibility info (parameters used).
@@ -608,7 +609,20 @@ async def compute_dependency_analysis(
 
 
 # --------------------------------------------------------------------------- #
-# §8.15 Discourse analysis — Hyland's metadiscourse taxonomy
+# §8.15 Discourse analysis — multi-taxonomy (v1.2.6)
+#
+# Four citable lenses over the same corpus:
+#   hyland2005          — Hyland's interactive/interactional metadiscourse
+#   hallidayhasan1976   — Halliday & Hasan cohesion (reference, conjunction,
+#                         lexical repetition across adjacent sentences)
+#   martinwhite2005     — Martin & White Appraisal (engagement, graduation,
+#                         attitude starter set)
+#   usas                — CLAWS-family USAS top-level semantic tagset
+#                         (lexicon-based; reuses reference-data/tagsets)
+#
+# Each lens is a named, citable taxonomy pinned to its source so results
+# stay comparable across studies. Cue lists are open-class starter sets —
+# Phase 3+ may swap in learned classifiers.
 # --------------------------------------------------------------------------- #
 
 
@@ -750,23 +764,255 @@ HYLAND_INTERACTIONAL = {
 }
 
 
+# --- Halliday & Hasan (1976) cohesion — reference, conjunction, lexical --- #
+# Halliday, M.A.K., & Hasan, R. (1976). Cohesion in English. Longman.
+# Substitution and ellipsis need parse-level analysis and are intentionally
+# NOT covered by this starter set; the remaining categories are.
+
+HALLIDAY_HASAN_1976 = {
+    "reference.pronouns": {  # anaphoric reference via pronouns/demonstratives
+        "he", "she", "it", "they", "him", "her", "them",
+        "his", "hers", "its", "their", "theirs",
+        "this", "that", "these", "those",
+    },
+    "conjunction.additive": {
+        "and", "also", "furthermore", "in addition", "besides",
+        "similarly", "likewise", "by contrast", "or", "nor",
+        "in other respects",
+    },
+    "conjunction.adversative": {
+        "but", "yet", "however", "nevertheless", "nonetheless",
+        "on the other hand", "though", "although", "whereas",
+        "in spite of", "despite this", "conversely",
+    },
+    "conjunction.causal": {
+        "so", "therefore", "thus", "hence", "consequently",
+        "because", "since", "accordingly", "for this reason", "as a result",
+    },
+    "conjunction.temporal": {
+        "then", "next", "finally", "afterwards", "meanwhile",
+        "subsequently", "first", "at last", "previously", "before that",
+        "earlier", "later",
+    },
+    # "lexical.repetition" is computed (same content lemma across adjacent
+    # sentences) — see _detect_lexical_cohesion below; it is NOT a cue list.
+}
+
+
+# --- Martin & White (2005) Appraisal — engagement, graduation, attitude --- #
+# Martin, J.R., & White, P.R.R. (2005). The Language of Evaluation:
+# Appraisal in English. Palgrave Macmillan.
+# Lexical starter set: INVOKED attitude (ideational appraisal) and
+# graduated normativity are beyond cue lists; the categories below cover
+# the inscribed, lexically-realised core.
+
+MARTIN_WHITE_2005 = {
+    "engagement.entertain": {  # open the dialogic space
+        "perhaps", "possibly", "probably", "may", "might", "could",
+        "seem", "appear", "likely", "presumably", "apparently",
+        "it seems", "arguably",
+    },
+    "engagement.attribute": {  # external voices
+        "according to", "cited in", "reported", "claimed", "as x argues",
+        "as x claims", "as x states", "x suggests", "x found that",
+    },
+    "engagement.deny": {  # disclaim: reject
+        "not", "no", "never", "none", "nor", "without",
+    },
+    "engagement.counter": {  # disclaim: counter-expectation
+        "but", "although", "while", "despite", "however", "yet",
+        "nevertheless", "ironically", "even so", "still",
+    },
+    "engagement.proclaim": {  # contract the space: concur/endorse/pronounce
+        "clearly", "obviously", "of course", "undoubtedly", "certainly",
+        "indeed", "necessarily", "naturally", "not surprisingly", "as is well known",
+    },
+    "graduation.force": {  # intensifiers and maximisers
+        "very", "extremely", "highly", "deeply", "strongly", "utterly",
+        "completely", "entirely", "totally", "so", "such", "too",
+        "remarkably", "strikingly", "considerably", "substantially",
+    },
+    "attitude.affect": {  # inscribed affect (honest starter subset)
+        "surprisingly", "unfortunately", "fortunately", "happily",
+        "sadly", "regrettably", "interestingly", "importantly", "notably",
+        "worryingly", "encouragingly",
+    },
+}
+
+
+# --- Taxonomy registry ---------------------------------------------------- #
+
+DISCOURSE_TAXONOMIES: dict[str, dict] = {
+    "hyland2005": {
+        "name": "Hyland 2005",
+        "citation": (
+            "Hyland, K. (2005). Metadiscourse: Exploring Interaction in "
+            "Writing. London: Continuum."
+        ),
+        "categories": {
+            **{f"interactive.{k}": v for k, v in HYLAND_INTERACTIVE.items()},
+            **{f"interactional.{k}": v for k, v in HYLAND_INTERACTIONAL.items()},
+        },
+    },
+    "hallidayhasan1976": {
+        "name": "Halliday & Hasan 1976",
+        "citation": (
+            "Halliday, M.A.K., & Hasan, R. (1976). Cohesion in English. "
+            "London: Longman. (Substitution and ellipsis not covered.)"
+        ),
+        "categories": dict(HALLIDAY_HASAN_1976),
+    },
+    "martinwhite2005": {
+        "name": "Martin & White 2005",
+        "citation": (
+            "Martin, J.R., & White, P.R.R. (2005). The Language of "
+            "Evaluation: Appraisal in English. Basingstoke: Palgrave "
+            "Macmillan. (Lexical starter set; invoked attitude not covered.)"
+        ),
+        "categories": dict(MARTIN_WHITE_2005),
+    },
+}
+
+# CLAWS-family semantic lens: the bundled USAS top-level lexicon
+# (reference-data/tagsets/usas-<lang>-top.tsv, CC BY-NC-SA 4.0) re-read as
+# discourse-functional groupings rather than a plain frequency list.
+USAS_TAXONOMY_KEY = "usas"
+
+USAS_DISCOURSE_GROUPS: dict[str, str] = {
+    "Q": "Communication and speech reporting",
+    "S": "Social interaction and relations",
+    "X": "Cognition and mental states",
+    "D": "Emotion and affect",
+    "R": "Politics and ideology",
+    "G": "Institutional power and governance",
+    "T": "Temporality and sequence",
+    "N": "Quantity, measurement and evidence",
+    "Z": "Grammatical / function words",
+    "W": "The physical world and environment",
+    "K": "Life and living things",
+    "B": "The body and health",
+    "A": "General and abstract terms",
+    "M": "Movement, location and travel",
+    "L": "Substances, materials and equipment",
+    "I": "Money and commerce",
+    "P": "Education and knowledge transmission",
+    "Y": "Science and technology",
+    "C": "Arts, crafts and culture",
+    "J": "Leisure, sport and entertainment",
+    "H": "Architecture, housing and home",
+    "E": "Food and farming",
+    "F": "Furniture and household fittings",
+    "O": "Hard to classify",
+}
+
+
 @dataclass
 class DiscourseResult:
-    categories: dict[str, dict]  # {category: {freq, per_million, examples}}
+    categories: dict[str, dict]  # {category: {freq, per_million, examples, ...}}
     total_tokens: int
-    taxonomy: str  # always "Hyland 2005"
+    taxonomy: str  # display name, e.g. "Hyland 2005"
+    taxonomy_key: str = "hyland2005"
+    citation: str = ""
+    unmatched_percent: float | None = None  # USAS lens only (lexicon misses)
+
+
+def discourse_taxonomy_list() -> list[dict]:
+    """Registry for the API/frontend: keys, display names, citations."""
+    items = [
+        {
+            "key": key,
+            "name": spec["name"],
+            "citation": spec["citation"],
+            "categories": sorted(spec["categories"].keys()),
+        }
+        for key, spec in DISCOURSE_TAXONOMIES.items()
+    ]
+    items.append(
+        {
+            "key": USAS_TAXONOMY_KEY,
+            "name": "CLAWS/USAS semantic tagset (top-level)",
+            "citation": (
+                "Rayson, P., Archer, D., Piao, S., & McEnery, T. (2004). "
+                "The UCREL Semantic Analysis System. Lancaster: UCREL "
+                "(CLAWS-family semantic tagset). Bundled top-level lexicon: "
+                "CC BY-NC-SA 4.0 — lexicon-based lookup, not the licensed "
+                "CLAWS/USAS tagger."
+            ),
+            "categories": sorted(USAS_DISCOURSE_GROUPS.keys()),
+        }
+    )
+    return items
+
+
+def _detect_lexical_cohesion(
+    sentences: list[list[dict]],
+    *,
+    limit_examples: int,
+    category_counts: Counter,
+    category_examples: dict[str, list[dict]],
+) -> None:
+    """Halliday & Hasan lexical cohesion: the same content lemma recurring
+    across ADJACENT sentences (repetition chains). Each shared lemma in a
+    sentence pair counts once. Substitution/ellipsis are not detected."""
+    content_pos = {"NOUN", "VERB", "ADJ", "ADV"}
+    for i in range(len(sentences) - 1):
+        a, b = sentences[i], sentences[i + 1]
+        a_lemmas = {
+            t["lemma"].lower()
+            for t in a
+            if t.get("pos") in content_pos and len(t.get("lemma", "")) > 2
+        }
+        if not a_lemmas:
+            continue
+        seen: set[str] = set()
+        for t in b:
+            lemma = t["lemma"].lower()
+            if t.get("pos") in content_pos and len(lemma) > 2 and lemma in a_lemmas and lemma not in seen:
+                seen.add(lemma)
+                if len(category_examples["lexical.repetition"]) < limit_examples:
+                    category_examples["lexical.repetition"].append(
+                        {
+                            "cue": lemma,
+                            "evidence_id": f"{t['doc']}:{t['sent']}:{t['idx']}",
+                            "sentence_preview": " ".join(
+                                x["text"].lower() for x in b
+                            )[:120],
+                        }
+                    )
+                category_counts["lexical.repetition"] += 1
 
 
 async def compute_discourse_analysis(
     session: AsyncSession,
     corpus_id: str,
     *,
+    taxonomy: str = "hyland2005",
     limit_examples: int = 5,
 ) -> DiscourseResult:
-    """Detect Hyland's metadiscourse markers across the corpus (§8.15)."""
+    """Detect discourse markers across the corpus under a named taxonomy.
+
+    taxonomy: hyland2005 (default) | hallidayhasan1976 | martinwhite2005
+    | usas. Raises ValueError for unknown keys — the API layer maps that
+    to a 400 listing the supported values.
+    """
+    key = (taxonomy or "hyland2005").strip().lower()
+    if key == USAS_TAXONOMY_KEY:
+        return await compute_usas_discourse_analysis(
+            session, corpus_id, limit_examples=limit_examples
+        )
+    spec = DISCOURSE_TAXONOMIES.get(key)
+    if spec is None:
+        raise ValueError(
+            f"Unknown discourse taxonomy: {taxonomy}. Supported: "
+            f"{[*DISCOURSE_TAXONOMIES.keys(), USAS_TAXONOMY_KEY]}"
+        )
+
     version_id = await _latest_version_id(session, corpus_id)
     if not version_id:
-        return DiscourseResult(categories={}, total_tokens=0, taxonomy="Hyland 2005")
+        return DiscourseResult(
+            categories={}, total_tokens=0, taxonomy=spec["name"],
+            taxonomy_key=key, citation=spec["citation"],
+        )
 
     total_tokens = await _corpus_size(session, version_id)
     sentences = await _load_parses(session, version_id)
@@ -775,14 +1021,14 @@ async def compute_discourse_analysis(
     category_counts: Counter = Counter()
     category_examples: dict[str, list[dict]] = defaultdict(list)
 
-    all_categories = {}
-    all_categories.update({f"interactive.{k}": v for k, v in HYLAND_INTERACTIVE.items()})
-    all_categories.update({f"interactional.{k}": v for k, v in HYLAND_INTERACTIONAL.items()})
+    all_categories = spec["categories"]
 
     for sent in sentences:
         sent_text_tokens = [t["text"].lower() for t in sent]
         sent_lower = " ".join(sent_text_tokens)
         for cat_name, cue_set in all_categories.items():
+            if cat_name == "lexical.repetition":
+                continue  # computed separately across sentence pairs
             for cue in cue_set:
                 # Multi-word cues: check if it appears as a substring of the sentence
                 if " " in cue:
@@ -810,6 +1056,14 @@ async def compute_discourse_analysis(
                                 )
                             category_counts[cat_name] += 1
 
+    if key == "hallidayhasan1976":
+        _detect_lexical_cohesion(
+            sentences,
+            limit_examples=limit_examples,
+            category_counts=category_counts,
+            category_examples=category_examples,
+        )
+
     categories = {}
     for cat, count in category_counts.most_common():
         per_million = (count / total_tokens * 1_000_000) if total_tokens else 0.0
@@ -822,7 +1076,95 @@ async def compute_discourse_analysis(
     return DiscourseResult(
         categories=categories,
         total_tokens=total_tokens,
-        taxonomy="Hyland 2005",
+        taxonomy=spec["name"],
+        taxonomy_key=key,
+        citation=spec["citation"],
+    )
+
+
+async def compute_usas_discourse_analysis(
+    session: AsyncSession,
+    corpus_id: str,
+    *,
+    limit_examples: int = 5,
+) -> DiscourseResult:
+    """CLAWS/USAS top-level semantic distribution re-read as discourse-
+    relevant features (v1.2.6).
+
+    Uses the SAME lexicon-based lookup as the semantic-analysis tool
+    (reference-data/tagsets/usas-<lang>-top.tsv) — honest label: this is
+    NOT the licensed CLAWS/USAS tagger. Each matched token contributes to
+    its top-level letter category; categories are additionally grouped
+    into discourse-functional readings (communication, cognition, emotion,
+    ideology...) via USAS_DISCOURSE_GROUPS so the Discourse page can show
+    what the semantic profile MEANS for discourse analysis.
+    """
+    from nlp.tagsets import USAS_TOP_LABELS, load_semantic_lexicon, semantic_lookup
+    from storage.models import Corpus as CorpusModel
+
+    version_id = await _latest_version_id(session, corpus_id)
+    if not version_id:
+        return DiscourseResult(
+            categories={}, total_tokens=0,
+            taxonomy="CLAWS/USAS semantic tagset (top-level)",
+            taxonomy_key=USAS_TAXONOMY_KEY,
+            citation=discourse_taxonomy_list()[-1]["citation"],
+            unmatched_percent=100.0,
+        )
+
+    corpus_row = await session.get(CorpusModel, corpus_id)
+    language = corpus_row.language if corpus_row and corpus_row.language else "en"
+    if not load_semantic_lexicon(language):
+        raise ValueError(f"usas_lexicon_missing:{language}")
+
+    total_tokens = await _corpus_size(session, version_id)
+    stmt = (
+        select(Token.lemma, Token.text, Token.document_id, Token.sentence_idx,
+               Token.token_idx, Token.is_punct, Token.pos)
+        .where(Token.version_id == version_id)
+        .order_by(Token.document_id, Token.sentence_idx, Token.token_idx)
+    )
+    rows_raw = (await session.execute(stmt)).all()
+
+    tag_counts: Counter = Counter()
+    tag_examples: dict[str, list[dict]] = defaultdict(list)
+    matched = 0
+    for lemma, text, doc_id, sent_idx, tok_idx, is_punct, pos in rows_raw:
+        if is_punct or (pos or "") == "SPACE":
+            continue
+        tag = semantic_lookup(lemma or "", text or "", language)
+        if not tag:
+            continue
+        matched += 1
+        tag_counts[tag] += 1
+        if len(tag_examples[tag]) < limit_examples:
+            tag_examples[tag].append(
+                {
+                    "cue": (lemma or text or "").lower(),
+                    "evidence_id": f"{doc_id}:{sent_idx}:{tok_idx}",
+                    "sentence_preview": "",
+                }
+            )
+
+    categories: dict[str, dict] = {}
+    for tag, count in tag_counts.most_common():
+        per_million = (count / total_tokens * 1_000_000) if total_tokens else 0.0
+        categories[tag] = {
+            "freq": count,
+            "per_million": round(per_million, 2),
+            "examples": tag_examples[tag],
+            "label": USAS_TOP_LABELS.get(tag, "Unknown"),
+            "group": USAS_DISCOURSE_GROUPS.get(tag, "Other"),
+        }
+
+    unmatched = round((total_tokens - matched) / total_tokens * 100, 2) if total_tokens else 0.0
+    return DiscourseResult(
+        categories=categories,
+        total_tokens=total_tokens,
+        taxonomy="CLAWS/USAS semantic tagset (top-level)",
+        taxonomy_key=USAS_TAXONOMY_KEY,
+        citation=discourse_taxonomy_list()[-1]["citation"],
+        unmatched_percent=unmatched,
     )
 
 
