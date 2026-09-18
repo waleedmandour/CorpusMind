@@ -2,7 +2,7 @@
 
 [![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.21226650-blue)](https://doi.org/10.5281/zenodo.21226650)
 [![License: AGPL-3.0-only](https://img.shields.io/badge/License-AGPL--3.0--only-blue.svg)](https://www.gnu.org/licenses/agpl-3.0.html)
-[![GitHub release](https://img.shields.io/badge/release-v1.0.0-blue)](https://github.com/waleedmandour/CorpusMind/releases)
+[![GitHub release](https://img.shields.io/badge/release-v1.2.6-blue)](https://github.com/waleedmandour/CorpusMind/releases)
 [![Build Status](https://img.shields.io/badge/CI-passing-brightgreen)](https://github.com/waleedmandour/CorpusMind/actions)
 
 > A local-first, AI-native research environment for corpus linguistics and multimodal discourse analysis.
@@ -34,14 +34,17 @@ run entirely on the researcher's own machine.
 
 ## Status
 
-**Current release: v1.2.0** — both suites are fully functional.
+**Current release: v1.2.6** — both suites are fully functional.
 
 **Suite A (Text):** complete — cleaning (16 options), corpus hub, concordance,
 **Vector KWIC** (semantic re-ranking, bge-m3), frequency, collocations, keyness,
 dispersion, subcorpus filtering, deterministic grounded-AI layer, Ollama/LM
 Studio auto-detection, multi-format + diagram export, bilingual (EN/AR) UI,
-research workflow tools, and the **Learner Research** suite (CAF battery, CIA
-compare, error-pattern candidates, L1/CEFR facets, AI-vs-learner comparator).
+research workflow tools, the **Learner Research** suite (CAF battery, CIA
+compare, error-pattern candidates, L1/CEFR facets, AI-vs-learner comparator),
+and a **multi-taxonomy Discourse page** (Hyland 2005 metadiscourse, Halliday &
+Hasan 1976 cohesion, Martin & White 2005 Appraisal, and the CLAWS/USAS
+semantic tagset — each result cites its taxonomy).
 
 **Suite B (Vision):** lives in the companion repo — the vision workbench
 (image ingestion with OCR, Visual Grammar, multimodal alignment, Vision-LM
@@ -59,7 +62,7 @@ Companion-Mode API when both are installed.
 Linux (`.deb` + `.AppImage`) and macOS (Apple Silicon + Intel `.dmg`) — are
 built automatically for every release tag and attached to
 [GitHub Releases](https://github.com/waleedmandour/CorpusMind/releases)
-together with the 2-page User Guide PDF. Each installer bundles the
+together with the User Guide PDF. Each installer bundles the
 analysis engine as a local sidecar, so the desktop apps run fully offline.
 
 <details>
@@ -192,7 +195,7 @@ Health check:
 
 ```bash
 curl http://127.0.0.1:8765/api/v1/health
-# {"status":"ok","engine":"corpusmind-engine","version":"1.2.0"}
+# {"status":"ok","engine":"corpusmind-engine","version":"1.2.6"}
 ```
 
 ### 2. Run the web frontend (PWA)
@@ -490,6 +493,45 @@ on GitHub.
 ---
 
 *Built with ❤ to the Academic Community.*
+
+---
+
+## v1.2.6 Release Notes
+
+### Multi-taxonomy Discourse page, floating-assistant alignment fix, resilience + honest troubleshooting docs
+
+**Discourse page — four citable taxonomies (was Hyland-only):**
+
+- The Discourse analysis page now offers a taxonomy selector. Every result names and cites its taxonomy, so findings stay reportable and comparable across studies.
+- **Hyland (2005)** metadiscourse (interactive + interactional) — unchanged default, fully backward compatible (bodyless POSTs keep the old behaviour).
+- **Halliday & Hasan (1976)** cohesion — reference pronouns, the four conjunction classes, and computed lexical-repetition chains across adjacent sentences (substitution/ellipsis intentionally not covered).
+- **Martin & White (2005)** Appraisal — engagement (entertain/attribute/deny/counter/proclaim), graduation-force intensifiers, and an inscribed-affect starter set (invoked attitude not covered).
+- **CLAWS/USAS semantic tagset (top-level)** — the bundled USAS lexicon maps words onto 24 semantic categories, each annotated with a discourse-functional group (communication, cognition, emotion, politics...); lexicon misses are honestly reported as *unmatched*. If the user has applied a CLAWS semantic tagset to their corpus language, the Discourse page now puts it to work on linguistic and discursive features.
+- New endpoint `GET /corpora/{cid}/discourse/taxonomies` (registry with citations); `POST /corpora/{cid}/discourse` accepts `{"taxonomy": ...}`; unknown keys → 400, missing USAS lexicon for the corpus language → 503.
+
+**Floating AI Assistant — alignment fixed:**
+
+- The AI Assistant drawer (available in every analysis tool) rendered assistant responses inside a 260px + 1fr grid with a clipped bubble: the reply text was squeezed into a narrow column on the right while the "ASSISTANT / grounded" header sat invisible in the wide left column.
+- Root cause: the drawer's message elements used bare role classes (`ai-drawer-msg assistant`), which also matched the full Assistant view's page-layout rule `.assistant { display: grid; grid-template-columns: 260px 1fr; height: 100% }`. Role modifiers are now namespaced (`ai-role-*`) and cannot collide with page-level classes.
+- Also fixed: USAS-style examples without a sentence preview no longer push the matched cue to the far edge of the panel.
+
+**Settings:** the Gemini interpretation block (API key + consent + status) now sits at the top of the Smart Troubleshooting card, above the explanation text.
+
+**Resilience (from the unreleased v1.2.5+ work, shipped here):**
+
+- Embed transport retries now cover any dropped connection (not just timeouts); an exhausted retry budget surfaces as `502 embedding_unreachable` with a restart hint instead of a misleading 409.
+- New `ensure_engine` Tauri command: the desktop shell probes backend health and restarts only what is actually down; the frontend auto-invokes it on connection errors and retries once. Boot health-wait extended 60s → 120s (antivirus + PyInstaller one-file extraction).
+- Vector KWIC shows a friendly 502 card (EN/AR) mirroring the 503 card.
+
+**User Guide (comprehensive but concise):**
+
+- New **Troubleshooting Common Issues** section (EN + AR + in-app guide) covering the confirmed Grammarly/security-software × Ollama interference case (HTTP 500), Ollama reachability, missing models, CPU embedding timeouts, engine reachability, macOS window lifecycle, Arabic tool prerequisites, and where the logs live.
+- Guide refreshed to the v1.2.x feature set (Vector KWIC, Learner Research, multi-taxonomy Discourse, floating assistant) and tightened throughout; regenerated as `CorpusMind_User_Guide_v1.2.6.pdf` (EN) and `CorpusMind_User_Guide_Arabic_v1.2.6.pdf` (AR); the installer-bundled PDF is refreshed too.
+
+### Tests
+- **Engine: 447 passed, 9 skipped** (9 pre-existing environmental spaCy-model skips), 0 failed — includes 7 new multi-taxonomy discourse tests.
+- **Ruff**: All checks passed.
+- **Web typecheck (tsc) + build**: passed; floating-assistant fix verified end-to-end against the dev engine with a scripted browser session.
 
 ---
 

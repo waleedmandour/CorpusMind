@@ -6,6 +6,114 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
+## [1.2.6] — 2026-09-18 — Multi-taxonomy Discourse page, floating-assistant alignment fix, resilience hardening, honest troubleshooting docs
+
+This release answers one field report (the floating AI Assistant showing
+responses "without proper alignment" in every analysis tool), one feature
+request (other discourse taxonomies besides Hyland 2005, plus putting the
+existing CLAWS semantic tagset to work), and ships the resilience work
+(502 for dropped Ollama connections, engine self-heal, Settings reorder)
+together with a rewritten, troubleshooting-first User Guide.
+
+### Added
+
+- **Discourse page: four citable taxonomies behind a selector** (was
+  Hyland-only). Every result names and cites its taxonomy so findings stay
+  reportable and comparable across studies.
+  - `hyland2005` — Hyland's interactive/interactional metadiscourse
+    (unchanged default; a bodyless POST keeps the old behaviour, and the
+    old response fields are unchanged).
+  - `hallidayhasan1976` — Halliday & Hasan cohesion: reference pronouns,
+    the four conjunction classes, and computed lexical-repetition chains
+    across adjacent sentences. Substitution and ellipsis need parse-level
+    analysis and are intentionally not covered (stated in the citation).
+  - `martinwhite2005` — Martin & White Appraisal: engagement
+    (entertain/attribute/deny/counter/proclaim), graduation-force
+    intensifiers, and an inscribed-affect starter set. Invoked attitude is
+    not covered (stated in the citation).
+  - `usas` — the CLAWS-family USAS top-level semantic tagset (v1.2.0's
+    bundled lexicon, CC BY-NC-SA 4.0) re-read as discourse-relevant
+    features: each of the 24 top-level categories is annotated with a
+    discourse-functional group (communication, cognition, emotion,
+    politics, ...) and top matched lemmas; lexicon misses are honestly
+    reported as `unmatched_percent` — still a lexicon lookup, NOT the
+    licensed CLAWS/USAS tagger. Missing lexicon for the corpus language →
+    HTTP 503; unknown taxonomy key → 400 with the supported list.
+  - New endpoint `GET /corpora/{cid}/discourse/taxonomies` returns the
+    registry (keys, display names, citations, category keys) so the UI
+    selector and exports stay in sync with the engine.
+  - Tests: 7 new (`engine/tests/test_v126_discourse_taxonomies.py`).
+
+- **User Guide rebuilt (comprehensive but concise, EN + AR + in-app)** —
+  new "Troubleshooting Common Issues" section documents the confirmed
+  Grammarly/security-software × Ollama interference case (HTTP 500 on a
+  fresh install; quitting the interfering app stops the errors), Ollama
+  reachability (503), missing models (409 + the v1.2.2 tag-matching
+  history), CPU embedding timeouts with the v1.2.5 chunking and env
+  knobs, engine reachability and port/firewall guidance, the macOS
+  window-lifecycle behaviour, Arabic/CAMeL prerequisites, and where the
+  logs live. The guide body is refreshed to the v1.2.x feature set
+  (Vector KWIC, Learner Research, multi-taxonomy Discourse, floating
+  assistant) and tightened throughout; regenerated as
+  `CorpusMind_User_Guide_v1.2.6.pdf` (EN) and
+  `CorpusMind_User_Guide_Arabic_v1.2.6.pdf` (AR); the installer-bundled
+  PDF is refreshed too. The in-app guide's Troubleshooting section gains
+  the same common-issues list and documents the Settings-based Gemini key
+  entry alongside the env-var path.
+
+### Fixed
+
+- **Floating AI Assistant responses were rendered without proper
+  alignment in every analysis tool** — the drawer's message articles used
+  bare role classes (`ai-drawer-msg assistant`), which ALSO matched the
+  full Assistant view's page-layout rule
+  `.assistant { display: grid; grid-template-columns: 260px 1fr;
+  height: 100% }`. Each AI reply was therefore laid out as a two-column
+  grid: the "ASSISTANT / grounded" header squeezed into a 260px column
+  (visually invisible), the response text squeezed into the leftover
+  narrow column, and `height: 100%` clipping the bubble under its own
+  overflowing text — exactly the "narrow right column + stray text below
+  the bubble" screenshot. Role modifiers are now namespaced
+  (`ai-role-user` / `ai-role-assistant`) and cannot collide with
+  page-level classes. Verified end-to-end with a scripted browser session
+  against the dev engine reproducing the exact screenshot before/after.
+- **Discourse examples without a sentence preview pushed the matched cue
+  to the far edge of the panel** — the flex-grow evidence-id styling
+  (shared with KWIC) only made sense when a preview followed it; the
+  growth is now scoped out inside `.discourse-examples`.
+- The PDF generator parsed `**bold**` but rendered literal `*asterisks*`
+  for emphasis; single-asterisk emphasis now maps to italics, and the
+  cover/footer/metadata version strings follow the release (they were
+  still hardcoded v0.1.0).
+
+### Changed
+
+- **Settings: the Gemini interpretation block (status, consent, API-key
+  entry, clear button) sits at the TOP of the Smart Troubleshooting card,
+  above the explanation text** — the user's key is the first thing on the
+  card instead of the last (carried over from the unreleased resilience
+  work; now properly released).
+- **Resilience hardening shipped** (carried over from the unreleased
+  work): embed transport retries now cover ANY dropped Ollama connection
+  (`httpx.TransportError` — `RemoteProtocolError`, `ConnectError`,
+  `ReadError`), not just timeouts; an exhausted non-timeout budget raises
+  `EmbeddingConnectionError` → semantic
+  `EmbeddingModelUnreachableError` → **HTTP 502 `embedding_unreachable`**
+  with a restart hint, reserving the 409 "run ollama pull" for genuinely
+  missing models. New `ensure_engine` Tauri command probes backend health
+  and restarts ONLY what is down; the frontend auto-invokes it on
+  connection errors and retries once; boot health-wait extended 60s →
+  120s (antivirus + PyInstaller one-file extraction). Vector KWIC shows a
+  friendly 502 card (EN/AR) mirroring the 503 card.
+
+### Tests
+
+- **Engine: 447 passed, 9 skipped** (the 9 are the pre-existing
+  environmental `en_core_web_sm` skips), 0 failed — includes the 7 new
+  multi-taxonomy discourse tests.
+- **Ruff**: All checks passed (0.16.8).
+- **Web typecheck (tsc) + build**: passed.
+
 ## [1.2.5] — 2026-09-17 — Engine/Ollama lifecycle fix (macOS), CPU-friendly embedding, connection self-healing
 
 Three field reports, three fronts. First: "the engine and Ollama keep
