@@ -4724,9 +4724,24 @@ html[dir="rtl"] .toggle-switch input:checked + .toggle-slider::before {
   color: var(--text-muted);
   font-weight: 500;
 }
-.verify-accept { color: var(--success) !important; border-color: var(--success) !important; }
-.verify-reject { color: var(--danger) !important; border-color: var(--danger) !important; }
-.verify-edit { color: var(--brand-500) !important; border-color: var(--brand-500) !important; }
+/* v1.2.6: these three share .btn-small, whose solid brand-green background
+   turned the colored text below into green-on-green / red-on-green (the user
+   saw "green buttons whose text is not white"). They are confirmation
+   affordances, not primary actions — render them as ghost/outline buttons:
+   transparent background + themed border, consistent with .ollama-delete-btn.
+   Full app-wide button audit (v1.2.6 rebuild): every other solid-green control
+   (btn-primary, btn-small, onboarding-btn-primary, run-btn, composer/search/
+   toolbar buttons, mcq-reveal-btn, source tabs, badges) already carries white
+   text via --text-on-brand / #fff; verified rule-by-rule. */
+.verify-accept,
+.verify-reject,
+.verify-edit {
+  background: transparent !important;
+  border: 1px solid currentColor !important;
+}
+.verify-accept { color: var(--success) !important; }
+.verify-reject { color: var(--danger) !important; }
+.verify-edit { color: var(--brand-500) !important; }
 
 .verify-badge {
   font-size: 11px;

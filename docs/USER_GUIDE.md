@@ -341,7 +341,7 @@ token; sync events are audited.
 contrast mode, reduced motion, 44px touch targets, full RTL mirroring.
 
 **Smart Troubleshooting**: backend errors appear in the taskbar. With a
-Gemini API key configured (Settings → Smart Troubleshooting, off by
+Gemini API key configured (Settings → Gemini Interpretation, off by
 default), errors are auto-interpreted in plain language with a likely
 cause and suggested fix; error context leaves the device only with your
 explicit acknowledgment. **Report to developer** opens a pre-filled email.

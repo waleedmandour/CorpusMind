@@ -58,6 +58,8 @@ export function SettingsView() {
   const version = useQuery({ queryKey: ["version"], queryFn: api.version });
   const encryption = useQuery({ queryKey: ["encryption"], queryFn: api.encryptionStatus });
   const troubleshoot = useQuery({ queryKey: ["troubleshoot-status"], queryFn: api.troubleshootStatus });
+  // v1.2.6: mute state drives the Smart Troubleshooting card badge (Muted/Active).
+  const troubleshootMuted = useTroubleshoot((s) => s.muted);
   // v1.0.9: §18 facial-analysis opt-in state (Settings → Ethics card).
   const facial = useQuery({ queryKey: ["facial-status"], queryFn: api.facialAnalysisStatus });
   const facialMutation = useMutation({
@@ -384,14 +386,15 @@ export function SettingsView() {
         </div>
       </section>
 
-      {/* Smart Troubleshooting card */}
+      {/* v1.2.6: Gemini Interpretation is its OWN block (user request) —
+          previously it sat inside the Smart Troubleshooting card. */}
       <section className="settings-card">
         <div className="settings-card-header">
-          <span className="settings-card-icon" aria-hidden>{"\u26A0"}</span>
+          <span className="settings-card-icon" aria-hidden>{"\u2726"}</span>
           <div>
-            <h2>Smart Troubleshooting</h2>
+            <h2>Gemini Interpretation</h2>
             <p className="settings-card-desc">
-              Automatic backend error detection with optional Gemini-powered interpretation.
+              Optional AI-powered, plain-language interpretation of backend errors via Google Gemini.
             </p>
           </div>
           <span className={`settings-badge ${troubleshoot.data?.available ? "ok" : "warn"}`}>
@@ -400,21 +403,38 @@ export function SettingsView() {
           </span>
         </div>
         <div className="settings-card-body">
-          {/* v1.2.5: the Gemini interpretation block moved ABOVE the Smart
-              Troubleshooting explanation (user request) so the API key is
-              the first thing seen on the card. */}
           <GeminiKeyInput
             available={troubleshoot.data?.available ?? false}
             source={troubleshoot.data?.source ?? "none"}
             model={troubleshoot.data?.model ?? "gemini-2.5-flash"}
           />
+        </div>
+      </section>
 
+      {/* v1.2.6: Smart Troubleshooting + Mute Notifications share ONE block
+          (user request). Error detection and its notification toggle live
+          together; Gemini key management lives in the block above. */}
+      <section className="settings-card">
+        <div className="settings-card-header">
+          <span className="settings-card-icon" aria-hidden>{"\u26A0"}</span>
+          <div>
+            <h2>Smart Troubleshooting</h2>
+            <p className="settings-card-desc">
+              Automatic backend error detection, reported in the taskbar while you work.
+            </p>
+          </div>
+          <span className={`settings-badge ${troubleshootMuted ? "warn" : "ok"}`}>
+            <span className="settings-badge-dot" />
+            {troubleshootMuted ? "Muted" : "Active"}
+          </span>
+        </div>
+        <div className="settings-card-body">
           <p className="settings-text">
             When a backend error occurs during use, CorpusMind captures it and shows
             the details in the taskbar at the bottom of the window. If a Gemini API
-            key is configured, the error is automatically interpreted by Google&apos;s
-            Gemini model — you get a plain-language explanation, the likely cause,
-            and a suggested fix.
+            key is configured (Gemini Interpretation block above), the error is
+            automatically interpreted by Google&apos;s Gemini model — you get a
+            plain-language explanation, the likely cause, and a suggested fix.
           </p>
 
           {/* Mute toggle */}
@@ -763,7 +783,9 @@ function GeminiKeyInput({
   return (
     <div className="gemini-key-section">
       <div className="gemini-key-status">
-        <strong>Gemini interpretation:</strong>{" "}
+        {/* v1.2.6: card is now titled "Gemini Interpretation", so the inner
+            status line no longer repeats the block name. */}
+        <strong>Status:</strong>{" "}
         {available ? (
           <span className="status-ok">
             ENABLED ({model}) via {source === "ui" ? "UI key" : "env var"}

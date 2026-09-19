@@ -374,8 +374,8 @@ def build_pdf(md_path, pdf_path, is_arabic=False):
     return pdf_path
 
 if __name__ == "__main__":
-    md_path = "/home/z/my-project/work/CorpusMind/docs/USER_GUIDE.md"
-    pdf_path = "/home/z/my-project/work/CorpusMind/download/CorpusMind_User_Guide_v0.1.0.pdf"
+    md_path = "/home/z/my-project/CorpusMind-latest/docs/USER_GUIDE.md"
+    pdf_path = "/home/z/my-project/CorpusMind-latest/download/CorpusMind_User_Guide_v1.2.6.pdf"
     build_pdf(md_path, pdf_path)
     print(f"PDF generated: {pdf_path}")
     import os

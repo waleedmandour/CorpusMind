@@ -6,14 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
-## [1.2.6] — 2026-09-18 — Multi-taxonomy Discourse page, floating-assistant alignment fix, resilience hardening, honest troubleshooting docs
+## [1.2.6] — 2026-09-19 — Multi-taxonomy Discourse page, floating-assistant alignment fix, resilience hardening, honest troubleshooting docs, Settings regrouping, green-button audit
 
 This release answers one field report (the floating AI Assistant showing
 responses "without proper alignment" in every analysis tool), one feature
 request (other discourse taxonomies besides Hyland 2005, plus putting the
-existing CLAWS semantic tagset to work), and ships the resilience work
-(502 for dropped Ollama connections, engine self-heal, Settings reorder)
-together with a rewritten, troubleshooting-first User Guide.
+existing CLAWS semantic tagset to work), two Settings corrections (the
+Gemini Interpretation card split, and a rule-by-rule green-button audit),
+and ships the resilience work (502 for dropped Ollama connections, engine
+self-heal) together with a rewritten, troubleshooting-first User Guide.
+
+> Note: v1.2.6 was rebuilt before publication completed its rollout — the
+> original build's Settings grouping (Gemini block inside the Smart
+> Troubleshooting card) did not match the agreed design and three
+> verification buttons carried non-white text on green. If you installed
+> the first v1.2.6 build, reinstall this one (same version number, so
+> there is no in-app update prompt).
 
 ### Added
 
@@ -85,14 +93,26 @@ together with a rewritten, troubleshooting-first User Guide.
   for emphasis; single-asterisk emphasis now maps to italics, and the
   cover/footer/metadata version strings follow the release (they were
   still hardcoded v0.1.0).
+- **Green buttons always carry white text** — the three verification
+  actions (accept/reject/edit) rendered green/red text on the solid
+  green `.btn-small` background (green-on-green / red-on-green); they
+  are now ghost/outline buttons with themed borders, consistent with
+  the other secondary controls. A rule-by-rule audit of every
+  green-background rule in the app's stylesheet (39 rules) confirmed
+  every other text-bearing green button — primary/small/toolbar/search/
+  run/onboarding/source-tab buttons, badges, and the user message bubble
+  — already renders white text; the only non-text match (the toggle
+  switch slider) contains no text by design.
 
 ### Changed
 
-- **Settings: the Gemini interpretation block (status, consent, API-key
-  entry, clear button) sits at the TOP of the Smart Troubleshooting card,
-  above the explanation text** — the user's key is the first thing on the
-  card instead of the last (carried over from the unreleased resilience
-  work; now properly released).
+- **Settings: "Gemini Interpretation" is its own card, and "Smart
+  Troubleshooting" + "Mute Notifications" share one card** — the Gemini
+  status/consent/API-key entry gets a dedicated block, while error
+  detection, its explanation, and the mute toggle live together, with
+  the card badge switching between Active and Muted (v1.2.6 rebuild per
+  user request; supersedes the earlier same-card reorder, which had put
+  the Gemini block at the top of the troubleshooting card).
 - **Resilience hardening shipped** (carried over from the unreleased
   work): embed transport retries now cover ANY dropped Ollama connection
   (`httpx.TransportError` — `RemoteProtocolError`, `ConnectError`,

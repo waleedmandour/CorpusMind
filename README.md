@@ -498,7 +498,9 @@ on GitHub.
 
 ## v1.2.6 Release Notes
 
-### Multi-taxonomy Discourse page, floating-assistant alignment fix, resilience + honest troubleshooting docs
+### Multi-taxonomy Discourse page, floating-assistant alignment fix, resilience + honest troubleshooting docs, Settings regrouping, green-button audit
+
+> v1.2.6 was rebuilt before its rollout completed: the first build's Settings grouping did not match the agreed design and three verification buttons carried non-white text on green. If you installed the first v1.2.6 build, reinstall this one (same version number — no in-app update prompt).
 
 **Discourse page — four citable taxonomies (was Hyland-only):**
 
@@ -515,7 +517,15 @@ on GitHub.
 - Root cause: the drawer's message elements used bare role classes (`ai-drawer-msg assistant`), which also matched the full Assistant view's page-layout rule `.assistant { display: grid; grid-template-columns: 260px 1fr; height: 100% }`. Role modifiers are now namespaced (`ai-role-*`) and cannot collide with page-level classes.
 - Also fixed: USAS-style examples without a sentence preview no longer push the matched cue to the far edge of the panel.
 
-**Settings:** the Gemini interpretation block (API key + consent + status) now sits at the top of the Smart Troubleshooting card, above the explanation text.
+**Settings — Gemini Interpretation is its own block, Smart Troubleshooting + Mute Notifications share one block:**
+
+- **Gemini Interpretation** (status, consent, API-key entry, clear button) now lives in its own dedicated Settings card.
+- **Smart Troubleshooting** (error detection + explanation) and **Mute Notifications** (the mute toggle) are merged into a single card, so a feature and its notification control are always seen together; the card badge switches between *Active* and *Muted*.
+
+**Buttons — green always means white text:**
+
+- Every green button in the app now renders its label in white. Three verification actions (accept/reject/edit) previously drew green/red text on a solid green background (green-on-green); they are now ghost/outline buttons with themed borders.
+- A rule-by-rule audit of all 39 green-background rules in the app stylesheet confirmed every other text-bearing green control (primary/small/toolbar/search/run/onboarding buttons, source tabs, badges, the user message bubble) already uses white text; the only remaining match (the toggle-switch slider) contains no text by design.
 
 **Resilience (from the unreleased v1.2.5+ work, shipped here):**
 

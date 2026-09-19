@@ -649,7 +649,7 @@ camel_data -i morphology-db-msa-r13`}</pre>
             you're not spammed.</li>
           <li>The error appears in the <strong>taskbar</strong> at the bottom of the window. Click
             it to see the full details.</li>
-          <li>If a <strong>Gemini API key</strong> is configured (Settings → Smart Troubleshooting, or the
+          <li>If a <strong>Gemini API key</strong> is configured (Settings → Gemini Interpretation, or the
             engine environment), the error is sent to Google's Gemini model for interpretation. Gemini returns
             a plain-language explanation of what went wrong, the likely cause, and a suggested fix. Error
             context leaves the device only after your explicit acknowledgment.</li>
@@ -660,7 +660,7 @@ camel_data -i morphology-db-msa-r13`}</pre>
         </ol>
         <h4>Configuring Gemini interpretation (optional)</h4>
         <p>
-          The easiest way is in-app: <strong>Settings → Smart Troubleshooting → Gemini interpretation</strong>
+          The easiest way is in-app: <strong>Settings → Gemini Interpretation</strong>
           {" "}— enter your key there (it is stored in-memory in the engine, never written to disk, and never
           sent back to the browser). For environment-based setup:
         </p>
