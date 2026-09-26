@@ -30,6 +30,8 @@ import { UserGuideView } from "@/views/UserGuideView";
 import { applyHtmlAttrs, useUI } from "@/store/ui";
 import { useApp } from "@/store/app";
 import { useEngineVersionDisplay } from "@/hooks/useEngineVersion";
+import { StudentConnectView } from "@/views/StudentConnectView";
+import { getStudentServer } from "@/lib/api";
 
 export default function App() {
   const activeNav = useUI((s) => s.activeNav);
@@ -42,6 +44,23 @@ export default function App() {
   const setOnboardingOpen = useUI((s) => s.setOnboardingOpen);
   const activeCorpusId = useApp((s) => s.activeCorpusId);
   const versionDisplay = useEngineVersionDisplay();
+  // v1.2.9 Student Mode (classroom client).
+  const studentClient = useUI((s) => s.studentClient);
+  const studentConnected = useUI((s) => s.studentConnected);
+
+  // Derive the student-client flag from the URL/localStorage session on
+  // every mount (never persisted in the store — see ui.ts).
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const inStudentMode =
+      params.get("mode") === "student" ||
+      (!!getStudentServer() && params.get("mode") !== "teacher");
+    useUI.getState().setStudentClient(inStudentMode);
+    // A saved session (from a previous QR visit or a reload) reconnects
+    // automatically; a fresh ?mode=student without a server URL shows the
+    // connect form.
+    useUI.getState().setStudentConnected(inStudentMode && !!getStudentServer());
+  }, []);
 
   // Issue 1 (v1.2.0): fetch the ACTIVE CORPUS NAME so the top-bar pill can
   // show "{corpus name} · Corpus ready" instead of a bare "Corpus ready".
@@ -91,6 +110,13 @@ export default function App() {
     })();
     return () => { cancelled = true; };
   }, []); // Run only once on mount
+
+  // v1.2.9 Student Mode: while in student mode, only the connect gate (and
+  // after connecting, the scoped student app) is shown. The onboarding
+  // modal and floating assistant belong to the teacher's desktop flow.
+  if (studentClient && !studentConnected) {
+    return <StudentConnectView />;
+  }
 
   return (
     <div className="app-shell">
@@ -185,16 +211,31 @@ export default function App() {
         <span className="status-sep">|</span>
         <span>AGPL-3.0</span>
         <span className="status-sep">|</span>
-        <span>Press Ctrl/Cmd+K for commands</span>
+        {studentClient ? (
+          <>
+            <span>{t(lang, "student_status_mode")}</span>
+            <span className="status-sep">|</span>
+            {/* AGPL-3.0 §13: prominent source offer for network users. */}
+            <a
+              href="https://github.com/waleedmandour/CorpusMind"
+              target="_blank"
+              rel="noreferrer"
+            >
+              {t(lang, "student_source_link")}
+            </a>
+          </>
+        ) : (
+          <span>Press Ctrl/Cmd+K for commands</span>
+        )}
         <span className="status-sep">|</span>
-        <span>Local Desktop App</span>
+        <span>{studentClient ? getStudentServer() || t(lang, "student_status_mode") : "Local Desktop App"}</span>
         <div className="statusbar-spacer" />
         <TroubleshootingBar />
       </footer>
 
-      <FloatingAssistant />
+      {!studentClient && <FloatingAssistant />}
       <CommandPalette />
-      <OnboardingModal />
+      {!studentClient && <OnboardingModal />}
     </div>
   );
 }

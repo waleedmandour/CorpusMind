@@ -724,7 +724,10 @@ function KeynessPanel({ cid }: { cid: string }) {
             headers={["Term", "f1", "f2", "LL", "χ²", "Log Ratio", "%DIFF", "Simple Maths", "Odds Ratio"]}
             rows={(result.data as any).positive_keywords.map((r: any) => [
               r.term, r.f1, r.f2, fmt(r.log_likelihood), fmt(r.chi_square),
-              fmt(r.log_ratio), fmt(r.pct_diff), fmt(r.simple_maths), fmt(r.odds_ratio),
+              // v1.2.9: comparison palette — green = over-represented in target.
+              <span key="lr" className="keyness-effect keyness-effect-pos">{fmt(r.log_ratio)}</span>,
+              <span key="pd" className="keyness-effect keyness-effect-pos">{fmt(r.pct_diff)}</span>,
+              fmt(r.simple_maths), fmt(r.odds_ratio),
             ])}
           />
           <h3>Negative keywords (under-represented in target)</h3>
@@ -732,7 +735,10 @@ function KeynessPanel({ cid }: { cid: string }) {
             headers={["Term", "f1", "f2", "LL", "χ²", "Log Ratio", "%DIFF", "Simple Maths", "Odds Ratio"]}
             rows={(result.data as any).negative_keywords.map((r: any) => [
               r.term, r.f1, r.f2, fmt(r.log_likelihood), fmt(r.chi_square),
-              fmt(r.log_ratio), fmt(r.pct_diff), fmt(r.simple_maths), fmt(r.odds_ratio),
+              // v1.2.9: red = under-represented in target (reference over-use).
+              <span key="lr" className="keyness-effect keyness-effect-neg">{fmt(r.log_ratio)}</span>,
+              <span key="pd" className="keyness-effect keyness-effect-neg">{fmt(r.pct_diff)}</span>,
+              fmt(r.simple_maths), fmt(r.odds_ratio),
             ])}
           />
         </>
@@ -1797,7 +1803,11 @@ function DiscoursePanel({ cid }: { cid: string }) {
           )}
           {piHealth.data.installed && (
             <ul className="pi-health-resources">
-              {Object.entries(piHealth.data.resources).map(([name, res]) => (
+              {Object.entries(piHealth.data.resources).map(([name, res]) => {
+                // v1.2.9: per-resource install guidance for the license-
+                // restricted files (never bundled — see install_hints).
+                const hint = piHealth.data.install_hints?.[name];
+                return (
                 <li key={name}>
                   <span className={clsx("pi-health-badge", res.available ? "ok" : "warn")}>
                     {res.available ? "✓" : "○"} {name}
@@ -1811,10 +1821,45 @@ function DiscoursePanel({ cid }: { cid: string }) {
                       <p>{res.detail}</p>
                       {res.features?.length ? <p>{res.features.join(" · ")}</p> : null}
                       {res.license_note ? <p className="cat-meta">{res.license_note}</p> : null}
+                      {hint && (
+                        <div className="pi-health-install-hint">
+                          <p>
+                            <strong>{t(lang, "pi_health_install_title")}</strong>{" "}
+                            {t(lang, "pi_health_install_body")}
+                          </p>
+                          <ol>
+                            <li>
+                              {t(lang, "pi_health_install_source")}:{" "}
+                              <a href={hint.source_url} target="_blank" rel="noreferrer">
+                                {hint.source_url}
+                              </a>
+                            </li>
+                            <li>
+                              {t(lang, "pi_health_install_where")}{" "}
+                              <code>{hint.folder}/{hint.filename}</code>
+                              <button
+                                type="button"
+                                className="pi-health-copy-btn"
+                                onClick={() => {
+                                  void navigator.clipboard?.writeText(`${hint.folder}/${hint.filename}`);
+                                }}
+                                title={t(lang, "pi_health_copy")}
+                              >
+                                ⧉
+                              </button>
+                            </li>
+                            <li>{t(lang, "pi_health_install_restart")}</li>
+                          </ol>
+                          <p className="cat-meta">
+                            {t(lang, "pi_health_install_env")} <code>{hint.engine_setting}</code>
+                          </p>
+                        </div>
+                      )}
                     </details>
                   )}
                 </li>
-              ))}
+                );
+              })}
             </ul>
           )}
           {!piHealth.data.installed && piHealth.data.install_hint && (

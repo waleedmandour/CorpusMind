@@ -563,6 +563,18 @@ cd CorpusMind
 docker compose -f infra/docker-compose.yml --profile tls up -d
 ```
 
+> **v1.2.9 — In-app Student Mode is the easier classroom alternative.**
+> For a teacher-led class you do not need Docker at all: the desktop app's
+> **Settings → Student Mode — Classroom Server** starts a bundled Caddy
+> reverse proxy that serves the PWA to student browsers on the LAN with
+> scoped bearer tokens (Secure HTTPS or Simple HTTP modes) — see
+> docs/USER_GUIDE.md §15. This shared-lab mode remains the right choice
+> for an always-on, multi-researcher lab server. When proxying to the
+> engine through your own nginx for classroom use, forward
+> `proxy_set_header X-CorpusMind-Classroom "1";` on the `/api/` location
+> (as `infra/nginx.conf` does) and set `CORPUSMIND_STUDENT_TOKEN` to grant
+> the student role.
+
 **Option B: Direct install on a VPS**
 
 ```bash

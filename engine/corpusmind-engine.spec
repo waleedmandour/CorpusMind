@@ -26,6 +26,8 @@ See:
 """
 from __future__ import annotations
 
+import sys
+
 from pathlib import Path
 
 # PyInstaller utilities for collecting a package's data files + submodules.
@@ -166,10 +168,34 @@ except Exception:
     # build and run; NLP ingestion just won't work until the model is present.
     pass
 
+# --------------------------------------------------------------------------- #
+# v1.2.9 Student Mode (classroom server) bundle additions.
+#
+# 1. web-dist: the built PWA (repo web/dist) is collected into the bundle so
+#    the Caddy sidecar can serve student browsers from disk. CI builds the
+#    web PWA BEFORE the engine for this reason. A dev build without a web
+#    dist just skips this (Student Mode then refuses to enable with a clear
+#    teacher-readable error, and everything else keeps working).
+# 2. caddy: the pinned Caddy reverse-proxy binary (fetched by
+#    scripts/fetch_caddy.py into engine/caddy-bin/, gitignored) is collected
+#    as a raw binary under caddy/. Without it Student Mode cannot enable —
+#    the release smoke gates now hard-fail on a missing classroom stack.
+# --------------------------------------------------------------------------- #
+_binaries = []
+_web_dist = _repo_root / "web" / "dist"
+if (_web_dist / "index.html").is_file():
+    _datas.append((str(_web_dist), "web-dist"))
+
+_caddy_bin_dir = Path(SPECPATH) / "caddy-bin"  # noqa: F821
+_caddy_exe = "caddy.exe" if sys.platform.startswith("win") else "caddy"
+_caddy_src = _caddy_bin_dir / _caddy_exe
+if _caddy_src.is_file():
+    _binaries.append((str(_caddy_src), "caddy"))
+
 a = Analysis(
     ["app/main.py"],
     pathex=[SPECPATH],  # noqa: F821
-    binaries=[],
+    binaries=_binaries,
     datas=_datas,
     hiddenimports=_hidden_imports,
     hookspath=[str(Path(SPECPATH) / "hooks")],  # noqa: F821 — custom hooks dir

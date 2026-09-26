@@ -31,7 +31,10 @@ from api import (
     visual_corpus,
     wordlists,
 )
-from app import __version__
+from api import (
+    server_mode as server_mode_routes,
+)
+from app import __version__, server_mode
 from app.logging import configure_logging, get_logger
 from app.settings import get_settings
 from storage.session import dispose_db, init_db
@@ -45,9 +48,39 @@ async def lifespan(app: FastAPI):
     settings = get_settings()
     log.info("engine_starting", host=settings.host, port=settings.port, data_dir=str(settings.data_dir))
 
+    # v1.2.9: bridge the user-owned PI resources folder onto
+    # persuasion-index's own env vars BEFORE anything scores the lens.
+    # check_resources() reads the environment at call time, so running
+    # this once at startup is sufficient for the health endpoint and the
+    # lens alike. Never downloads anything; never overrides explicit vars.
+    from discourse.pi_resources import apply_pi_resource_env
+
+    applied = apply_pi_resource_env(settings)
+    if applied:
+        log.info("pi_resources_bridged", resources=applied)
+
     # Initialize the SQLite database (idempotent create_all)
     await init_db()
     log.info("db_ready", url=settings.sqlite_url)
+
+    # v1.2.9 Student Mode: bridge PI resources (above), then restore the
+    # classroom server if it was enabled before the engine restarted —
+    # tokens persist in <data_dir>/server-mode/config.json, so students'
+    # QR links keep working across engine restarts. Caddy respawning is
+    # best-effort: a missing binary keeps the classroom flagged offline in
+    # /server-mode/status rather than failing engine startup.
+    sm_state = server_mode.ServerModeState(config=server_mode.load_config(settings))
+    if sm_state.config.student_token:
+        settings.student_token = sm_state.config.student_token
+    if sm_state.config.enabled:
+        try:
+            spawn_info = server_mode.spawn_caddy(settings, sm_state)
+            sm_state.caddy_error = ""
+            log.info("server_mode_restored", **spawn_info)
+        except Exception as exc:
+            sm_state.caddy_error = str(exc)
+            log.warning("server_mode_restore_failed", error=str(exc))
+    app.state.server_mode = sm_state
 
     registry = ProviderRegistry(settings)
     app.state.providers = registry
@@ -55,6 +88,7 @@ async def lifespan(app: FastAPI):
     try:
         yield
     finally:
+        server_mode.stop_caddy(sm_state)
         await registry.aclose()
         await dispose_db()
         log.info("engine_stopped")
@@ -126,16 +160,59 @@ def create_app() -> FastAPI:
     #   - otherwise every /api request except /api/v1/health (used by the
     #     Docker healthcheck, which cannot present credentials) must send
     #     "Authorization: Bearer <CORPUSMIND_AUTH_TOKEN>".
+    #
+    # v1.2.9 Student Mode: requests that arrive stamped with the
+    # X-CorpusMind-Classroom header (only the locally-bundled Caddy sidecar
+    # injects it; the engine port itself is loopback-only and unreachable
+    # from the LAN) are treated as classroom traffic. They must present a
+    # bearer token: the teacher token (full access) or the student token
+    # (allowlisted read/analysis routes only — app/server_mode.py). The
+    # teacher's own desktop app connects directly on loopback with no
+    # header, so enabling Student Mode changes nothing locally.
     @app.middleware("http")
     async def enforce_shared_token(request: Request, call_next):
         # Read the (lru-cached) settings per request — tests and runtime
         # re-configuration must be able to change auth without a re-import.
         current = get_settings()
+        path = request.url.path
+        sm = getattr(request.app.state, "server_mode", None)
+        via_proxy = request.headers.get("X-CorpusMind-Classroom", "") == "1"
+
+        if sm is not None and sm.config.enabled and via_proxy and path.startswith("/api/"):
+            import secrets as _secrets
+
+            from fastapi.responses import JSONResponse
+
+            if path != "/api/v1/health":
+                provided = request.headers.get("Authorization", "")
+                role = None
+                teacher_header = f"Bearer {sm.config.teacher_token}" if sm.config.teacher_token else None
+                student_header = f"Bearer {sm.config.student_token}" if sm.config.student_token else None
+                if teacher_header and _secrets.compare_digest(provided, teacher_header):
+                    role = "teacher"
+                elif student_header and _secrets.compare_digest(provided, student_header):
+                    role = "student"
+                if role is None:
+                    return JSONResponse(
+                        {"detail": "Unauthorized. Set Authorization: Bearer <teacher or student token>."},
+                        status_code=401,
+                    )
+                if role == "student" and not server_mode.student_route_allowed(request.method, path):
+                    return JSONResponse(
+                        {"detail": "Forbidden: this action is not available in Student Mode."},
+                        status_code=403,
+                    )
+                request.state.role = role
+                if role == "student":
+                    client_ip = request.client.host if request.client else "?"
+                    sm.note_student(client_ip)
+            return await call_next(request)
+
         token = current.auth_token
         host = current.host
         loopback = host in ("127.0.0.1", "::1", "localhost") or host.startswith("127.")
-        if token and not loopback and request.url.path.startswith("/api/"):
-            if request.url.path != "/api/v1/health":
+        if token and not loopback and path.startswith("/api/"):
+            if path != "/api/v1/health":
                 provided = request.headers.get("Authorization", "")
                 import secrets as _secrets
                 if not _secrets.compare_digest(provided, f"Bearer {token}"):
@@ -168,6 +245,8 @@ def create_app() -> FastAPI:
     app.include_router(reference_corpus.router, prefix="/api/v1", tags=["reference-corpus"])
     app.include_router(open_access.router, prefix="/api/v1", tags=["open-access"])
     app.include_router(wordlists.router, prefix="/api/v1", tags=["wordlists"])
+    # v1.2.9 Student Mode — classroom server control plane (teacher-only).
+    app.include_router(server_mode_routes.router, prefix="/api/v1", tags=["server-mode"])
     return app
 
 

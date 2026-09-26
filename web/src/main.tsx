@@ -5,7 +5,37 @@ import { QueryClient, QueryClientProvider, QueryCache, MutationCache } from "@ta
 import App from "@/App";
 import "@/styles/global.css";
 import { useTroubleshoot } from "@/store/troubleshooting";
-import { api, isTauriRuntime } from "@/lib/api";
+import { api, isTauriRuntime, setStudentSession } from "@/lib/api";
+
+// ----------------------------------------------------------------------- //
+// v1.2.9 Student Mode bootstrap — MUST run before the first render.
+//
+// The teacher's QR encodes the classroom server, the student token, and
+// the mode flag:  ?mode=student&server=https%3A%2F%2F192.168.1.10%3A8483&token=…
+// We commit them to the student session (localStorage) here so that App's
+// first render — and every api.ts fetch — already targets the classroom.
+// A previous session persists, so a plain reload keeps working.
+// ----------------------------------------------------------------------- //
+try {
+  const params = new URLSearchParams(window.location.search);
+  const server = params.get("server");
+  const token = params.get("token");
+  if (params.get("mode") === "student") {
+    if (server) setStudentSession(server, token ?? "");
+    else if (token) {
+      // Token-only link: keep the previously saved server, refresh the token.
+      const saved = localStorage.getItem("corpusmind-student-server");
+      if (saved) setStudentSession(saved, token);
+    }
+  }
+  if (params.get("mode") === "teacher") {
+    // Explicit escape hatch: leave the classroom client on this device.
+    localStorage.removeItem("corpusmind-student-server");
+    localStorage.removeItem("corpusmind-student-token");
+  }
+} catch {
+  /* storage unavailable — student connect form still works without persistence */
+}
 
 // ----------------------------------------------------------------------- //
 // PWA service worker registration.
@@ -15,8 +45,13 @@ import { api, isTauriRuntime } from "@/lib/api";
 // service worker intercepts every fetch to http://127.0.0.1:8765 and fails
 // with net::ERR_FAILED, breaking all engine API calls. This is the root cause
 // of the "Detected (API unreachable)" amber state on Windows desktop builds.
+//
+// v1.2.9 Student Mode: a service worker also requires a secure context.
+// Over the classroom's plain-HTTP "Simple" mode the page is NOT secure,
+// so registration is skipped (the app still works as a regular page; the
+// secure mode's local-CA HTTPS gets full PWA installability).
 // ----------------------------------------------------------------------- //
-if (!isTauriRuntime()) {
+if (!isTauriRuntime() && typeof window !== "undefined" && window.isSecureContext) {
   // vite-plugin-pwa provides the virtual module; the import is tree-shaken
   // out of the Tauri build because isTauriRuntime() is false at runtime, but
   // the module is still bundled (the SW file is generated regardless).

@@ -127,8 +127,14 @@ allowing users to use the full CAMeL Tools stack.
 
 | Package | License | Purpose |
 | --- | --- | --- |
-| [persuasion-index](https://github.com/krystalgong/Persuasion_Index_Code) | Apache-2.0 | 15-dimension persuasive-language scoring (Wang & Gong 2026, EMNLP). Optional engine dependency — the Discourse page degrades to an explicit 503 when it is absent. |
+| [persuasion-index](https://github.com/krystalgong/Persuasion_Index_Code) | Apache-2.0 | 15-dimension persuasive-language scoring (Wang & Gong 2026, EMNLP). Pinned main dependency since v1.2.8 — the packaged engine ships the lens. |
 | pandas, wordfreq, vaderSentiment | BSD-3 / CC-BY-SA-style data terms / MIT | Transitive dependencies of persuasion-index (see upstream THIRD_PARTY_RESOURCES.md for its optional LIWC/concreteness/NRC-VAD resources, which CorpusMind does NOT bundle) |
+
+### Student Mode classroom stack (v1.2.9)
+
+| Package | License | Purpose |
+| --- | --- | --- |
+| [Caddy](https://caddyserver.com/) (pinned 2.10.0) | Apache-2.0 | Classroom reverse proxy + static PWA server for Student Mode (teacher-as-server). Fetched per-build by `scripts/fetch_caddy.py` and verified against the release's official sha512 checksums; bundled inside the engine's PyInstaller onedir. Its local CA (`tls internal`) issues the classroom HTTPS certificate. |
 
 ---
 
@@ -154,6 +160,7 @@ The full dependency list is in [`web/package.json`](web/package.json).
 | [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react) | MIT | React plugin |
 | [typescript](https://www.typescriptlang.org/) | Apache-2.0 | Type system |
 | [vite-plugin-pwa](https://vite-pwa-org.netlify.app/) | MIT | PWA support |
+| [qrcode](https://github.com/soldair/node-qrcode) (web) | MIT | Student Mode classroom QR codes (join URL + certificate link) |
 | [eslint](https://eslint.org/) | MIT | Linter |
 | [@typescript-eslint/*](https://typescript-eslint.io/) | MIT | TypeScript ESLint plugin |
 | [eslint-plugin-react-hooks](https://www.npmjs.com/package/eslint-plugin-react-hooks) | MIT | React hooks linting |

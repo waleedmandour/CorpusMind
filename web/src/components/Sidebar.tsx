@@ -28,6 +28,11 @@ import { api } from "@/lib/api";
 import { useEngineVersionDisplay } from "@/hooks/useEngineVersion";
 import { t, type TranslationKey } from "@/lib/i18n";
 
+// v1.2.9 Student Mode (classroom client): nav targets hidden from students.
+// Everything else is read/analysis surface the engine's student allowlist
+// permits anyway — the two layers mirror each other (see app/server_mode.py).
+const STUDENT_HIDDEN_NAV: NavTarget[] = ["settings"];
+
 interface NavItem {
   id: NavTarget;
   labelKey: TranslationKey;
@@ -121,13 +126,20 @@ export function Sidebar() {
   const toggleGroup = useUI((s) => s.toggleGroup);
   const sidebarCollapsed = useUI((s) => s.sidebarCollapsed);
   const toggleSidebar = useUI((s) => s.toggleSidebar);
+  const studentClient = useUI((s) => s.studentClient);
   const activeCorpusId = useApp((s) => s.activeCorpusId);
   const versionDisplay = useEngineVersionDisplay();
 
   // v1.2.1: the Lens shell lives in its own repository now, so the
   // Lens-specific group filtering (LENS_GROUP_IDS) is gone — this sidebar
   // always shows the full main-app navigation.
-  const visibleGroups = NAV_GROUPS;
+  // v1.2.9: ...except in the student client, where teacher-only nav is cut.
+  const visibleGroups = studentClient
+    ? NAV_GROUPS.map((g) => ({
+        ...g,
+        items: g.items.filter((item) => !STUDENT_HIDDEN_NAV.includes(item.id)),
+      })).filter((g) => g.items.length > 0)
+    : NAV_GROUPS;
 
   const activeCorpus = useQuery({
     queryKey: ["corpus", activeCorpusId],
@@ -230,7 +242,9 @@ export function Sidebar() {
         <div className="sidebar-footer">
           <span className="sidebar-footer-text">AGPL-3.0</span>
           <span className="sidebar-footer-dot" />
-          <span className="sidebar-footer-text">Local-first</span>
+          <span className="sidebar-footer-text">
+            {studentClient ? t(lang, "student_status_mode") : "Local-first"}
+          </span>
         </div>
       ) : (
         <div className="sidebar-footer sidebar-footer-collapsed" title="AGPL-3.0 · Local-first">

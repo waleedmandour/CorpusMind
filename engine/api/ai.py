@@ -62,6 +62,27 @@ async def chat(
             f"Make sure Ollama or LM Studio is running, or configure a cloud provider in Settings.",
         )
 
+    # v1.2.9 Student Mode: classroom chats run on the small classroom model
+    # the teacher picked in Settings — never on whatever large model the
+    # teacher uses for solo research (and a student cannot name a bigger
+    # one; the override wins over any req.model). The classroom model lives
+    # in Ollama, so a student request pointed at another provider is
+    # redirected to the Ollama provider.
+    sm = getattr(request.app.state, "server_mode", None)
+    if (
+        sm is not None
+        and getattr(request.state, "role", "") == "student"
+        and sm.config.student_model
+        and req.model != sm.config.student_model
+    ):
+        req.model = sm.config.student_model
+        if req.provider != "ollama":
+            req.provider = "ollama"
+            try:
+                provider = request.app.state.providers.get("ollama")
+            except Exception as e:
+                raise HTTPException(status_code=400, detail=f"Provider error: {e}") from e
+
     # If no model is specified, auto-detect one. v1.2.0: prefer a model
     # with the 'tools' capability (OllamaProvider.pick_default_model) —
     # the first model in /api/tags is often an embedding model, which made

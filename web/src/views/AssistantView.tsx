@@ -15,6 +15,7 @@ import clsx from "clsx";
 import { api, type ChatTurnResponse, type EvidenceItem, type MCQ, type QuerySuggestion } from "@/lib/api";
 import { useApp } from "@/store/app";
 import { useUI } from "@/store/ui";
+import { t } from "@/lib/i18n";
 
 interface Message {
   role: "user" | "assistant";
@@ -38,6 +39,11 @@ export function AssistantView() {
   const storeModel = useApp((s) => s.selectedOllamaModel);
   const setActiveNav = useUI((s) => s.setActiveNav);
   const studentMode = useUI((s) => s.studentMode);
+  // v1.2.9 Student Mode (classroom client): the engine forces the teacher's
+  // classroom model for every student chat, so the provider/model pickers
+  // would lie — hide them entirely here.
+  const studentClient = useUI((s) => s.studentClient);
+  const lang = useUI((s) => s.lang);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [provider, setProvider] = useState<"ollama" | "lmstudio" | "cloud">("ollama");
@@ -196,6 +202,8 @@ export function AssistantView() {
   return (
     <div className="assistant">
       <aside className="assistant-sidebar">
+        {!studentClient && (
+        <>
         <h3>Model Provider</h3>
         <select value={provider} onChange={(e) => { setProvider(e.target.value as typeof provider); setLocalModel(""); }}>
           <option value="ollama">Ollama (local)</option>
@@ -228,6 +236,11 @@ export function AssistantView() {
         )}
         {provider === "ollama" && ollamaModels.data?.models.length === 0 && (
           <p className="hint">No models installed. Go to Settings to download one.</p>
+        )}
+        </>
+        )}
+        {studentClient && (
+          <p className="hint">{t(lang, "sm_classroom_model_note")}</p>
         )}
 
         <div className="corpus-hint">{corpusHint}</div>

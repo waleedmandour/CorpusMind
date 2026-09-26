@@ -1,7 +1,7 @@
 {
   "name": "corpusmind-web",
   "private": true,
-  "version": "1.2.8",
+  "version": "1.2.9",
   "type": "module",
   "description": "CorpusMind web frontend - installable PWA, also embedded in the Tauri 2 desktop shell.",
   "license": "AGPL-3.0-only",
@@ -20,6 +20,7 @@
     "clsx": "^2.1.1",
     "graphology": "^0.26.0",
     "graphology-layout-forceatlas2": "^0.10.1",
+    "qrcode": "^1.5.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "sigma": "^3.0.3",
@@ -27,6 +28,7 @@
   },
   "devDependencies": {
     "@types/node": "^26.1.0",
+    "@types/qrcode": "^1.5.5",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@typescript-eslint/eslint-plugin": "^8.13.0",

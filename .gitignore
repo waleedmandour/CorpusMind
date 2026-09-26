@@ -68,6 +68,9 @@ desktop/binaries/*
 !desktop/binaries/.gitkeep
 # Sidecar binaries are large; never commit them. CI produces them per release.
 desktop/src-tauri/binaries/*
+# v1.2.9 Student Mode: the Caddy sidecar binary is fetched per-build by
+# scripts/fetch_caddy.py (pinned version + official sha512) — never committed.
+engine/caddy-bin/
 !desktop/src-tauri/binaries/.gitkeep
 # CorpusMind Lens shell — same rules as the main desktop shell
 desktop-lens/src-tauri/target/

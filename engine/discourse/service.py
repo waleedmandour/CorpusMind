@@ -939,6 +939,11 @@ class DiscourseResult:
     # comparison corpus. log_ratio/pct_diff are None (JSON null) when the
     # category is absent from either side: the raw formulas return ±inf
     # there and JSON cannot carry infinities — the UI shows an em dash.
+    # v1.2.9: category dicts additionally gain `ref_freq` and
+    # `ref_per_million` (the reference side's raw count and normalized
+    # rate), so the UI can draw a true target-vs-reference grouped bar
+    # chart (green vs purple) alongside the green/red log-ratio
+    # divergence view.
     compare_corpus_id: str | None = None
     compare_total_tokens: int | None = None
     # v1.2.7 (§4): persuasion lens — how many documents were actually scored
@@ -1257,10 +1262,17 @@ async def compute_discourse_analysis(
                         "dp": 0.0,
                     },
                 )
+                # v1.2.9: expose the reference side's rate so the UI can
+                # draw grouped target-vs-reference bars (green/purple).
+                c_freq = c_counts.get(cat, 0)
+                row["ref_freq"] = c_freq
+                row["ref_per_million"] = (
+                    round(c_freq / compare_total * 1_000_000, 2) if compare_total else 0.0
+                )
                 row.update(
                     _keyness_fields(
                         row["freq"], total_tokens,
-                        c_counts.get(cat, 0), compare_total,
+                        c_freq, compare_total,
                     )
                 )
 
@@ -1414,10 +1426,16 @@ async def compute_usas_discourse_analysis(
                         "dp": 0.0,
                     },
                 )
+                # v1.2.9: expose the reference side's rate (grouped bars).
+                c_freq = c_counts.get(tag, 0)
+                row["ref_freq"] = c_freq
+                row["ref_per_million"] = (
+                    round(c_freq / compare_total * 1_000_000, 2) if compare_total else 0.0
+                )
                 row.update(
                     _keyness_fields(
                         row["freq"], total_tokens,
-                        c_counts.get(tag, 0), compare_total,
+                        c_freq, compare_total,
                     )
                 )
 
@@ -2158,9 +2176,15 @@ async def compute_sfg_discourse_analysis(
             )
             for cat in sorted(set(categories) | set(c_counts)):
                 row = categories.setdefault(cat, {"freq": 0, "per_million": 0.0, "examples": []})
+                # v1.2.9: expose the reference side's rate (grouped bars).
+                c_freq = c_counts.get(cat, 0)
+                row["ref_freq"] = c_freq
+                row["ref_per_million"] = (
+                    round(c_freq / compare_total * 1_000_000, 2) if compare_total else 0.0
+                )
                 row.update(
                     _keyness_fields(
-                        row["freq"], total_tokens, c_counts.get(cat, 0), compare_total
+                        row["freq"], total_tokens, c_freq, compare_total
                     )
                 )
 

@@ -1,0 +1,481 @@
+"""v1.2.9 — Student Mode (classroom server): middleware, allowlist, Caddy.
+
+Covers:
+  - the student route allowlist (what students may and may never call);
+  - the auth middleware's classroom branch: proxy-stamped requests must
+    present the teacher or student token; the student token gets the
+    allowlist only; direct loopback stays trusted teacher access;
+  - the /server-mode/* control plane being teacher-only;
+  - Caddyfile generation for both connection modes;
+  - caddy binary lookup order, config persistence, capacity math,
+    and LAN IP enumeration being sane.
+"""
+
+from __future__ import annotations
+
+import os
+
+import pytest
+
+# --------------------------------------------------------------------------- #
+# Unit tests: allowlist
+# --------------------------------------------------------------------------- #
+
+
+def test_student_allowlist_covers_analysis_and_ai_chat():
+    from app.server_mode import student_route_allowed
+
+    # Analysis: allowed.
+    for method, path in [
+        ("POST", "/api/v1/corpora/abc123/concordance"),
+        ("POST", "/api/v1/corpora/abc123/concordance/vector"),
+        ("POST", "/api/v1/corpora/abc123/frequency"),
+        ("POST", "/api/v1/corpora/abc123/collocations"),
+        ("POST", "/api/v1/corpora/abc123/keyness"),
+        ("POST", "/api/v1/corpora/abc123/dispersion"),
+        ("POST", "/api/v1/corpora/abc123/ngrams"),
+        ("POST", "/api/v1/corpora/abc123/pos-analysis"),
+        ("POST", "/api/v1/corpora/abc123/grammar"),
+        ("POST", "/api/v1/corpora/abc123/dependencies"),
+        ("POST", "/api/v1/corpora/abc123/discourse"),
+        ("POST", "/api/v1/corpora/abc123/sentiment"),
+        ("GET", "/api/v1/corpora/abc123/readability"),
+        ("POST", "/api/v1/ai/chat"),
+        ("GET", "/api/v1/ai/tools"),
+        ("GET", "/api/v1/health/resources"),
+        ("GET", "/api/v1/discourse/persuasion/health"),
+        ("POST", "/api/v1/corpora/abc123/learner/caf"),
+        ("POST", "/api/v1/arabic/analyze"),
+    ]:
+        assert student_route_allowed(method, path), f"{method} {path} must be allowed"
+
+
+def test_student_allowlist_denies_teacher_surface():
+    from app.server_mode import student_route_allowed
+
+    # Write/admin surface: denied.
+    for method, path in [
+        ("POST", "/api/v1/corpora/abc123/documents"),          # upload
+        ("DELETE", "/api/v1/corpora/abc123"),                   # delete corpus
+        ("DELETE", "/api/v1/corpora/abc123/documents/x"),      # delete doc
+        ("POST", "/api/v1/corpora/abc123/recompile"),
+        ("POST", "/api/v1/corpora/abc123/subcorpora"),
+        ("PATCH", "/api/v1/corpora/abc123/tagset"),
+        ("POST", "/api/v1/corpora/abc123/clean"),
+        ("GET", "/api/v1/settings"),                             # settings
+        ("POST", "/api/v1/ai/cloud-config"),
+        ("POST", "/api/v1/ollama/pull"),                         # model mgmt
+        ("DELETE", "/api/v1/ollama/models"),
+        ("POST", "/api/v1/export/jobs"),                         # export queue
+        ("POST", "/api/v1/reference-corpora/be06/download"),
+        ("POST", "/api/v1/open-access/api-key"),
+        ("POST", "/api/v1/facial-analysis/enabled"),
+        ("POST", "/api/v1/troubleshoot/gemini-key"),
+        ("POST", "/api/v1/projects/p1/saved-searches"),          # phase6 writes
+        ("POST", "/api/v1/image-sets/abc/images"),               # vision uploads
+        ("GET", "/api/v1/ai/conversations"),                     # teacher chats
+        ("GET", "/api/v1/ai/conversations/xyz"),
+        ("DELETE", "/api/v1/ai/conversations/xyz"),
+        # The classroom control plane itself must never be student-visible.
+        ("GET", "/api/v1/server-mode/status"),
+        ("POST", "/api/v1/server-mode/enable"),
+        ("POST", "/api/v1/server-mode/disable"),
+    ]:
+        assert not student_route_allowed(method, path), f"{method} {path} must be DENIED"
+
+
+# --------------------------------------------------------------------------- #
+# Unit tests: config persistence, Caddyfile, lookup, capacity, LAN IPs
+# --------------------------------------------------------------------------- #
+
+
+def test_config_roundtrip_and_sanitize(tmp_path):
+    from app.server_mode import ServerModeConfig, load_config, save_config
+
+    settings = type("S", (), {"data_dir": tmp_path})
+    cfg = ServerModeConfig()
+    cfg.mode = "bogus"
+    cfg.https_port = 80  # below 1024
+    cfg.num_parallel = 999
+    cfg.sanitize()
+    assert cfg.mode == "secure"
+    assert cfg.https_port == 1024
+    assert cfg.num_parallel == 16
+
+    cfg2 = ServerModeConfig(enabled=True, mode="simple", student_token="s", teacher_token="t")
+    save_config(settings, cfg2)
+    loaded = load_config(settings)
+    assert loaded.enabled and loaded.mode == "simple"
+    assert loaded.student_token == "s"
+    # Tokens never travel into world-readable files.
+    assert (tmp_path / "server-mode" / "config.json").is_file()
+
+
+def test_ensure_tokens_generates_and_rotates():
+    from app.server_mode import ServerModeConfig, ensure_tokens
+
+    cfg = ServerModeConfig()
+    ensure_tokens(cfg)
+    assert cfg.teacher_token.startswith("cm_teach_")
+    assert cfg.student_token.startswith("cm_study_")
+    t1, s1 = cfg.teacher_token, cfg.student_token
+    ensure_tokens(cfg)  # idempotent
+    assert (cfg.teacher_token, cfg.student_token) == (t1, s1)
+    ensure_tokens(cfg, rotate=True)
+    assert cfg.teacher_token not in ("", t1)
+    assert cfg.student_token not in ("", s1)
+
+
+def _settings_stub(tmp_path, port=8765):
+    return type("S", (), {"data_dir": tmp_path, "port": port})
+
+
+def test_generate_caddyfile_secure_mode(tmp_path):
+    from app.server_mode import ServerModeConfig, generate_caddyfile
+
+    cfg = ServerModeConfig(mode="secure", https_port=8443, http_port=8088)
+    web = tmp_path / "web-dist"
+    web.mkdir()
+    ca = tmp_path / "ca-share"
+    ca.mkdir()
+    cert = tmp_path / "server.crt"
+    key = tmp_path / "server.key"
+    cert.write_text("CERT")
+    key.write_text("KEY")
+    text = generate_caddyfile(_settings_stub(tmp_path), cfg, web, ca,
+                              server_cert=cert, server_key=key)
+
+    assert f"https://:{cfg.https_port}" in text
+    # v1.2.9: the engine issues the certificate itself (Caddy's `tls internal`
+    # tries to sudo-install its root into the OS trust store, which is not
+    # guaranteed on teacher machines) — the Caddyfile points at the files.
+    assert f"tls {cert} {key}" in text
+    assert "tls internal" not in text
+    assert 'header_up X-CorpusMind-Classroom "1"' in text
+    assert "reverse_proxy 127.0.0.1:8765" in text
+    assert f"root * {web}" in text
+    assert "try_files {path} /index.html" in text
+    # The cert-trust helper port serves the CA share over plain HTTP.
+    assert f"http://:{cfg.http_port}" in text
+    assert f"root * {ca}" in text
+
+
+def test_generate_caddyfile_simple_mode(tmp_path):
+    from app.server_mode import ServerModeConfig, generate_caddyfile
+
+    cfg = ServerModeConfig(mode="simple", http_port=8088)
+    text = generate_caddyfile(
+        _settings_stub(tmp_path), cfg, tmp_path / "w", tmp_path / "ca"
+    )
+    assert "tls" not in text
+    assert f"http://:{cfg.http_port}" in text
+    assert 'header_up X-CorpusMind-Classroom "1"' in text
+
+
+def test_classroom_certificates_issued_and_persisted(tmp_path):
+    """The engine issues its own classroom CA + leaf (no sudo, no bundler).
+    The CA persists across calls; the leaf is refreshed with current SANs."""
+    from cryptography import x509
+
+    from app.server_mode import ServerModeConfig, ensure_classroom_certificates
+
+    settings = _settings_stub(tmp_path)
+    cfg = ServerModeConfig(mode="secure")
+    cert, key, ca = ensure_classroom_certificates(settings, cfg)
+    assert cert.is_file() and key.is_file() and ca.is_file()
+
+    ca_cert = x509.load_pem_x509_certificate(ca.read_bytes())
+    assert "CorpusMind Classroom CA" in ca_cert.subject.rfc4514_string()
+
+    leaf = x509.load_pem_x509_certificate(cert.read_bytes())
+    assert leaf.issuer == ca_cert.subject
+    sans = leaf.extensions.get_extension_for_class(x509.SubjectAlternativeName).value
+    names = sans.get_values_for_type(x509.DNSName)
+    ips = sans.get_values_for_type(x509.IPAddress)
+    assert "localhost" in names
+    assert any(str(ip) == "127.0.0.1" for ip in ips)
+
+    # Second call: CA unchanged (persisted and not expiring).
+    _cert2, _key2, ca2 = ensure_classroom_certificates(settings, cfg)
+    assert ca2.read_bytes() == ca.read_bytes()
+
+
+def test_find_caddy_binary_order(tmp_path, monkeypatch):
+    import sys as _sys
+
+    from app import server_mode as sm
+
+    exe = "caddy.exe" if _sys.platform.startswith("win") else "caddy"
+    monkeypatch.delenv("CORPUSMIND_CADDY_BIN", raising=False)
+    monkeypatch.setattr(sm.shutil, "which", lambda name: None)
+
+    # 1. env wins.
+    env_bin = tmp_path / "env" / exe
+    env_bin.parent.mkdir()
+    env_bin.write_text("x")
+    monkeypatch.setenv("CORPUSMIND_CADDY_BIN", str(env_bin))
+    assert sm.find_caddy_binary(_settings_stub(tmp_path)) == env_bin
+    monkeypatch.delenv("CORPUSMIND_CADDY_BIN")
+
+    # 2. sibling of the frozen executable (caddy/caddy).
+    frozen = tmp_path / "frozen" / "caddy" / exe
+    frozen.parent.mkdir(parents=True)
+    frozen.write_text("x")
+    fake_exe = tmp_path / "frozen" / "corpusmind-engine"
+    fake_exe.write_text("x")
+    monkeypatch.setattr(sm.sys, "executable", str(fake_exe))
+    assert sm.find_caddy_binary(_settings_stub(tmp_path)) == frozen
+
+    # 3. dev checkout (patched away here) — the real checkout may hold the
+    # fetched binary, so point the constant at a missing path first.
+    monkeypatch.setattr(sm, "_DEV_CADDY_DIR", tmp_path / "absent" / exe)
+    path_bin = tmp_path / "on-path" / exe
+    path_bin.parent.mkdir()
+    path_bin.write_text("x")
+    monkeypatch.setattr(sm.sys, "executable", str(tmp_path / "nowhere"))
+    monkeypatch.setattr(sm.shutil, "which", lambda name: str(path_bin))
+    assert sm.find_caddy_binary(_settings_stub(tmp_path)) == path_bin
+
+    # 4. dev checkout hit when it exists.
+    monkeypatch.setattr(sm, "_DEV_CADDY_DIR", path_bin)
+    monkeypatch.setattr(sm.shutil, "which", lambda name: None)
+    assert sm.find_caddy_binary(_settings_stub(tmp_path)) == path_bin
+
+    # 5. nothing found → None.
+    monkeypatch.setattr(sm, "_DEV_CADDY_DIR", tmp_path / "absent" / exe)
+    assert sm.find_caddy_binary(_settings_stub(tmp_path)) is None
+
+
+def test_find_web_dist_frozen_and_dev(tmp_path, monkeypatch):
+    from app import server_mode as sm
+
+    # Dev checkout: repo web/dist wins.
+    repo = tmp_path / "repo"
+    dist = repo / "web" / "dist"
+    dist.mkdir(parents=True)
+    (dist / "index.html").write_text("<html></html>")
+    app_pkg = repo / "engine" / "app"
+    app_pkg.mkdir(parents=True)
+    fake_file = app_pkg / "server_mode.py"
+    fake_file.write_text("")
+    monkeypatch.setattr(sm, "__file__", str(fake_file))
+    monkeypatch.delattr(sm.sys, "_MEIPASS", raising=False)
+    assert sm.find_web_dist(_settings_stub(tmp_path)) == dist
+
+
+def test_lan_ips_sane():
+    from app.server_mode import lan_ips
+
+    ips = lan_ips()
+    assert isinstance(ips, list)
+    for ip in ips:
+        assert ip.count(".") == 3
+        assert not ip.startswith("127.")
+        assert not ip.startswith("169.254.")
+
+
+def test_estimate_students_math(monkeypatch):
+    from ai.hf_catalog import MachineProfile
+    from app import server_mode as sm
+
+    gb = 1024 ** 3
+    profile = MachineProfile(
+        ram_total=32 * gb, ram_available=24 * gb,
+        vram_total=0, vram_available=0, gpu_name="",
+        source="proc/meminfo",
+    )
+    monkeypatch.setattr(sm, "_machine_dict", lambda p: {})
+    import ai.hf_catalog as hf
+
+    monkeypatch.setattr(hf, "machine_profile", lambda **kw: profile)
+
+    # 2 GB model, 4 parallel slots → fits several students in 24 GB RAM.
+    est = sm.estimate_students(2 * gb, 4)
+    assert est["students_max"] is not None
+    assert 1 <= est["students_max"] <= sm.MAX_STUDENTS
+    assert "not a guarantee" in est["note"]
+
+    # Unknown model size → honest None, not a fake number.
+    est0 = sm.estimate_students(0, 4)
+    assert est0["students_max"] is None
+
+
+def test_student_seen_window():
+    from app.server_mode import ServerModeState
+
+    st = ServerModeState()
+    st.note_student("10.0.0.5")
+    st.note_student("10.0.0.6")
+    assert st.active_students() == 2
+    # A stale timestamp beyond the active window stops counting.
+    import time as _t
+
+    st.student_seen["10.0.0.5"] = _t.monotonic() - 10 * 60 - 5
+    assert st.active_students() == 1
+
+
+# --------------------------------------------------------------------------- #
+# API tests: middleware + control plane
+# --------------------------------------------------------------------------- #
+
+
+def _make_client_fixture(env: dict[str, str], unset: tuple[str, ...] = ()):
+    async def client():
+        for k in unset:
+            os.environ.pop(k, None)
+        for k, v in env.items():
+            os.environ[k] = v
+        os.environ["CORPUSMIND_DB_URL"] = "sqlite+aiosqlite:///:memory:"
+        os.environ["CORPUSMIND_DATA_DIR"] = "/tmp/cm-sm-test-data"
+        os.environ.pop("CORPUSMIND_STUDENT_TOKEN", None)
+        # Isolate from any previous run's persisted classroom config.
+        import shutil
+
+        shutil.rmtree("/tmp/cm-sm-test-data/server-mode", ignore_errors=True)
+
+        from app.settings import get_settings
+
+        get_settings.cache_clear()
+        from storage.session import _engine, dispose_db
+
+        _engine.clear() if hasattr(_engine, "clear") else None
+
+        from httpx import ASGITransport, AsyncClient
+
+        from app.main import app
+
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+            async with app.router.lifespan_context(app):
+                yield ac
+        await dispose_db()
+
+    return pytest.fixture(client)
+
+
+sm_client = _make_client_fixture({"CORPUSMIND_HOST": "127.0.0.1"})
+
+PROXY = {"X-CorpusMind-Classroom": "1"}
+
+
+@pytest.fixture()
+def classroom(sm_client):
+    """Flip the app's server-mode state into an enabled classroom with
+    fixed tokens (no Caddy spawned — unit-level middleware testing)."""
+    ac = sm_client
+    app = ac._transport.app
+    sm_state = app.state.server_mode
+    sm_state.config.enabled = True
+    sm_state.config.teacher_token = "teach-token-xyz"
+    sm_state.config.student_token = "study-token-xyz"
+    sm_state.config.student_model = "llama3.2:3b"
+    yield ac, sm_state
+    sm_state.config.enabled = False
+
+
+def _app(ac):
+    return ac._transport.app
+
+
+@pytest.mark.asyncio
+async def test_proxy_traffic_requires_token(classroom):
+    ac, _ = classroom
+    r = await ac.get("/api/v1/version", headers=PROXY)
+    assert r.status_code == 401  # no token at all
+
+
+@pytest.mark.asyncio
+async def test_proxy_wrong_token_401(classroom):
+    ac, _ = classroom
+    r = await ac.get("/api/v1/version", headers={**PROXY, "Authorization": "Bearer nope"})
+    assert r.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_teacher_token_full_access(classroom):
+    ac, sm_state = classroom
+    h = {**PROXY, "Authorization": f"Bearer {sm_state.config.teacher_token}"}
+    r = await ac.get("/api/v1/version", headers=h)
+    assert r.status_code == 200
+    # Teacher may hit the classroom control plane.
+    r = await ac.get("/api/v1/server-mode/status", headers=h)
+    assert r.status_code == 200
+    body = r.json()
+    assert body["enabled"] is True
+    assert body["student_token"] == "study-token-xyz"  # teacher-only field
+    assert "lan_ips" in body and "caddy_running" in body
+
+
+@pytest.mark.asyncio
+async def test_student_token_allowlist_and_denials(classroom):
+    ac, sm_state = classroom
+    h = {**PROXY, "Authorization": f"Bearer {sm_state.config.student_token}"}
+
+    # Allowed analysis route (the corpus doesn't exist → 404 from the
+    # route handler, NOT 401/403 from the gate).
+    r = await ac.get("/api/v1/version", headers=h)
+    assert r.status_code == 200
+
+    # Teacher-only control plane → 403 for students.
+    r = await ac.get("/api/v1/server-mode/status", headers=h)
+    assert r.status_code == 403
+
+    # Upload / management surface → 403.
+    r = await ac.post("/api/v1/projects", headers=h, json={"name": "x"})
+    assert r.status_code == 403
+    r = await ac.get("/api/v1/ai/conversations", headers=h)
+    assert r.status_code == 403
+    r = await ac.post("/api/v1/ollama/pull", headers=h, json={"model": "x"})
+    assert r.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_direct_loopback_stays_teacher_no_auth(classroom):
+    """No proxy header → the local desktop experience is untouched."""
+    ac, _ = classroom
+    r = await ac.get("/api/v1/version")  # no auth, no header
+    assert r.status_code == 200
+    r = await ac.get("/api/v1/server-mode/status")  # direct = teacher
+    assert r.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_student_requests_counted_as_connected(classroom):
+    ac, sm_state = classroom
+    h = {**PROXY, "Authorization": f"Bearer {sm_state.config.student_token}"}
+    assert sm_state.active_students() == 0
+    await ac.get("/api/v1/version", headers=h)
+    assert sm_state.active_students() >= 1
+
+
+@pytest.mark.asyncio
+async def test_health_stays_open_for_probes(classroom):
+    ac, _sm_state = classroom
+    # Docker-style health probes carry no credentials.
+    r = await ac.get("/api/v1/health", headers=PROXY)
+    assert r.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_enable_requires_caddy_and_reports_error(classroom, monkeypatch):
+    """Enabling with no Caddy binary fails loudly but does not crash."""
+    ac, sm_state = classroom
+    import api.server_mode as router_mod
+    from app import server_mode as sm
+
+    sm_state.config.enabled = False
+    monkeypatch.setattr(sm, "find_caddy_binary", lambda settings: None)
+    monkeypatch.setattr(router_mod, "find_caddy_binary", lambda settings: None)
+    r = await ac.post("/api/v1/server-mode/enable", json={"mode": "secure"})
+    assert r.status_code == 500
+    assert "Caddy" in r.json()["detail"]
+    assert sm_state.config.enabled is False  # not persisted half-on
+
+
+@pytest.mark.asyncio
+async def test_status_reports_disabled_by_default(sm_client):
+    ac = sm_client
+    r = await ac.get("/api/v1/server-mode/status")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["enabled"] is False
+    assert "student_token" not in body  # tokens only leak while enabled

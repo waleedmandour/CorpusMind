@@ -36,6 +36,17 @@ class Settings(BaseSettings):
     # bearer model means "shared trust boundary" — see infra/docker-compose.yml.
     auth_token: str = ""
 
+    # v1.2.9 Student Mode (classroom server): a second, lower-privilege
+    # bearer token. When set, requests that reach the engine through the
+    # classroom proxy (they carry the X-CorpusMind-Classroom header, which
+    # only the locally-bundled Caddy sidecar injects) must present either
+    # this token (role=student, read/analysis routes only) or the teacher
+    # token (full access). Direct loopback requests — the teacher's own
+    # desktop app — remain trusted teacher access. See app/server_mode.py.
+    # In the packaged app this is normally managed at runtime by the
+    # server-mode config file, not by editing env vars.
+    student_token: str = ""
+
     # --- Storage ---
     data_dir: Path = Field(default=Path.home() / ".corpusmind", description="Root for projects, indices, caches.")
     db_url: str = ""  # empty → defaults to sqlite under data_dir
@@ -64,6 +75,25 @@ class Settings(BaseSettings):
 
     # --- Reproducibility ---
     enable_methods_export: bool = True
+
+    # --- Persuasion Index optional resources (v1.2.9) ---
+    # persuasion-index 0.3.0 resolves its optional resources (concreteness,
+    # LIWC, NRC-VAD) through ITS OWN env vars (PI_CONCRETENESS_FILE,
+    # PI_MWE_CONCRETENESS_FILE, PI_LIWC_FILE, PI_NRC_VAD_FILE), falling back
+    # to files inside its package tree. Those files are license-restricted
+    # ("obtain from the official source; not redistributed") so the engine
+    # can never bundle them. Instead the engine bridges a single, stable,
+    # update-surviving folder — CORPUSMIND_PI_RESOURCES_DIR, defaulting to
+    # <data_dir>/pi-resources/ — onto PI's supported env vars at startup
+    # (see discourse/pi_resources.py). Users of the packaged desktop app
+    # drop the official downloads into that folder and restart; no shell or
+    # env-var editing required.
+    pi_resources_dir: str = ""
+    # Per-resource explicit overrides (win over the resources dir).
+    pi_concreteness_file: str = ""
+    pi_mwe_concreteness_file: str = ""
+    pi_liwc_file: str = ""
+    pi_nrc_vad_file: str = ""
 
     # --- Layered sentiment (v1.2.8, review #8) ---
     # Directory holding user-configured emotion lexicons (our converted

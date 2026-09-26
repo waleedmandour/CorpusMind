@@ -6,6 +6,94 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
+## [1.2.9] — 2026-09-27 — Review response: Persuasion Index optional resources, comparison palette, and Student Mode (classroom server)
+
+Three review-driven work items over v1.2.8: the Persuasion Index resource
+panel turned into actionable install guidance, every corpus-comparison
+visual adopted a consistent green/purple + green/red palette, and the
+whole Student Mode classroom feature (teacher-as-server) landed — engine,
+Caddy sidecar, PWA client, Settings, docs.
+
+### Added
+- **Student Mode — classroom server (teacher-as-server)**. The teacher's
+  desktop app can now open a scoped classroom server: students on their
+  own phones/tablets open a URL/QR in a normal browser and get the
+  analysis tools + AI assistant over the teacher's corpora — read-only.
+  - Engine: a second, lower-privilege bearer role (`CORPUSMIND_STUDENT_TOKEN`,
+    managed at runtime by the server-mode config). Proxy-stamped requests
+    (`X-CorpusMind-Classroom`, injected only by the locally-bundled Caddy
+    sidecar) must present the teacher or student token; the student role is
+    constrained by an explicit route allowlist (concordance, frequency,
+    collocations, keyness, dispersion, n-grams, POS, grammar, dependency,
+    discourse, Vector KWIC, learner + Arabic analysis, AI chat) and every
+    management route 403s. Direct loopback access — the teacher's desktop
+    app — is untouched. Teacher chat history is not student-visible.
+  - `GET /api/v1/server-mode/status`, `POST /server-mode/enable|disable|config`,
+    `GET /server-mode/capacity` (teacher-only): enabled state, bound URLs,
+    LAN IPs, live connected-student count, Ollama load, and an honest
+    "up to N students" estimate computed from the same RAM/VRAM probe the
+    HF GGUF explorer uses (no second probe).
+  - Caddy sidecar (Apache-2.0, pinned 2.10.0, fetched by
+    `scripts/fetch_caddy.py` and verified against the release's official
+    sha512 checksums): bundled inside the engine's onedir, spawned/stopped
+    by the engine (POSIX PDEATHSIG + Windows Job Object watchdog, orphan
+    sweep on re-enable). Two connection modes: **Secure** (Caddy
+    `tls internal` local CA + a one-time certificate-trust helper port) and
+    **Simple** (plain HTTP, gated behind an explicit closed-network warning
+    in the UI copy). The bundled PWA is collected into the engine bundle
+    (`web-dist`) and served to student browsers with SPA fallback.
+  - PWA student client: `?mode=student` (or a saved classroom session)
+    shows a connect gate (server URL + token, prefilled from the QR),
+    then the scoped app — teacher-only nav hidden (Settings, uploads,
+    deletes, model management), a live "Student Mode" status indicator,
+    and a prominent **Source Code** link (AGPL-3.0 §13 for network users).
+    Service-worker registration is skipped on non-secure contexts (Simple
+    mode) so the classroom link degrades gracefully to a regular page.
+  - Settings: a new **Student Mode — Classroom Server** card (mode choice
+    with the trade-offs explained inline, QR + URL + token display with
+    copy buttons, token rotation, classroom model picker defaulting to
+    `llama3.2:3b` — deliberately separate from the teacher's research
+    model, OLLAMA_NUM_PARALLEL guidance, capacity estimate, live status).
+    The pre-existing pedagogy toggle is renamed "Guided Student Mode
+    (AI reveal)" to disambiguate. All new UI strings ship in EN + AR.
+- **Persuasion Index install guidance** (review #1). The four optional
+  PI resources (single/multi-word concreteness, LIWC, NRC-VAD) are
+  license-restricted and can never be bundled — the resource panel now
+  says exactly how to enable each one: the official download source, the
+  canonical filename, the user-owned resources folder
+  (`CORPUSMIND_PI_RESOURCES_DIR`, default `<data_dir>/pi-resources/`,
+  survives app updates), and the restart step. The engine bridges that
+  folder onto persuasion-index's own `PI_*` env vars at startup
+  (`discourse/pi_resources.py`), and `scripts/install_pi_resources.py`
+  automates the two openly-downloadable concreteness files and arranges
+  manually-downloaded NRC-VAD/LIWC files. `GET /discourse/persuasion/health`
+  now carries `resources_dir` + per-resource `install_hints`.
+- New release smoke-gate content checks: the bundle must contain
+  `web-dist/index.html` + `caddy/caddy` (all platforms) — the classroom
+  stack cannot silently go dark like the v1.2.8 resources did.
+
+### Changed
+- **Comparison palette, applied to every comparison visual** (review #2).
+  Wherever the app compares target vs reference: grouped bars render the
+  target in **green** (`--bar-positive`) and the reference in **purple**
+  (`--tool5-accent`); divergence renders over-use in green and under-use
+  in **red** (`--bar-negative`). Concretely: the Discourse page's new
+  grouped target-vs-reference chart (the engine now emits `ref_freq` +
+  `ref_per_million` for every compared category across all taxonomies),
+  the Log-Ratio divergence chart (previously green/teal), and the Keyness
+  tables' Log Ratio / %DIFF cells (green = over-represented in target,
+  red = under-represented). Theme-aware in light and dark mode.
+- Release workflow: web PWA build and the Caddy fetch now run BEFORE the
+  engine PyInstaller build (the spec collects `web/dist`).
+- Version strings re-synced to 1.2.9 everywhere, including the drift the
+  review flagged: desktop Cargo.toml (was 1.2.7), both package-locks,
+  CITATION.cff preferred-citation (was 1.2.7), the frontend's engine
+  version fallback (was 1.2.1), and the docker-compose image tag.
+
+### Fixed
+- CI workflow doc drift (`ci.yml` described an `externalBin` declaration
+  that the config had long since replaced with onedir resources).
+
 ## [1.2.8] — 2026-09-26 — Review response: Persuasion Index hardening, dependency concordance, discourse chart, KWIC latency profile, grammar audit
 
 Five reviewer-driven fixes over v1.2.7, each verified against the running

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Post-build smoke gate for the packaged engine sidecar (v1.2.8, review #6).
+# Post-build smoke gate for the packaged engine sidecar (v1.2.8, review #6;
+# v1.2.9 adds the Student Mode classroom stack: web-dist + Caddy).
 #
 # Launches the PyInstaller-built engine binary on a scratch port and asserts
 # that the features that regressed in the shipped v1.2.8 actually work
@@ -7,6 +8,7 @@
 #   - the USAS semantic lexicon resolves (reference-data path fix)
 #   - the Academic Word List is found (same fix, silent degradation)
 #   - the persuasion-index package imports (dependency manifest + spec fix)
+#   - the bundled web-dist + Caddy binary exist (Student Mode prerequisites)
 #
 # The release workflow runs this on every platform BEFORE the Tauri
 # packaging step; a failure fails the release. Usage:
@@ -38,6 +40,23 @@ if [ -d "${INTERNAL_DIR}/wordfreq/data" ]; then
   echo "[smoke] OK   wordfreq data ($(find "${INTERNAL_DIR}/wordfreq/data" -type f | wc -l) files)"
 else
   echo "[smoke] FAIL: missing wordfreq data directory in bundle"
+  exit 1
+fi
+
+# v1.2.9 Student Mode classroom stack (hard content gate):
+# the PWA build Caddy serves + the Caddy binary itself.
+if [ -f "${INTERNAL_DIR}/web-dist/index.html" ]; then
+  echo "[smoke] OK   web-dist/index.html (student PWA bundle)"
+else
+  echo "[smoke] FAIL: missing web-dist/index.html in bundle (Student Mode cannot serve students)"
+  exit 1
+fi
+CADDY_EXE="caddy"; case "$(uname -s)" in MINGW*|MSYS*|CYGWIN*) CADDY_EXE="caddy.exe" ;; esac
+if [ -f "${INTERNAL_DIR}/caddy/${CADDY_EXE}" ]; then
+  CADDY_VERSION_OUT="$("${INTERNAL_DIR}/caddy/${CADDY_EXE}" version 2>/dev/null | head -1 || echo '?')"
+  echo "[smoke] OK   caddy sidecar present (${CADDY_VERSION_OUT})"
+else
+  echo "[smoke] FAIL: missing caddy/caddy binary in bundle (Student Mode cannot start)"
   exit 1
 fi
 

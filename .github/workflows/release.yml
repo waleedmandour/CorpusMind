@@ -153,6 +153,25 @@ jobs:
           Set-MpPreference -DisableRealtimeMonitoring $true -ErrorAction SilentlyContinue
           Write-Host "Windows Defender exclusions added for build directories"
 
+      # v1.2.9 Student Mode: the pinned Caddy classroom sidecar must be
+      # present before PyInstaller runs — the engine spec collects it into
+      # the bundle (engine/caddy-bin/, fetched with a pinned version + the
+      # release's official sha512 checksums).
+      - name: Fetch Caddy binary (Student Mode sidecar)
+        run: python scripts/fetch_caddy.py
+
+      - name: Build web PWA
+        working-directory: web
+        env:
+          # Bake the engine sidecar's fixed address into the bundle so the
+          # Tauri webview (served from http://tauri.localhost on Windows,
+          # with no Vite dev proxy) can reach http://127.0.0.1:8765.
+          # See web/src/lib/api.ts for the full story.
+          VITE_ENGINE_URL: http://127.0.0.1:8765
+        run: |
+          npm ci
+          npm run build
+
       - name: Build engine sidecar (PyInstaller)
         working-directory: engine
         timeout-minutes: 20
@@ -255,18 +274,6 @@ jobs:
         shell: pwsh
         run: pwsh -File scripts/ci_smoke_engine.ps1 -Bin "desktop/src-tauri/binaries/corpusmind-engine/corpusmind-engine.exe" -InternalDir "desktop/src-tauri/binaries/corpusmind-engine/_internal" -WarnFile "engine/build/corpusmind-engine/warn-corpusmind-engine.txt"
 
-      - name: Build web PWA
-        working-directory: web
-        env:
-          # Bake the engine sidecar's fixed address into the bundle so the
-          # Tauri webview (served from http://tauri.localhost on Windows,
-          # with no Vite dev proxy) can reach http://127.0.0.1:8765.
-          # See web/src/lib/api.ts for the full story.
-          VITE_ENGINE_URL: http://127.0.0.1:8765
-        run: |
-          npm ci
-          npm run build
-
       - name: Build Tauri app (NSIS + MSI)
         working-directory: desktop/src-tauri
         run: cargo tauri build
@@ -361,6 +368,25 @@ jobs:
           python -m spacy download en_core_web_sm
           python -c "import en_core_web_sm; print('spaCy model OK:', en_core_web_sm.__version__)"
 
+      # v1.2.9 Student Mode: the pinned Caddy classroom sidecar must be
+      # present before PyInstaller runs — the engine spec collects it into
+      # the bundle (engine/caddy-bin/, fetched with a pinned version + the
+      # release's official sha512 checksums).
+      - name: Fetch Caddy binary (Student Mode sidecar)
+        run: python scripts/fetch_caddy.py
+
+      - name: Build web PWA
+        working-directory: web
+        env:
+          # Bake the engine sidecar's fixed address into the bundle so the
+          # Tauri webview (served from tauri://localhost on macOS, with no
+          # Vite dev proxy) can reach http://127.0.0.1:8765.
+          # See web/src/lib/api.ts for the full story.
+          VITE_ENGINE_URL: http://127.0.0.1:8765
+        run: |
+          npm ci
+          npm run build
+
       - name: Build engine sidecar (PyInstaller)
         working-directory: engine
         run: pyinstaller corpusmind-engine.spec --noconfirm --clean --log-level WARN
@@ -399,18 +425,6 @@ jobs:
       # here fails the release instead of shipping another dark feature.
       - name: Smoke-test engine sidecar (USAS + AWL + persuasion-index)
         run: bash scripts/ci_smoke_engine.sh desktop/src-tauri/binaries/corpusmind-engine/corpusmind-engine
-
-      - name: Build web PWA
-        working-directory: web
-        env:
-          # Bake the engine sidecar's fixed address into the bundle so the
-          # Tauri webview (served from tauri://localhost on macOS, with no
-          # Vite dev proxy) can reach http://127.0.0.1:8765.
-          # See web/src/lib/api.ts for the full story.
-          VITE_ENGINE_URL: http://127.0.0.1:8765
-        run: |
-          npm ci
-          npm run build
 
       - name: Import macOS signing certificate (optional)
         if: env.CM_APPLE_CERTIFICATE != ''
@@ -527,6 +541,25 @@ jobs:
           python -m spacy download en_core_web_sm
           python -c "import en_core_web_sm; print('spaCy model OK:', en_core_web_sm.__version__)"
 
+      # v1.2.9 Student Mode: the pinned Caddy classroom sidecar must be
+      # present before PyInstaller runs — the engine spec collects it into
+      # the bundle (engine/caddy-bin/, fetched with a pinned version + the
+      # release's official sha512 checksums).
+      - name: Fetch Caddy binary (Student Mode sidecar)
+        run: python scripts/fetch_caddy.py
+
+      - name: Build web PWA
+        working-directory: web
+        env:
+          # Bake the engine sidecar's fixed address into the bundle so the
+          # Tauri webview (served from tauri://localhost on macOS, with no
+          # Vite dev proxy) can reach http://127.0.0.1:8765.
+          # See web/src/lib/api.ts for the full story.
+          VITE_ENGINE_URL: http://127.0.0.1:8765
+        run: |
+          npm ci
+          npm run build
+
       - name: Build engine sidecar (PyInstaller)
         working-directory: engine
         run: pyinstaller corpusmind-engine.spec --noconfirm --clean --log-level WARN
@@ -565,18 +598,6 @@ jobs:
       # here fails the release instead of shipping another dark feature.
       - name: Smoke-test engine sidecar (USAS + AWL + persuasion-index)
         run: bash scripts/ci_smoke_engine.sh desktop/src-tauri/binaries/corpusmind-engine/corpusmind-engine
-
-      - name: Build web PWA
-        working-directory: web
-        env:
-          # Bake the engine sidecar's fixed address into the bundle so the
-          # Tauri webview (served from tauri://localhost on macOS, with no
-          # Vite dev proxy) can reach http://127.0.0.1:8765.
-          # See web/src/lib/api.ts for the full story.
-          VITE_ENGINE_URL: http://127.0.0.1:8765
-        run: |
-          npm ci
-          npm run build
 
       - name: Import macOS signing certificate (optional)
         if: env.CM_APPLE_CERTIFICATE != ''
@@ -678,6 +699,25 @@ jobs:
           python -m spacy download en_core_web_sm
           python -c "import en_core_web_sm; print('spaCy model OK:', en_core_web_sm.__version__)"
 
+      # v1.2.9 Student Mode: the pinned Caddy classroom sidecar must be
+      # present before PyInstaller runs — the engine spec collects it into
+      # the bundle (engine/caddy-bin/, fetched with a pinned version + the
+      # release's official sha512 checksums).
+      - name: Fetch Caddy binary (Student Mode sidecar)
+        run: python scripts/fetch_caddy.py
+
+      - name: Build web PWA
+        working-directory: web
+        env:
+          # Bake the engine sidecar's fixed address into the bundle so the
+          # Tauri webview (served from tauri://localhost on Linux, with no
+          # Vite dev proxy) can reach http://127.0.0.1:8765.
+          # See web/src/lib/api.ts for the full story.
+          VITE_ENGINE_URL: http://127.0.0.1:8765
+        run: |
+          npm ci
+          npm run build
+
       - name: Build engine sidecar (PyInstaller)
         working-directory: engine
         run: pyinstaller corpusmind-engine.spec --noconfirm --clean --log-level WARN
@@ -717,18 +757,6 @@ jobs:
       # here fails the release instead of shipping another dark feature.
       - name: Smoke-test engine sidecar (USAS + AWL + persuasion-index)
         run: bash scripts/ci_smoke_engine.sh desktop/src-tauri/binaries/corpusmind-engine/corpusmind-engine
-
-      - name: Build web PWA
-        working-directory: web
-        env:
-          # Bake the engine sidecar's fixed address into the bundle so the
-          # Tauri webview (served from tauri://localhost on Linux, with no
-          # Vite dev proxy) can reach http://127.0.0.1:8765.
-          # See web/src/lib/api.ts for the full story.
-          VITE_ENGINE_URL: http://127.0.0.1:8765
-        run: |
-          npm ci
-          npm run build
 
       - name: Build Tauri app (AppImage + deb)
         working-directory: desktop/src-tauri

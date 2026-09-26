@@ -57,6 +57,62 @@ export const ENGINE_BASE =
 // empty string ("") → same-origin, relies on the Vite dev proxy in `vite dev`.
 
 // ----------------------------------------------------------------------- //
+// v1.2.9 Student Mode (classroom client)
+//
+// When the PWA is opened in student mode (?mode=student served by the
+// classroom Caddy sidecar), it connects to a CONFIGURED server instead of
+// localhost and presents the student bearer token on every API call. The
+// server URL + token persist in localStorage so a refresh keeps the
+// session. All teacher-only UI is hidden elsewhere in the app (Sidebar,
+// CommandPalette, corpus views); this block is just the transport layer.
+// ----------------------------------------------------------------------- //
+
+const STUDENT_SERVER_KEY = "corpusmind-student-server";
+const STUDENT_TOKEN_KEY = "corpusmind-student-token";
+
+export function getStudentServer(): string {
+  try {
+    return (localStorage.getItem(STUDENT_SERVER_KEY) ?? "").replace(/\/+$/, "");
+  } catch {
+    return "";
+  }
+}
+
+export function setStudentSession(serverUrl: string, token: string): void {
+  try {
+    localStorage.setItem(STUDENT_SERVER_KEY, serverUrl.replace(/\/+$/, ""));
+    if (token) localStorage.setItem(STUDENT_TOKEN_KEY, token);
+  } catch {
+    /* private mode — session lives for this page load only */
+  }
+}
+
+export function getStudentToken(): string {
+  try {
+    return localStorage.getItem(STUDENT_TOKEN_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+export function clearStudentSession(): void {
+  try {
+    localStorage.removeItem(STUDENT_SERVER_KEY);
+    localStorage.removeItem(STUDENT_TOKEN_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Resolve the API base per request: the classroom server in student
+ * mode, otherwise the classic localhost/VITE_ENGINE_URL base. */
+export function getEngineBase(): string {
+  const student = getStudentServer();
+  if (student) return student;
+  return ENGINE_BASE;
+}
+
+// ----------------------------------------------------------------------- //
 // Types
 // ----------------------------------------------------------------------- //
 
@@ -750,6 +806,9 @@ export interface DiscourseCategory {
   pct_diff?: number | null;
   simple_maths?: number;
   cochran_warning?: boolean;
+  // v1.2.9: reference side of a comparison (grouped green/purple bars).
+  ref_freq?: number;
+  ref_per_million?: number;
 }
 
 export interface DiscourseTaxonomyInfo {
@@ -1416,12 +1475,22 @@ async function getTauriFetch(): Promise<(input: string, init?: RequestInit) => P
  * ENGINE_BASE is "http://127.0.0.1:8765").
  */
 async function smartFetch(path: string, init?: RequestInit): Promise<Response> {
-  const url = `${ENGINE_BASE}${path}`;
+  const url = `${getEngineBase()}${path}`;
+  // v1.2.9 Student Mode: classroom servers require the student (or teacher)
+  // bearer token on every call. The desktop/loopback flow stays unauthenticated.
+  const token = getStudentToken();
+  const headers: Record<string, string> = {
+    ...((init?.headers as Record<string, string>) ?? {}),
+  };
+  if (token && !headers["Authorization"]) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  const finalInit: RequestInit = { ...init, headers };
   if (isTauriRuntime()) {
     const tFetch = await getTauriFetch();
-    return tFetch(url, init);
+    return tFetch(url, finalInit);
   }
-  return fetch(url, init);
+  return fetch(url, finalInit);
 }
 
 
@@ -1811,6 +1880,29 @@ export const api = {
   // v1.2.8 (review #1): persuasion-index resource status.
   persuasionHealth: () =>
     jsonFetch<PersuasionHealth>("/api/v1/discourse/persuasion/health"),
+
+  // --------------------------------------------------------------------- //
+  // v1.2.9 Student Mode — classroom server control plane (teacher side).
+  // These are called from the Settings card; every route is teacher-gated
+  // server-side, so in a student client they'd 403 (and the UI hides them).
+  // --------------------------------------------------------------------- //
+  serverModeStatus: () => jsonFetch<ServerModeStatus>(`/api/v1/server-mode/status`),
+  serverModeEnable: (req: ServerModeEnableRequest) =>
+    jsonFetch<ServerModeStatus>(`/api/v1/server-mode/enable`, {
+      method: "POST",
+      body: JSON.stringify(req),
+    }),
+  serverModeDisable: () =>
+    jsonFetch<ServerModeStatus>(`/api/v1/server-mode/disable`, { method: "POST" }),
+  serverModeUpdateConfig: (req: { student_model?: string; num_parallel?: number }) =>
+    jsonFetch<ServerModeStatus>(`/api/v1/server-mode/config`, {
+      method: "POST",
+      body: JSON.stringify(req),
+    }),
+  serverModeCapacity: (model?: string) =>
+    jsonFetch<ServerModeCapacity>(
+      `/api/v1/server-mode/capacity${model ? `?model=${encodeURIComponent(model)}` : ""}`,
+    ),
 
   discourse: (cid: string, taxonomy = "hyland2005", compareCorpusId?: string | null) =>
     jsonFetch<DiscourseResult>(`/api/v1/corpora/${cid}/discourse`, {
@@ -2592,7 +2684,7 @@ export const api = {
       `/api/v1/hub/search?q=${encodeURIComponent(q)}&language=${language}&hub=${hub}&limit=${limit}`,
     ),
   hubDownloadUrl: (hub: string, corpusId: string, title: string, extra: Record<string, unknown>) =>
-    `${ENGINE_BASE}/api/v1/hub/download?hub=${encodeURIComponent(hub)}&corpus_id=${encodeURIComponent(corpusId)}&title=${encodeURIComponent(title)}&extra=${encodeURIComponent(JSON.stringify(extra))}`,
+    `${getEngineBase()}/api/v1/hub/download?hub=${encodeURIComponent(hub)}&corpus_id=${encodeURIComponent(corpusId)}&title=${encodeURIComponent(title)}&extra=${encodeURIComponent(JSON.stringify(extra))}`,
   // Task 5: Proper hub download via smartFetch (uses Tauri HTTP plugin in desktop)
   hubDownload: async (hub: string, corpusId: string, title: string, extra: Record<string, unknown>): Promise<Blob> => {
     const path = `/api/v1/hub/download?hub=${encodeURIComponent(hub)}&corpus_id=${encodeURIComponent(corpusId)}&title=${encodeURIComponent(title)}&extra=${encodeURIComponent(JSON.stringify(extra))}`;
@@ -2762,6 +2854,74 @@ export interface PersuasionHealth {
   missing: string[];
   resources: Record<string, PersuasionHealthResource>;
   citation: string;
+  // v1.2.9: per-resource install guidance (license-restricted resources
+  // can never be bundled — the panel teaches the user how to enable them).
+  resources_dir?: string;
+  install_hints?: Record<
+    string,
+    {
+      env_var: string;
+      engine_setting: string;
+      filename: string;
+      folder: string;
+      source_url: string;
+      license_note: string;
+      resolvable: boolean;
+      resolved_from: string;
+      env_value: string | null;
+    }
+  >;
+}
+
+// ----------------------------------------------------------------------- //
+// v1.2.9 Student Mode — classroom server (teacher-side types)
+// ----------------------------------------------------------------------- //
+
+export interface ServerModeStatus {
+  enabled: boolean;
+  mode: "secure" | "simple";
+  https_port: number;
+  http_port: number;
+  caddy_running: boolean;
+  caddy_binary_found: boolean;
+  caddy_version: string | null;
+  caddy_error: string;
+  web_dist_bundled: boolean;
+  lan_ips: string[];
+  urls: { app: string; server: string; root_ca?: string };
+  student_model: string;
+  num_parallel: number;
+  students_active: number;
+  ollama_queue_depth: number | null;
+  ollama_running_models: number | null;
+  config_path: string;
+  // Present only while the classroom is enabled (teacher-only endpoint).
+  student_token?: string;
+  teacher_token?: string;
+}
+
+export interface ServerModeEnableRequest {
+  mode: "secure" | "simple";
+  https_port?: number | null;
+  http_port?: number | null;
+  student_model?: string | null;
+  num_parallel?: number | null;
+  rotate?: boolean;
+}
+
+export interface ServerModeCapacity {
+  students_max: number | null;
+  note: string;
+  machine: {
+    ram_total: number;
+    ram_available: number;
+    vram_total: number;
+    vram_available: number;
+    gpu_name: string;
+    source: string;
+  };
+  model: string | null;
+  model_size_bytes: number;
 }
 
 export interface CafIndices {

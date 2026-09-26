@@ -201,6 +201,48 @@ camel_data -i morphology-db-msa-r13`}</pre>
     ),
   },
   {
+    id: "student-mode",
+    title: t(lang, "sm_card_title"),
+    icon: "\u2318",
+    body: (
+      <>
+        <p>
+          <strong>v1.2.9.</strong> Student Mode turns your desktop app into a small classroom
+          server (teacher-as-server): students on their own phones/tablets open a link or QR in
+          their normal browser and get a <strong>read-only</strong> view of your corpora plus the
+          analysis tools and the AI assistant. Uploads, deletes, recompiles, settings, model
+          management, and your AI chat history are never visible to students — the engine enforces
+          it, and the student UI does not offer those actions. Open{" "}
+          <strong>Settings → Student Mode — Classroom Server</strong> to start.
+        </p>
+        <h4>Secure (HTTPS) vs Simple (HTTP)</h4>
+        <p>
+          <strong>Secure</strong> generates a local certificate with the bundled Caddy proxy.
+          Students perform a one-time trust step per device: open the certificate QR/link, install
+          and trust the profile (iOS: Settings → Profile Downloaded; Android: install as CA
+          certificate), then open the classroom link. School-managed devices may block profile
+          installs — test on one device first. <strong>Simple</strong> skips the certificate but
+          sends everything unencrypted; it belongs only on a closed, trusted classroom Wi-Fi.
+        </p>
+        <h4>Classroom model &amp; capacity</h4>
+        <p>
+          Classroom chats always run on the small classroom model you pick (default
+          {" "}<code>llama3.2:3b</code>) — never on your research model. The card estimates how many
+          students your machine can serve from its RAM/VRAM, and shows live connected-student
+          counts. To apply <code>OLLAMA_NUM_PARALLEL</code> (parallel generation slots), restart
+          Ollama with that environment variable set.
+        </p>
+        <h4>Joining &amp; leaving</h4>
+        <p>
+          Students scan the QR (server URL + <code>cm_study_…</code> token are prefilled) and see a
+          clear Student Mode status with a Source Code link (AGPL-3.0 §13). Rotate tokens between
+          classes with <strong>New tokens</strong>; students exit via Exit Student Mode or a link
+          with <code>?mode=teacher</code>.
+        </p>
+      </>
+    ),
+  },
+  {
     id: "frequency",
     title: "Frequency and STTR",
     icon: "\u25B6",

@@ -213,9 +213,32 @@ governor–dependent pairs.
 - **Comparing two corpora (keyness)** — pick a comparison corpus and every
   category row gains the standard keyness battery: log-likelihood, Log
   Ratio (Hardie 2014), %DIFF and the simple-maths heuristic, with a
-  low-power warning when counts are small. The diverging chart plots Log
-  Ratio around a zero axis, with each category label on the opposite side
-  of its bar's direction so text and bar never overlap.
+  low-power warning when counts are small. The comparison visuals follow
+  one palette everywhere: the target corpus is always **green**, the
+  reference corpus **purple**, and divergence charts read green = more
+  frequent in the target, red = more frequent in the reference. The
+  grouped chart plots both corpora side by side on the shared per-million
+  scale; the diverging chart plots Log Ratio around a zero axis, with
+  each category label on the opposite side of its bar's direction so
+  text and bar never overlap.
+
+**Enabling the optional Persuasion Index resources (v1.2.9)**. Four
+optional resources refine specific subfeatures but are license-restricted
+(their providers forbid redistribution), so the app cannot ship them:
+Brysbaert single-word concreteness (.xlsx), multiword concreteness ratings
+(.csv, OSF), NRC-VAD v2.1 unigrams (non-commercial use; manual download),
+and a licensed LIWC dictionary (legacy .dic — LIWC-22 .dicx is not
+supported). Each unavailable resource in the Persuasion Index panel shows
+a "How to enable" guide with the official download link and the exact
+target path. The folder is `~/.corpusmind/pi-resources` on macOS/Linux
+and `C:\Users\<you>\.corpusmind\pi-resources` on Windows; it survives app
+updates. Quickest route: run `python scripts/install_pi_resources.py
+--all-open` for the two concreteness files, download NRC-VAD yourself from
+saifmohammad.com and pass the zip with `--nrc-vad-zip`, and copy your
+licensed LIWC `.dic` with `--liwc-file`. Restart the engine and the panel
+marks them ✓. Power users can instead set `CORPUSMIND_PI_CONCRETENESS_FILE`,
+`CORPUSMIND_PI_MWE_CONCRETENESS_FILE`, `CORPUSMIND_PI_LIWC_FILE`, or
+`CORPUSMIND_PI_NRC_VAD_FILE` to explicit paths.
 
 Every result names and cites its taxonomy, so findings are reportable and
 comparable across studies.
@@ -543,6 +566,62 @@ annotation, formal statistics, and reproducibility.
 for teaching and quick searches; Sketch Engine for Word Sketches and
 ready-made corpora; CorpusMind for reproducible, framework-grounded,
 local-first analysis of text and images.
+
+---
+
+## 15. Student Mode — Classroom Teaching with Student Devices (v1.2.9)
+
+Student Mode turns your desktop app into a small classroom server: up to
+~20 students on their own phones or tablets open a link/QR in their normal
+browser and get a **read-only** view of your corpora plus the analysis
+tools and the AI assistant. Students cannot upload, delete, recompile,
+change settings, manage models, or see your AI conversation history — the
+restriction is enforced in the engine itself, and the student UI simply
+does not offer those actions. Your own desktop experience is unchanged
+while the classroom runs.
+
+**Starting a classroom (teacher side)**
+
+1. Open **Settings → Student Mode — Classroom Server**.
+2. Choose a connection mode:
+   - **Secure (HTTPS, recommended)** — the app's built-in proxy generates
+     a local certificate. Each student device performs a one-time trust
+     step: open the certificate QR/link shown in Settings, install and
+     trust the profile (iOS: Settings → Profile Downloaded; Android:
+     install as a CA certificate), then open the classroom link. This
+     step is real and intentional — school-managed Chromebooks/iPads may
+     block profile installs, so test on one student device first.
+   - **Simple (plain HTTP)** — no certificate and no trust step, but the
+     traffic is unencrypted. Use it only on a closed, trusted classroom
+     Wi-Fi. Students on such networks can see content in transit.
+3. Press **Start classroom**. Share the **Student QR** (or the link plus
+   the `cm_study_…` token) with the class. Use **New tokens** to rotate
+   them between classes — old links stop working.
+4. The card shows how many students are active (last 10 minutes) and an
+   estimate of how many students your machine can serve with the selected
+   **classroom model**. Classroom chats always run on that small model —
+   never on the large model you may use for solo research. For smoother
+   multi-student generation, restart Ollama with the
+   `OLLAMA_NUM_PARALLEL` environment variable set (e.g. 4).
+
+**Joining a classroom (student side)**
+
+Scan the teacher's QR or open the link. The first screen asks for the
+server address and access token (usually prefilled from the QR). After
+connecting, students see the analysis tools — concordance, frequency,
+collocation, keyness, dispersion, n-grams, POS, grammar, dependency,
+discourse, Vector KWIC, the learner suite, Arabic tools, and the AI
+assistant — over the teacher's corpora, with a clear "Student Mode"
+status and a Source Code link (the app is AGPL-3.0; students on a network
+are entitled to the source). To leave, use Exit Student Mode or open the
+link with `?mode=teacher`.
+
+**Security notes.** The classroom server binds to your machine only; the
+bundled proxy stamps proxied requests and the engine refuses any
+classroom traffic without a valid teacher or student token. Anyone with
+the student token can read your corpora and run analyses — that is the
+point of a classroom — so share the QR only with your class and rotate
+tokens between groups. On untrusted networks, prefer Secure mode.
 
 ---
 

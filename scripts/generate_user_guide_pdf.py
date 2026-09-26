@@ -229,7 +229,7 @@ def build_pdf(md_path, pdf_path, is_arabic=False):
     story.append(meta_table)
     story.append(Spacer(1, 1 * cm))
 
-    story.append(Paragraph("v1.2.8", style_cover_label))
+    story.append(Paragraph("v1.2.9", style_cover_label))
     story.append(Spacer(1, 0.5 * cm))
     story.append(Paragraph("Dr. Waleed Mandour", style_cover_author))
     story.append(Paragraph("Sultan Qaboos University | ORCID: 0000-0002-9262-5993", style_cover_author))
@@ -320,7 +320,7 @@ def build_pdf(md_path, pdf_path, is_arabic=False):
             canvas.setFont("LibMono", 7)
             canvas.setFillColor(TEXT_MUTED)
             canvas.drawCentredString(A4[0] / 2, 1.2 * cm,
-                f"CORPUSMIND / v1.2.8 / USER GUIDE / PAGE {page_num - 1}")
+                f"CORPUSMIND / v1.2.9 / USER GUIDE / PAGE {page_num - 1}")
             # Top accent line
             canvas.setStrokeColor(BRAND)
             canvas.setLineWidth(1)
@@ -351,7 +351,7 @@ def build_pdf(md_path, pdf_path, is_arabic=False):
             canvas.setFont("LibMono", 7)
             canvas.setFillColor(TEXT_MUTED)
             canvas.drawCentredString(A4[0] / 2, 1.2 * cm,
-                f"CORPUSMIND / v1.2.8 / USER GUIDE / PAGE {canvas.getPageNumber() - 1}")
+                f"CORPUSMIND / v1.2.9 / USER GUIDE / PAGE {canvas.getPageNumber() - 1}")
             canvas.setStrokeColor(BRAND)
             canvas.setLineWidth(1)
             canvas.line(2.5 * cm, A4[1] - 1.5 * cm, A4[0] - 2.5 * cm, A4[1] - 1.5 * cm)
@@ -364,9 +364,9 @@ def build_pdf(md_path, pdf_path, is_arabic=False):
         rightMargin=2.5 * cm,
         topMargin=2.5 * cm,
         bottomMargin=2.5 * cm,
-        title="CorpusMind User Guide v1.2.8",
+        title="CorpusMind User Guide v1.2.9",
         author="Dr. Waleed Mandour and Prof. Wesam Ibrahim",
-        subject="User Guide for CorpusMind v1.2.8",
+        subject="User Guide for CorpusMind v1.2.9",
         creator="CorpusMind",
     )
 
@@ -376,7 +376,7 @@ def build_pdf(md_path, pdf_path, is_arabic=False):
 if __name__ == "__main__":
     _repo = Path(__file__).resolve().parent.parent
     md_path = _repo / "docs" / "USER_GUIDE.md"
-    pdf_path = _repo / "download" / "CorpusMind_User_Guide_v1.2.8.pdf"
+    pdf_path = _repo / "download" / "CorpusMind_User_Guide_v1.2.9.pdf"
     build_pdf(md_path, pdf_path)
     print(f"PDF generated: {pdf_path}")
     import os

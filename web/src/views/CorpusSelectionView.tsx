@@ -186,6 +186,9 @@ function CorpusListPanel({ mode }: { mode: CorpusMode }) {
   const qc = useQueryClient();
   const isReference = mode === "reference";
   const lang = useUI((s) => s.lang);
+  // v1.2.9 Student Mode: read-only corpus list — no create/delete affordances
+  // (the engine's student allowlist denies them anyway; this mirrors it).
+  const studentClient = useUI((s) => s.studentClient);
   const activeCorpusId = useApp((s) => isReference ? s.referenceCorpusId : s.activeCorpusId);
   const setActive = useApp((s) => isReference ? s.setReferenceCorpus : s.setActiveCorpus);
   const activeProjectId = useApp((s) => s.activeProjectId);
@@ -213,7 +216,7 @@ function CorpusListPanel({ mode }: { mode: CorpusMode }) {
     <section className="corpus-panel">
       <header className="corpus-panel-header">
         <h2>{isReference ? "Reference Corpora" : "Your Corpora"}</h2>
-        {activeProjectId && (
+        {activeProjectId && !studentClient && (
           <NewCorpusDialog
             onCreate={(name, lang, genre, l1, proficiency) => {
               // v1.2.0: optional learner facets (L1 + CEFR proficiency) passed
@@ -264,9 +267,11 @@ function CorpusListPanel({ mode }: { mode: CorpusMode }) {
                 v1.2.1: the bare ✕ glyph read as "close/unload" and looked
                 unprofessional next to the Active/Reference badge — replaced
                 with an explicit, labelled Delete button (same confirm flow,
-                same action, localised via the shared `delete` key). */}
-            <button
-              className="corpus-delete-btn"
+                same action, localised via the shared `delete` key).
+                v1.2.9: hidden from student clients entirely. */}
+            {c.id === activeCorpusId && !studentClient && (
+              <button
+                className="corpus-delete-btn"
               title={isReference
                 ? "Delete this reference corpus - cannot be undone"
                 : "Delete this corpus (and all its documents) - cannot be undone"}
@@ -282,10 +287,11 @@ function CorpusListPanel({ mode }: { mode: CorpusMode }) {
             >
               {t(lang, "delete")}
             </button>
+            )}
           </li>
         ))}
         {corpora.data?.length === 0 && activeProjectId && (
-          <li className="corpus-empty">No corpora yet. Click "+ New" to create one.</li>
+          <li className="corpus-empty">{studentClient ? "No corpora yet — ask your teacher to add one." : "No corpora yet. Click \"+ New\" to create one."}</li>
         )}
       </ul>
 
@@ -363,25 +369,33 @@ function CorpusStatsDashboard({ cid }: { cid: string }) {
 function CorpusActionsPanel({ mode }: { mode: CorpusMode }) {
   const isReference = mode === "reference";
   const activeCorpusId = useApp((s) => isReference ? s.referenceCorpusId : s.activeCorpusId);
+  // v1.2.9 Student Mode: students get the read-only document list only.
+  const studentClient = useUI((s) => s.studentClient);
 
   return (
     <section className="corpus-panel">
       <header className="corpus-panel-header">
-        <h2>{isReference ? "Add Reference Corpus" : "Upload & Manage"}</h2>
+        <h2>{isReference ? "Add Reference Corpus" : studentClient ? "Documents" : "Upload & Manage"}</h2>
       </header>
 
       {isReference ? (
-        <ReferenceCorpusOptions />
+        studentClient ? (
+          <div className="corpus-empty">
+            The teacher manages the reference corpora in Student Mode.
+          </div>
+        ) : (
+          <ReferenceCorpusOptions />
+        )
       ) : (
         activeCorpusId ? (
           <>
             {/* v1.0.7: the Tagset card moves BEFORE the file list / uploader —
                 corpus-construction norm: pick the annotation scheme first,
                 then upload/tag/parse against it. */}
-            <TagsetSelector cid={activeCorpusId} />
-            <DocumentUploader cid={activeCorpusId} />
+            {!studentClient && <TagsetSelector cid={activeCorpusId} />}
+            {!studentClient && <DocumentUploader cid={activeCorpusId} />}
             <DocumentList cid={activeCorpusId} />
-            <CleanCorpusButton cid={activeCorpusId} />
+            {!studentClient && <CleanCorpusButton cid={activeCorpusId} />}
           </>
         ) : (
           <div className="corpus-empty">

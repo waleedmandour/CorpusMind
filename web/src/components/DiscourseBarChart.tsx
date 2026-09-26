@@ -8,14 +8,21 @@
  *   frequency for lenses that report an index instead, e.g. persuasion,
  *   which uses the radar instead of this chart). Bars are colored by the
  *   taxonomy's discourse group when the engine provides one.
- * - Compare mode: one diverging bar per category around a zero axis,
- *   length proportional to Log Ratio (Hardie 2014, log2 effect size):
- *   right = more frequent in the target corpus, left = more frequent in
- *   the reference corpus. Each category label sits on the OPPOSITE side
- *   of its bar's direction (bar right -> text left, and vice versa) so a
- *   growing bar can never paint over its own text. Categories with an
- *   undefined Log Ratio (absent from one side) are listed separately
- *   below the chart.
+ * - Compare mode (v1.2.9): TWO views, both requested in review round 3:
+ *   1. Grouped target-vs-reference bars (green = target, purple =
+ *      reference) on the shared per-million scale — the "which corpus
+ *      uses more of what" picture;
+ *   2. The diverging Log-Ratio bars around a zero axis (green = more
+ *      frequent in the target, red = more frequent in the reference) —
+ *      the effect-size picture. Each category label sits on the OPPOSITE
+ *      side of its bar's direction (bar right -> text left, and vice
+ *      versa) so a growing bar can never paint over its own text.
+ *   Categories with an undefined Log Ratio (absent from one side) are
+ *   listed separately below the divergence chart.
+ *
+ * Comparison palette (v1.2.9, applies app-wide): target = green
+ * (--bar-positive), reference = purple (--tool5-accent); divergence =
+ * green/red (--bar-positive/--bar-negative). All theme-aware.
  *
  * Pure inline SVG, no chart dependency — consistent with the repo's
  * offline-first PWA stance and the PersuasionRadar approach.
@@ -38,6 +45,15 @@ const GROUP_PALETTE = [
   "var(--tool8-accent)",
 ];
 
+// v1.2.9 comparison palette — target vs reference and divergence colors
+// shared by every comparison visual (Discourse grouped + diverging bars,
+// Keyness effect-size chips). Theme-aware tokens, tuned for WCAG contrast
+// in both light and dark themes (see global.css --bar-* tokens).
+export const COMPARE_TARGET_COLOR = "var(--bar-positive)"; // green
+export const COMPARE_REFERENCE_COLOR = "var(--tool5-accent)"; // purple
+export const COMPARE_DIVERGE_POS = "var(--bar-positive)"; // green: target over-use
+export const COMPARE_DIVERGE_NEG = "var(--bar-negative)"; // red: reference over-use
+
 export interface DiscourseChartRow {
   cat: string;
   info: DiscourseCategory;
@@ -58,7 +74,12 @@ export function DiscourseBarChart({ rows, hasCompare }: { rows: DiscourseChartRo
   if (rows.length === 0) return null;
 
   if (hasCompare) {
-    return <DivergingChart rows={rows} lang={lang} />;
+    return (
+      <>
+        <GroupedCompareChart rows={rows} lang={lang} />
+        <DivergingChart rows={rows} lang={lang} />
+      </>
+    );
   }
   return <SingleCorpusChart rows={rows} lang={lang} />;
 }
@@ -137,6 +158,97 @@ function SingleCorpusChart({ rows, lang }: { rows: DiscourseChartRow[]; lang: La
   );
 }
 
+/**
+ * v1.2.9: grouped target-vs-reference bars on the shared per-million
+ * scale. Green = target corpus, purple = reference corpus. Falls back to
+ * null when the engine didn't send reference rates (pre-1.2.9 response).
+ */
+function GroupedCompareChart({ rows, lang }: { rows: DiscourseChartRow[]; lang: Lang }) {
+  const valued = rows
+    .map((r) => ({
+      cat: r.cat,
+      target: r.info.per_million ?? 0,
+      reference: r.info.ref_per_million,
+      hasRef: r.info.ref_per_million != null && Number.isFinite(r.info.ref_per_million),
+    }))
+    .filter((r) => r.hasRef && Number.isFinite(r.target));
+  if (valued.length === 0) return null;
+
+  const max = Math.max(...valued.flatMap((r) => [r.target, r.reference ?? 0]), 0.000001);
+
+  const LABEL_W = 190;
+  const VALUE_W = 64;
+  const ROW_H = 24;
+  const W = 640;
+  const H = valued.length * ROW_H + 26;
+  const barMax = W - LABEL_W - VALUE_W;
+  const BAR_H = 6;
+
+  return (
+    <figure className="discourse-chart-wrap">
+      <figcaption className="discourse-chart-title">
+        {t(lang, "discourse_chart_title_grouped")}
+      </figcaption>
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        width="100%"
+        role="img"
+        aria-label={t(lang, "discourse_chart_title_grouped")}
+      >
+        {valued.map((r, i) => {
+          const y = i * ROW_H + 20;
+          const wT = Math.max(1.5, ((r.target ?? 0) / max) * barMax);
+          const wR = Math.max(1.5, ((r.reference ?? 0) / max) * barMax);
+          const label = r.cat.startsWith("pi.") ? r.cat.split(".").slice(2).join(".") : r.cat;
+          return (
+            <g key={r.cat}>
+              <text x={LABEL_W - 8} y={y + 11} textAnchor="end" className="discourse-chart-label">
+                <title>{label}</title>
+                {truncateLabel(label, 30)}
+              </text>
+              {/* target bar (green) — top of the pair */}
+              <rect
+                x={LABEL_W}
+                y={y}
+                width={wT}
+                height={BAR_H}
+                rx="2"
+                fill={COMPARE_TARGET_COLOR}
+              >
+                <title>{`${label} — ${t(lang, "discourse_chart_target")}: ${fmt(r.target)}`}</title>
+              </rect>
+              {/* reference bar (purple) — bottom of the pair */}
+              <rect
+                x={LABEL_W}
+                y={y + BAR_H + 2}
+                width={wR}
+                height={BAR_H}
+                rx="2"
+                fill={COMPARE_REFERENCE_COLOR}
+              >
+                <title>{`${label} — ${t(lang, "discourse_chart_reference")}: ${fmt(r.reference ?? 0)}`}</title>
+              </rect>
+              <text x={LABEL_W + Math.max(wT, wR) + 6} y={y + 12} className="discourse-chart-value">
+                {fmt(r.target)}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+      <div className="discourse-chart-legend">
+        <span className="pi-legend-item">
+          <span className="pi-legend-swatch" style={{ background: COMPARE_TARGET_COLOR }} />
+          {t(lang, "discourse_chart_target")}
+        </span>
+        <span className="pi-legend-item">
+          <span className="pi-legend-swatch" style={{ background: COMPARE_REFERENCE_COLOR }} />
+          {t(lang, "discourse_chart_reference")}
+        </span>
+      </div>
+    </figure>
+  );
+}
+
 function DivergingChart({ rows, lang }: { rows: DiscourseChartRow[]; lang: Lang }) {
   const withLr = rows
     .map((r) => ({ cat: r.cat, lr: r.info.log_ratio ?? null }))
@@ -183,13 +295,15 @@ function DivergingChart({ rows, lang }: { rows: DiscourseChartRow[]; lang: Lang 
                 <title>{label}</title>
                 {truncateLabel(label, 34)}
               </text>
+              {/* v1.2.9: divergence palette — green = target over-use,
+                  red = reference over-use (was green/teal). */}
               <rect
                 x={positive ? midX + 2 : midX - 2 - w}
                 y={y + 2}
                 width={w}
                 height={ROW_H - 7}
                 rx="2"
-                fill={positive ? "var(--brand-500)" : "var(--tool6-accent)"}
+                fill={positive ? COMPARE_DIVERGE_POS : COMPARE_DIVERGE_NEG}
               />
               <text
                 x={positive ? midX + w + 10 : midX - w - 10}
@@ -205,11 +319,11 @@ function DivergingChart({ rows, lang }: { rows: DiscourseChartRow[]; lang: Lang 
       </svg>
       <div className="discourse-chart-legend">
         <span className="pi-legend-item">
-          <span className="pi-legend-swatch" style={{ background: "var(--brand-500)" }} />
+          <span className="pi-legend-swatch" style={{ background: COMPARE_DIVERGE_POS }} />
           {t(lang, "discourse_chart_more_target")}
         </span>
         <span className="pi-legend-item">
-          <span className="pi-legend-swatch" style={{ background: "var(--tool6-accent)" }} />
+          <span className="pi-legend-swatch" style={{ background: COMPARE_DIVERGE_NEG }} />
           {t(lang, "discourse_chart_more_reference")}
         </span>
       </div>

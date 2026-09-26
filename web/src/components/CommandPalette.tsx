@@ -24,6 +24,9 @@ export function CommandPalette() {
 
   const actions = useMemo<Action[]>(() => {
     // v1.2.1: the Lens-mode nav filter is gone (Lens lives in its own repo).
+    // v1.2.9 Student Mode: the Settings action mirrors the Sidebar's student
+    // filter — the classroom client never offers teacher-only surfaces.
+    const student = ui.studentClient;
     return [
       { id: "nav.home", label: "Go to Home", run: () => ui.setActiveNav("home") },
       { id: "nav.corpus-target", label: "Go to Your Corpus", run: () => ui.setActiveNav("corpus-target") },
@@ -47,7 +50,7 @@ export function CommandPalette() {
       { id: "nav.learner-errors", label: "Go to Error Patterns", run: () => ui.setActiveNav("learner-errors" as any) },
       { id: "nav.arabic", label: "Go to Arabic Tools", run: () => ui.setActiveNav("arabic" as any) },
       { id: "nav.assistant", label: "Go to AI Assistant", run: () => ui.setActiveNav("assistant") },
-      { id: "nav.settings", label: "Go to Settings", run: () => ui.setActiveNav("settings") },
+      ...(student ? [] : [{ id: "nav.settings", label: "Go to Settings", run: () => ui.setActiveNav("settings") }]),
       { id: "nav.userguide", label: "Go to User Guide", run: () => ui.setActiveNav("userguide") },
       { id: "nav.about", label: "Go to About", run: () => ui.setActiveNav("about") },
       { id: "theme.light", label: "Theme: Light", run: () => ui.setTheme("light") },

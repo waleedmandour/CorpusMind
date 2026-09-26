@@ -71,6 +71,24 @@ if (Test-Path $wfDir) {
     $Failures += "missing wordfreq data directory"
 }
 
+# v1.2.9 Student Mode classroom stack (hard content gate): the PWA build
+# Caddy serves + the Caddy sidecar binary itself.
+$webDist = Join-Path $InternalDir "web-dist\index.html"
+if (Test-Path $webDist) {
+    Write-Host "[smoke] OK   web-dist\index.html (student PWA bundle)"
+} else {
+    Write-Host "[smoke] MISS web-dist\index.html" -ForegroundColor Red
+    $Failures += "missing web-dist\index.html (Student Mode cannot serve students)"
+}
+$caddyBin = Join-Path $InternalDir "caddy\caddy.exe"
+if (Test-Path $caddyBin) {
+    $caddyVersion = (& $caddyBin version 2>$null | Select-Object -First 1)
+    Write-Host "[smoke] OK   caddy sidecar present ($caddyVersion)"
+} else {
+    Write-Host "[smoke] MISS caddy\caddy.exe" -ForegroundColor Red
+    $Failures += "missing caddy\caddy.exe (Student Mode cannot start)"
+}
+
 if ($WarnFile -and (Test-Path $WarnFile)) {
     $warn = Get-Content $WarnFile
     $bad = $warn | Where-Object { $_ -match "hidden import '(persuasion_index|persuasion_profile|persuasion_runner|PI_score_generator|pi_config|helper_features|wordfreq|vaderSentiment|pandas)" }

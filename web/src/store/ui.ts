@@ -43,6 +43,15 @@ interface UIState {
    * their own interpretation. Prevents over-reliance while still
    * teaching the tools. Persisted to localStorage. */
   studentMode: boolean;
+  /** v1.2.9 Student Mode (classroom client): the PWA was opened with
+   * ?mode=student (teacher-as-server). NOT persisted — re-derived from
+   * the URL/localStorage student session on every load, so escaping the
+   * mode is always one clear step (Disconnect) away. */
+  studentClient: boolean;
+  /** Whether the student client is connected to the classroom server. */
+  studentConnected: boolean;
+  setStudentClient: (on: boolean) => void;
+  setStudentConnected: (on: boolean) => void;
   setTheme: (t: Theme) => void;
   toggleTheme: () => void;
   setDir: (d: Dir) => void;
@@ -89,6 +98,8 @@ export const useUI = create<UIState>()(
       },
       sidebarCollapsed: false,
       studentMode: false,
+      studentClient: false,
+      studentConnected: false,
       setTheme: (theme) => set({ theme }),
       toggleTheme: () => {
         const current = get().theme;
@@ -126,6 +137,8 @@ export const useUI = create<UIState>()(
       toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
       setSidebarCollapsed: (sidebarCollapsed) => set({ sidebarCollapsed }),
       setStudentMode: (studentMode) => set({ studentMode }),
+      setStudentClient: (studentClient) => set({ studentClient }),
+      setStudentConnected: (studentConnected) => set({ studentConnected }),
     }),
     {
       name: "corpusmind-ui",
@@ -142,8 +155,10 @@ export const useUI = create<UIState>()(
       partialize: (state) => {
         // activeNav is never persisted — the app must open on its default
         // view (Home) at every launch (see version note above).
-        const { activeNav, ...rest } = state;
+        const { activeNav, studentClient, studentConnected, ...rest } = state;
         void activeNav;
+        void studentClient;
+        void studentConnected;
         return rest;
       },
     },

@@ -37,6 +37,7 @@ import { useUI } from "@/store/ui";
 import { useApp } from "@/store/app";
 import { t } from "@/lib/i18n";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { StudentModeServerCard } from "@/components/StudentModeServerCard";
 
 export function SettingsView() {
   const qc = useQueryClient();
@@ -587,6 +588,9 @@ export function SettingsView() {
       {/* v1.0.1: Stopword lists manager */}
       <StopwordListsCard />
 
+      {/* v1.2.9 Student Mode — classroom server (teacher-as-server) */}
+      <StudentModeServerCard />
+
       {/* Research + Reproducibility card */}
       <ResearchCard />
     </div>
@@ -595,6 +599,7 @@ export function SettingsView() {
 
 
 function ResearchCard() {
+  const lang = useUI((s) => s.lang);
   const studentMode = useUI((s) => s.studentMode);
   const setStudentMode = useUI((s) => s.setStudentMode);
   const activeCorpusId = useApp((s) => s.activeCorpusId);
@@ -626,15 +631,13 @@ function ResearchCard() {
           </div>
         </div>
         <div className="settings-card-body">
-          {/* Student mode toggle */}
+          {/* Guided student mode toggle (v1.2.9 renamed to distinguish it
+              from the classroom server card above) */}
           <div className="student-mode-row">
             <div>
-              <strong>Student Mode</strong>
+              <strong>{t(lang, "sm_guided_title")}</strong>
               <p className="settings-text-muted">
-                When ON, the AI Assistant hides its interpretation until the
-                student writes their own. Prevents over-reliance while still
-                teaching the tools. The student can then compare their
-                interpretation with the AI&apos;s for learning.
+                {t(lang, "sm_guided_hint")}
               </p>
             </div>
             <label className="toggle-switch">

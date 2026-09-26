@@ -48,8 +48,8 @@ cargo tauri build
 
 The installers will be in:
 ```
-desktop\src-tauri\target\release\bundle\msi\CorpusMind_0.1.0_x64_en-US.msi
-desktop\src-tauri\target\release\bundle\nsis\CorpusMind_0.1.0_x64-setup.exe
+desktop\src-tauri\target\release\bundle\msi\CorpusMind_1.2.9_x64_en-US.msi
+desktop\src-tauri\target\release\bundle\nsis\CorpusMind_1.2.9_x64-setup.exe
 ```
 
 ### Windows Notes
@@ -104,7 +104,7 @@ cargo tauri build
 The installers will be in:
 ```
 desktop/src-tauri/target/release/bundle/macos/CorpusMind.app
-desktop/src-tauri/target/release/bundle/dmg/CorpusMind_0.1.0_aarch64.dmg
+desktop/src-tauri/target/release/bundle/dmg/CorpusMind_1.2.9_aarch64.dmg
 ```
 
 ### macOS Notes
@@ -130,7 +130,7 @@ desktop/src-tauri/target/release/bundle/dmg/CorpusMind_0.1.0_aarch64.dmg
 Once you have the built installers, upload them to the release:
 
 1. Go to: https://github.com/waleedmandour/CorpusMind/releases
-2. Click "Draft a new release" or edit the existing v0.1.0 release
+2. Click "Draft a new release" or edit the existing v1.2.9 release
 3. Drag and drop your built files into the "Attach binaries" area
 4. Click "Publish release" or "Update release"
 
@@ -138,8 +138,8 @@ Once you have the built installers, upload them to the release:
 
 | Platform | File to Upload |
 |----------|---------------|
-| Windows | `CorpusMind_0.1.0_x64_en-US.msi` and/or `CorpusMind_0.1.0_x64-setup.exe` |
-| macOS | `CorpusMind_0.1.0_aarch64.dmg` |
+| Windows | `CorpusMind_1.2.9_x64_en-US.msi` and/or `CorpusMind_1.2.9_x64-setup.exe` |
+| macOS | `CorpusMind_1.2.9_aarch64.dmg` |
 
 ---
 

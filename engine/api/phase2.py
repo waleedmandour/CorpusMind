@@ -374,6 +374,17 @@ async def persuasion_health() -> dict:
 
     resources = check_resources()
     missing = missing_resources()
+
+    # v1.2.9: per-resource "how to enable" metadata — the env var
+    # persuasion-index honours, the canonical filename, the official
+    # source, and the license note. The four data-backed resources are
+    # license-restricted (never bundled), so the panel must be able to
+    # teach the user exactly how to turn each one on.
+    from app.settings import get_settings
+    from discourse.pi_resources import install_hints, resources_dir_hint
+
+    _settings = get_settings()
+
     return {
         "installed": True,
         "version": version,
@@ -388,6 +399,9 @@ async def persuasion_health() -> dict:
         "complete": len(missing) == 0,
         "missing": missing,
         "resources": resources,
+        # v1.2.9: install guidance for license-restricted optional resources.
+        "resources_dir": resources_dir_hint(_settings),
+        "install_hints": install_hints(_settings),
         "citation": PERSUASION_CITATION,
     }
 
