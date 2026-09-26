@@ -18,6 +18,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.logging import get_logger
+from nlp.ud_relations import base_relation
 from stats.measures import (
     chi2_min_expected,
     gries_dp,
@@ -959,6 +960,23 @@ def discourse_taxonomy_list() -> list[dict]:
             "categories": sorted(USAS_DISCOURSE_GROUPS.keys()),
         }
     )
+    # v1.2.7 (§2): SFG transitivity & modality lens (parse-driven).
+    items.append(
+        {
+            "key": SFG_TAXONOMY_KEY,
+            "name": "SFG Transitivity & Modality (Halliday & Matthiessen 2014)",
+            "citation": SFG_CITATION,
+            "categories": sorted(
+                [
+                    "transitivity.material", "transitivity.mental",
+                    "transitivity.relational", "transitivity.behavioural",
+                    "transitivity.verbal", "transitivity.existential",
+                    "modality.probability", "modality.usuality",
+                    "modality.obligation", "modality.inclination",
+                ]
+            ),
+        }
+    )
     return items
 
 
@@ -1148,11 +1166,16 @@ async def compute_discourse_analysis(
             session, corpus_id, limit_examples=limit_examples,
             compare_corpus_id=compare_corpus_id,
         )
+    if key == SFG_TAXONOMY_KEY:
+        return await compute_sfg_discourse_analysis(
+            session, corpus_id, limit_examples=limit_examples,
+            compare_corpus_id=compare_corpus_id,
+        )
     spec = DISCOURSE_TAXONOMIES.get(key)
     if spec is None:
         raise ValueError(
             f"Unknown discourse taxonomy: {taxonomy}. Supported: "
-            f"{[*DISCOURSE_TAXONOMIES.keys(), USAS_TAXONOMY_KEY]}"
+            f"{[*DISCOURSE_TAXONOMIES.keys(), USAS_TAXONOMY_KEY, SFG_TAXONOMY_KEY]}"
         )
 
     version_id = await _latest_version_id(session, corpus_id)
@@ -1381,6 +1404,566 @@ async def compute_usas_discourse_analysis(
         taxonomy="CLAWS/USAS semantic tagset (top-level)",
         taxonomy_key=USAS_TAXONOMY_KEY,
         citation=discourse_taxonomy_list()[-1]["citation"],
+        unmatched_percent=unmatched,
+        compare_corpus_id=compare_corpus_id if compare_total is not None else None,
+        compare_total_tokens=compare_total,
+    )
+
+
+# --------------------------------------------------------------------------- #
+# §8.13b UD v2 syntax upgrade (v1.2.7, §2)
+#
+# Three additions over the basic dependency queries above, all computed
+# from the SAME parses (no new pipeline):
+#   1. ud_profile      — the 37 universal relations profiled by functional
+#                        group (nlp/ud_relations.py inventory)
+#   2. valency_frames  — argument-frame profiles for one verb lemma
+#   3. sentence_tree   — raw head/rel tokens for one sentence, rendered
+#                        as a displaCy-style arc diagram in the UI
+# --------------------------------------------------------------------------- #
+
+
+@dataclass
+class UDProfileResult:
+    total_relations: int
+    relations: list[dict]  # [{relation, group, group_label, description, freq, per_million}]
+    groups: list[dict]     # [{group, label, freq, percent}]
+    citation: str = (
+        "Nivre, J., de Marneffe, M.-C., Ginter, F., Hajič, J., Manning, C.D., "
+        "Pyysalo, S., Schuster, S., Tyers, F., & Zeman, D. (2020). Universal "
+        "Dependencies v2: An evolving multilingual treebank collection. "
+        "LREC 2020. https://universaldependencies.org"
+    )
+
+
+async def compute_ud_profile(session: AsyncSession, corpus_id: str) -> UDProfileResult:
+    """Profile the corpus over the 37 UD v2 universal relations, grouped by
+    grammatical function. Subtypes collapse onto their base relation
+    (``nsubj:pass`` → ``nsubj``) — the universal inventory's own rule."""
+    from nlp.ud_relations import UD_RELATION_GROUPS, UD_RELATION_INFO, base_relation
+
+    version_id = await _latest_version_id(session, corpus_id)
+    if not version_id:
+        return UDProfileResult(total_relations=0, relations=[], groups=[])
+
+    sentences = await _load_parses(session, version_id)
+    rel_counts: Counter = Counter()
+    for sent in sentences:
+        for tok in sent:
+            if (tok.get("pos") or "") == "SPACE":
+                continue
+            base = base_relation(tok.get("rel"))
+            if base:
+                rel_counts[base] += 1
+
+    total = sum(rel_counts.values())
+    relations = [
+        {
+            "relation": rel,
+            "group": info[0],
+            "group_label": UD_RELATION_GROUPS.get(info[0], info[0]),
+            "description": info[1],
+            "freq": freq,
+            "per_million": round(freq / total * 1_000_000, 2) if total else 0.0,
+        }
+        for rel, freq in rel_counts.most_common()
+        if (info := UD_RELATION_INFO.get(rel))
+    ]
+
+    group_counts: Counter = Counter()
+    for rel, freq in rel_counts.items():
+        info = UD_RELATION_INFO.get(rel)
+        if info:
+            group_counts[info[0]] += freq
+    groups = [
+        {
+            "group": g,
+            "label": UD_RELATION_GROUPS.get(g, g),
+            "freq": freq,
+            "percent": round(freq / total * 100, 2) if total else 0.0,
+        }
+        for g, freq in group_counts.most_common()
+    ]
+    return UDProfileResult(total_relations=total, relations=relations, groups=groups)
+
+
+# Relations treated as arguments/complements when building valency frames.
+_VALENCY_SLOT_RELS = {"nsubj", "csubj", "obj", "iobj", "ccomp", "xcomp", "obl"}
+
+
+@dataclass
+class ValencyResult:
+    lemma: str
+    total_occurrences: int  # times the lemma is the HEAD of a dependency
+    frames: list[dict]      # [{frame, freq, percent, examples}]
+    obliques: list[dict]    # [{prep, freq}] — case-markers of its obl children
+    citation: str = (
+        "Frames are observed argument combinations (nsubj/obj/iobj/xcomp/"
+        "ccomp/obl) of the lemma as dependency head. Cf. the UD v2 valency "
+        "pattern work: Nivre et al. (2020), https://universaldependencies.org"
+    )
+
+
+async def compute_valency_frames(
+    session: AsyncSession,
+    corpus_id: str,
+    *,
+    lemma: str,
+    limit: int = 20,
+) -> ValencyResult:
+    """Observed argument frames for one verb lemma (§2 valency).
+
+    A frame is the sorted set of argument/complement relations realized by
+    the lemma's children in a single occurrence (e.g. ``nsubj+obj``). The
+    oblique's case-marker (preposition) is tracked separately rather than
+    inside the frame string, so ``obl`` frames stay comparable.
+    """
+    target = (lemma or "").strip().lower()
+    if not target:
+        raise ValueError("lemma is required")
+
+    version_id = await _latest_version_id(session, corpus_id)
+    if not version_id:
+        return ValencyResult(lemma=target, total_occurrences=0, frames=[], obliques=[])
+
+    sentences = await _load_parses(session, version_id)
+    frame_counts: Counter = Counter()
+    frame_examples: dict[str, list[str]] = defaultdict(list)
+    obl_preps: Counter = Counter()
+    total_heads = 0
+
+    for sent in sentences:
+        for tok in sent:
+            if (tok.get("lemma") or "").lower() != target:
+                continue
+            rel_base = base_relation(tok["rel"]) if tok.get("rel") else ""
+            # dep_head is 1-based within the sentence; token_idx is 0-based
+            # (ingestion stores enumerate() positions). A self-head is an
+            # alternative root encoding seen in some parse paths.
+            is_root = rel_base == "root" or tok.get("head") == tok["idx"] + 1
+            if tok.get("rel") and rel_base not in ("", "root") and not is_root:
+                continue
+            head_idx = tok["idx"]
+            # children point at the head's 1-based position == idx + 1
+            children = [t for t in sent if t.get("head") == head_idx + 1 and t is not tok]
+            if not children:
+                continue
+            total_heads += 1
+            slots: list[str] = []
+            prep = ""
+            for child in children:
+                base = base_relation(child.get("rel"))
+                if base == "case":
+                    # ClearNLP parses hang the preposition directly off the
+                    # verb (prep) with the oblique noun as ITS child (pobj).
+                    prep = (child.get("text") or "").lower()
+                    slots.append("obl")
+                elif base == "obl":
+                    # UD-style parse: obl child; case marker is ITS child.
+                    prep = _obl_case_marker(sent, child)
+                    slots.append("obl")
+                elif base in _VALENCY_SLOT_RELS:
+                    slots.append(base)
+            slots = [s for s in slots if s != "obl" or "obl" not in slots[: slots.index(s)]]
+            if not slots:
+                continue
+            frame = "+".join(sorted(set(slots)))
+            frame_counts[frame] += 1
+            if len(frame_examples[frame]) < 3:
+                frame_examples[frame].append(f"{tok['doc']}:{tok['sent']}")
+            if prep:
+                obl_preps[prep] += 1
+
+    frames = [
+        {
+            "frame": frame,
+            "freq": freq,
+            "percent": round(freq / total_heads * 100, 2) if total_heads else 0.0,
+            "examples": frame_examples[frame],
+        }
+        for frame, freq in frame_counts.most_common(limit)
+    ]
+    obliques = [
+        {"prep": prep, "freq": freq}
+        for prep, freq in obl_preps.most_common(10)
+    ]
+    return ValencyResult(lemma=target, total_occurrences=total_heads, frames=frames, obliques=obliques)
+
+
+def _obl_case_marker(sent: list[dict], obl_tok: dict) -> str:
+    """Lowercase surface form of an oblique's ``case`` child (preposition),
+    or '' when the obl is case-marked morphologically (no case child)."""
+    for child in sent:
+        if child.get("head") == obl_tok["idx"] + 1 and base_relation(child.get("rel")) == "case":
+            return (child.get("text") or "").lower()
+    return ""
+
+
+@dataclass
+class SentenceListResult:
+    total_sentences: int
+    items: list[dict]  # [{doc, sent, token_count, preview}]
+
+
+async def list_corpus_sentences(
+    session: AsyncSession,
+    corpus_id: str,
+    *,
+    limit: int = 30,
+    offset: int = 0,
+) -> SentenceListResult:
+    """Paginated sentence index for the syntax-tree picker."""
+    version_id = await _latest_version_id(session, corpus_id)
+    if not version_id:
+        return SentenceListResult(total_sentences=0, items=[])
+
+    sentences = await _load_parses(session, version_id)
+    # Deterministic order: (doc, sent)
+    sentences.sort(key=lambda s: (s[0]["doc"], s[0]["sent"]))
+    total = len(sentences)
+    items = []
+    for sent in sentences[offset : offset + limit]:
+        toks = [t for t in sent if (t.get("pos") or "") != "SPACE"]
+        items.append(
+            {
+                "doc": toks[0]["doc"] if toks else "",
+                "sent": toks[0]["sent"] if toks else 0,
+                "token_count": len(toks),
+                "preview": " ".join(t["text"] for t in toks)[:160],
+            }
+        )
+    return SentenceListResult(total_sentences=total, items=items)
+
+
+@dataclass
+class SentenceTreeResult:
+    doc: str
+    sent: int
+    tokens: list[dict]  # [{id (1-based), text, lemma, pos, head (0=root), rel, rel_base}]
+    citation: str = (
+        "Rendered from the corpus dependency parses (UD v2). See Nivre et "
+        "al. (2020), https://universaldependencies.org"
+    )
+
+
+async def compute_sentence_tree(
+    session: AsyncSession,
+    corpus_id: str,
+    *,
+    doc: str,
+    sent: int,
+) -> SentenceTreeResult:
+    """Head/rel token list for one sentence — the UI draws it as a
+    displaCy-style arc diagram (§2)."""
+    from nlp.ud_relations import base_relation
+
+    version_id = await _latest_version_id(session, corpus_id)
+    if not version_id:
+        return SentenceTreeResult(doc=doc, sent=sent, tokens=[])
+
+    sentences = await _load_parses(session, version_id)
+    for sent_tokens in sentences:
+        if not sent_tokens:
+            continue
+        if sent_tokens[0]["doc"] == doc and sent_tokens[0]["sent"] == sent:
+            toks = [t for t in sent_tokens if (t.get("pos") or "") != "SPACE"]
+            # dep_head is 1-based within the ORIGINAL sentence sequence;
+            # map original positions → sequential ids so the UI can draw
+            # arcs directly. A self-head (dep_head == own 1-based position)
+            # is treated as root (0) — some parse paths encode root that way.
+            idx_to_id = {t["idx"]: i + 1 for i, t in enumerate(toks)}
+            out = []
+            for i, t in enumerate(toks):
+                raw_head = t.get("head") or 0
+                if raw_head == t["idx"] + 1:
+                    normalized_head = 0  # self-head = root
+                elif raw_head == 0:
+                    normalized_head = 0
+                else:
+                    normalized_head = idx_to_id.get(raw_head - 1, 0)
+                out.append(
+                    {
+                        "id": i + 1,
+                        "text": t.get("text") or "",
+                        "lemma": t.get("lemma") or "",
+                        "pos": t.get("pos") or "",
+                        "head": normalized_head,
+                        "rel": t.get("rel") or "",
+                        "rel_base": base_relation(t.get("rel")),
+                    }
+                )
+            return SentenceTreeResult(doc=doc, sent=sent, tokens=out)
+    raise ValueError(f"sentence_not_found:{doc}:{sent}")
+
+
+# --------------------------------------------------------------------------- #
+# §8.15b SFG Transitivity & Modality lens (v1.2.7, §2)
+#
+# Halliday & Matthiessen (2014) transitivity process types and the
+# modality system, implemented as an HONEST lexicon+structural heuristic
+# over the dependency parses (USAS-style): process types are assigned only
+# when a lexical cue or a structural cue (copula, existential) fires, and
+# `unmatched_percent` reports the share of clauses left unassigned. This
+# is a starter heuristic, NOT the full IFG system — the citation says so.
+# --------------------------------------------------------------------------- #
+
+SFG_TAXONOMY_KEY = "sfg_hm2014"
+
+SFG_CITATION = (
+    "Halliday, M.A.K., & Matthiessen, C.M.I.M. (2014). Halliday's "
+    "Introduction to Functional Grammar (4th ed.). London: Routledge. "
+    "Process types and modality detected via a structural+lexicon starter "
+    "heuristic over dependency parses — an approximation, not the full "
+    "IFG system; unmatched clauses are reported, not force-bucketed."
+)
+
+# Verbalization processes (verbal: 'X said that ...')
+SFG_VERBAL_LEXICON = {
+    "say", "tell", "report", "state", "claim", "ask", "answer", "reply",
+    "explain", "describe", "announce", "declare", "argue", "promise",
+    "warn", "suggest", "mention", "add", "note", "demand", "request",
+}
+# Perception/cognition/affectation (mental)
+SFG_MENTAL_LEXICON = {
+    "see", "hear", "feel", "sense", "notice", "perceive", "watch", "listen",
+    "think", "know", "believe", "understand", "realise", "realize",
+    "imagine", "suppose", "guess", "doubt", "forget", "remember",
+    "want", "wish", "hope", "fear", "like", "love", "hate", "enjoy",
+    "prefer", "mind", "wonder", "expect",
+}
+# Behavioural: physiological/behavioural consciousness (between material & mental)
+SFG_BEHAVIOURAL_LEXICON = {
+    "laugh", "cry", "smile", "grin", "frown", "sigh", "breathe", "cough",
+    "sneeze", "yawn", "sleep", "wake", "stare", "glare", "gaze", "look",
+    "tremble", "shiver", "nod", "shrug", "dream", "chat", "gossip", "grumble",
+}
+# Doing & happening (material) — largest honest starter set
+SFG_MATERIAL_LEXICON = {
+    "do", "make", "take", "give", "get", "go", "come", "run", "walk", "move",
+    "carry", "bring", "put", "break", "hit", "cut", "build", "create",
+    "destroy", "send", "receive", "buy", "sell", "open", "close", "eat",
+    "drink", "cook", "write", "read", "draw", "throw", "catch", "kick",
+    "fall", "rise", "grow", "change", "increase", "decrease", "arrive",
+    "leave", "enter", "exit", "start", "stop", "continue", "finish",
+    "work", "play", "help", "kill", "die", "live", "sit", "stand", "drive",
+    "travel", "wash", "clean", "fix", "repair", "pay", "spend", "cost",
+    "lose", "find", "keep", "hold", "lift", "drop", "fill", "remove",
+}
+# Relational: attributive/identifying cues beyond the structural copula
+SFG_RELATIONAL_LEXICON = {
+    "be", "seem", "appear", "become", "remain", "stay", "look", "sound",
+    "smell", "taste", "belong", "contain", "include", "consist", "involve",
+    "represent", "constitute", "equal", "mean", "lack", "resemble", "matter",
+}
+# Modality — MODALIZATION (probability / usuality) and MODULATION
+# (obligation / inclination), per IFG ch. 4 (Halliday & Matthiessen 2014).
+SFG_MODALITY_AUX = {
+    "modality.probability": {"may", "might", "could", "will", "shall", "must"},
+    "modality.obligation": {"must", "should", "ought", "need"},
+    "modality.inclination": {},
+}
+SFG_MODALITY_ADVERB = {
+    "modality.probability": {"perhaps", "possibly", "probably", "likely", "certainly", "definitely"},
+    "modality.usuality": {"usually", "often", "always", "sometimes", "never", "seldom", "rarely", "generally", "normally"},
+}
+# Catenative inclination: verb + xcomp open clausal complement
+SFG_INCLINATION_LEXICON = {
+    "want", "wish", "intend", "decide", "agree", "refuse", "offer",
+    "promise", "manage", "fail", "try", "plan", "hope", "attempt",
+}
+
+
+@dataclass
+class SFGResult:
+    categories: dict[str, dict]  # {category: {freq, per_million, examples}}
+    total_clauses: int
+    unmatched_percent: float  # clauses with no determinate process type
+    citation: str = SFG_CITATION
+
+
+def _clause_verb_units(sent: list[dict]) -> list[dict]:
+    """Clause 'units' = the verb heading each clause: root tokens plus
+    dependents heading subordinate/coordinated clauses (conj, advcl,
+    ccomp, xcomp, acl, parataxis). Deterministic, parse-driven."""
+    clause_rels = {"conj", "advcl", "ccomp", "xcomp", "acl", "parataxis"}
+    units = []
+    for tok in sent:
+        base = base_relation(tok.get("rel")) if tok.get("rel") else ""
+        pos = tok.get("pos") or ""
+        if base == "root" or (base in clause_rels and pos in ("VERB", "AUX")):
+            units.append(tok)
+    return units
+
+
+def _children_of(sent: list[dict], tok: dict) -> list[dict]:
+    # dep_head (1-based) == token_idx (0-based) + 1
+    return [t for t in sent if t.get("head") == tok["idx"] + 1 and t is not tok]
+
+
+def _classify_process_type(sent: list[dict], verb: dict) -> str:
+    """One process-type reading per clause, structural cues first, then
+    lexicon. '' = no determinate reading (honest unmatched)."""
+    lemma = (verb.get("lemma") or "").lower()
+    children = _children_of(sent, verb)
+    child_rels = {base_relation(c.get("rel")) for c in children}
+    child_lemmas = {(c.get("lemma") or "").lower() for c in children}
+
+    # 1. existential: "there be" (expl child or 'there' subject of be)
+    if lemma == "be" and ("expl" in child_rels or "there" in child_lemmas):
+        return "transitivity.existential"
+    # 2. relational via copula (structural, strongest cue)
+    if "cop" in child_rels:
+        return "transitivity.relational"
+    # 3. lexical starter sets (verbal > mental > behavioural > material >
+    #    relational; behavioural overlaps material/mental — first match wins)
+    if lemma in SFG_VERBAL_LEXICON:
+        return "transitivity.verbal"
+    if lemma in SFG_MENTAL_LEXICON:
+        return "transitivity.mental"
+    if lemma in SFG_BEHAVIOURAL_LEXICON:
+        return "transitivity.behavioural"
+    if lemma in SFG_MATERIAL_LEXICON:
+        return "transitivity.material"
+    if lemma in SFG_RELATIONAL_LEXICON:
+        return "transitivity.relational"
+    # 4. behavioral fallback: 'there'-existential via bare be + locative obl
+    if lemma == "be" and "obl" in child_rels:
+        return "transitivity.existential"
+    return ""
+
+
+def _clause_modality_categories(sent: list[dict], verb: dict) -> list[str]:
+    """Modality readings realized inside this clause (0..n categories)."""
+    found: list[str] = []
+    children = _children_of(sent, verb)
+    lemma = (verb.get("lemma") or "").lower()
+    for child in children:
+        base = base_relation(child.get("rel"))
+        cl = (child.get("lemma") or "").lower()
+        if base == "aux" and cl:
+            for cat, lemmas in SFG_MODALITY_AUX.items():
+                if cl in lemmas and cat not in found:
+                    found.append(cat)
+        if base == "advmod" and cl:
+            for cat, lemmas in SFG_MODALITY_ADVERB.items():
+                if cl in lemmas and cat not in found:
+                    found.append(cat)
+    # inclination: catenative verb + open complement
+    if lemma in SFG_INCLINATION_LEXICON and any(
+        base_relation(c.get("rel")) == "xcomp" for c in children
+    ):
+        if "modality.inclination" not in found:
+            found.append("modality.inclination")
+    return found
+
+
+def _count_sfg_categories(
+    sentences: list[list[dict]],
+    *,
+    limit_examples: int,
+) -> tuple[Counter, dict[str, list[dict]], int, int]:
+    """SFG scan over parsed sentences (factored so the target and the
+    comparison corpus run identical detection semantics, §3-compat).
+
+    Returns (counts, examples, total_clauses, matched_clauses)."""
+    counts: Counter = Counter()
+    examples: dict[str, list[dict]] = defaultdict(list)
+    total_clauses = 0
+    matched_clauses = 0
+
+    for sent in sentences:
+        sent_lower = " ".join(t["text"].lower() for t in sent)
+        for verb in _clause_verb_units(sent):
+            total_clauses += 1
+            evidence_id = f"{verb['doc']}:{verb['sent']}:{verb['idx']}"
+            process = _classify_process_type(sent, verb)
+            if process:
+                matched_clauses += 1
+                counts[process] += 1
+                if len(examples[process]) < limit_examples:
+                    examples[process].append(
+                        {"cue": (verb.get("lemma") or "").lower(),
+                         "evidence_id": evidence_id,
+                         "sentence_preview": sent_lower[:120]}
+                    )
+            for cat in _clause_modality_categories(sent, verb):
+                counts[cat] += 1
+                if len(examples[cat]) < limit_examples:
+                    examples[cat].append(
+                        {"cue": (verb.get("lemma") or "").lower(),
+                         "evidence_id": evidence_id,
+                         "sentence_preview": sent_lower[:120]}
+                    )
+    return counts, examples, total_clauses, matched_clauses
+
+
+async def compute_sfg_discourse_analysis(
+    session: AsyncSession,
+    corpus_id: str,
+    *,
+    limit_examples: int = 5,
+    compare_corpus_id: str | None = None,
+) -> DiscourseResult:
+    """SFG Transitivity & Modality over dependency parses (v1.2.7 §2).
+
+    Clause units are the verbs heading root/subordinate/coordinated
+    clauses. Each clause contributes at most ONE process type (structural
+    existential/copula cues first, then lexicon); clauses with no firing
+    cue are counted in `unmatched_percent` instead of being force-bucketed.
+    Modality categories (probability/usuality/obligation/inclination) are
+    detected per clause and may co-occur with any process type.
+
+    Supports the same optional compare_corpus_id keyness battery as the
+    other lenses (§3).
+    """
+    version_id = await _latest_version_id(session, corpus_id)
+    if not version_id:
+        return DiscourseResult(
+            categories={}, total_tokens=0,
+            taxonomy="SFG Transitivity & Modality (Halliday & Matthiessen 2014)",
+            taxonomy_key=SFG_TAXONOMY_KEY, citation=SFG_CITATION,
+            unmatched_percent=100.0,
+        )
+
+    total_tokens = await _corpus_size(session, version_id)
+    sentences = await _load_parses(session, version_id)
+    counts, examples, total_clauses, matched_clauses = _count_sfg_categories(
+        sentences, limit_examples=limit_examples
+    )
+
+    categories: dict[str, dict] = {}
+    for cat, count in counts.most_common():
+        per_million = (count / total_tokens * 1_000_000) if total_tokens else 0.0
+        categories[cat] = {
+            "freq": count,
+            "per_million": round(per_million, 2),
+            "examples": examples[cat],
+        }
+
+    compare_total: int | None = None
+    if compare_corpus_id:
+        compare_version_id = await _latest_version_id(session, compare_corpus_id)
+        if compare_version_id:
+            compare_total = await _corpus_size(session, compare_version_id)
+            compare_sentences = await _load_parses(session, compare_version_id)
+            c_counts, _c_ex, _c_total, _c_matched = _count_sfg_categories(
+                compare_sentences, limit_examples=0
+            )
+            for cat in sorted(set(categories) | set(c_counts)):
+                row = categories.setdefault(cat, {"freq": 0, "per_million": 0.0, "examples": []})
+                row.update(
+                    _keyness_fields(
+                        row["freq"], total_tokens, c_counts.get(cat, 0), compare_total
+                    )
+                )
+
+    unmatched = round((total_clauses - matched_clauses) / total_clauses * 100, 2) if total_clauses else 0.0
+    return DiscourseResult(
+        categories=categories,
+        total_tokens=total_tokens,
+        taxonomy="SFG Transitivity & Modality (Halliday & Matthiessen 2014)",
+        taxonomy_key=SFG_TAXONOMY_KEY,
+        citation=SFG_CITATION,
         unmatched_percent=unmatched,
         compare_corpus_id=compare_corpus_id if compare_total is not None else None,
         compare_total_tokens=compare_total,

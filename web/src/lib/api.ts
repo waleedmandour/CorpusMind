@@ -772,6 +772,58 @@ export interface DiscourseResult {
   compare_total_tokens?: number | null;
 }
 
+// v1.2.7 (§2): UD v2 syntax upgrade
+export interface UDProfileResult {
+  total_relations: number;
+  relations: Array<{
+    relation: string;
+    group: string;
+    group_label: string;
+    description: string;
+    freq: number;
+    per_million: number;
+  }>;
+  groups: Array<{ group: string; label: string; freq: number; percent: number }>;
+  citation: string;
+}
+
+export interface ValencyResult {
+  lemma: string;
+  total_occurrences: number;
+  frames: Array<{ frame: string; freq: number; percent: number; examples: string[] }>;
+  obliques: Array<{ prep: string; freq: number }>;
+  citation: string;
+}
+
+export interface SentenceListItem {
+  doc: string;
+  sent: number;
+  token_count: number;
+  preview: string;
+}
+
+export interface SentenceListResult {
+  total_sentences: number;
+  items: SentenceListItem[];
+}
+
+export interface SentenceTreeToken {
+  id: number;
+  text: string;
+  lemma: string;
+  pos: string;
+  head: number; // 0 = root
+  rel: string;
+  rel_base: string;
+}
+
+export interface SentenceTreeResult {
+  doc: string;
+  sent: number;
+  tokens: SentenceTreeToken[];
+  citation: string;
+}
+
 export interface VocabBand {
   band: string;
   freq: number;
@@ -1674,6 +1726,27 @@ export const api = {
     jsonFetch<DependencyResult>(`/api/v1/corpora/${cid}/dependencies`, {
       method: "POST",
       body: JSON.stringify({ relation, limit }),
+    }),
+
+  // v1.2.7 (§2): UD v2 syntax upgrade
+  udProfile: (cid: string) =>
+    jsonFetch<UDProfileResult>(`/api/v1/corpora/${cid}/ud-profile`, { method: "POST" }),
+
+  valency: (cid: string, lemma: string) =>
+    jsonFetch<ValencyResult>(`/api/v1/corpora/${cid}/valency`, {
+      method: "POST",
+      body: JSON.stringify({ lemma }),
+    }),
+
+  sentences: (cid: string, limit = 30, offset = 0) =>
+    jsonFetch<SentenceListResult>(
+      `/api/v1/corpora/${cid}/sentences?limit=${limit}&offset=${offset}`,
+    ),
+
+  sentenceTree: (cid: string, doc: string, sent: number) =>
+    jsonFetch<SentenceTreeResult>(`/api/v1/corpora/${cid}/sentence-tree`, {
+      method: "POST",
+      body: JSON.stringify({ doc, sent }),
     }),
 
   discourse: (cid: string, taxonomy = "hyland2005", compareCorpusId?: string | null) =>

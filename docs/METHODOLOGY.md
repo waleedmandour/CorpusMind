@@ -664,3 +664,66 @@ Keyness, Vector KWIC) applies the §Phase 3 normalization (أ إ آ → ا,
 dispersion, LIX/RIX readability and the metadata facets are script-generic
 and work unchanged for Arabic; Arabic readability is reported honestly as
 LIX/RIX + descriptive length statistics (no fake "Arabic Flesch").
+
+## UD v2 syntax upgrade — new in v1.2.7 (§2)
+
+The Dependency tool gains three views computed from the **same dependency
+parses** produced at ingestion (§8.1) — no second pipeline, no re-parsing:
+
+1. **UD relation profile.** Every dependency edge in the corpus is counted
+   over the **37 UD v2 universal relations**, grouped by grammatical
+   function (core arguments, non-core arguments, nominal dependents,
+   clausal dependents, modifiers, function words, coordination, fixed
+   multiword expressions, loose joinings, punctuation, clause head).
+   Relation subtypes collapse onto their base relation (`nsubj:pass` →
+   `nsubj`), following the universal inventory's own rule.
+2. **Valency frames.** For a chosen verb lemma, the observed argument
+   frames (combinations of `nsubj/obj/iobj/xcomp/ccomp/obl` realized by
+   its children when it heads a clause), with oblique prepositions tracked
+   separately so `obl` frames stay comparable across prepositions.
+3. **Sentence tree.** One sentence's head/rel sequence, rendered in the UI
+   as a displaCy-style arc diagram (drawn in-house with SVG — no external
+   renderer, offline-safe).
+
+**Label normalization.** The bundled spaCy English models emit the
+ClearNLP/OntoNotes label scheme (`ROOT`, `dobj`, `pobj`, `prep`, `attr`,
+`acomp`, `auxpass`, `nsubjpass`, …). Profiles normalize these onto the
+universal inventory at read time — `dobj` → `obj`, `pobj` → `obl`,
+`prep` → `case`, `acomp` → `xcomp`, `attr` → `nmod`, `ROOT` → `root`,
+etc. This is a documented, *label-level* approximation: structural
+reanalysis (e.g. UD-style copula promotion) is out of scope. Unknown
+labels pass through unchanged rather than being silently dropped.
+
+**Citation:**
+
+- Nivre, J., de Marneffe, M.-C., Ginter, F., Hajič, J., Manning, C.D.,
+  Pyysalo, S., Schuster, S., Tyers, F., & Zeman, D. (2020). Universal
+  Dependencies v2: An evolving multilingual treebank collection. In
+  *Proceedings of LREC 2020*. https://universaldependencies.org
+
+## SFG Transitivity & Modality — new in v1.2.7 (§2)
+
+A sixth lens on the Discourse page implementing the transitivity process
+types and the modality system of Systemic Functional Linguistics, over
+the dependency parses:
+
+- **Transitivity process types** — material, mental, relational,
+  behavioural, verbal, existential. Clause units are the verbs heading
+  root/subordinate/coordinated clauses. Each clause receives **at most
+  one** process-type reading: structural cues first (existential *there
+  be*; copula present → relational), then lexical starter sets (verbal →
+  mental → behavioural → material → relational, in fixed priority order).
+- **Modality** — probability and usuality (modalization) and obligation
+  and inclination (modulation), detected from modal auxiliaries, modal
+  adverbs, and catenative constructions; modality may co-occur with any
+  process type in the same clause.
+- **Honest unmatched reporting.** Clauses where no cue fires are counted
+  in `unmatched_percent` instead of being force-bucketed into the closest
+  category. This is a starter heuristic — the full IFG system includes
+  circumstantial ranges, ergative analysis, and clause-complex
+  TAXESIS that no lexicon can cover.
+
+**Citation:**
+
+- Halliday, M.A.K., & Matthiessen, C.M.I.M. (2014). *Halliday's
+  Introduction to Functional Grammar* (4th ed.). London: Routledge.

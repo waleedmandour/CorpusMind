@@ -11,7 +11,7 @@ import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
 
-import { api, exportWithFeedback, type ExportFormat, type ReferenceCorpusEntry, type POSAnalysisResult, type SemanticAnalysisResult, type DiscourseCategory } from "@/lib/api";
+import { api, exportWithFeedback, type ExportFormat, type ReferenceCorpusEntry, type POSAnalysisResult, type SemanticAnalysisResult, type DiscourseCategory, type SentenceTreeToken } from "@/lib/api";
 import { useApp } from "@/store/app";
 import { useUI, type NavTarget } from "@/store/ui";
 import { t, type TranslationKey } from "@/lib/i18n";
@@ -1129,12 +1129,112 @@ function GrammarPanel({ cid }: { cid: string }) {
 }
 
 
+// v1.2.7 (§2): displaCy-style arc diagram (in-house SVG, offline-safe —
+// no external renderer dependency). Tokens sit on a baseline; every
+// non-root dependency is an arc from head to dependent with the relation
+// label on its apex. Arc height scales with head-dependent distance.
+function DependencyTreeSVG({ tokens }: { tokens: SentenceTreeToken[] }) {
+  if (tokens.length === 0) return null;
+  const CHAR_W = 7.2;
+  const PAD = 14;
+  const ARC_BASE = 46; // baseline → lowest arc apex
+  const ARC_STEP = 16; // extra height per span unit
+  const H = ARC_BASE + Math.max(1, tokens.length) * ARC_STEP + 8;
+
+  // x centers per token
+  const widths = tokens.map((t) => Math.max(28, t.text.length * CHAR_W + 10));
+  const xs: number[] = [];
+  let x = PAD;
+  for (const w of widths) {
+    xs.push(x + w / 2);
+    x += w;
+  }
+  const totalW = x + PAD;
+  const baseline = H - 22;
+
+  const arcs = tokens
+    .filter((t) => t.head > 0)
+    .map((t) => {
+      const from = xs[t.head - 1] ?? 0;
+      const to = xs[t.id - 1] ?? 0;
+      const span = Math.abs(t.head - t.id);
+      const lift = Math.min(ARC_BASE - 12, 12 + span * ARC_STEP);
+      const apex = baseline - lift;
+      const mx = (from + to) / 2;
+      return { key: `${t.id}-${t.head}`, from, to, mx, apex, label: t.rel_base || t.rel, upward: t.head < t.id };
+    });
+
+  return (
+    <div className="deptree-wrap">
+      <svg viewBox={`0 0 ${totalW} ${H}`} width="100%" role="img" aria-label="dependency tree">
+        {arcs.map((a) => (
+          <g key={a.key}>
+            <path
+              d={`M ${a.from} ${baseline - 6} Q ${a.mx} ${a.apex - 26} ${a.to} ${baseline - 6}`}
+              fill="none"
+              stroke="var(--brand-500)"
+              strokeWidth="1.4"
+            />
+            <polygon
+              points={`${a.to - 3.5},${baseline - 9} ${a.to + 3.5},${baseline - 9} ${a.to},${baseline - 4}`}
+              fill="var(--brand-500)"
+            />
+            <text x={a.mx} y={a.apex - 30} textAnchor="middle" className="deptree-label">
+              {a.label}
+            </text>
+          </g>
+        ))}
+        <line x1={PAD / 2} y1={baseline} x2={totalW - PAD / 2} y2={baseline} stroke="var(--border-strong)" strokeWidth="1" />
+        {tokens.map((t, i) => (
+          <g key={t.id}>
+            <text x={xs[i]} y={baseline + 15} textAnchor="middle" className="deptree-token">{t.text}</text>
+            <text x={xs[i]} y={baseline + 27} textAnchor="middle" className="deptree-pos">{t.pos}</text>
+          </g>
+        ))}
+      </svg>
+    </div>
+  );
+}
+
 function DependencyPanel({ cid }: { cid: string }) {
   const [relation, setRelation] = useState("nsubj");
+  const [valencyLemma, setValencyLemma] = useState("");
+  const [valencyQuery, setValencyQuery] = useState("");
+  const [selectedSentence, setSelectedSentence] = useState("");
   const result = useQuery({
     queryKey: ["dep", cid, relation],
     queryFn: () => api.dependencies(cid, relation, 100),
   });
+
+  // v1.2.7 (§2): relation profile grouped by grammatical function
+  const profile = useQuery({
+    queryKey: ["ud-profile", cid],
+    queryFn: () => api.udProfile(cid),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // v1.2.7 (§2): valency frames for one lemma
+  const valency = useQuery({
+    queryKey: ["valency", cid, valencyQuery],
+    queryFn: () => api.valency(cid, valencyQuery),
+    enabled: valencyQuery.trim().length > 0,
+  });
+
+  // v1.2.7 (§2): sentence picker + arc-diagram tree
+  const sentenceList = useQuery({
+    queryKey: ["sentences", cid],
+    queryFn: () => api.sentences(cid, 30, 0),
+    staleTime: 5 * 60 * 1000,
+  });
+  const firstItem = sentenceList.data?.items[0];
+  const treeTarget = selectedSentence || (firstItem ? `${firstItem.doc}:${firstItem.sent}` : "");
+  const [treeDoc, treeSent] = treeTarget ? treeTarget.split(/:(?=\d+$)/) : ["", "0"];
+  const tree = useQuery({
+    queryKey: ["tree", cid, treeDoc, treeSent],
+    queryFn: () => api.sentenceTree(cid, treeDoc, Number(treeSent)),
+    enabled: !!treeDoc,
+  });
+
   const exportStatus = useExportStatus();
 
   return (
@@ -1157,7 +1257,9 @@ function DependencyPanel({ cid }: { cid: string }) {
 
       <div className="grounding-notice">
         <strong>Note:</strong> Built as thin queries over the same dependency parses already
-        produced in 8.1 - not a separate pipeline.
+        produced in 8.1 - not a separate pipeline. Relation labels are normalized onto the
+        UD v2 universal inventory (37 relations) — spaCy ClearNLP labels like
+        <code> dobj</code>/<code>ROOT</code> map onto <code>obj</code>/<code>root</code> at read time.
       </div>
 
       {result.data && (
@@ -1167,6 +1269,86 @@ function DependencyPanel({ cid }: { cid: string }) {
             headers={["Governor", "Dependent", "Frequency", "Example evidence IDs"]}
             rows={result.data.rows.map((r) => [r.governor, r.dependent, r.freq, r.examples.join(" · ")])}
           />
+        </>
+      )}
+
+      {/* v1.2.7 (§2): UD v2 relation profile by functional group */}
+      {profile.data && profile.data.total_relations > 0 && (
+        <>
+          <h3>UD relation profile (37 universal relations)</h3>
+          <DataTable
+            headers={["Functional group", "Frequency", "% of relations"]}
+            rows={profile.data.groups.map((g) => [g.label, g.freq, g.percent])}
+          />
+          <details className="ud-profile-details">
+            <summary>All relations</summary>
+            <DataTable
+              headers={["Relation", "Group", "Frequency", "Per million"]}
+              rows={profile.data.relations.map((r) => [r.relation, r.group_label, r.freq, r.per_million])}
+            />
+          </details>
+          <div className="grounding-notice"><em>{profile.data.citation}</em></div>
+        </>
+      )}
+
+      {/* v1.2.7 (§2): valency frames */}
+      <h3>Valency frames</h3>
+      <div className="toolbar">
+        <input
+          type="text"
+          value={valencyLemma}
+          placeholder="verb lemma, e.g. give"
+          onChange={(e) => setValencyLemma(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") setValencyQuery(valencyLemma.trim()); }}
+        />
+        <button type="button" onClick={() => setValencyQuery(valencyLemma.trim())} disabled={!valencyLemma.trim()}>
+          Show frames
+        </button>
+      </div>
+      {valency.data && (
+        valency.data.total_occurrences > 0 ? (
+          <>
+            <div className="result-meta">
+              <strong>{valency.data.lemma}</strong> · {valency.data.total_occurrences.toLocaleString()} clause-head occurrences
+            </div>
+            <DataTable
+              headers={["Frame", "Frequency", "%", "Examples"]}
+              rows={valency.data.frames.map((f) => [f.frame, f.freq, f.percent, f.examples.join(" · ")])}
+            />
+            {valency.data.obliques.length > 0 && (
+              <DataTable
+                headers={["Oblique preposition", "Frequency"]}
+                rows={valency.data.obliques.map((o) => [o.prep, o.freq])}
+              />
+            )}
+          </>
+        ) : (
+          <div className="result-meta">No clause-head occurrences of <code>{valency.data.lemma}</code>.</div>
+        )
+      )}
+
+      {/* v1.2.7 (§2): syntax tree (arc diagram) */}
+      <h3>Syntax tree</h3>
+      {sentenceList.data && sentenceList.data.items.length > 0 && (
+        <div className="toolbar">
+          <label>Sentence
+            <select
+              value={treeTarget}
+              onChange={(e) => setSelectedSentence(e.target.value)}
+            >
+              {sentenceList.data.items.map((s) => (
+                <option key={`${s.doc}:${s.sent}`} value={`${s.doc}:${s.sent}`}>
+                  [{s.token_count} tokens] {s.preview}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      )}
+      {tree.data && tree.data.tokens.length > 0 && (
+        <>
+          <DependencyTreeSVG tokens={tree.data.tokens} />
+          <div className="grounding-notice"><em>{tree.data.citation}</em></div>
         </>
       )}
     </div>

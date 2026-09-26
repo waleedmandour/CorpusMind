@@ -173,6 +173,85 @@ async def dependencies(
 
 
 # --------------------------------------------------------------------------- #
+# §8.13b UD v2 syntax upgrade (v1.2.7, §2)
+# --------------------------------------------------------------------------- #
+
+
+@router.post("/corpora/{cid}/ud-profile")
+async def ud_profile(cid: str, session: AsyncSession = Depends(get_session)) -> dict:
+    """The 37 UD v2 universal relations profiled by functional group (§2)."""
+    from discourse.service import compute_ud_profile
+
+    if not await session.get(Corpus, cid):
+        raise HTTPException(404, "Corpus not found")
+    r = await compute_ud_profile(session, cid)
+    return asdict(r)
+
+
+class ValencyRequest(BaseModel):
+    lemma: str = Field(..., min_length=1, description="Verb lemma to profile")
+    limit: int = Field(20, ge=1, le=100)
+
+
+@router.post("/corpora/{cid}/valency")
+async def valency(
+    cid: str, body: ValencyRequest, session: AsyncSession = Depends(get_session)
+) -> dict:
+    """Observed argument frames (valency) for one verb lemma (§2)."""
+    from discourse.service import compute_valency_frames
+
+    if not await session.get(Corpus, cid):
+        raise HTTPException(404, "Corpus not found")
+    try:
+        r = await compute_valency_frames(
+            session, cid, lemma=body.lemma, limit=body.limit
+        )
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
+    return asdict(r)
+
+
+@router.get("/corpora/{cid}/sentences")
+async def sentences(
+    cid: str,
+    limit: int = 30,
+    offset: int = 0,
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    """Paginated sentence index (tree picker)."""
+    from discourse.service import list_corpus_sentences
+
+    if not await session.get(Corpus, cid):
+        raise HTTPException(404, "Corpus not found")
+    r = await list_corpus_sentences(session, cid, limit=min(limit, 200), offset=max(offset, 0))
+    return asdict(r)
+
+
+class SentenceTreeRequest(BaseModel):
+    doc: str
+    sent: int = Field(..., ge=0)
+
+
+@router.post("/corpora/{cid}/sentence-tree")
+async def sentence_tree(
+    cid: str, body: SentenceTreeRequest, session: AsyncSession = Depends(get_session)
+) -> dict:
+    """Head/rel tokens for one sentence — rendered as an arc diagram (§2)."""
+    from discourse.service import compute_sentence_tree
+
+    if not await session.get(Corpus, cid):
+        raise HTTPException(404, "Corpus not found")
+    try:
+        r = await compute_sentence_tree(session, cid, doc=body.doc, sent=body.sent)
+    except ValueError as e:
+        msg = str(e)
+        if msg.startswith("sentence_not_found:"):
+            raise HTTPException(404, "Sentence not found in this corpus") from e
+        raise HTTPException(400, msg) from e
+    return asdict(r)
+
+
+# --------------------------------------------------------------------------- #
 # §8.15 Discourse analysis — multi-taxonomy (v1.2.6)
 # --------------------------------------------------------------------------- #
 
@@ -182,7 +261,8 @@ class DiscourseRequest(BaseModel):
         "hyland2005",
         description=(
             "hyland2005 (default) | hallidayhasan1976 | martinwhite2005 | "
-            "usas (CLAWS/USAS top-level semantic tagset)"
+            "usas (CLAWS/USAS top-level semantic tagset) | sfg_hm2014 "
+            "(SFG Transitivity & Modality)"
         ),
     )
     # v1.2.7 (§3): optional keyness comparison — when set, the same taxonomy

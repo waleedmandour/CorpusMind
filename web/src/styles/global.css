@@ -1986,6 +1986,21 @@ code, pre { font-family: var(--font-mono); }
 }
 .discourse-examples-details[open] summary { margin-block-end: var(--space-1); }
 
+/* v1.2.7 (§2): dependency arc diagram (displaCy-style, in-house SVG) */
+.deptree-wrap {
+  inline-size: 100%;
+  overflow-x: auto;
+  padding: var(--space-2);
+  background: var(--bg-subtle);
+  border-radius: var(--radius-md);
+  margin-block: var(--space-2);
+}
+.deptree-wrap svg { min-inline-size: 640px; display: block; }
+.deptree-token { font-size: 14px; fill: var(--text); font-family: var(--font-sans); }
+.deptree-pos { font-size: 10px; fill: var(--text-muted); font-family: var(--font-mono); }
+.deptree-label { font-size: 10.5px; fill: var(--brand-500); font-family: var(--font-mono); }
+.ud-profile-details summary { cursor: pointer; color: var(--brand-500); margin-block: var(--space-2); user-select: none; }
+
 .sentiment-bars { margin: var(--space-3) 0; }
 .sentiment-timeline {
   display: flex;
