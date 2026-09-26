@@ -11,7 +11,7 @@ import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
 
-import { api, exportWithFeedback, type ExportFormat, type ReferenceCorpusEntry, type POSAnalysisResult, type SemanticAnalysisResult } from "@/lib/api";
+import { api, exportWithFeedback, type ExportFormat, type ReferenceCorpusEntry, type POSAnalysisResult, type SemanticAnalysisResult, type DiscourseCategory } from "@/lib/api";
 import { useApp } from "@/store/app";
 import { useUI, type NavTarget } from "@/store/ui";
 import { t, type TranslationKey } from "@/lib/i18n";
@@ -1174,20 +1174,56 @@ function DependencyPanel({ cid }: { cid: string }) {
 }
 
 
+// v1.2.7 (§3): sortable column keys for the discourse DataTable.
+type DiscourseSortKey =
+  | "category"
+  | "freq"
+  | "per_million"
+  | "dp"
+  | "log_likelihood"
+  | "log_ratio"
+  | "pct_diff"
+  | "simple_maths";
+
+// Named fmtNum to stay clear of the 4-decimal fmt() helper used by the
+// dispersion panel; the discourse table wants short per-column precision.
+const fmtNum = (v: number | null | undefined, digits: number) =>
+  v == null ? "—" : v.toLocaleString(undefined, { maximumFractionDigits: digits });
+
 function DiscoursePanel({ cid }: { cid: string }) {
   const lang = useUI((s) => s.lang);
   // v1.2.6: multi-taxonomy support — the lens is user-selectable and each
   // result names + cites its taxonomy. Default stays Hyland 2005.
   const [taxonomy, setTaxonomy] = useState("hyland2005");
+  // v1.2.7 (§3): optional comparison corpus → per-category keyness battery.
+  const [compareId, setCompareId] = useState("");
+  const [sortKey, setSortKey] = useState<DiscourseSortKey>("freq");
+  const [sortDir, setSortDir] = useState<1 | -1>(-1);
+
   const result = useQuery({
-    queryKey: ["discourse", cid, taxonomy],
-    queryFn: () => api.discourse(cid, taxonomy),
+    queryKey: ["discourse", cid, taxonomy, compareId],
+    queryFn: () => api.discourse(cid, taxonomy, compareId || null),
   });
   const taxonomies = useQuery({
     queryKey: ["discourse-taxonomies", cid],
     queryFn: () => api.discourseTaxonomies(cid),
     staleTime: 5 * 60 * 1000,
   });
+  // v1.2.7 (§3): sibling corpora as comparison candidates.
+  const corpusMeta = useQuery({
+    queryKey: ["corpus", cid],
+    queryFn: () => api.getCorpus(cid),
+    staleTime: 5 * 60 * 1000,
+  });
+  const projectId = corpusMeta.data?.project_id;
+  const siblings = useQuery({
+    queryKey: ["corpora", projectId],
+    queryFn: () => api.listCorpora(projectId as string),
+    enabled: !!projectId,
+    staleTime: 5 * 60 * 1000,
+  });
+  const compareOptions = (siblings.data ?? []).filter((c) => c.id !== cid);
+  const compareName = compareOptions.find((c) => c.id === compareId)?.name;
   const exportStatus = useExportStatus();
 
   const opts: Array<{ key: string; name: string }> =
@@ -1198,6 +1234,54 @@ function DiscoursePanel({ cid }: { cid: string }) {
       { key: "usas", name: "CLAWS/USAS semantic tagset (top-level)" },
     ];
   const isUsas = result.data?.taxonomy_key === "usas";
+
+  // v1.2.7 (§3): rows + sorting. Frequencies default to descending; a
+  // second click on the active header flips the direction. Null measures
+  // (Log Ratio/%DIFF undefined on an absent side) always sort last.
+  const rows = Object.entries(result.data?.categories ?? {}).map(([cat, info]) => ({ cat, info }));
+  const sortVal = (r: { cat: string; info: DiscourseCategory }): number | string => {
+    switch (sortKey) {
+      case "category": return r.cat;
+      case "freq": return r.info.freq;
+      case "per_million": return r.info.per_million;
+      case "dp": return r.info.dp ?? 0;
+      case "log_likelihood": return r.info.log_likelihood ?? Number.NEGATIVE_INFINITY;
+      case "log_ratio": return r.info.log_ratio ?? Number.NEGATIVE_INFINITY;
+      case "pct_diff": return r.info.pct_diff ?? Number.NEGATIVE_INFINITY;
+      case "simple_maths": return r.info.simple_maths ?? Number.NEGATIVE_INFINITY;
+    }
+  };
+  rows.sort((a, b) => {
+    const va = sortVal(a);
+    const vb = sortVal(b);
+    const cmp =
+      typeof va === "string" || typeof vb === "string"
+        ? String(va).localeCompare(String(vb))
+        : (va as number) - (vb as number);
+    return cmp * sortDir;
+  });
+  const onSort = (key: DiscourseSortKey) => {
+    if (key === sortKey) setSortDir((d) => (d === 1 ? -1 : 1));
+    else {
+      setSortKey(key);
+      setSortDir(key === "category" ? 1 : -1);
+    }
+  };
+  const arrow = (key: DiscourseSortKey) => (key === sortKey ? (sortDir === 1 ? " ▲" : " ▼") : "");
+  const hasCompare = !!result.data?.compare_corpus_id;
+  const anyCochran = rows.some((r) => r.info.cochran_warning);
+
+  const columns: Array<{ key: DiscourseSortKey; labelKey: TranslationKey; titleKey?: TranslationKey; numeric: boolean }> = [
+    { key: "category", labelKey: "discourse_col_category", numeric: false },
+    { key: "freq", labelKey: "discourse_col_freq", numeric: true },
+    { key: "per_million", labelKey: "discourse_col_pm", numeric: true },
+    { key: "dp", labelKey: "discourse_col_dp", titleKey: "discourse_dp_hint", numeric: true },
+    { key: "log_likelihood", labelKey: "discourse_col_ll", titleKey: "discourse_ll_hint", numeric: true },
+    { key: "log_ratio", labelKey: "discourse_col_lr", titleKey: "discourse_lr_hint", numeric: true },
+    { key: "pct_diff", labelKey: "discourse_col_pd", numeric: true },
+    { key: "simple_maths", labelKey: "discourse_col_sm", numeric: true },
+    { key: "category", labelKey: "discourse_col_examples", numeric: false },
+  ];
 
   return (
     <div className="panel-content">
@@ -1217,12 +1301,40 @@ function DiscoursePanel({ cid }: { cid: string }) {
             </option>
           ))}
         </select>
-        <ExportButton onExport={(fmt) => { if (result.data) { downloadJsonResult(result.data, `discourse.${fmt}`, exportStatus.set); } } } disabled={!result.data} />
+        {compareOptions.length > 0 && (
+          <>
+            <label htmlFor="discourse-compare" style={{ fontWeight: 600 }}>
+              {t(lang, "discourse_compare")}:{" "}
+            </label>
+            <select
+              id="discourse-compare"
+              value={compareId}
+              onChange={(e) => setCompareId(e.target.value)}
+            >
+              <option value="">{t(lang, "discourse_compare_none")}</option>
+              {compareOptions.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </>
+        )}
+        <ExportButton onExport={(fmt_) => { if (result.data) { downloadJsonResult(result.data, `discourse.${fmt_}`, exportStatus.set); } } } disabled={!result.data} />
       </div>
       <div className="grounding-notice">
         <strong>Note:</strong> {t(lang, "discourse_note_intro")}{" "}
         {result.data?.citation && <em>{result.data.citation}</em>}
       </div>
+      {hasCompare && (
+        <div className="grounding-notice">
+          {t(lang, "discourse_compare_hint")}{" "}
+          {compareName && <em>{compareName}</em>}
+          {result.data?.compare_total_tokens != null && (
+            <> · N = {result.data.compare_total_tokens.toLocaleString()}</>
+          )}
+        </div>
+      )}
 
       {result.data && (
         <>
@@ -1233,29 +1345,115 @@ function DiscoursePanel({ cid }: { cid: string }) {
               <> · <span title={t(lang, "discourse_unmatched_hint")}>{t(lang, "discourse_unmatched")}: <strong>{result.data.unmatched_percent}%</strong></span></>
             )}
           </div>
-          {Object.entries(result.data.categories).map(([cat, info]) => (
-            <div key={cat} className="discourse-cat">
-              <h3>
-                {cat}{" "}
-                {isUsas && (info.label || info.group) && (
-                  <span className="cat-meta">
-                    {info.label}
-                    {info.group ? ` — ${info.group}` : ""}
-                  </span>
-                )}
-                <span className="cat-meta">freq={info.freq} · {info.per_million}/M</span>
-              </h3>
-              <ul className="discourse-examples">
-                {info.examples.map((ex, i) => (
-                  <li key={i}>
-                    {ex.evidence_id && <code className="evidence-ref">{ex.evidence_id}</code>}
-                    <strong>{ex.cue}</strong>
-                    {ex.sentence_preview && <em>"{ex.sentence_preview}…"</em>}
-                  </li>
+          {/* v1.2.7 (§3): sortable DataTable — replaces the v1.2.6 card list.
+              DP is always available; LL / Log Ratio / %DIFF / SM appear when
+              a comparison corpus is selected. The Examples column keeps the
+              evidence list from the old cards behind an expandable row. */}
+          <div className="discourse-table-wrap">
+            <table className="discourse-table">
+              <thead>
+                <tr>
+                  {columns.map((col, i) => (
+                    <th
+                      key={`${col.key}-${i}`}
+                      className={clsx(col.numeric && "num", col.key === sortKey && "sorted")}
+                      aria-sort={
+                        col.key === sortKey
+                          ? sortDir === 1 ? "ascending" : "descending"
+                          : undefined
+                      }
+                    >
+                      {/* The examples column reuses the category key but must
+                          not render as a sort control. */}
+                      {i === columns.length - 1 ? (
+                        <span>{t(lang, col.labelKey)}</span>
+                      ) : (
+                        <button
+                          type="button"
+                          className="discourse-sort-btn"
+                          onClick={() => onSort(col.key)}
+                          title={col.titleKey ? t(lang, col.titleKey) : undefined}
+                        >
+                          {t(lang, col.labelKey)}
+                          {arrow(col.key)}
+                        </button>
+                      )}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map(({ cat, info }) => (
+                  <tr key={cat}>
+                    <td>
+                      <strong>{cat}</strong>
+                      {isUsas && (info.label || info.group) && (
+                        <div className="cat-meta">
+                          {info.label}
+                          {info.group ? ` — ${info.group}` : ""}
+                        </div>
+                      )}
+                    </td>
+                    <td className="num">{info.freq.toLocaleString()}</td>
+                    <td className="num">{fmtNum(info.per_million, 2)}</td>
+                    <td className="num" title={t(lang, "discourse_dp_hint")}>
+                      {fmtNum(info.dp, 2)}
+                    </td>
+                    <td className="num" title={t(lang, "discourse_ll_hint")}>
+                      {hasCompare ? (
+                        <>
+                          {fmtNum(info.log_likelihood ?? null, 2)}
+                          {info.cochran_warning && (
+                            <span className="discourse-cochran-flag" title={t(lang, "discourse_cochran_warning")}>*</span>
+                          )}
+                        </>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                    <td className="num" title={t(lang, "discourse_lr_hint")}>
+                      {hasCompare ? fmtNum(info.log_ratio ?? null, 2) : "—"}
+                    </td>
+                    <td className="num">{hasCompare ? fmtNum(info.pct_diff ?? null, 1) : "—"}</td>
+                    <td className="num">{hasCompare ? fmtNum(info.simple_maths, 2) : "—"}</td>
+                    <td>
+                      {info.examples.length > 0 ? (
+                        <details className="discourse-examples-details">
+                          <summary>{t(lang, "discourse_examples_count").replace("{n}", String(info.examples.length))}</summary>
+                          <ul className="discourse-examples">
+                            {info.examples.map((ex, i) => (
+                              <li key={i}>
+                                {ex.evidence_id && <code className="evidence-ref">{ex.evidence_id}</code>}
+                                <strong>{ex.cue}</strong>
+                                {ex.sentence_preview && <em>"{ex.sentence_preview}…"</em>}
+                              </li>
+                            ))}
+                          </ul>
+                        </details>
+                      ) : (
+                        <span className="cat-meta">—</span>
+                      )}
+                    </td>
+                  </tr>
                 ))}
-              </ul>
-            </div>
-          ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="result-meta">
+            {t(lang, "discourse_dp_hint")}
+            {hasCompare && (
+              <>
+                {" · "}{t(lang, "discourse_ll_hint")}
+                {anyCochran && (
+                  <>
+                    {" · "}
+                    <strong>* </strong>
+                    {t(lang, "discourse_cochran_warning")}
+                  </>
+                )}
+              </>
+            )}
+          </div>
         </>
       )}
     </div>

@@ -185,6 +185,13 @@ class DiscourseRequest(BaseModel):
             "usas (CLAWS/USAS top-level semantic tagset)"
         ),
     )
+    # v1.2.7 (§3): optional keyness comparison — when set, the same taxonomy
+    # is also run over this corpus and every category row gains the §12
+    # keyness battery (LL, Log Ratio, %DIFF, simple maths) + a Cochran
+    # low-power warning. Omit for the v1.2.6 single-corpus response shape.
+    compare_corpus_id: str | None = Field(
+        None, description="Optional second corpus id to compute per-category keyness against."
+    )
 
 
 @router.get("/corpora/{cid}/discourse/taxonomies")
@@ -209,8 +216,17 @@ async def discourse(
     if not await session.get(Corpus, cid):
         raise HTTPException(404, "Corpus not found")
     taxonomy = (body.taxonomy if body else "hyland2005") or "hyland2005"
+    compare_corpus_id = body.compare_corpus_id if body else None
+    if compare_corpus_id:
+        compare_corpus = await session.get(Corpus, compare_corpus_id)
+        if not compare_corpus:
+            raise HTTPException(
+                404, f"Comparison corpus not found: {compare_corpus_id}"
+            )
     try:
-        r = await compute_discourse_analysis(session, cid, taxonomy=taxonomy)
+        r = await compute_discourse_analysis(
+            session, cid, taxonomy=taxonomy, compare_corpus_id=compare_corpus_id
+        )
     except ValueError as e:
         msg = str(e)
         if msg.startswith("usas_lexicon_missing:"):

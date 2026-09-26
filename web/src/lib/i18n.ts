@@ -170,6 +170,26 @@ export const translations = {
     discourse_unmatched: "not covered by the lexicon",
     discourse_unmatched_hint:
       "Share of tokens the bundled USAS lexicon could not tag — expected for a lexicon lookup (this is not the licensed CLAWS/USAS tagger).",
+    // v1.2.7 (§3): discourse statistics DataTable
+    discourse_compare: "Compare with",
+    discourse_compare_none: "no comparison",
+    discourse_compare_hint:
+      "Per-category keyness against — log-likelihood (significance), Log Ratio (effect size), %DIFF and Simple Maths; * marks a low expected count (Cochran).",
+    discourse_cochran_warning:
+      "low expected count — treat the significance figure with caution (Cochran's rule: all expected cells should be ≥ 5)",
+    discourse_ll_hint: "LL = G², df=1 (Dunning 1993): ≥ 3.84 → p<0.05; ≥ 6.63 → p<0.01; ≥ 10.83 → p<0.001",
+    discourse_lr_hint: "Log Ratio (Hardie 2014): effect size. “—” = category absent from one side (undefined)",
+    discourse_dp_hint: "Gries' DP: 0 = even across documents, 1 = concentrated in one document",
+    discourse_col_category: "Category",
+    discourse_col_freq: "Freq",
+    discourse_col_pm: "Per million",
+    discourse_col_dp: "DP",
+    discourse_col_ll: "LL",
+    discourse_col_lr: "Log Ratio",
+    discourse_col_pd: "%DIFF",
+    discourse_col_sm: "SM",
+    discourse_col_examples: "Examples",
+    discourse_examples_count: "examples ({n})",
     ai_input_placeholder: "Ask about this analysis…",
 
     // Settings
@@ -990,6 +1010,26 @@ export const translations = {
     discourse_unmatched: "غير مشمول في المعجم",
     discourse_unmatched_hint:
       "نسبة الكلمات التي لم يتمكن معجم USAS المرفق من وسملها — أمر متوقع في البحث المعجمي (هذه ليست الوسّام المرخّص CLAWS/USAS).",
+    // v1.2.7 (§3): جدول إحصاءات الخطاب
+    discourse_compare: "قارن مع",
+    discourse_compare_none: "بدون مقارنة",
+    discourse_compare_hint:
+      "الدلالة الإحصائية وحجم الأثر لكل فئة مقابل — LL (الدلالة)، Log Ratio (حجم الأثر)، %DIFF وSimple Maths؛ وتشير * إلى عدد متوقع منخفض (قاعدة كوكران).",
+    discourse_cochran_warning:
+      "عدد متوقع منخفض — تعامل مع رقم الدلالة الإحصائية بحذر (قاعدة كوكران: كل الخلايا المتوقعة يجب أن تكون ≥ 5)",
+    discourse_ll_hint: "LL = G²، درجة حرية 1 (Dunning 1993): ≥ 3.84 → p<0.05؛ ≥ 6.63 → p<0.01؛ ≥ 10.83 → p<0.001",
+    discourse_lr_hint: "Log Ratio (Hardie 2014): حجم الأثر. \u201C—\u201D تعني أن الفئة غائبة في أحد الطرفين (غير معرّفة)",
+    discourse_dp_hint: "DP لـ Gries: 0 = موزعة بالتساوي عبر المستندات، 1 = مركزة في مستند واحد",
+    discourse_col_category: "الفئة",
+    discourse_col_freq: "التكرار",
+    discourse_col_pm: "لكل مليون",
+    discourse_col_dp: "DP",
+    discourse_col_ll: "LL",
+    discourse_col_lr: "Log Ratio",
+    discourse_col_pd: "%DIFF",
+    discourse_col_sm: "SM",
+    discourse_col_examples: "أمثلة",
+    discourse_examples_count: "أمثلة ({n})",
     ai_input_placeholder: "اسأل عن هذا التحليل…",
 
     // Settings

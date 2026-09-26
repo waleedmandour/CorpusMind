@@ -742,6 +742,13 @@ export interface DiscourseCategory {
   // v1.2.6: USAS semantic lens only — top-level label + discourse group
   label?: string;
   group?: string;
+  // v1.2.7 (§3): dispersion + optional keyness comparison
+  dp?: number;
+  log_likelihood?: number;
+  log_ratio?: number | null;
+  pct_diff?: number | null;
+  simple_maths?: number;
+  cochran_warning?: boolean;
 }
 
 export interface DiscourseTaxonomyInfo {
@@ -759,6 +766,10 @@ export interface DiscourseResult {
   taxonomy_key: string;
   citation: string;
   unmatched_percent?: number | null;
+  // v1.2.7 (§3): set when the request carried compare_corpus_id and the
+  // comparison corpus had a processed version
+  compare_corpus_id?: string | null;
+  compare_total_tokens?: number | null;
 }
 
 export interface VocabBand {
@@ -1665,10 +1676,10 @@ export const api = {
       body: JSON.stringify({ relation, limit }),
     }),
 
-  discourse: (cid: string, taxonomy = "hyland2005") =>
+  discourse: (cid: string, taxonomy = "hyland2005", compareCorpusId?: string | null) =>
     jsonFetch<DiscourseResult>(`/api/v1/corpora/${cid}/discourse`, {
       method: "POST",
-      body: JSON.stringify({ taxonomy }),
+      body: JSON.stringify({ taxonomy, compare_corpus_id: compareCorpusId || null }),
     }),
 
   discourseTaxonomies: (cid: string) =>

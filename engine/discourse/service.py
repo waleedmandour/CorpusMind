@@ -18,6 +18,14 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.logging import get_logger
+from stats.measures import (
+    chi2_min_expected,
+    gries_dp,
+    keyness_ll,
+    log_ratio,
+    pct_diff,
+    simple_maths,
+)
 from stats.service import _corpus_size, _is_real_token, _latest_version_id
 from storage.models import Token
 
@@ -914,6 +922,16 @@ class DiscourseResult:
     taxonomy_key: str = "hyland2005"
     citation: str = ""
     unmatched_percent: float | None = None  # USAS lens only (lexicon misses)
+    # v1.2.7 (§3): dispersion + optional keyness comparison.
+    # Every category dict gains `dp` (Gries' DP across documents, size-
+    # weighted). When compare_corpus_id is set, category dicts also gain
+    # `log_likelihood`, `log_ratio`, `pct_diff`, `simple_maths` and
+    # `cochran_warning` — computed against the same taxonomy run over the
+    # comparison corpus. log_ratio/pct_diff are None (JSON null) when the
+    # category is absent from either side: the raw formulas return ±inf
+    # there and JSON cannot carry infinities — the UI shows an em dash.
+    compare_corpus_id: str | None = None
+    compare_total_tokens: int | None = None
 
 
 def discourse_taxonomy_list() -> list[dict]:
@@ -950,6 +968,7 @@ def _detect_lexical_cohesion(
     limit_examples: int,
     category_counts: Counter,
     category_examples: dict[str, list[dict]],
+    category_doc_counts: dict[str, Counter] | None = None,  # v1.2.7 (§3) DP support
 ) -> None:
     """Halliday & Hasan lexical cohesion: the same content lemma recurring
     across ADJACENT sentences (repetition chains). Each shared lemma in a
@@ -980,6 +999,126 @@ def _detect_lexical_cohesion(
                         }
                     )
                 category_counts["lexical.repetition"] += 1
+                if category_doc_counts is not None:
+                    # attributed to the document of the repeating sentence
+                    category_doc_counts["lexical.repetition"][t["doc"]] += 1
+
+
+def _count_cue_categories(
+    sentences: list[list[dict]],
+    categories: dict[str, set[str] | list[str]],
+    *,
+    limit_examples: int,
+    include_lexical_cohesion: bool = False,
+) -> tuple[Counter, dict[str, list[dict]], dict[str, Counter], Counter]:
+    """Count cue matches per category over parsed sentences.
+
+    v1.2.7 (§3): factored out of :func:`compute_discourse_analysis` so the
+    SAME counting runs on the target corpus and on a comparison corpus —
+    the per-category keyness battery is only meaningful when both sides use
+    identical detection semantics. Also tracks per-document counts (for
+    Gries' DP) and per-document token sizes (the DP expected proportions).
+
+    Returns (category_counts, category_examples, category_doc_counts,
+    doc_sizes). Doc sizes exclude SPACE/PUNCT tokens so the DP parts match
+    the same token convention as ``_corpus_size`` (punctuation excluded).
+    """
+    category_counts: Counter = Counter()
+    category_examples: dict[str, list[dict]] = defaultdict(list)
+    category_doc_counts: dict[str, Counter] = defaultdict(Counter)
+    doc_sizes: Counter = Counter()
+
+    for sent in sentences:
+        sent_text_tokens = [t["text"].lower() for t in sent]
+        sent_lower = " ".join(sent_text_tokens)
+        for tok in sent:
+            if tok.get("pos") not in ("SPACE", "PUNCT"):
+                doc_sizes[tok["doc"]] += 1
+        for cat_name, cue_set in categories.items():
+            if cat_name == "lexical.repetition":
+                continue  # computed separately across sentence pairs
+            for cue in cue_set:
+                # Multi-word cues: check if it appears as a substring of the sentence
+                if " " in cue:
+                    if cue in sent_lower:
+                        if len(category_examples[cat_name]) < limit_examples:
+                            category_examples[cat_name].append(
+                                {
+                                    "cue": cue,
+                                    "evidence_id": f"{sent[0]['doc']}:{sent[0]['sent']}:0",
+                                    "sentence_preview": sent_lower[:120],
+                                }
+                            )
+                        category_counts[cat_name] += 1
+                        category_doc_counts[cat_name][sent[0]["doc"]] += 1
+                else:
+                    # Single-word: match against individual tokens
+                    for tok in sent:
+                        if tok["text"].lower() == cue:
+                            if len(category_examples[cat_name]) < limit_examples:
+                                category_examples[cat_name].append(
+                                    {
+                                        "cue": cue,
+                                        "evidence_id": f"{tok['doc']}:{tok['sent']}:{tok['idx']}",
+                                        "sentence_preview": sent_lower[:120],
+                                    }
+                                )
+                            category_counts[cat_name] += 1
+                            category_doc_counts[cat_name][tok["doc"]] += 1
+
+    if include_lexical_cohesion:
+        _detect_lexical_cohesion(
+            sentences,
+            limit_examples=limit_examples,
+            category_counts=category_counts,
+            category_examples=category_examples,
+            category_doc_counts=category_doc_counts,
+        )
+
+    return category_counts, category_examples, category_doc_counts, doc_sizes
+
+
+def _per_category_dp(
+    category_counts: Counter,
+    category_doc_counts: dict[str, Counter],
+    doc_sizes: Counter,
+) -> dict[str, float]:
+    """Gries' DP for every category, size-weighted over the document parts.
+
+    Documents are iterated in sorted-id order so the result is deterministic
+    regardless of dict insertion order. A category absent from every
+    document (cannot happen for rows we emit) would get DP 0.
+    """
+    docs = sorted(doc_sizes)
+    sizes = [doc_sizes[d] for d in docs]
+    dp_by_cat: dict[str, float] = {}
+    for cat, count in category_counts.items():
+        if count <= 0 or not docs:
+            dp_by_cat[cat] = 0.0
+            continue
+        observed = [category_doc_counts.get(cat, Counter()).get(d, 0) for d in docs]
+        dp_by_cat[cat] = round(gries_dp(observed, sizes), 3)
+    return dp_by_cat
+
+
+def _keyness_fields(f1: int, N1: int, f2: int, N2: int) -> dict:
+    """v1.2.7 (§3): the per-category keyness battery against a comparison
+    corpus, wired onto the existing measures library (§12 formulas).
+
+    LL (Dunning 1993) and simple_maths are defined for zero cells;
+    Log Ratio (Hardie 2014) and %DIFF are NOT — they return None (JSON
+    null) when the category is absent from either side, and the UI shows
+    an em dash. `cochran_warning` flags 2x2 tables whose smallest expected
+    cell is < 5 (Cochran's validity rule) — the chi-square/LL p-value
+    approximation behind the significance claim is unreliable there.
+    """
+    return {
+        "log_likelihood": round(keyness_ll(f1, f2, N1, N2), 2),
+        "log_ratio": round(log_ratio(f1, f2, N1, N2), 3) if (f1 > 0 and f2 > 0) else None,
+        "pct_diff": round(pct_diff(f1, f2, N1, N2), 1) if (f1 > 0 and f2 > 0) else None,
+        "simple_maths": round(simple_maths(f1, f2, N1, N2), 3),
+        "cochran_warning": chi2_min_expected(f1, N1 - f1, f2, N2 - f2) < 5,
+    }
 
 
 async def compute_discourse_analysis(
@@ -988,17 +1127,26 @@ async def compute_discourse_analysis(
     *,
     taxonomy: str = "hyland2005",
     limit_examples: int = 5,
+    compare_corpus_id: str | None = None,
 ) -> DiscourseResult:
     """Detect discourse markers across the corpus under a named taxonomy.
 
     taxonomy: hyland2005 (default) | hallidayhasan1976 | martinwhite2005
     | usas. Raises ValueError for unknown keys — the API layer maps that
     to a 400 listing the supported values.
+
+    v1.2.7 (§3): every category row carries `dp` (dispersion across
+    documents). When ``compare_corpus_id`` is set, the same taxonomy is
+    run over the comparison corpus and each row additionally carries the
+    keyness battery (log_likelihood, log_ratio, pct_diff, simple_maths,
+    cochran_warning) — effect size + significance + a Cochran low-power
+    warning, all from the shared measures library.
     """
     key = (taxonomy or "hyland2005").strip().lower()
     if key == USAS_TAXONOMY_KEY:
         return await compute_usas_discourse_analysis(
-            session, corpus_id, limit_examples=limit_examples
+            session, corpus_id, limit_examples=limit_examples,
+            compare_corpus_id=compare_corpus_id,
         )
     spec = DISCOURSE_TAXONOMIES.get(key)
     if spec is None:
@@ -1017,61 +1165,57 @@ async def compute_discourse_analysis(
     total_tokens = await _corpus_size(session, version_id)
     sentences = await _load_parses(session, version_id)
 
-    # Build a flat token stream with positions for example citation
-    category_counts: Counter = Counter()
-    category_examples: dict[str, list[dict]] = defaultdict(list)
-
     all_categories = spec["categories"]
+    counts, examples, per_doc, doc_sizes = _count_cue_categories(
+        sentences,
+        all_categories,
+        limit_examples=limit_examples,
+        include_lexical_cohesion=(key == "hallidayhasan1976"),
+    )
+    dp_by_cat = _per_category_dp(counts, per_doc, doc_sizes)
 
-    for sent in sentences:
-        sent_text_tokens = [t["text"].lower() for t in sent]
-        sent_lower = " ".join(sent_text_tokens)
-        for cat_name, cue_set in all_categories.items():
-            if cat_name == "lexical.repetition":
-                continue  # computed separately across sentence pairs
-            for cue in cue_set:
-                # Multi-word cues: check if it appears as a substring of the sentence
-                if " " in cue:
-                    if cue in sent_lower:
-                        if len(category_examples[cat_name]) < limit_examples:
-                            category_examples[cat_name].append(
-                                {
-                                    "cue": cue,
-                                    "evidence_id": f"{sent[0]['doc']}:{sent[0]['sent']}:0",
-                                    "sentence_preview": sent_lower[:120],
-                                }
-                            )
-                        category_counts[cat_name] += 1
-                else:
-                    # Single-word: match against individual tokens
-                    for tok in sent:
-                        if tok["text"].lower() == cue:
-                            if len(category_examples[cat_name]) < limit_examples:
-                                category_examples[cat_name].append(
-                                    {
-                                        "cue": cue,
-                                        "evidence_id": f"{tok['doc']}:{tok['sent']}:{tok['idx']}",
-                                        "sentence_preview": sent_lower[:120],
-                                    }
-                                )
-                            category_counts[cat_name] += 1
-
-    if key == "hallidayhasan1976":
-        _detect_lexical_cohesion(
-            sentences,
-            limit_examples=limit_examples,
-            category_counts=category_counts,
-            category_examples=category_examples,
-        )
-
-    categories = {}
-    for cat, count in category_counts.most_common():
+    categories: dict[str, dict] = {}
+    for cat, count in counts.most_common():
         per_million = (count / total_tokens * 1_000_000) if total_tokens else 0.0
         categories[cat] = {
             "freq": count,
             "per_million": round(per_million, 2),
-            "examples": category_examples[cat],
+            "examples": examples[cat],
+            "dp": dp_by_cat.get(cat, 0.0),
         }
+
+    # v1.2.7 (§3): optional keyness comparison against a second corpus run
+    # under the SAME taxonomy. Rows are the union of categories seen on
+    # either side (freq 0 rows make the "absent here, common there"
+    # contrast visible, which is exactly what keyness is for).
+    compare_total: int | None = None
+    if compare_corpus_id:
+        compare_version_id = await _latest_version_id(session, compare_corpus_id)
+        if compare_version_id:
+            compare_total = await _corpus_size(session, compare_version_id)
+            compare_sentences = await _load_parses(session, compare_version_id)
+            c_counts, _c_examples, _c_per_doc, _c_sizes = _count_cue_categories(
+                compare_sentences,
+                all_categories,
+                limit_examples=0,
+                include_lexical_cohesion=(key == "hallidayhasan1976"),
+            )
+            for cat in sorted(set(categories) | set(c_counts)):
+                row = categories.setdefault(
+                    cat,
+                    {
+                        "freq": 0,
+                        "per_million": 0.0,
+                        "examples": [],
+                        "dp": 0.0,
+                    },
+                )
+                row.update(
+                    _keyness_fields(
+                        row["freq"], total_tokens,
+                        c_counts.get(cat, 0), compare_total,
+                    )
+                )
 
     return DiscourseResult(
         categories=categories,
@@ -1079,7 +1223,61 @@ async def compute_discourse_analysis(
         taxonomy=spec["name"],
         taxonomy_key=key,
         citation=spec["citation"],
+        compare_corpus_id=compare_corpus_id if compare_total is not None else None,
+        compare_total_tokens=compare_total,
     )
+
+
+async def _count_usas_tags(
+    session: AsyncSession,
+    version_id: str,
+    language: str,
+    *,
+    limit_examples: int,
+) -> tuple[Counter, dict[str, list[dict]], dict[str, Counter], Counter, int, int]:
+    """v1.2.7 (§3): USAS top-level scan, factored out so the target and
+    the comparison corpus run IDENTICAL detection semantics (the compare-
+    side keyness is only valid if both sides count the same way).
+
+    Returns (tag_counts, tag_examples, tag_doc_counts, doc_sizes, matched,
+    total_tokens). Doc sizes exclude punct/space, matching the DP
+    convention of the cue-based lens.
+    """
+    from nlp.tagsets import semantic_lookup
+
+    total_tokens = await _corpus_size(session, version_id)
+    stmt = (
+        select(Token.lemma, Token.text, Token.document_id, Token.sentence_idx,
+               Token.token_idx, Token.is_punct, Token.pos)
+        .where(Token.version_id == version_id)
+        .order_by(Token.document_id, Token.sentence_idx, Token.token_idx)
+    )
+    rows_raw = (await session.execute(stmt)).all()
+
+    tag_counts: Counter = Counter()
+    tag_examples: dict[str, list[dict]] = defaultdict(list)
+    tag_doc_counts: dict[str, Counter] = defaultdict(Counter)
+    doc_sizes: Counter = Counter()
+    matched = 0
+    for lemma, text, doc_id, sent_idx, tok_idx, is_punct, pos in rows_raw:
+        if is_punct or (pos or "") == "SPACE":
+            continue
+        doc_sizes[doc_id] += 1
+        tag = semantic_lookup(lemma or "", text or "", language)
+        if not tag:
+            continue
+        matched += 1
+        tag_counts[tag] += 1
+        tag_doc_counts[tag][doc_id] += 1
+        if len(tag_examples[tag]) < limit_examples:
+            tag_examples[tag].append(
+                {
+                    "cue": (lemma or text or "").lower(),
+                    "evidence_id": f"{doc_id}:{sent_idx}:{tok_idx}",
+                    "sentence_preview": "",
+                }
+            )
+    return tag_counts, tag_examples, tag_doc_counts, doc_sizes, matched, total_tokens
 
 
 async def compute_usas_discourse_analysis(
@@ -1087,6 +1285,7 @@ async def compute_usas_discourse_analysis(
     corpus_id: str,
     *,
     limit_examples: int = 5,
+    compare_corpus_id: str | None = None,
 ) -> DiscourseResult:
     """CLAWS/USAS top-level semantic distribution re-read as discourse-
     relevant features (v1.2.6).
@@ -1098,8 +1297,11 @@ async def compute_usas_discourse_analysis(
     into discourse-functional readings (communication, cognition, emotion,
     ideology...) via USAS_DISCOURSE_GROUPS so the Discourse page can show
     what the semantic profile MEANS for discourse analysis.
+
+    v1.2.7 (§3): per-category `dp` + optional keyness comparison against
+    another corpus (each side uses its own language's bundled lexicon).
     """
-    from nlp.tagsets import USAS_TOP_LABELS, load_semantic_lexicon, semantic_lookup
+    from nlp.tagsets import USAS_TOP_LABELS, load_semantic_lexicon
     from storage.models import Corpus as CorpusModel
 
     version_id = await _latest_version_id(session, corpus_id)
@@ -1118,33 +1320,11 @@ async def compute_usas_discourse_analysis(
         raise ValueError(f"usas_lexicon_missing:{language}")
 
     total_tokens = await _corpus_size(session, version_id)
-    stmt = (
-        select(Token.lemma, Token.text, Token.document_id, Token.sentence_idx,
-               Token.token_idx, Token.is_punct, Token.pos)
-        .where(Token.version_id == version_id)
-        .order_by(Token.document_id, Token.sentence_idx, Token.token_idx)
+    tag_counts, tag_examples, tag_doc_counts, doc_sizes, matched, _ = (
+        await _count_usas_tags(session, version_id, language, limit_examples=limit_examples)
     )
-    rows_raw = (await session.execute(stmt)).all()
 
-    tag_counts: Counter = Counter()
-    tag_examples: dict[str, list[dict]] = defaultdict(list)
-    matched = 0
-    for lemma, text, doc_id, sent_idx, tok_idx, is_punct, pos in rows_raw:
-        if is_punct or (pos or "") == "SPACE":
-            continue
-        tag = semantic_lookup(lemma or "", text or "", language)
-        if not tag:
-            continue
-        matched += 1
-        tag_counts[tag] += 1
-        if len(tag_examples[tag]) < limit_examples:
-            tag_examples[tag].append(
-                {
-                    "cue": (lemma or text or "").lower(),
-                    "evidence_id": f"{doc_id}:{sent_idx}:{tok_idx}",
-                    "sentence_preview": "",
-                }
-            )
+    dp_by_cat = _per_category_dp(tag_counts, tag_doc_counts, doc_sizes)
 
     categories: dict[str, dict] = {}
     for tag, count in tag_counts.most_common():
@@ -1155,7 +1335,44 @@ async def compute_usas_discourse_analysis(
             "examples": tag_examples[tag],
             "label": USAS_TOP_LABELS.get(tag, "Unknown"),
             "group": USAS_DISCOURSE_GROUPS.get(tag, "Other"),
+            "dp": dp_by_cat.get(tag, 0.0),
         }
+
+    # v1.2.7 (§3): optional keyness comparison. The comparison corpus uses
+    # ITS OWN language lexicon; comparing across languages is technically
+    # possible but semantically dubious, so the UI labels the comparison.
+    compare_total: int | None = None
+    if compare_corpus_id:
+        compare_version_id = await _latest_version_id(session, compare_corpus_id)
+        if compare_version_id:
+            compare_row = await session.get(CorpusModel, compare_corpus_id)
+            compare_lang = compare_row.language if compare_row and compare_row.language else "en"
+            if not load_semantic_lexicon(compare_lang):
+                raise ValueError(f"usas_lexicon_missing:{compare_lang}")
+            compare_total = await _corpus_size(session, compare_version_id)
+            c_counts, _c_ex, _c_dc, _c_sz, _c_matched, _c_total = (
+                await _count_usas_tags(
+                    session, compare_version_id, compare_lang, limit_examples=0
+                )
+            )
+            for tag in sorted(set(categories) | set(c_counts)):
+                row = categories.setdefault(
+                    tag,
+                    {
+                        "freq": 0,
+                        "per_million": 0.0,
+                        "examples": [],
+                        "label": USAS_TOP_LABELS.get(tag, "Unknown"),
+                        "group": USAS_DISCOURSE_GROUPS.get(tag, "Other"),
+                        "dp": 0.0,
+                    },
+                )
+                row.update(
+                    _keyness_fields(
+                        row["freq"], total_tokens,
+                        c_counts.get(tag, 0), compare_total,
+                    )
+                )
 
     unmatched = round((total_tokens - matched) / total_tokens * 100, 2) if total_tokens else 0.0
     return DiscourseResult(
@@ -1165,6 +1382,8 @@ async def compute_usas_discourse_analysis(
         taxonomy_key=USAS_TAXONOMY_KEY,
         citation=discourse_taxonomy_list()[-1]["citation"],
         unmatched_percent=unmatched,
+        compare_corpus_id=compare_corpus_id if compare_total is not None else None,
+        compare_total_tokens=compare_total,
     )
 
 
