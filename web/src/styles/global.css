@@ -14,7 +14,11 @@
   --accent: #e8b339;
   --danger: #c0392b;
   --success: #2e7d32;
-  --warning: #c77b0e;
+  /* v1.2.7 (§1 audit): light --warning was #c77b0e — 3.15:1 on --bg, a
+     WCAG AA failure for status text the automated contrast check caught.
+     Darkened to #96610a (4.9:1 on bg / 5.2:1 on elevated / 4.6:1 on
+     subtle) — same amber hue family, now AA everywhere it appears. */
+  --warning: #96610a;
   /* Info token — light theme (Issue 4: was missing, status-info messages had no semantic color) */
   --info: #2563eb;
 
@@ -50,6 +54,12 @@
 /* Light theme (default) */
 :root,
 [data-theme="light"] {
+  /* v1.2.7 (§1 dark-theme audit): tell the browser which native-control
+     palette to use. Without this, native <select> popups, scrollbars,
+     checkboxes and date inputs render with the OS default (light) scheme
+     even when the app is in dark mode — the "light dropdown in dark UI"
+     field report. The dark block below flips it to `dark`. */
+  color-scheme: light;
   --bg: #f7f8f7;
   --bg-elevated: #ffffff;
   --bg-subtle: #eef0ee;
@@ -60,6 +70,15 @@
   --text: #1c1f1d;
   --text-muted: #5a5f5c;
   --text-subtle: #8b918d;
+  /* v1.2.7 (§1 audit): disabled controls previously relied on bare opacity
+     stacking (0.4–0.6 scattered across the file), which made disabled-text
+     contrast theme- and context-dependent. Disabled UI is WCAG-exempt
+     (1.4.3 inactive components), but it must still be clearly "off" without
+     becoming unreadable noise — hence a dedicated token rather than opacity
+     alone. --disabled-opacity keeps the established dimming strength per
+     theme and is now the single source of truth for it. */
+  --text-disabled: #9ba39d;
+  --disabled-opacity: 0.5;
   --text-on-brand: #ffffff;
   --ribbon-tab-bg: transparent;
   --ribbon-tab-bg-hover: #e9ebe9;
@@ -115,6 +134,9 @@
 
 /* Dark theme */
 [data-theme="dark"] {
+  /* v1.2.7 (§1): native controls (select popups, scrollbars, checkboxes)
+     follow the OS scheme unless told otherwise — see the light block. */
+  color-scheme: dark;
   --bg: #0e1116;
   --bg-elevated: #161a21;
   --bg-subtle: #1c2129;
@@ -125,6 +147,11 @@
   --text: #e6e9ec;
   --text-muted: #b3bac3;
   --text-subtle: #8b919e;
+  /* v1.2.7 (§1): tokenized disabled state — see the light block comment.
+     Dark theme keeps the stronger dim this file already used (0.6, was a
+     special-case override at the bottom of the file). */
+  --text-disabled: #6b7480;
+  --disabled-opacity: 0.6;
   --text-on-brand: #ffffff;
   /* Issue 4: semantic status colors must be brighter on dark surfaces to
      maintain WCAG AA (4.5:1) contrast. Light-theme values:
@@ -142,8 +169,11 @@
   --info: #6ba6ff;
   /* v0.1.17: brand colors must be brighter in dark mode for button contrast.
      Light-theme --brand-500 (#0b6e4f) has only 3.8:1 on #161a21 — fails
-     WCAG AA for white text on buttons. Override to brighter values. */
-  --brand-500: #2a9070;
+     WCAG AA for white text on buttons. Override to brighter values.
+     v1.2.7 (§1 audit): #2a9070 gave white labels only 3.95:1 — the other
+     direction of the same AA requirement. #1f8563 keeps the fill ≥ 3:1
+     against every dark surface (1.4.11) while white labels reach 4.57:1. */
+  --brand-500: #1f8563;
   --brand-600: #0b6e4f;
   --ribbon-tab-bg: transparent;
   --ribbon-tab-bg-hover: #1f242c;
@@ -236,7 +266,17 @@ html[dir="rtl"] body {
 }
 
 button { font: inherit; color: inherit; cursor: pointer; }
-button:disabled { cursor: not-allowed; opacity: 0.5; }
+/* v1.2.7 (§1): the dim strength is now theme-tunable (--disabled-opacity,
+   0.5 light / 0.6 dark — the dark value formalises the former special-case
+   override at the bottom of this file). The color token (--text-disabled)
+   is deliberately NOT set here: filled buttons (primary/danger) keep their
+   fill at reduced opacity, which reads better than recolored text on a
+   fill. Text-only disabled surfaces opt into --text-disabled explicitly
+   (e.g. .tool-card:disabled below). */
+button:disabled {
+  cursor: not-allowed;
+  opacity: var(--disabled-opacity);
+}
 
 input, textarea, select { font: inherit; color: inherit; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: var(--space-2) var(--space-3); }
 
@@ -1801,6 +1841,31 @@ code, pre { font-family: var(--font-mono); }
   outline: 2px solid var(--tool-accent);
   outline-offset: 2px;
 }
+/* v1.2.7 (§1 dark-theme audit) — interaction-state matrix for the 8 hues.
+   Every tool-hue token pair is covered in BOTH themes across the four UI
+   states, and `scripts/check_contrast.mjs` (wired into CI) fails the build
+   if a future token edit regresses any cell:
+
+     state      surfaces                        tokens involved
+     ---------- ------------------------------- -----------------------------
+     default    soft fill + accent icon         toolN-accent/soft ≥ 3:1 (1.4.11)
+     hover      accent border + shadow          border vs soft ≥ 3:1
+     active     full accent fill, on-accent fg  toolN-accent/on-accent ≥ 4.5:1
+     disabled   muted text, no fill/transform   --text-disabled (WCAG-exempt,
+                                                still theme-tuned)
+   The disabled state previously did not exist for tool cards — a disabled
+   card inherited the generic 0.5-opacity rule, stacking translucent washes
+   on both soft fills and accent fills. */
+.tool-card:disabled,
+.tool-card:disabled:hover {
+  cursor: not-allowed;
+  background: var(--bg-subtle);
+  border-color: var(--border);
+  color: var(--text-disabled);
+  box-shadow: none;
+  transform: none;
+}
+.tool-card:disabled .tool-card-icon { color: var(--text-disabled); }
 .tool-card-icon {
   font-size: 17px;
   line-height: 1;
@@ -6214,14 +6279,11 @@ html[dir="rtl"] .toggle-switch input:checked + .toggle-slider::before {
 }
 
 /* --- Disabled-element contrast (WCAG 1.4.3 exception for inactive UI) --- */
-/* Disabled buttons at 0.5 opacity fail AA when their text color is already
-   low-contrast. Bump the opacity + add a clearer "disabled" cursor. */
-[data-theme="dark"] button:disabled,
-[data-theme="dark"] .btn-small:disabled,
-[data-theme="dark"] .btn-primary:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
+/* v1.2.7 (§1): superseded by the --disabled-opacity / --text-disabled tokens
+   defined per theme in the token blocks above. The dark-theme override that
+   used to live here (opacity 0.6) is now the token default in the dark
+   block, so light and dark dimming stay exactly as shipped but are declared
+   in one place each. */
 
 /* --- Reference corpus download progress bar (new in Issue 1) --- */
 /* The progress bar uses brand colors on a subtle background; in dark mode

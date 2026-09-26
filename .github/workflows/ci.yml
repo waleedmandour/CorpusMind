@@ -105,6 +105,14 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      # v1.2.7 (§1 dark-theme audit): automated WCAG AA contrast regression
+      # over the design tokens in web/src/styles/global.css — all 8 tool-hue
+      # token pairs × both themes × interaction-state surfaces. Fails the
+      # build if a token edit drops any audited pair below its threshold.
+      - name: Contrast regression (WCAG AA)
+        run: node scripts/check_contrast.mjs
+        working-directory: .
+
       - name: Build (PWA)
         run: npm run build
 
