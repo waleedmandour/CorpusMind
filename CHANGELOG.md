@@ -6,6 +6,90 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
+## [1.2.7] — 2026-09-26 — Dark-theme audit with WCAG contrast regression, discourse statistics DataTable, UD v2 syntax upgrade, Persuasion Index lens, three register-specialised references
+
+This release ships five coordinated workstreams agreed in the v1.2.7 plan:
+a dark-theme accessibility audit that now fails CI on contrast regressions
+(§1); statistics for the Discourse page (§3); a UD v2 syntax upgrade
+(§2); the Persuasion Index lens (§4); and three register-specialised
+reference corpora (§5). Multi-Dimensional Analysis (Biber 1988) stays
+deferred to v2.8+ as planned.
+
+### Added
+
+- **Discourse page: statistics DataTable** (§3, benefits all lenses).
+  Every category row now carries Gries' DP dispersion (size-weighted
+  across documents) and — when a comparison corpus is selected — the full
+  keyness battery wired onto the existing measures library:
+  log-likelihood G² (Dunning 1993), Log Ratio (Hardie 2014), %DIFF and
+  Simple Maths (Kilgarriff 2009), plus a Cochran low-expected-count
+  warning (smallest expected cell < 5) surfaced as an inline `*` flag.
+  Log Ratio/%DIFF render an em dash when the category is absent from one
+  side — JSON null, not fake infinity. The v1.2.6 card list becomes a
+  sortable table with expandable evidence examples (en + ar).
+- **UD v2 syntax upgrade** (§2). The Dependency tool gains: (1) a corpus
+  profile over the **37 UD v2 universal relations** grouped by
+  grammatical function — spaCy ClearNLP labels (ROOT/dobj/pobj/…) are
+  normalized onto the universal inventory at read time, documented as a
+  label-level approximation, unknown labels pass through untouched;
+  (2) **valency frames** per verb lemma (observed argument combinations,
+  oblique prepositions tracked separately); (3) an in-house
+  **displaCy-style arc diagram** (pure SVG, offline-safe). Cited:
+  Nivre et al. (2020), LREC — see docs/METHODOLOGY.md.
+- **SFG Transitivity & Modality lens** (`sfg_hm2014`, §2). Sixth Discourse
+  lens — Halliday & Matthiessen (2014) process types (material, mental,
+  relational, behavioural, verbal, existential) plus modality
+  (probability/usuality/obligation/inclination), from structural cues
+  (copula, existential) then honest lexicon starter sets. Clauses with no
+  firing cue are reported in `unmatched_percent`, never force-bucketed.
+  Supports the §3 compare-corpus keyness battery.
+- **Persuasion Index lens** (`persuasion_gong2026`, §4). Integrates
+  persuasion-index (Wang & Gong 2026, EMNLP, Apache-2.0): 15
+  interpretable dimensions scored per document (aggregation scope always
+  reported via `scored_documents`) and aggregated to corpus-level 0–100
+  indices, with a pure-SVG radar grouped logos/ethos/pathos (our
+  analysis-facing interpretation, stated in the UI). The grounding
+  disclaimer is in the UI: PI measures rhetorical strategies, not
+  argument truth. The package is an OPTIONAL dependency
+  (`pip install -e ".[persuasion]"`); without it the API answers an
+  explicit 503, and the desktop sidecar does not bundle it.
+- **Three register-specialised reference corpora** (§5), each committed
+  and SHA-256-pinned, tests re-hashing the committed files:
+  `dialectal-arabic-tweets` (~148k dialect-labelled Arabic tweets, MIT,
+  ~1.96M tokens — top items مش/اللي/بس are unmistakably dialectal),
+  `pd-persuasive` (Federalist Papers + Common Sense + Wollstonecraft,
+  public domain, ~301k tokens), and `ellipse-learner` (ELLIPSE corpus
+  train split, Crossley et al. 2023, ~3,911 learner essays, ~1.69M
+  tokens; CC-BY-NC-SA-4.0) as an open ICLE-style learner-English
+  reference. Regeneration script: scripts/build_v127_ref_freq_lists.py.
+
+### Changed
+
+- **Dark theme (§1)**: `color-scheme: light/dark` per theme — native
+  `<select>` popups, scrollbars and form controls now follow the app
+  theme (no more light dropdowns in dark UI). Disabled states are
+  tokenized: `--text-disabled` per theme and `--disabled-opacity`
+  (0.5 light / 0.6 dark — the former dark-only override is now the
+  token default), and tool cards gain a real disabled state.
+- **Light `--warning` darkened** `#c77b0e` → `#96610a` (3.15 → 4.9:1 on
+  `--bg`) and **dark `--brand-500` adjusted** `#2a9070` → `#1f8563`
+  (white labels 3.95 → 4.57:1) — both caught by the new check.
+- CI (web job) runs `scripts/check_contrast.mjs`: WCAG AA contrast
+  regression over the design tokens — 86 token pairs asserted, covering
+  all 8 tool-hue tokens × both themes × interaction-state surfaces
+  (4.5:1 text pairs, 3:1 UI-component pairs). Fails the build on any
+  regression.
+- The discourse registry grew to six lenses; taxonomy-list citations
+  are now named constants (fixes a latent positional-lookup bug that
+  would have mis-cited the USAS lens once the registry grew).
+
+### Fixed
+
+- USAS lens citation no longer fetched positionally
+  (`discourse_taxonomy_list()[-1]`) — the registry growth would have
+  silently swapped it for the persuasion citation.
+
+
 ## [1.2.6] — 2026-09-19 — Multi-taxonomy Discourse page, floating-assistant alignment fix, resilience hardening, honest troubleshooting docs, Settings regrouping, green-button audit
 
 This release answers one field report (the floating AI Assistant showing

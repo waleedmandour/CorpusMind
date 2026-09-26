@@ -53,7 +53,7 @@ CONTENT = (
 def test_ud_inventory_covers_37_relations():
     """The UD v2 inventory lists all 37 universal relations exactly once,
     and every relation maps to a declared group."""
-    from nlp.ud_relations import UD_RELATION_INFO, UD_RELATIONS, UD_RELATION_GROUPS
+    from nlp.ud_relations import UD_RELATION_GROUPS, UD_RELATION_INFO, UD_RELATIONS
 
     assert len(UD_RELATIONS) == 37
     assert len(set(UD_RELATIONS)) == 37
