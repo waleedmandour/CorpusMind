@@ -6,6 +6,81 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
+## [1.2.8] — 2026-09-26 — Review response: Persuasion Index hardening, dependency concordance, discourse chart, KWIC latency profile, grammar audit
+
+Five reviewer-driven fixes over v1.2.7, each verified against the running
+engine and the real package surface (persuasion-index 0.3.0 on PyPI).
+
+### Changed
+
+- **Persuasion Index lens** (review #1). The dimension-to-appeal grouping
+  now mirrors the package's own inventory exactly (grounded against
+  persuasion-index 0.3.0): Logos 5 (Evidence, Logic/Cohesion,
+  Argumentation, Specificity, Opponent's View), Ethos 4
+  (Authority/Credibility, Politeness, Commitment, Style), Pathos 6
+  (Sentiment, Impact, Engagement, Reciprocity, Scarcity/Urgency,
+  Propaganda) - Engagement/Reciprocity move to pathos and Style to ethos.
+  All 15 dimensions are emitted on every run (a dimension with no score
+  shows its 0 baseline instead of being silently dropped). Multi-document
+  corpora are scored through the package's index-preserving `score_batch`
+  (single documents keep `score`), with per-document fallback on batch
+  failure. `persuasion-index` is pinned to `==0.3.0` (PI's own docs note
+  dimension comparisons are only valid under a fixed version + resource
+  configuration). Engine Python floor is already >=3.12 (satisfies the
+  package's >=3.10 requirement).
+- **Resource health instead of a blanket 503** (review #1). New status
+  endpoint `GET /api/v1/discourse/persuasion/health` mirrors
+  `persuasion-index doctor --json`: installed + version, the explicit
+  design decision (the lens ships on the package's bundled lexicons;
+  optional resources only refine specific subfeatures), and per-resource
+  availability with the degraded subfeatures, setup detail and license
+  notes (spaCy `en_core_web_sm`, concreteness ratings, LIWC, NRC-VAD).
+  Each lens run also logs the missing-resource set to the engine log.
+  The Discourse panel renders this health card whenever the persuasion
+  taxonomy is selected, and engine errors (503 install hints) are now
+  surfaced inline in the panel with a Retry button - previously they were
+  invisible outside the status-bar counter.
+- **Dependency concordance table** (review #2). The syntax panel's
+  per-instance sentence dropdown becomes a KWIC-style concordance over
+  dependency hits, one row per hit: left context | node | right context |
+  head token | relation label | source reference - the layout familiar
+  from Sketch Engine and AntConc. The node is colour-coded by part of
+  speech with a fixed legend (displaCy convention), the table sorts by
+  node/head/relation/source and filters by relation (base UD relation,
+  raw subtypes match too) or POS, and clicking a row draws its arc
+  diagram below. Backed by the new `POST /corpora/{cid}/dep-concordance`
+  endpoint (concordancer matching semantics: word/lemma, wildcards,
+  regex).
+- **Discourse visualization** (review #3). The discourse statistics table
+  gains a matching inline-SVG chart plotting exactly the table's own
+  columns (no new metric): per-category bars (per-million rate, falling
+  back to the index column) coloured by taxonomy group, and - when a
+  comparison corpus is selected - a diverging Log Ratio bar chart
+  (right: more frequent in the target, left: more frequent in the
+  reference). The persuasion lens keeps its 15-dimension radar.
+- **Vector KWIC latency** (review #4). The similarity search was a
+  pure-Python cosine loop over every candidate vector; it now runs as a
+  single numpy matrix product (the engine already depends on numpy), and
+  every response carries a per-phase latency profile (candidate
+  collection / embedding / search) that the UI renders under the result
+  meta line - so the bottleneck (embedding generation vs similarity
+  search) is measured, not guessed. Embedding remains batched (the
+  provider chunks large /api/embed requests) and the SQLite vector cache
+  is unchanged.
+
+### Added
+
+- Grammar functional audit suite (`engine/tests/test_grammar_audit.py`):
+  one crafted case per rule category through the real annotation
+  pipeline, an anti-no-op meta-test that fails if any of the six
+  detectors returns zero on a sentence engineered to contain it,
+  negative controls for a plain sentence, and a field-contract test
+  pinning the example fields the web panel renders (verb, modal,
+  negator, head + modifiers, evidence_id).
+- Dependency concordance tests pinning the row contract the UI table
+  renders, and vector-KWIC tests for batch/scalar cosine agreement plus
+  the timing payload.
+
 ## [1.2.7] — 2026-09-26 — Dark-theme audit with WCAG contrast regression, discourse statistics DataTable, UD v2 syntax upgrade, Persuasion Index lens, three register-specialised references
 
 This release ships five coordinated workstreams agreed in the v1.2.7 plan:
