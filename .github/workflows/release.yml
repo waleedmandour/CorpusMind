@@ -226,6 +226,19 @@ jobs:
             Write-Host "OK: Versioned model dir: $($versionedDir.Name)" -ForegroundColor Green
           }
 
+      # Windows runners Defender-scan a freshly built onedir bundle on its
+      # first boot, which delayed the first health response past the poll
+      # budget (first failed gate, 2026-09-26). Touch every file once so
+      # the scan happens here, not inside the smoke budget.
+      - name: Warm bundle cache (first-boot Defender scan)
+        shell: pwsh
+        run: |
+          $dir = "desktop/src-tauri/binaries/corpusmind-engine"
+          $files = Get-ChildItem $dir -Recurse -File
+          $t = Get-Date
+          foreach ($f in $files) { $null = [System.IO.File]::OpenRead($f.FullName).Close() }
+          Write-Host ("warmed {0} files ({1:N1} GB) in {2:N0}s" -f $files.Count, (($files | Measure-Object Length -Sum).Sum / 1GB), ((Get-Date) - $t).TotalSeconds)
+
       # v1.2.8 (review #6): launch the bundled engine and assert that the
       # resources behind the two features that regressed in the shipped
       # v1.2.8 actually resolve inside THIS bundle: the USAS semantic

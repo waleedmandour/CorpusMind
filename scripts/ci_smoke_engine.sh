@@ -29,6 +29,11 @@ trap cleanup EXIT
 echo -n "[smoke] waiting for /api/v1/health"
 READY=0
 for _ in $(seq 1 60); do
+  if ! kill -0 "${ENGINE_PID}" 2>/dev/null; then
+    echo
+    echo "[smoke] FAIL: engine exited early (see its output above)"
+    exit 1
+  fi
   if curl -fsS "${BASE}/api/v1/health" >/dev/null 2>&1; then
     READY=1
     break
