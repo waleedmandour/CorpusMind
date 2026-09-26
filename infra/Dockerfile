@@ -25,6 +25,7 @@ COPY engine/ingestion /build/ingestion
 COPY engine/nlp /build/nlp
 COPY engine/stats /build/stats
 COPY engine/discourse /build/discourse
+COPY engine/sentiment /build/sentiment
 COPY engine/vision /build/vision
 COPY engine/multimodal /build/multimodal
 COPY engine/storage /build/storage
