@@ -131,7 +131,11 @@ export = [
 corpusmind-engine = "app.main:run"
 
 [tool.hatch.build.targets.wheel]
-packages = ["app", "ingestion", "nlp", "stats", "discourse", "vision", "multimodal", "ai", "storage", "api", "reference_corpus", "export_queue", "learner", "semantic"]
+# NOTE: every runtime top-level package MUST be listed here. `sentiment`
+# was missing when it was added in v1.2.8 (review #8), which broke
+# non-editable installs (the Docker image) with ModuleNotFoundError while
+# editable installs kept working - caught by the CI docker boot probe.
+packages = ["app", "ingestion", "nlp", "stats", "discourse", "sentiment", "vision", "multimodal", "ai", "storage", "api", "reference_corpus", "export_queue", "learner", "semantic"]
 
 [tool.ruff]
 line-length = 100
