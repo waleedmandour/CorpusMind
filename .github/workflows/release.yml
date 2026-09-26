@@ -253,7 +253,7 @@ jobs:
       # engine and enforce the endpoint assertions strictly.
       - name: Smoke-test engine sidecar (USAS + AWL + persuasion-index)
         shell: pwsh
-        run: scripts/ci_smoke_engine.ps1 -Bin "desktop/src-tauri/binaries/corpusmind-engine/corpusmind-engine.exe" -InternalDir "desktop/src-tauri/binaries/corpusmind-engine/_internal" -WarnFile "engine/build/corpusmind-engine/warn-corpusmind-engine.txt"
+        run: pwsh -File scripts/ci_smoke_engine.ps1 -Bin "desktop/src-tauri/binaries/corpusmind-engine/corpusmind-engine.exe" -InternalDir "desktop/src-tauri/binaries/corpusmind-engine/_internal" -WarnFile "engine/build/corpusmind-engine/warn-corpusmind-engine.txt"
 
       - name: Build web PWA
         working-directory: web

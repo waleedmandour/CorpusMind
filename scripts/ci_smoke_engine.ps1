@@ -130,3 +130,8 @@ if ($Failures.Count -gt 0) {
 $passMsg = "[smoke] PASS: bundle content verified"
 if ($ready) { $passMsg += " + boot assertions" } else { $passMsg += " (boot probe skipped by runner limitation)" }
 Write-Host $passMsg
+# Deterministic success: without an explicit exit, pwsh's process exit code
+# can inherit $LASTEXITCODE from the last NATIVE command (curl.exe probes
+# fail by design when the engine is down), which failed the step AFTER the
+# PASS verdict was printed. See the two earlier release runs.
+exit 0
