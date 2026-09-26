@@ -17,6 +17,7 @@ import { useUI, type NavTarget } from "@/store/ui";
 import { t, type TranslationKey } from "@/lib/i18n";
 import { ExportButton } from "@/components/ExportButton";
 import { CollocationNetwork } from "@/components/CollocationNetwork";
+import { PersuasionRadar } from "@/components/PersuasionRadar";
 
 // Issue 5: shared export-status hook so every analysis panel gets the same
 // user-visible success/error feedback without duplicating the boilerplate.
@@ -1414,8 +1415,11 @@ function DiscoursePanel({ cid }: { cid: string }) {
       { key: "hallidayhasan1976", name: "Halliday & Hasan 1976" },
       { key: "martinwhite2005", name: "Martin & White 2005" },
       { key: "usas", name: "CLAWS/USAS semantic tagset (top-level)" },
+      { key: "sfg_hm2014", name: "SFG Transitivity & Modality (Halliday & Matthiessen 2014)" },
+      { key: "persuasion_gong2026", name: "Persuasion Index (Wang & Gong 2026) — 15 dimensions" },
     ];
   const isUsas = result.data?.taxonomy_key === "usas";
+  const isPersuasion = result.data?.taxonomy_key === "persuasion_gong2026";
 
   // v1.2.7 (§3): rows + sorting. Frequencies default to descending; a
   // second click on the active header flips the direction. Null measures
@@ -1425,7 +1429,7 @@ function DiscoursePanel({ cid }: { cid: string }) {
     switch (sortKey) {
       case "category": return r.cat;
       case "freq": return r.info.freq;
-      case "per_million": return r.info.per_million;
+      case "per_million": return r.info.per_million ?? Number.NEGATIVE_INFINITY;
       case "dp": return r.info.dp ?? 0;
       case "log_likelihood": return r.info.log_likelihood ?? Number.NEGATIVE_INFINITY;
       case "log_ratio": return r.info.log_ratio ?? Number.NEGATIVE_INFINITY;
@@ -1517,6 +1521,11 @@ function DiscoursePanel({ cid }: { cid: string }) {
           )}
         </div>
       )}
+      {isPersuasion && (
+        <div className="grounding-notice pi-disclaimer">
+          <strong>⚠</strong> {t(lang, "pi_disclaimer")}
+        </div>
+      )}
 
       {result.data && (
         <>
@@ -1526,7 +1535,14 @@ function DiscoursePanel({ cid }: { cid: string }) {
             {isUsas && result.data.unmatched_percent != null && (
               <> · <span title={t(lang, "discourse_unmatched_hint")}>{t(lang, "discourse_unmatched")}: <strong>{result.data.unmatched_percent}%</strong></span></>
             )}
+            {isPersuasion && result.data.scored_documents != null && (
+              <> · {t(lang, "pi_scored_docs")}: <strong>{result.data.scored_documents}</strong></>
+            )}
           </div>
+          {/* v1.2.7 (§4): radar over the 15 dimensions before the table */}
+          {isPersuasion && result.data.categories && Object.keys(result.data.categories).length > 0 && (
+            <PersuasionRadar categories={result.data.categories} />
+          )}
           {/* v1.2.7 (§3): sortable DataTable — replaces the v1.2.6 card list.
               DP is always available; LL / Log Ratio / %DIFF / SM appear when
               a comparison corpus is selected. The Examples column keeps the
@@ -1576,7 +1592,9 @@ function DiscoursePanel({ cid }: { cid: string }) {
                         </div>
                       )}
                     </td>
-                    <td className="num">{info.freq.toLocaleString()}</td>
+                    <td className="num" title={isPersuasion ? t(lang, "pi_freq_hint") : undefined}>
+                      {fmtNum(info.freq, 1)}
+                    </td>
                     <td className="num">{fmtNum(info.per_million, 2)}</td>
                     <td className="num" title={t(lang, "discourse_dp_hint")}>
                       {fmtNum(info.dp, 2)}

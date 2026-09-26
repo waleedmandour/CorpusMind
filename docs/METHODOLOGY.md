@@ -727,3 +727,38 @@ the dependency parses:
 
 - Halliday, M.A.K., & Matthiessen, C.M.I.M. (2014). *Halliday's
   Introduction to Functional Grammar* (4th ed.). London: Routledge.
+
+## Persuasion Index — new in v1.2.7 (§4)
+
+The Discourse page gains a sixth lens, `persuasion_gong2026`, powered by
+the **persuasion-index** package (Wang & Gong 2026, EMNLP; Apache-2.0):
+15 interpretable dimensions (Evidence, Specificity, Authority/Credibility,
+Logic/Cohesion, Argumentation, Opponent's View, Sentiment, Politeness,
+Reciprocity, Impact, Commitment, Scarcity/Urgency, Engagement, Propaganda,
+Style) scored **per document** and aggregated to corpus-level **0–100
+indices** (the mean across scored documents).
+
+- **Aggregation scope is always reported** — the response carries
+  `scored_documents` (documents are iterated in id order, capped at 50)
+  so averages are never presented as corpus-wide truths.
+- **Radar grouping.** The UI's radar groups the 15 dimensions onto the
+  classical rhetorical triad — logos (evidence & reasoning), ethos
+  (credibility & relationship), pathos (affect & impact), five each.
+  This grouping is our analysis-facing interpretation, not a claim about
+  the upstream paper's own structure.
+- **Optional dependency.** The package is installed via
+  `pip install -e ".[persuasion]"`; without it the API answers an
+  explicit 503 with an install hint. Its optional LIWC / concreteness /
+  NRC-VAD resources are **not bundled** (license-restricted); the package
+  degrades those subfeatures to neutral baselines on its own.
+- **Disclaimer (also shown in the UI):** the Persuasion Index measures
+  rhetorical *strategies* — how a text persuades — **not** whether its
+  arguments are true. A high score is not a quality verdict and a low
+  score is not a refutation.
+
+**Citation:**
+
+- Wang, Z., & Gong, L. (2026). persuasion-index: Theory-guided,
+  interpretable analysis of persuasive language (v0.3.0). In *Proceedings
+  of EMNLP 2026*. Apache-2.0.
+  https://github.com/krystalgong/Persuasion_Index_Code (arXiv:2606.14580)

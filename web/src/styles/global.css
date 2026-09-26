@@ -2001,6 +2001,24 @@ code, pre { font-family: var(--font-mono); }
 .deptree-label { font-size: 10.5px; fill: var(--brand-500); font-family: var(--font-mono); }
 .ud-profile-details summary { cursor: pointer; color: var(--brand-500); margin-block: var(--space-2); user-select: none; }
 
+/* v1.2.7 (§4): persuasion index radar + disclaimer */
+.pi-radar-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  align-items: center;
+  padding: var(--space-3);
+  background: var(--bg-subtle);
+  border-radius: var(--radius-md);
+  margin-block: var(--space-2);
+}
+.pi-radar-wrap svg { flex: 0 0 auto; }
+.pi-axis-label { font-size: 9px; fill: var(--text-muted); font-family: var(--font-sans); }
+.pi-radar-legend { display: flex; flex-direction: column; gap: var(--space-2); font-size: 13px; }
+.pi-legend-item { display: inline-flex; align-items: center; gap: var(--space-2); }
+.pi-legend-swatch { inline-size: 12px; block-size: 12px; border-radius: 3px; display: inline-block; }
+.pi-disclaimer { border-inline-start: 3px solid var(--warning); }
+
 .sentiment-bars { margin: var(--space-3) 0; }
 .sentiment-timeline {
   display: flex;

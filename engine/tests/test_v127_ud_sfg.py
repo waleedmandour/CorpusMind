@@ -181,7 +181,8 @@ async def test_sfg_lens_in_registry_and_keyness(client):
     r = await client.get(f"/api/v1/corpora/{cid_a}/discourse/taxonomies")
     keys = [t["key"] for t in r.json()["taxonomies"]]
     assert keys == [
-        "hyland2005", "hallidayhasan1976", "martinwhite2005", "usas", "sfg_hm2014",
+        "hyland2005", "hallidayhasan1976", "martinwhite2005",
+        "usas", "sfg_hm2014", "persuasion_gong2026",
     ]
 
     r = await client.post(

@@ -317,6 +317,14 @@ async def discourse(
                 "See reference-data/tagsets/ in the repository, or use the "
                 "Grammatical tagsets setting to check availability.",
             ) from e
+        if msg.startswith("persuasion_index_missing:"):
+            raise HTTPException(
+                503,
+                "The persuasion-index package is not installed in this "
+                "engine. Install it with `pip install persuasion-index` "
+                "(Apache-2.0, Wang & Gong 2026) to enable the Persuasion "
+                "Index lens.",
+            ) from e
         raise HTTPException(400, msg) from e
     return asdict(r)
 

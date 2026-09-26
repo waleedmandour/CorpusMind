@@ -123,6 +123,13 @@ allowing users to use the full CAMeL Tools stack.
 | [opencv-python](https://opencv.org/) | Apache-2.0 | Computer vision (release build dependency) |
 | [pillow](https://python-pillow.org/) | MIT-CMU | Image processing |
 
+### Persuasion Index (v1.2.7, optional install via `pip install -e ".[persuasion]"`)
+
+| Package | License | Purpose |
+| --- | --- | --- |
+| [persuasion-index](https://github.com/krystalgong/Persuasion_Index_Code) | Apache-2.0 | 15-dimension persuasive-language scoring (Wang & Gong 2026, EMNLP). Optional engine dependency — the Discourse page degrades to an explicit 503 when it is absent. |
+| pandas, wordfreq, vaderSentiment | BSD-3 / CC-BY-SA-style data terms / MIT | Transitive dependencies of persuasion-index (see upstream THIRD_PARTY_RESOURCES.md for its optional LIWC/concreteness/NRC-VAD resources, which CorpusMind does NOT bundle) |
+
 ---
 
 ## Web dependencies (Node.js)

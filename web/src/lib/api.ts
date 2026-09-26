@@ -737,13 +737,14 @@ export interface DependencyResult {
 
 export interface DiscourseCategory {
   freq: number;
-  per_million: number;
+  per_million: number | null;
   examples: Array<{ cue: string; evidence_id: string; sentence_preview: string }>;
   // v1.2.6: USAS semantic lens only — top-level label + discourse group
   label?: string;
   group?: string;
-  // v1.2.7 (§3): dispersion + optional keyness comparison
-  dp?: number;
+  // v1.2.7 (§3): dispersion + optional keyness comparison. per_million and
+  // dp are null for the persuasion lens (scores, not token counts).
+  dp?: number | null;
   log_likelihood?: number;
   log_ratio?: number | null;
   pct_diff?: number | null;
@@ -770,6 +771,8 @@ export interface DiscourseResult {
   // comparison corpus had a processed version
   compare_corpus_id?: string | null;
   compare_total_tokens?: number | null;
+  // v1.2.7 (§4): persuasion lens — documents actually scored
+  scored_documents?: number | null;
 }
 
 // v1.2.7 (§2): UD v2 syntax upgrade

@@ -933,6 +933,8 @@ class DiscourseResult:
     # there and JSON cannot carry infinities — the UI shows an em dash.
     compare_corpus_id: str | None = None
     compare_total_tokens: int | None = None
+    # v1.2.7 (§4): persuasion lens — how many documents were actually scored
+    scored_documents: int | None = None
 
 
 def discourse_taxonomy_list() -> list[dict]:
@@ -974,6 +976,17 @@ def discourse_taxonomy_list() -> list[dict]:
                     "modality.probability", "modality.usuality",
                     "modality.obligation", "modality.inclination",
                 ]
+            ),
+        }
+    )
+    # v1.2.7 (§4): persuasion index lens (optional dependency).
+    items.append(
+        {
+            "key": PERSUASION_TAXONOMY_KEY,
+            "name": "Persuasion Index (Wang & Gong 2026) — 15 dimensions",
+            "citation": PERSUASION_CITATION,
+            "categories": sorted(
+                f"pi.{family}.{dim}" for dim, family in PI_DIMENSION_FAMILIES.items()
             ),
         }
     )
@@ -1171,11 +1184,20 @@ async def compute_discourse_analysis(
             session, corpus_id, limit_examples=limit_examples,
             compare_corpus_id=compare_corpus_id,
         )
+    if key == PERSUASION_TAXONOMY_KEY:
+        if compare_corpus_id:
+            raise ValueError(
+                "compare_corpus_id is not supported for the persuasion lens "
+                "(document-level scores, not token frequencies)"
+            )
+        return await compute_persuasion_discourse_analysis(
+            session, corpus_id, limit_examples=limit_examples,
+        )
     spec = DISCOURSE_TAXONOMIES.get(key)
     if spec is None:
         raise ValueError(
             f"Unknown discourse taxonomy: {taxonomy}. Supported: "
-            f"{[*DISCOURSE_TAXONOMIES.keys(), USAS_TAXONOMY_KEY, SFG_TAXONOMY_KEY]}"
+            f"{[*DISCOURSE_TAXONOMIES.keys(), USAS_TAXONOMY_KEY, SFG_TAXONOMY_KEY, PERSUASION_TAXONOMY_KEY]}"
         )
 
     version_id = await _latest_version_id(session, corpus_id)
@@ -1967,6 +1989,146 @@ async def compute_sfg_discourse_analysis(
         unmatched_percent=unmatched,
         compare_corpus_id=compare_corpus_id if compare_total is not None else None,
         compare_total_tokens=compare_total,
+    )
+
+
+# --------------------------------------------------------------------------- #
+# §8.15c Persuasion Index lens (v1.2.7, §4)
+#
+# Integrates the persuasion-index package (Wang & Gong 2026, EMNLP;
+# Apache-2.0) as a citable lens: 15 interpretable dimensions scored per
+# document, aggregated to corpus-level 0–100 indices. The optional LIWC /
+# concreteness / NRC-VAD resources are NOT required — the package's own
+# bundled lexicons carry the core scoring and it degrades honestly.
+#
+# The package is an OPTIONAL dependency (lazy import): production installs
+# without it get an explicit 503 with an install hint, not a crash.
+# --------------------------------------------------------------------------- #
+
+PERSUASION_TAXONOMY_KEY = "persuasion_gong2026"
+
+PERSUASION_CITATION = (
+    "Wang, Z., & Gong, L. (2026). persuasion-index: Theory-guided, "
+    "interpretable analysis of persuasive language (v0.3.0). EMNLP 2026. "
+    "Apache-2.0. https://github.com/krystalgong/Persuasion_Index_Code "
+    "(arXiv:2606.14580). Scores are aggregated over documents; optional "
+    "LIWC/concreteness/VAD resources are not bundled, and the package "
+    "degrades those subfeatures to neutral baselines."
+)
+
+# Our grouping of the 15 PI dimensions onto the classical rhetorical
+# triad for the radar chart — an analysis-facing interpretation, not a
+# claim about the PI paper's own taxonomy. 5 dimensions per family.
+PI_DIMENSION_FAMILIES: dict[str, str] = {
+    "Evidence": "logos",
+    "Specificity": "logos",
+    "Logic/Cohesion": "logos",
+    "Argumentation": "logos",
+    "Opponent’s View": "logos",
+    "Authority/Credibility": "ethos",
+    "Politeness": "ethos",
+    "Reciprocity": "ethos",
+    "Commitment": "ethos",
+    "Engagement": "ethos",
+    "Sentiment": "pathos",
+    "Impact": "pathos",
+    "Scarcity/Urgency": "pathos",
+    "Propaganda": "pathos",
+    "Style": "pathos",
+}
+
+PI_DISCLAIMER = (
+    "The Persuasion Index measures rhetorical STRATEGIES (how a text "
+    "persuades), not whether its arguments are TRUE. A high score is not "
+    "a quality verdict and a low score is not a refutation."
+)
+
+
+async def compute_persuasion_discourse_analysis(
+    session: AsyncSession,
+    corpus_id: str,
+    *,
+    limit_examples: int = 5,
+    max_docs: int = 50,
+) -> DiscourseResult:
+    """Score every document with persuasion-index and aggregate the 15
+    dimensions to corpus-level 0–100 indices (v1.2.7 §4).
+
+    Documents are iterated in id order (deterministic); up to ``max_docs``
+    documents are scored and the count is reported so aggregation scope is
+    never hidden. Examples cite the highest-scoring document per dimension.
+    """
+    from storage.models import Document as DocumentModel
+
+    try:
+        from persuasion_index import score as pi_score
+    except ImportError as e:  # optional dependency — honest 503 upstream
+        raise ValueError(
+            "persuasion_index_missing: install the optional dependency with "
+            "`pip install persuasion-index` (or `pip install -e \".[persuasion]\"`)"
+        ) from e
+
+    version_id = await _latest_version_id(session, corpus_id)
+    total_tokens = await _corpus_size(session, version_id) if version_id else 0
+
+    stmt = (
+        select(DocumentModel.id, DocumentModel.filename, DocumentModel.cleaned_text)
+        .where(DocumentModel.corpus_id == corpus_id)
+        .order_by(DocumentModel.id)
+        .limit(max_docs)
+    )
+    docs = (await session.execute(stmt)).all()
+    docs = [(d_id, name, text) for d_id, name, text in docs if (text or "").strip()]
+
+    dim_scores: dict[str, list[float]] = defaultdict(list)
+    top_docs: dict[str, tuple[float, str, str]] = {}  # dim -> (score, doc_id, filename)
+    scored_docs = 0
+    for d_id, name, text in docs:
+        try:
+            result = pi_score(text)
+        except Exception as e:  # per-doc resilience: one bad doc never kills the lens
+            log.warning("persuasion_score_failed", doc=d_id, error=str(e))
+            continue
+        scored_docs += 1
+        for dim, sub in result.items():
+            mean = sub.get("mean") if isinstance(sub, dict) else None
+            if mean is None:
+                continue
+            dim_scores[dim].append(float(mean))
+            top = top_docs.get(dim)
+            if top is None or float(mean) > top[0]:
+                top_docs[dim] = (float(mean), d_id, name)
+
+    categories: dict[str, dict] = {}
+    for dim in sorted(dim_scores):
+        scores = dim_scores[dim]
+        index = round(sum(scores) / len(scores) * 100, 1)
+        family = PI_DIMENSION_FAMILIES.get(dim, "logos")
+        top = top_docs.get(dim)
+        categories[f"pi.{family}.{dim}"] = {
+            "freq": index,  # 0–100 index, not a token count — see the UI note
+            "per_million": None,  # not a frequency measure; UI shows an em dash
+            "examples": [
+                {
+                    "cue": f"{top[0]:.2f}",
+                    "evidence_id": top[1],
+                    "sentence_preview": top[2],
+                }
+            ][:limit_examples] if top else [],
+            "label": dim,
+            "group": family,
+            "dp": None,  # document-level scores, not token counts
+        }
+
+    return DiscourseResult(
+        categories=categories,
+        total_tokens=total_tokens,
+        taxonomy="Persuasion Index (Wang & Gong 2026) — 15 dimensions",
+        taxonomy_key=PERSUASION_TAXONOMY_KEY,
+        citation=PERSUASION_CITATION,
+        compare_corpus_id=None,
+        compare_total_tokens=None,
+        scored_documents=scored_docs,
     )
 
 

@@ -190,6 +190,11 @@ export const translations = {
     discourse_col_sm: "SM",
     discourse_col_examples: "Examples",
     discourse_examples_count: "examples ({n})",
+    // v1.2.7 (§4): persuasion index
+    pi_disclaimer:
+      "The Persuasion Index measures rhetorical strategies (how a text persuades), not whether its arguments are true. A high score is not a quality verdict and a low score is not a refutation.",
+    pi_scored_docs: "documents scored",
+    pi_freq_hint: "0–100 index (dimension mean across scored documents), not a token count",
     ai_input_placeholder: "Ask about this analysis…",
 
     // Settings
@@ -1030,6 +1035,11 @@ export const translations = {
     discourse_col_sm: "SM",
     discourse_col_examples: "أمثلة",
     discourse_examples_count: "أمثلة ({n})",
+    // v1.2.7 (§4): مؤشر الإقناع
+    pi_disclaimer:
+      "يقيس مؤشر الإقناع الاستراتيجيات البلاغية (كيفية إقناع النص)، وليس صحة حججه. الدرجة المرتفعة ليست حكماً على الجودة، والدرجة المنخفضة ليست دحضاً.",
+    pi_scored_docs: "المستندات المُقيَّمة",
+    pi_freq_hint: "مؤشر من 0 إلى 100 (متوسط البُعد عبر المستندات المُقيَّمة)، وليس عدد كلمات",
     ai_input_placeholder: "اسأل عن هذا التحليل…",
 
     // Settings
