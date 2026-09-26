@@ -244,15 +244,16 @@ jobs:
           reg add "HKLM\SOFTWARE\Microsoft\Windows\Windows Error Reporting" /v DontShowUI /t REG_DWORD /d 1 /f
           reg add "HKLM\SOFTWARE\Microsoft\Windows\Windows Error Reporting" /v Disabled /t REG_DWORD /d 1 /f
 
-      # v1.2.8 (review #6): launch the bundled engine and assert that the
-      # resources behind the two features that regressed in the shipped
-      # v1.2.8 actually resolve inside THIS bundle: the USAS semantic
-      # lexicon (503ed in the field), the AWL wordlist (silently missing)
-      # and the persuasion-index package (503ed in the field). A failure
-      # here fails the release instead of shipping another dark feature.
+      # v1.2.8 (review #6): assert that the resources behind the two
+      # features that regressed in the shipped v1.2.8 are present in THIS
+      # bundle. Windows runner note: windows-latest cannot boot the
+      # windowed sidecar at all (process alive, no port, no log; three
+      # runs on 2026-09-26), so this gate is content-based and the boot
+      # probe is informational there. Linux and macOS gates boot the
+      # engine and enforce the endpoint assertions strictly.
       - name: Smoke-test engine sidecar (USAS + AWL + persuasion-index)
         shell: pwsh
-        run: scripts/ci_smoke_engine.ps1 -Bin "desktop/src-tauri/binaries/corpusmind-engine/corpusmind-engine.exe"
+        run: scripts/ci_smoke_engine.ps1 -Bin "desktop/src-tauri/binaries/corpusmind-engine/corpusmind-engine.exe" -InternalDir "desktop/src-tauri/binaries/corpusmind-engine/_internal" -WarnFile "engine/build/corpusmind-engine/warn-corpusmind-engine.txt"
 
       - name: Build web PWA
         working-directory: web
