@@ -887,6 +887,14 @@ DISCOURSE_TAXONOMIES: dict[str, dict] = {
 # discourse-functional groupings rather than a plain frequency list.
 USAS_TAXONOMY_KEY = "usas"
 
+USAS_CITATION = (
+    "Rayson, P., Archer, D., Piao, S., & McEnery, T. (2004). "
+    "The UCREL Semantic Analysis System. Lancaster: UCREL "
+    "(CLAWS-family semantic tagset). Bundled top-level lexicon: "
+    "CC BY-NC-SA 4.0 — lexicon-based lookup, not the licensed "
+    "CLAWS/USAS tagger."
+)
+
 USAS_DISCOURSE_GROUPS: dict[str, str] = {
     "Q": "Communication and speech reporting",
     "S": "Social interaction and relations",
@@ -952,13 +960,7 @@ def discourse_taxonomy_list() -> list[dict]:
         {
             "key": USAS_TAXONOMY_KEY,
             "name": "CLAWS/USAS semantic tagset (top-level)",
-            "citation": (
-                "Rayson, P., Archer, D., Piao, S., & McEnery, T. (2004). "
-                "The UCREL Semantic Analysis System. Lancaster: UCREL "
-                "(CLAWS-family semantic tagset). Bundled top-level lexicon: "
-                "CC BY-NC-SA 4.0 — lexicon-based lookup, not the licensed "
-                "CLAWS/USAS tagger."
-            ),
+            "citation": USAS_CITATION,
             "categories": sorted(USAS_DISCOURSE_GROUPS.keys()),
         }
     )
@@ -1355,7 +1357,7 @@ async def compute_usas_discourse_analysis(
             categories={}, total_tokens=0,
             taxonomy="CLAWS/USAS semantic tagset (top-level)",
             taxonomy_key=USAS_TAXONOMY_KEY,
-            citation=discourse_taxonomy_list()[-1]["citation"],
+            citation=USAS_CITATION,
             unmatched_percent=100.0,
         )
 
@@ -1425,7 +1427,7 @@ async def compute_usas_discourse_analysis(
         total_tokens=total_tokens,
         taxonomy="CLAWS/USAS semantic tagset (top-level)",
         taxonomy_key=USAS_TAXONOMY_KEY,
-        citation=discourse_taxonomy_list()[-1]["citation"],
+        citation=USAS_CITATION,
         unmatched_percent=unmatched,
         compare_corpus_id=compare_corpus_id if compare_total is not None else None,
         compare_total_tokens=compare_total,

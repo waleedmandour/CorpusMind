@@ -144,7 +144,11 @@ async def test_discourse_taxonomies_registry(client):
     assert r.status_code == 200
     taxonomies = r.json()["taxonomies"]
     keys = [t["key"] for t in taxonomies]
-    assert keys == ["hyland2005", "hallidayhasan1976", "martinwhite2005", "usas"]
+    # v1.2.7: the registry grew — sfg_hm2014 (§2) and persuasion_gong2026 (§4)
+    assert keys == [
+        "hyland2005", "hallidayhasan1976", "martinwhite2005",
+        "usas", "sfg_hm2014", "persuasion_gong2026",
+    ]
     for t in taxonomies:
         assert t["name"]
         assert t["citation"]

@@ -370,4 +370,107 @@ BUNDLED_REFERENCES: list[ReferenceCorpusSpec] = [
         min_corpus_tokens=1_000,
         tags=("arabic", "news", "leipzig"),
     ),
+    # v1.2.7 (§5): three register-specialised references — dialectal Arabic,
+    # persuasive genre, learner English. Each ships as a committed,
+    # SHA-256-pinned top-1000 frequency list built from a real, open source
+    # (scripts/build_v127_ref_freq_lists.py regenerates them); the
+    # test_v127_reference_corpora.py suite re-hashes the committed files so
+    # a stale or tampered list fails CI.
+    ReferenceCorpusSpec(
+        name="dialectal-arabic-tweets",
+        display_name="Dialectal Arabic Tweets — multi-dialect (top 1000)",
+        language="ar",
+        description=(
+            "Top-1000 word-frequency list built from ~148,000 "
+            "dialect-labelled Arabic tweets (Hugging Face dataset "
+            "amgadhasan/arabic_tweets_dialects, 5 dialect groups; "
+            "mentions/URLs/hashtags stripped, diacritics and tatweel "
+            "removed, ~1.96M tokens). A genuine colloquial/dialectal "
+            "register reference — the register MSA news corpora lack — "
+            "for dialect/register keyness against MSA or classical "
+            "targets. Honest caveat: social-media register, so hashtag "
+            "culture and short-form orthography apply."
+        ),
+        source_url=(
+            "https://raw.githubusercontent.com/waleedmandour/CorpusMind/main/"
+            "reference-data/reference-corpora/ar/dialectal-arabic-tweets-top1000.tsv"
+        ),
+        sha256="7a4571e336d8a592b148b86a633532c8521aa7de8a9e3b3ec17d600177d90cdf",
+        format="tsv_freq",
+        size_hint="~18 KB",
+        license="MIT",
+        citation=(
+            "arabic_tweets_dialects dataset (Hugging Face, amgadhasan, "
+            "2023), ~148k dialect-labelled Arabic tweets. MIT License."
+        ),
+        genre="dialectal",
+        min_corpus_tokens=500,
+        tags=("arabic", "dialectal", "colloquial", "tweets", "social-media"),
+    ),
+    ReferenceCorpusSpec(
+        name="pd-persuasive",
+        display_name="Persuasive Essays & Oratory — public domain (top 1000)",
+        language="en",
+        description=(
+            "Top-1000 word-frequency list built from ~301,000 tokens of "
+            "public-domain persuasive writing via Project Gutenberg: The "
+            "Federalist Papers (Hamilton, Madison & Jay, 1788), Common "
+            "Sense (Paine, 1776) and A Vindication of the Rights of "
+            "Woman (Wollstonecraft, 1792). A persuasive-GENRE comparable "
+            "corpus: argumentation, exhortation and polemic — pairs with "
+            "the persuasion_gong2026 lens for genre-aware interpretation "
+            "of rhetorical-strategy scores."
+        ),
+        source_url=(
+            "https://raw.githubusercontent.com/waleedmandour/CorpusMind/main/"
+            "reference-data/reference-corpora/en/pd-persuasive-top1000.tsv"
+        ),
+        sha256="5dc6ae6f5309fcb06c7dad73c894c2607485b025e6ecb7293a9bcca7a9d07a73",
+        format="tsv_freq",
+        size_hint="~20 KB",
+        license="Public domain",
+        citation=(
+            "Hamilton, A., Madison, J., & Jay, J. (1788). The Federalist "
+            "Papers; Paine, T. (1776). Common Sense; Wollstonecraft, M. "
+            "(1792). A Vindication of the Rights of Woman. Project "
+            "Gutenberg texts, public domain."
+        ),
+        genre="persuasive",
+        min_corpus_tokens=1_000,
+        tags=("english", "persuasive", "essays", "oratory", "public-domain"),
+    ),
+    ReferenceCorpusSpec(
+        name="ellipse-learner",
+        display_name="ELLIPSE — learner English essays (top 1000)",
+        language="en",
+        description=(
+            "Top-1000 word-frequency list from the ELLIPSE corpus "
+            "(Crossley et al. 2023): the training split, ~3,911 "
+            "argumentative essays (~1.69M tokens) written by English "
+            "language learners in US secondary standardized testing "
+            "(grades 8-12). An open ICLE-STYLE learner-English reference "
+            "for keyness against native/expert English target corpora — "
+            "the closed ICLE itself is not redistributable. Note the "
+            "non-commercial license before reuse."
+        ),
+        source_url=(
+            "https://raw.githubusercontent.com/waleedmandour/CorpusMind/main/"
+            "reference-data/reference-corpora/en/ellipse-learner-top1000.tsv"
+        ),
+        sha256="7aff609753e04aaa0c3ba1787593bbe4583f97fd5b10384c09988b8bedce6313",
+        format="tsv_freq",
+        size_hint="~19 KB",
+        license="CC-BY-NC-SA-4.0",
+        citation=(
+            "Crossley, S. A., Tian, Y., Baffour, P., Franklin, A., Kim, "
+            "Y., Morris, W., Benner, B., Picou, A., & Boser, U. (2023). "
+            "Measuring second language proficiency using the English "
+            "Language Learner Insight, Proficiency and Skills Evaluation "
+            "(ELLIPSE) Corpus. International Journal of Learner Corpus "
+            "Research, 9(2), 248-269."
+        ),
+        genre="learner",
+        min_corpus_tokens=500,
+        tags=("english", "learner", "essays", "l2"),
+    ),
 ]
