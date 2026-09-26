@@ -229,7 +229,10 @@ jobs:
       # Windows runners Defender-scan a freshly built onedir bundle on its
       # first boot, which delayed the first health response past the poll
       # budget (first failed gate, 2026-09-26). Touch every file once so
-      # the scan happens here, not inside the smoke budget.
+      # the scan happens here, not inside the smoke budget. A crashing
+      # windowed engine also pops a Windows Error Reporting dialog that
+      # keeps the process "alive" forever - disable the WER UI so crashes
+      # exit and yield their exit codes to the smoke gate.
       - name: Warm bundle cache (first-boot Defender scan)
         shell: pwsh
         run: |
@@ -238,6 +241,8 @@ jobs:
           $t = Get-Date
           foreach ($f in $files) { $null = [System.IO.File]::OpenRead($f.FullName).Close() }
           Write-Host ("warmed {0} files ({1:N1} GB) in {2:N0}s" -f $files.Count, (($files | Measure-Object Length -Sum).Sum / 1GB), ((Get-Date) - $t).TotalSeconds)
+          reg add "HKLM\SOFTWARE\Microsoft\Windows\Windows Error Reporting" /v DontShowUI /t REG_DWORD /d 1 /f
+          reg add "HKLM\SOFTWARE\Microsoft\Windows\Windows Error Reporting" /v Disabled /t REG_DWORD /d 1 /f
 
       # v1.2.8 (review #6): launch the bundled engine and assert that the
       # resources behind the two features that regressed in the shipped
