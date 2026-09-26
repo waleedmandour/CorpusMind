@@ -88,6 +88,12 @@ deferred to v2.8+ as planned.
 - USAS lens citation no longer fetched positionally
   (`discourse_taxonomy_list()[-1]`) — the registry growth would have
   silently swapped it for the persuasion citation.
+- Engine dependencies now declare `sqlalchemy[asyncio]` so `greenlet` is
+  installed explicitly; SQLAlchemy 2.1 stopped bundling it, which broke
+  fresh installs and CI (assistant tool endpoints failed at import).
+- All user-facing strings audited: em dashes removed from the UI
+  (web strings, engine API responses, desktop sidecar errors, exports);
+  en-dash pairing typography and comments untouched.
 
 
 ## [1.2.6] — 2026-09-19 — Multi-taxonomy Discourse page, floating-assistant alignment fix, resilience hardening, honest troubleshooting docs, Settings regrouping, green-button audit

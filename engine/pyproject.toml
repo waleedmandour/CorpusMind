@@ -50,7 +50,7 @@ dependencies = [
     # confirmed they are never imported or used anywhere in the engine. Removing
     # them reduces bundle size, native DLL surface area, and AV false-positive risk.
     # Storage
-    "sqlalchemy>=2.0.36",
+    "sqlalchemy[asyncio]>=2.0.36",  # asyncio extra pins greenlet (required since SQLAlchemy 2.1)
     "aiosqlite>=0.20.0",
     # Reproducibility / provenance
     "pyyaml>=6.0.2",
