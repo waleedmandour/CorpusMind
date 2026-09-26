@@ -18,7 +18,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import QRCode from "qrcode";
 
-import { api } from "@/lib/api";
+import { api, type ServerModeAuditEntry } from "@/lib/api";
 import { useUI } from "@/store/ui";
 import { t } from "@/lib/i18n";
 
@@ -60,6 +60,53 @@ function QrImage({ value, size = 148 }: { value: string; size?: number }) {
   return <img ref={ref} width={size} height={size} alt={`QR: ${value}`} className="sm-qr-img" />;
 }
 
+/** One line of the anonymous audit log, human-readable. */
+function AuditEntryRow({ e, lang }: { e: ServerModeAuditEntry; lang: "en" | "ar" }) {
+  const time = useMemo(() => {
+    try {
+      return new Date(e.ts).toLocaleTimeString();
+    } catch {
+      return e.ts;
+    }
+  }, [e.ts]);
+  const detail = useMemo(() => {
+    switch (e.event) {
+      case "chat":
+        return `${e.alias ?? "S-?"}: ${e.question ?? ""}`;
+      case "chat_error":
+        return `${e.alias ?? "S-?"}: ${e.question ?? ""} — ${e.error ?? ""}`;
+      case "api_request":
+        return `${e.alias ?? (e.role === "teacher" ? "teacher" : "S-?")} · ${e.method ?? "GET"} ${e.path ?? ""} → ${e.status ?? ""}`;
+      case "student_join":
+        return `${e.alias ?? "S-?"} · ${t(lang, "sm_students_connected").replace("{n}", String(e.students_active ?? ""))}`;
+      case "denied":
+        return `${e.alias ?? "S-?"} · ${e.reason ?? ""} (${e.path ?? ""})`;
+      case "classroom_started":
+        return `${e.student_model ?? ""} · ×${e.num_parallel ?? ""}`;
+      case "classroom_stopped":
+        return `${t(lang, "sm_audit_summary_joined").replace("{n}", String(e.students_joined_total ?? 0))} · ${t(lang, "sm_audit_summary_chats").replace("{n}", String(e.chats_total ?? 0))}`;
+      default:
+        return "";
+    }
+  }, [e, lang]);
+  return (
+    <li className="sm-audit-item">
+      <span className="sm-audit-meta">{time}</span>
+      <span className={`sm-audit-badge sm-audit-${e.event}`}>{e.event}</span>
+      <span className="sm-audit-text">
+        {e.event === "chat" || e.event === "chat_error" ? (
+          <>
+            <span className="sm-audit-q">{detail}</span>
+            {e.response ? <span className="sm-audit-a">↳ {e.response}</span> : null}
+          </>
+        ) : (
+          detail
+        )}
+      </span>
+    </li>
+  );
+}
+
 export function StudentModeServerCard() {
   const lang = useUI((s) => s.lang);
   const qc = useQueryClient();
@@ -92,17 +139,53 @@ export function StudentModeServerCard() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["server-mode-status"] }),
   });
   const updateConfig = useMutation({
-    mutationFn: (req: { student_model?: string; num_parallel?: number }) =>
-      api.serverModeUpdateConfig(req),
+    mutationFn: (req: {
+      student_model?: string;
+      num_parallel?: number;
+      max_students?: number | null;
+      audit_enabled?: boolean;
+    }) => api.serverModeUpdateConfig(req),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["server-mode-status"] }),
   });
+
+  const s = status.data;
+  const enabled = !!s?.enabled;
 
   const [mode, setMode] = useState<"secure" | "simple">("secure");
   const [httpsPort, setHttpsPort] = useState<number | null>(null);
   const [httpPort, setHttpPort] = useState<number | null>(null);
+  const [seatDraft, setSeatDraft] = useState<string>("");
+  const [auditOpen, setAuditOpen] = useState(false);
 
-  const s = status.data;
-  const enabled = !!s?.enabled;
+  useEffect(() => {
+    setSeatDraft(s?.max_students != null ? String(s.max_students) : "");
+  }, [s?.max_students]);
+
+  const audit = useQuery({
+    queryKey: ["server-mode-audit"],
+    queryFn: () => api.serverModeAudit(120),
+    enabled: enabled && auditOpen && !!s?.audit_enabled,
+    refetchInterval: auditOpen && enabled ? 8000 : false,
+  });
+
+  const applySeatLimit = () => {
+    const raw = seatDraft.trim();
+    if (raw === "") {
+      updateConfig.mutate({ max_students: null }); // back to auto
+      return;
+    }
+    const n = Number(raw);
+    if (!Number.isFinite(n)) return;
+    updateConfig.mutate({ max_students: Math.max(1, Math.min(99, Math.round(n))) });
+  };
+
+  const seatsSourceText = useMemo(() => {
+    const src = s?.students_cap_source;
+    if (src === "manual") return t(lang, "sm_seats_source_manual");
+    if (src === "auto") return t(lang, "sm_seats_source_auto");
+    if (src === "auto-fallback") return t(lang, "sm_seats_source_fallback");
+    return t(lang, "sm_seats_source_unknown");
+  }, [s?.students_cap_source, lang]);
 
   const studentUrl = useMemo(() => {
     if (!s?.enabled) return "";
@@ -322,6 +405,107 @@ export function StudentModeServerCard() {
                 <p className="cat-meta">{capacity.data.note}</p>
               </div>
             )}
+
+            {/* v1.2.9: enforced seat limit — the engine rejects NEW students
+                with 429 while the classroom is full (this device + LM sized). */}
+            <div className="sm-seats">
+              <strong>
+                {s.students_max != null
+                  ? t(lang, "sm_seats_line")
+                      .replace("{active}", String(s.students_active))
+                      .replace("{max}", String(s.students_max))
+                  : t(lang, "sm_students_connected").replace("{n}", String(s.students_active))}
+              </strong>
+              <p className="cat-meta">{seatsSourceText}</p>
+              <div className="sm-port-row">
+                <label>
+                  {t(lang, "sm_seats_label")}
+                  <input
+                    type="number"
+                    min={1}
+                    max={99}
+                    value={seatDraft}
+                    placeholder="auto"
+                    onChange={(e) => setSeatDraft(e.target.value)}
+                  />
+                </label>
+                <button
+                  type="button"
+                  className="btn-small"
+                  disabled={updateConfig.isPending}
+                  onClick={applySeatLimit}
+                >
+                  {t(lang, "sm_seats_apply")}
+                </button>
+                <button
+                  type="button"
+                  className="btn-small"
+                  disabled={updateConfig.isPending || s.max_students == null}
+                  onClick={() => updateConfig.mutate({ max_students: null })}
+                >
+                  {t(lang, "sm_seats_reset_auto")}
+                </button>
+              </div>
+              <p className="cat-meta">{t(lang, "sm_max_students_hint")}</p>
+            </div>
+
+            {/* v1.2.9: anonymous audit log — joins, queries, LM answers,
+                denials. Aliases only (S-1, S-2 …), stored locally. */}
+            <details
+              className="sm-advanced"
+              open={auditOpen}
+              onToggle={(e) => setAuditOpen((e.target as HTMLDetailsElement).open)}
+            >
+              <summary>{t(lang, "sm_audit_title")}</summary>
+              <div className="sm-audit">
+                {audit.data && (
+                  <p className="cat-meta sm-audit-summary">
+                    {t(lang, "sm_audit_summary_joined").replace(
+                      "{n}",
+                      String(audit.data.students_joined_total),
+                    )}
+                    {" · "}
+                    {t(lang, "sm_audit_summary_chats").replace(
+                      "{n}",
+                      String(audit.data.chats_total),
+                    )}
+                    {" · "}
+                    {t(lang, "sm_audit_summary_events").replace(
+                      "{n}",
+                      String(audit.data.summary?.events_total ?? 0),
+                    )}
+                  </p>
+                )}
+                <label className="sm-audit-toggle-row">
+                  <input
+                    type="checkbox"
+                    checked={!!s.audit_enabled}
+                    onChange={(e) => updateConfig.mutate({ audit_enabled: e.target.checked })}
+                  />
+                  <span>{t(lang, "sm_audit_toggle")}</span>
+                </label>
+                {s.audit_enabled && (
+                  <>
+                    {audit.isLoading && <p className="cat-meta">…</p>}
+                    {audit.data && audit.data.entries.length === 0 && (
+                      <p className="cat-meta">{t(lang, "sm_audit_empty")}</p>
+                    )}
+                    {audit.data && audit.data.entries.length > 0 && (
+                      <ul className="sm-audit-list">
+                        {[...audit.data.entries].reverse().slice(0, 40).map((e, i) => (
+                          <AuditEntryRow key={`${e.ts}-${i}`} e={e} lang={lang} />
+                        ))}
+                      </ul>
+                    )}
+                  </>
+                )}
+                <p className="cat-meta">
+                  {t(lang, "sm_audit_privacy")}
+                  <br />
+                  <code>{s.audit_dir}</code>
+                </p>
+              </div>
+            </details>
           </>
         )}
       </div>

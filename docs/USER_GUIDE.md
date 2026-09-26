@@ -616,6 +616,43 @@ status and a Source Code link (the app is AGPL-3.0; students on a network
 are entitled to the source). To leave, use Exit Student Mode or open the
 link with `?mode=teacher`.
 
+**Seat limit (protects your machine)**
+
+The classroom enforces a hard cap on how many students can join at once,
+sized from your hardware: by default the limit is estimated automatically
+from your device's available memory (or GPU VRAM when present) and the size
+of the classroom model — the same probe behind the model-download guidance.
+When the classroom is full, new students see a friendly "classroom is full"
+message and can retry in a few minutes, while already-connected students
+keep working and you (the teacher) are never capped. The card shows the
+live seat usage ("Seats: 12 active of 18") and its source. To set a fixed
+number instead, type it into **Seat limit** and press **Apply**; press
+**Auto** to return to the device-sized estimate. The cap is also informed
+by `OLLAMA_NUM_PARALLEL`: more parallel slots let the model serve several
+students simultaneously, but each slot still costs memory.
+
+**Audit log (anonymous)**
+
+While Student Mode is on, the engine keeps an audit log of classroom
+activity — on by default, and toggleable in the card. It records, with
+every possible detail but no identities:
+
+- each student joining (shown as an anonymous alias, `S-1`, `S-2`, …) and
+  the number of students connected over the session;
+- every analysis request (tool, route, status, duration);
+- **each question a student asked the local LM and the full answer the
+  model returned**, with the model name and response time;
+- denials (routes students may not touch, classroom-full rejections).
+
+The log is anonymous by design: students appear only as aliases; no names,
+device addresses, or tokens are ever written, and the mapping is kept in
+memory only, so the file cannot be de-anonymised later. Entries are stored
+locally as one JSON-lines file per day under
+`<data>/classroom/audit/` (rotated when a day file grows past 5 MB). Open
+the **Classroom audit log** panel in the card to browse today's events with
+a summary (students joined, chats held), or open the folder to archive the
+raw files for your teaching records.
+
 **Security notes.** The classroom server binds to your machine only; the
 bundled proxy stamps proxied requests and the engine refuses any
 classroom traffic without a valid teacher or student token. Anyone with

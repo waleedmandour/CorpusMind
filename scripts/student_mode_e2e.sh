@@ -99,6 +99,43 @@ COUNT=$(curl -fsS "${BASE}/api/v1/server-mode/status" | python3 -c "import json,
 [ "${COUNT}" -ge 1 ] || fail "students_active=${COUNT} (want >=1 after student requests)"
 ok "connected-student counter live (${COUNT})"
 
+# --- 7b. Anonymous audit log records the classroom traffic ---------------
+AUDIT=$(curl -fsS -H "Authorization: Bearer ${TEACHER}" "${BASE}/api/v1/server-mode/audit?limit=50")
+echo "${AUDIT}" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+assert d['audit_enabled'] is True, d
+assert d['students_joined_total'] >= 1, d
+events=[e['event'] for e in d['entries']]
+assert 'student_join' in events, events
+assert 'api_request' in events, events
+blob=json.dumps(d['entries'])
+assert 'cm_study_' not in blob and 'cm_teach_' not in blob, 'token leaked into audit'
+assert '127.0.0.1' not in blob, 'IP leaked into audit'
+print('events:', d['summary']['events_total'])
+" || fail "audit log invalid"
+ok "anonymous audit log records joins + requests (no IPs/tokens)"
+
+CODE=$(curl -ks -o /dev/null -w '%{http_code}' -H "Authorization: Bearer ${STUDENT}" "${APPURL}/api/v1/server-mode/audit")
+[ "${CODE}" = "403" ] || fail "student audit -> ${CODE} (want 403)"
+ok "audit log hidden from students (403)"
+
+# --- 7c. Seat limit: seated student keeps the seat, new device rejected --
+curl -fsS -X POST "${BASE}/api/v1/server-mode/config" -H 'Content-Type: application/json' \
+  -d '{"max_students":1}' >/dev/null
+CODE=$(curl -ks -o /dev/null -w '%{http_code}' -H "Authorization: Bearer ${STUDENT}" "${APPURL}/api/v1/version")
+[ "${CODE}" = "200" ] || fail "seated student blocked after cap (${CODE})"
+CODE=$(curl -ks -o /dev/null -w '%{http_code}' -H "Authorization: Bearer ${STUDENT}" \
+  -H 'X-CorpusMind-Session: e2e-second-device' "${APPURL}/api/v1/version")
+[ "${CODE}" = "429" ] || fail "second device -> ${CODE} (want 429 while full)"
+ok "seat limit enforced (seated student OK, new device 429)"
+curl -fsS -X POST "${BASE}/api/v1/server-mode/config" -H 'Content-Type: application/json' \
+  -d '{"max_students":null}' >/dev/null
+CODE=$(curl -ks -o /dev/null -w '%{http_code}' -H "Authorization: Bearer ${STUDENT}" \
+  -H 'X-CorpusMind-Session: e2e-second-device' "${APPURL}/api/v1/version")
+[ "${CODE}" = "200" ] || fail "auto cap rejected everyone (${CODE})"
+ok "auto cap restored (device-sized/fallback), new device joins"
+
 # --- 8. Disable: Caddy stops, proxied traffic refused -------------------
 curl -fsS -X POST "${BASE}/api/v1/server-mode/disable" >/dev/null
 sleep 1

@@ -332,6 +332,8 @@ def _make_client_fixture(env: dict[str, str], unset: tuple[str, ...] = ()):
         import shutil
 
         shutil.rmtree("/tmp/cm-sm-test-data/server-mode", ignore_errors=True)
+        # v1.2.9: the classroom audit day-file must not leak across tests.
+        shutil.rmtree("/tmp/cm-sm-test-data/classroom", ignore_errors=True)
 
         from app.settings import get_settings
 
@@ -479,3 +481,254 @@ async def test_status_reports_disabled_by_default(sm_client):
     body = r.json()
     assert body["enabled"] is False
     assert "student_token" not in body  # tokens only leak while enabled
+
+
+# --------------------------------------------------------------------------- #
+# v1.2.9 (follow-up): anonymous audit log + enforced seat limit
+# --------------------------------------------------------------------------- #
+
+
+def _read_audit(state):
+    """All audit entries of the current day (oldest-first)."""
+    return state.audit.read_tail(500)
+
+
+@pytest.mark.asyncio
+async def test_audit_written_and_anonymous(classroom):
+    """Student traffic lands in the JSONL audit file with an anonymous
+    alias — and NEVER with the IP, session ID or bearer tokens."""
+    ac, sm_state = classroom
+    h = {
+        **PROXY,
+        "Authorization": f"Bearer {sm_state.config.student_token}",
+        "X-CorpusMind-Session": "very-secret-browser-uuid-42",
+    }
+    r = await ac.get("/api/v1/version", headers=h)
+    assert r.status_code == 200
+
+    entries = _read_audit(sm_state)
+    events = [e["event"] for e in entries]
+    assert "student_join" in events
+    assert "api_request" in events
+    join = next(e for e in entries if e["event"] == "student_join")
+    assert join["alias"] == "S-1"
+    assert sm_state.joined_total == 1
+
+    import json as _json
+
+    blob = _json.dumps(entries)
+    assert "very-secret-browser-uuid-42" not in blob  # session ID never stored
+    assert "study-token-xyz" not in blob and "teach-token-xyz" not in blob
+    assert "testclient" not in blob and "127.0.0.1" not in blob  # no addresses
+
+
+@pytest.mark.asyncio
+async def test_seat_limit_rejects_new_students_only(classroom):
+    """max_students=1: the first student gets a seat; the next NEW student
+    is rejected with 429 while the seated student keeps working and the
+    teacher is never capped."""
+    ac, sm_state = classroom
+    sm_state.config.max_students = 1
+
+    student_a = {**PROXY, "Authorization": f"Bearer {sm_state.config.student_token}",
+                 "X-CorpusMind-Session": "sess-A"}
+    student_b = {**PROXY, "Authorization": f"Bearer {sm_state.config.student_token}",
+                 "X-CorpusMind-Session": "sess-B"}
+    teacher = {**PROXY, "Authorization": f"Bearer {sm_state.config.teacher_token}",
+               "X-CorpusMind-Session": "sess-T"}
+
+    r = await ac.get("/api/v1/version", headers=student_a)
+    assert r.status_code == 200
+    r = await ac.get("/api/v1/version", headers=student_a)  # seated → still fine
+    assert r.status_code == 200
+
+    r = await ac.get("/api/v1/version", headers=student_b)
+    assert r.status_code == 429
+    assert "full" in r.json()["detail"].lower()
+
+    r = await ac.get("/api/v1/version", headers=teacher)
+    assert r.status_code == 200  # teacher unaffected by the cap
+
+    # The rejection is audited (rate-limited to one line per window).
+    denials = [e for e in _read_audit(sm_state) if e["event"] == "denied"]
+    assert any("classroom_full" in str(e.get("reason", "")) for e in denials)
+
+
+@pytest.mark.asyncio
+async def test_seat_limit_status_and_auto_fallback(classroom):
+    """Status exposes the effective cap + its source; nulling the manual
+    override falls back to the conservative auto ceiling (MAX_STUDENTS)."""
+    ac, sm_state = classroom
+    teacher = {"Authorization": f"Bearer {sm_state.config.teacher_token}"}
+
+    r = await ac.post("/api/v1/server-mode/config", headers=teacher,
+                      json={"max_students": 7})
+    body = r.json()
+    assert body["max_students"] == 7
+    assert body["students_max"] == 7
+    assert body["students_cap_source"] == "manual"
+
+    r = await ac.post("/api/v1/server-mode/config", headers=teacher,
+                      json={"max_students": None})  # back to auto
+    body = r.json()
+    assert body["max_students"] is None
+    # No Ollama in the test env → model size unknown → hard fallback cap.
+    from app.server_mode import MAX_STUDENTS as _MAX_STUDENTS
+
+    assert body["students_max"] == _MAX_STUDENTS
+    assert body["students_cap_source"] == "auto-fallback"
+
+
+@pytest.mark.asyncio
+async def test_audit_endpoint_teacher_only(classroom):
+    ac, sm_state = classroom
+    student = {**PROXY, "Authorization": f"Bearer {sm_state.config.student_token}"}
+    teacher = {**PROXY, "Authorization": f"Bearer {sm_state.config.teacher_token}"}
+
+    r = await ac.get("/api/v1/server-mode/audit", headers=student)
+    assert r.status_code == 403
+
+    await ac.get("/api/v1/version", headers=student)  # generate one event
+
+    r = await ac.get("/api/v1/server-mode/audit?limit=50", headers=teacher)
+    assert r.status_code == 200
+    body = r.json()
+    assert body["enabled"] is True
+    assert body["audit_enabled"] is True
+    assert body["chats_total"] == 0
+    assert body["students_joined_total"] == 1
+    assert any(e["event"] == "api_request" for e in body["entries"])
+    assert body["summary"]["events_total"] >= 2
+
+
+@pytest.mark.asyncio
+async def test_audit_toggle_off_silences_writer(classroom):
+    ac, sm_state = classroom
+    teacher = {"Authorization": f"Bearer {sm_state.config.teacher_token}"}
+    student = {**PROXY, "Authorization": f"Bearer {sm_state.config.student_token}",
+               "X-CorpusMind-Session": "sess-quiet"}
+
+    r = await ac.post("/api/v1/server-mode/config", headers=teacher,
+                      json={"audit_enabled": False})
+    assert r.json()["audit_enabled"] is False
+
+    r = await ac.get("/api/v1/version", headers=student)
+    assert r.status_code == 200
+    assert _read_audit(sm_state) == []  # nothing written while off
+
+    r = await ac.post("/api/v1/server-mode/config", headers=teacher,
+                      json={"audit_enabled": True})
+    assert r.json()["audit_enabled"] is True
+    await ac.get("/api/v1/version", headers=student)
+    assert len(_read_audit(sm_state)) >= 1
+
+
+def test_audit_rotation_and_size_cap(tmp_path):
+    """A day file over the size threshold rotates to .1; disabled writers
+    and corrupt lines are handled without raising."""
+    from app.classroom_audit import AUDIT_MAX_BYTES, ClassroomAudit
+
+    a = ClassroomAudit(tmp_path, enabled=True)
+    for i in range(3):
+        a.write("api_request", alias=f"S-{i}", path="/api/v1/version")
+    active = a.current_file()
+    assert active.exists() and active.read_text().count("\n") == 3
+
+    # Force the threshold and confirm rotation.
+    active.write_text("x" * (AUDIT_MAX_BYTES + 1), encoding="utf-8")
+    a.write("api_request", alias="S-9", path="/api/v1/version")
+    rotated = active.with_suffix(active.suffix + ".1")
+    assert rotated.exists()
+    assert any(e.get("alias") == "S-9" for e in a.read_tail(10))
+
+    # Disabled writer: no file, no error.
+    off = ClassroomAudit(tmp_path / "off", enabled=False)
+    off.write("chat", alias="S-1", question="q", response="r")
+    assert not (tmp_path / "off").exists()
+
+    # Corrupt lines are skipped by readers (the valid entry survives).
+    with open(active, "a", encoding="utf-8") as f:
+        f.write("not-json\n")
+    tail = [e for e in a.read_tail(10) if e is not None]
+    assert any(e.get("alias") == "S-9" for e in tail)
+
+
+@pytest.mark.asyncio
+async def test_student_chat_question_and_response_audited(classroom, monkeypatch):
+    """The audit contract's core: what the student asked the local LM and
+    what the model answered both land in the log, verbatim."""
+    ac, sm_state = classroom
+
+    class _StubProvider:
+        name = "ollama"
+        default_model = "llama3.2:3b"
+
+        async def health(self):
+            return True
+
+        async def pick_default_model(self):
+            return "llama3.2:3b"
+
+        async def supports_tools(self, model=None):
+            return True
+
+        async def list_models(self):
+            return ["llama3.2:3b"]
+
+        async def chat(self, messages, model=None, temperature=0.2, tools=None):
+            from ai.providers import ChatResponse
+
+            return ChatResponse(
+                content="The corpus shows heavy nominal style.",
+                model=model or "llama3.2:3b",
+                provider="ollama",
+                raw={},
+            )
+
+    class _StubRegistry:
+        def __init__(self, p):
+            self._p = p
+
+        def get(self, name=None):
+            return self._p
+
+    from ai import Assistant
+
+    async def _fake_answer(self, convo_id, message, context=None):
+        from types import SimpleNamespace
+
+        return SimpleNamespace(
+            turn_id=1,
+            content="The corpus shows heavy nominal style.",
+            grounded=False,
+            tool_calls=[],
+            evidence=[],
+            elapsed_ms=42,
+            confidence=0.9,
+            confidence_reasoning="",
+            needs_validation=False,
+            mcqs=[],
+        )
+
+    monkeypatch.setattr(Assistant, "answer", _fake_answer)
+    from app.main import app
+
+    monkeypatch.setattr(app.state, "providers", _StubRegistry(_StubProvider()))
+
+    h = {**PROXY, "Authorization": f"Bearer {sm_state.config.student_token}",
+         "X-CorpusMind-Session": "sess-chat"}
+    r = await ac.post(
+        "/api/v1/ai/chat",
+        headers=h,
+        json={"message": "What is the dominant register of this corpus?"},
+    )
+    assert r.status_code == 200
+
+    chats = [e for e in _read_audit(sm_state) if e["event"] == "chat"]
+    assert len(chats) == 1
+    entry = chats[0]
+    assert entry["question"] == "What is the dominant register of this corpus?"
+    assert entry["response"] == "The corpus shows heavy nominal style."
+    assert entry["model"] == "llama3.2:3b"
+    assert entry["elapsed_ms"] == 42
+    assert sm_state.chats_total == 1

@@ -70,6 +70,10 @@ async def lifespan(app: FastAPI):
     # best-effort: a missing binary keeps the classroom flagged offline in
     # /server-mode/status rather than failing engine startup.
     sm_state = server_mode.ServerModeState(config=server_mode.load_config(settings))
+    # v1.2.9: anonymous classroom audit writer — exists whenever the state
+    # does; it writes nothing unless the classroom is enabled AND
+    # config.audit_enabled is on (writes also fail-soft on any IO error).
+    sm_state.ensure_audit(settings)
     if sm_state.config.student_token:
         settings.student_token = sm_state.config.student_token
     if sm_state.config.enabled:
@@ -198,15 +202,50 @@ def create_app() -> FastAPI:
                         status_code=401,
                     )
                 if role == "student" and not server_mode.student_route_allowed(request.method, path):
+                    # v1.2.9 audit: rejections are recorded (anonymously).
+                    sm.log_denied(request, role, 403, "route_not_allowed")
                     return JSONResponse(
                         {"detail": "Forbidden: this action is not available in Student Mode."},
                         status_code=403,
                     )
                 request.state.role = role
                 if role == "student":
+                    # v1.2.9 seat limit: the number of concurrent students is
+                    # capped by the teacher's device + LM sizing (manual
+                    # override or the auto RAM/VRAM estimate). Only NEW
+                    # students are rejected at capacity — seats already
+                    # occupied keep working, and the teacher is never capped.
+                    # The auto estimate is cached (60s) so this stays cheap.
+                    seats, _seats_source = await sm.effective_seats(current)
+                    if sm.client_key(request) not in sm.aliases and sm.active_students() >= seats:
+                        sm.log_full_deny(request, seats)
+                        return JSONResponse(
+                            {
+                                "detail": (
+                                    f"The classroom is full ({seats} seats in use). "
+                                    "Please try again in a few minutes."
+                                )
+                            },
+                            status_code=429,
+                            headers={"Retry-After": "120"},
+                        )
                     client_ip = request.client.host if request.client else "?"
                     sm.note_student(client_ip)
-            return await call_next(request)
+                    sm.touch_alias(sm.alias_for(request))
+                import time as _time
+
+                _t0 = _time.perf_counter()
+                response = await call_next(request)
+                # v1.2.9 audit: one anonymous line per classroom API call
+                # (join/chat/denied events carry the detail; this is the
+                # per-request access trail). Health probes stay unlogged.
+                sm.log_request(
+                    request,
+                    role,
+                    response.status_code,
+                    int((_time.perf_counter() - _t0) * 1000),
+                )
+                return response
 
         token = current.auth_token
         host = current.host

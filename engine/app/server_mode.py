@@ -49,6 +49,10 @@ from pathlib import Path
 from typing import Any
 
 STUDENT_PROXY_HEADER = "X-CorpusMind-Classroom"
+# v1.2.9 audit: the student PWA sends a random per-browser-session ID so the
+# anonymous audit alias (S-1, S-2, …) stays stable across WiFi roaming and
+# distinct even when many devices share one NAT address.
+STUDENT_SESSION_HEADER = "X-CorpusMind-Session"
 DEFAULT_HTTPS_PORT = 8483
 DEFAULT_HTTP_PORT = 8484
 DEFAULT_STUDENT_MODEL = "llama3.2:3b"
@@ -56,6 +60,13 @@ DEFAULT_NUM_PARALLEL = 4
 MAX_STUDENTS = 20
 # How long after their last request a student IP counts as "connected".
 ACTIVE_WINDOW_S = 10 * 60
+# The auto seat limit (device + LM sized) is re-probed at most this often —
+# the probe may run nvidia-smi and ask Ollama for the model size, neither of
+# which belongs on the per-request hot path.
+SEATS_CACHE_TTL_S = 60.0
+# A classroom-full rejection is logged once per student per this window so
+# a tablet auto-retrying cannot flood the audit log.
+FULL_DENY_LOG_WINDOW_S = 60.0
 
 # Dev-checkout Caddy location (engine/caddy-bin/caddy). Module-level so
 # tests can point it at a temp dir; the frozen app never uses it.
@@ -86,6 +97,12 @@ class ServerModeConfig:
     teacher_token: str = ""
     student_token: str = ""
     enabled_at: str = ""
+    # v1.2.9 audit + seat limit:
+    # max_students None → auto: derived from the teacher's device memory +
+    # the classroom model size (estimate_students), re-probed every
+    # SEATS_CACHE_TTL_S; an explicit number overrides the estimate.
+    max_students: int | None = None
+    audit_enabled: bool = True
 
     def sanitize(self) -> None:
         if self.mode not in ("secure", "simple"):
@@ -94,6 +111,12 @@ class ServerModeConfig:
         self.http_port = max(1024, min(65535, int(self.http_port or DEFAULT_HTTP_PORT)))
         self.num_parallel = max(1, min(16, int(self.num_parallel or DEFAULT_NUM_PARALLEL)))
         self.student_model = (self.student_model or DEFAULT_STUDENT_MODEL).strip() or DEFAULT_STUDENT_MODEL
+        if self.max_students is not None:
+            try:
+                self.max_students = max(1, min(99, int(self.max_students)))
+            except (TypeError, ValueError):
+                self.max_students = None
+        self.audit_enabled = bool(self.audit_enabled)
 
 
 def config_path(settings: Any) -> Path:
@@ -709,6 +732,21 @@ class ServerModeState:
     # student IP → last-seen monotonic timestamp (lightweight counter, no
     # session store — the plan explicitly asks for the cheap version).
     student_seen: dict[str, float] = field(default_factory=dict)
+    # v1.2.9 audit + anonymous aliases + seat limit. The alias map and the
+    # salted-hash salt both live ONLY here (process memory): the audit file
+    # never sees IPs, session IDs or tokens, so it cannot be de-anonymised
+    # after the fact. Counters restart with each classroom enable.
+    audit: Any = None  # app.classroom_audit.ClassroomAudit (lazy)
+    aliases: dict[str, str] = field(default_factory=dict)
+    # alias → last-seen monotonic timestamp. Primary seat counter: aliases
+    # are per-device (session header), so two students behind one NAT
+    # address count as two seats, unlike the IP-based fallback below.
+    alias_seen: dict[str, float] = field(default_factory=dict)
+    _alias_counter: int = 0
+    joined_total: int = 0
+    chats_total: int = 0
+    _cap_cache: tuple[float, int, str] | None = None
+    _full_deny_logged: dict[str, float] = field(default_factory=dict)
 
     def note_student(self, ip: str) -> None:
         if not ip:
@@ -722,7 +760,212 @@ class ServerModeState:
 
     def active_students(self) -> int:
         now = time.monotonic()
-        return sum(1 for ts in self.student_seen.values() if now - ts <= ACTIVE_WINDOW_S)
+        fresh_alias = sum(1 for ts in self.alias_seen.values()
+                          if now - ts <= ACTIVE_WINDOW_S)
+        fresh_ip = sum(1 for ts in self.student_seen.values()
+                       if now - ts <= ACTIVE_WINDOW_S)
+        # Aliases are the finer-grained (per-device) count; the IP count
+        # covers header-less clients that never got an alias.
+        return max(fresh_alias, fresh_ip)
+
+    def touch_alias(self, alias: str) -> None:
+        now = time.monotonic()
+        if len(self.alias_seen) > 128:
+            self.alias_seen = {a: ts for a, ts in self.alias_seen.items()
+                               if now - ts <= ACTIVE_WINDOW_S}
+        self.alias_seen[alias] = now
+
+    # ------------------------------------------------------------------ #
+    # Anonymous aliases + audit (v1.2.9)
+    # ------------------------------------------------------------------ #
+
+    def ensure_audit(self, settings: Any) -> Any:
+        """Lazily create the audit writer honouring config.audit_enabled."""
+        from app.classroom_audit import ClassroomAudit, audit_dir
+
+        if self.audit is None:
+            self.audit = ClassroomAudit(audit_dir(settings), enabled=self.config.audit_enabled)
+        else:
+            self.audit.enabled = self.config.audit_enabled
+        return self.audit
+
+    def reset_classroom_session(self) -> None:
+        """Fresh numbering/counters per enable — aliases never survive a
+        restart, which is exactly what keeps the log anonymous."""
+        self.aliases.clear()
+        self._alias_counter = 0
+        self.alias_seen.clear()
+        self.joined_total = 0
+        self.chats_total = 0
+        self._cap_cache = None
+        self._full_deny_logged.clear()
+
+    def client_key(self, request: Any) -> str:
+        """Alias key for a proxied request (see ClassroomAudit.alias_key)."""
+        header = request.headers.get(STUDENT_SESSION_HEADER, "").strip()
+        client_ip = request.client.host if request.client else ""
+        audit = self.audit
+        if audit is None:
+            # Audit disabled — still need a stable key for join counting.
+            return f"sid:{header}" if header else f"ip:{client_ip}"
+        return audit.alias_key(header, client_ip)
+
+    def alias_for(self, request: Any) -> str:
+        """Return (assigning on first sight) the anonymous alias for this
+        request, writing a ``student_join`` audit event for newcomers."""
+        key = self.client_key(request)
+        alias = self.aliases.get(key)
+        if alias is None:
+            self._alias_counter += 1
+            alias = f"S-{self._alias_counter}"
+            self.aliases[key] = alias
+            self.joined_total += 1
+            if self.audit is not None:
+                self.audit.write(
+                    "student_join",
+                    alias=alias,
+                    students_active=self.active_students(),
+                    students_joined_total=self.joined_total,
+                )
+        return alias
+
+    def log_request(self, request: Any, role: str, status: int, dur_ms: int) -> None:
+        """One audit line per classroom API call (aliases only, never IPs)."""
+        if self.audit is None:
+            return
+        alias = "teacher" if role == "teacher" else self.aliases.get(self.client_key(request), "S-?")
+        self.audit.write(
+            "api_request",
+            alias=alias,
+            role=role,
+            method=request.method,
+            path=request.url.path,
+            status=status,
+            dur_ms=dur_ms,
+        )
+
+    def log_denied(self, request: Any, role: str, status: int, reason: str) -> None:
+        if self.audit is None:
+            return
+        alias = self.aliases.get(self.client_key(request))
+        self.audit.write(
+            "denied",
+            alias=alias,
+            role=role,
+            method=request.method,
+            path=request.url.path,
+            status=status,
+            reason=reason,
+        )
+
+    def log_chat(
+        self,
+        request: Any,
+        *,
+        question: str,
+        response: str = "",
+        model: str = "",
+        elapsed_ms: int = 0,
+        grounded: bool | None = None,
+        turn_id: int | None = None,
+        error: str = "",
+    ) -> None:
+        """The heart of the audit contract: what students asked the local LM
+        and exactly what it answered (both truncated only at a very
+        generous cap — see classroom_audit.AUDIT_TEXT_MAX)."""
+        alias = self.aliases.get(self.client_key(request), "S-?")
+        if self.audit is not None:
+            self.audit.write(
+                "chat_error" if error else "chat",
+                alias=alias,
+                question=question,
+                response=response or None,
+                model=model,
+                elapsed_ms=elapsed_ms,
+                grounded=grounded,
+                turn_id=turn_id,
+                error=error or None,
+            )
+        if error:
+            return
+        self.chats_total += 1
+
+    def log_full_deny(self, request: Any, seats: int) -> bool:
+        """Log a classroom-full rejection at most once per student per window.
+        Returns True when a line was actually written."""
+        key = self.client_key(request)
+        now = time.monotonic()
+        last = self._full_deny_logged.get(key, 0.0)
+        if now - last < FULL_DENY_LOG_WINDOW_S:
+            return False
+        self._full_deny_logged[key] = now
+        if self.audit is not None:
+            self.audit.write(
+                "denied",
+                alias=self.aliases.get(key),
+                role="student",
+                method=request.method,
+                path=request.url.path,
+                status=429,
+                reason=f"classroom_full ({seats} seats)",
+            )
+        return True
+
+    # ------------------------------------------------------------------ #
+    # Seat limit (device + LM sized)
+    # ------------------------------------------------------------------ #
+
+    async def effective_seats(self, settings: Any) -> tuple[int, str]:
+        """(max concurrent students, source) — manual override wins, else
+        the auto estimate from the shared RAM/VRAM probe, else the hard
+        MAX_STUDENTS fallback. Cached SEATS_CACHE_TTL_S: the probe may run
+        nvidia-smi and ask Ollama, so it must not run per request."""
+        if self.config.max_students:
+            return self.config.max_students, "manual"
+        now = time.monotonic()
+        if self._cap_cache and now - self._cap_cache[0] < SEATS_CACHE_TTL_S:
+            return self._cap_cache[1], self._cap_cache[2]
+        size = 0
+        try:
+            size, _ = await ollama_model_size(
+                settings.ollama_base_url, self.config.student_model
+            )
+        except Exception:
+            size = 0
+        try:
+            import anyio
+
+            est = await anyio.to_thread.run_sync(
+                lambda: estimate_students(size, self.config.num_parallel)
+            )
+        except Exception:
+            est = {"students_max": None}
+        if est.get("students_max"):
+            seats, source = int(est["students_max"]), "auto"
+        else:
+            # Cannot measure (no Ollama / no memory probe): still enforce a
+            # conservative ceiling so the classroom can never run away.
+            seats, source = MAX_STUDENTS, "auto-fallback"
+        self._cap_cache = (now, seats, source)
+        return seats, source
+
+
+async def ollama_model_size(base_url: str, wanted: str) -> tuple[int, str | None]:
+    """On-disk size (bytes) of ``wanted`` from Ollama /api/tags, plus the
+    resolved full name. 0/None when Ollama is unreachable."""
+    import httpx
+
+    try:
+        async with httpx.AsyncClient(timeout=3.0) as client:
+            r = await client.get(f"{base_url.rstrip('/')}/api/tags")
+            if r.status_code == 200:
+                for m in r.json().get("models", []):
+                    name = m.get("name", "")
+                    if name == wanted or name.split(":")[0] == wanted.split(":")[0]:
+                        return int(m.get("size", 0)), name
+    except Exception:
+        pass
+    return 0, None
 
 
 def lan_ips() -> list[str]:

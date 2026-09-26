@@ -104,6 +104,27 @@ export function clearStudentSession(): void {
   }
 }
 
+const STUDENT_SESSION_KEY = "corpusmind-classroom-session";
+
+/** Random per-browser-session ID sent as X-CorpusMind-Session. The engine
+ * uses it ONLY to assign a stable anonymous alias (S-1, S-2, …) in the
+ * classroom audit log — it is not an credential and grants nothing. */
+function classroomSessionId(): string {
+  try {
+    let id = sessionStorage.getItem(STUDENT_SESSION_KEY);
+    if (!id) {
+      id =
+        typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? crypto.randomUUID()
+          : `s-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      sessionStorage.setItem(STUDENT_SESSION_KEY, id);
+    }
+    return id;
+  } catch {
+    return "";
+  }
+}
+
 /** Resolve the API base per request: the classroom server in student
  * mode, otherwise the classic localhost/VITE_ENGINE_URL base. */
 export function getEngineBase(): string {
@@ -1485,6 +1506,12 @@ async function smartFetch(path: string, init?: RequestInit): Promise<Response> {
   if (token && !headers["Authorization"]) {
     headers["Authorization"] = `Bearer ${token}`;
   }
+  // Classroom clients also announce an anonymous per-session ID so the
+  // teacher's audit log shows a stable S-alias per device (never an IP).
+  if (token && !headers["X-CorpusMind-Session"]) {
+    const sid = classroomSessionId();
+    if (sid) headers["X-CorpusMind-Session"] = sid;
+  }
   const finalInit: RequestInit = { ...init, headers };
   if (isTauriRuntime()) {
     const tFetch = await getTauriFetch();
@@ -1894,7 +1921,12 @@ export const api = {
     }),
   serverModeDisable: () =>
     jsonFetch<ServerModeStatus>(`/api/v1/server-mode/disable`, { method: "POST" }),
-  serverModeUpdateConfig: (req: { student_model?: string; num_parallel?: number }) =>
+  serverModeUpdateConfig: (req: {
+    student_model?: string;
+    num_parallel?: number;
+    max_students?: number | null;
+    audit_enabled?: boolean;
+  }) =>
     jsonFetch<ServerModeStatus>(`/api/v1/server-mode/config`, {
       method: "POST",
       body: JSON.stringify(req),
@@ -1903,6 +1935,8 @@ export const api = {
     jsonFetch<ServerModeCapacity>(
       `/api/v1/server-mode/capacity${model ? `?model=${encodeURIComponent(model)}` : ""}`,
     ),
+  serverModeAudit: (limit = 200) =>
+    jsonFetch<ServerModeAudit>(`/api/v1/server-mode/audit?limit=${limit}`),
 
   discourse: (cid: string, taxonomy = "hyland2005", compareCorpusId?: string | null) =>
     jsonFetch<DiscourseResult>(`/api/v1/corpora/${cid}/discourse`, {
@@ -2892,6 +2926,14 @@ export interface ServerModeStatus {
   student_model: string;
   num_parallel: number;
   students_active: number;
+  // v1.2.9 seat limit + audit surfaces.
+  max_students: number | null;
+  students_max: number | null;
+  students_cap_source: "manual" | "auto" | "auto-fallback" | "unknown";
+  students_joined_total: number;
+  chats_total: number;
+  audit_enabled: boolean;
+  audit_dir: string;
   ollama_queue_depth: number | null;
   ollama_running_models: number | null;
   config_path: string;
@@ -2907,6 +2949,60 @@ export interface ServerModeEnableRequest {
   student_model?: string | null;
   num_parallel?: number | null;
   rotate?: boolean;
+  max_students?: number | null;
+  audit_enabled?: boolean;
+}
+
+/** One anonymous audit line (see engine app/classroom_audit.py). */
+export interface ServerModeAuditEntry {
+  ts: string;
+  event:
+    | "classroom_started"
+    | "classroom_stopped"
+    | "classroom_start_failed"
+    | "student_join"
+    | "api_request"
+    | "chat"
+    | "chat_error"
+    | "denied";
+  alias?: string;
+  role?: string;
+  method?: string;
+  path?: string;
+  status?: number;
+  dur_ms?: number;
+  question?: string;
+  response?: string;
+  model?: string;
+  elapsed_ms?: number;
+  grounded?: boolean;
+  turn_id?: number;
+  error?: string;
+  reason?: string;
+  students_active?: number;
+  students_joined_total?: number;
+  chats_total?: number;
+  [k: string]: unknown;
+}
+
+export interface ServerModeAudit {
+  enabled: boolean;
+  audit_enabled: boolean;
+  dir: string;
+  file: string | null;
+  students_active: number;
+  students_max: number | null;
+  students_cap_source: string;
+  students_joined_total: number;
+  chats_total: number;
+  summary: {
+    events_total: number;
+    by_event: Record<string, number>;
+    students_seen: number;
+    chats: number;
+    chat_errors: number;
+  };
+  entries: ServerModeAuditEntry[];
 }
 
 export interface ServerModeCapacity {

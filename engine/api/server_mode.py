@@ -21,6 +21,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from app import server_mode as sm
+from app.classroom_audit import audit_dir
 from app.server_mode import (
     ServerModeConfig,
     caddy_version,
@@ -30,6 +31,7 @@ from app.server_mode import (
     find_caddy_binary,
     find_web_dist,
     lan_ips,
+    ollama_model_size,
     save_config,
     spawn_caddy,
     stop_caddy,
@@ -54,14 +56,24 @@ class EnableRequest(BaseModel):
     student_model: str | None = None
     num_parallel: int | None = Field(default=None, ge=1, le=16)
     rotate: bool = False  # regenerate both tokens
+    # v1.2.9 seat limit + audit: None (or omitted) keeps the current value;
+    # max_students=null means "auto — size the cap from this device + LM".
+    max_students: int | None = Field(default=None, ge=1, le=99)
+    audit_enabled: bool | None = None
 
 
 class ConfigUpdate(BaseModel):
     student_model: str | None = None
     num_parallel: int | None = Field(default=None, ge=1, le=16)
+    max_students: int | None = Field(default=None, ge=1, le=99)
+    audit_enabled: bool | None = None
 
 
-def _status_payload(settings: Any, state: sm.ServerModeState) -> dict[str, Any]:
+def _status_payload(
+    settings: Any,
+    state: sm.ServerModeState,
+    seats: tuple[int, str] | None = None,
+) -> dict[str, Any]:
     cfg = state.config
     caddy_bin = find_caddy_binary(settings)
     running = bool(state.caddy_proc and state.caddy_proc.poll() is None)
@@ -80,6 +92,14 @@ def _status_payload(settings: Any, state: sm.ServerModeState) -> dict[str, Any]:
         "student_model": cfg.student_model,
         "num_parallel": cfg.num_parallel,
         "students_active": state.active_students(),
+        # v1.2.9 seat limit + audit surfaces (teacher-only endpoint).
+        "max_students": cfg.max_students,
+        "students_max": seats[0] if seats else None,
+        "students_cap_source": seats[1] if seats else "unknown",
+        "students_joined_total": state.joined_total,
+        "chats_total": state.chats_total,
+        "audit_enabled": cfg.audit_enabled,
+        "audit_dir": str(audit_dir(settings)),
         "ollama_queue_depth": None,  # Ollama does not expose a queue; see ollama_running_models
         "ollama_running_models": _ollama_running_models(settings),
         "config_path": str(config_path(settings)),
@@ -112,7 +132,10 @@ async def server_mode_status(request: Request) -> dict:
     require_teacher(request)
     from app.settings import get_settings
 
-    return _status_payload(get_settings(), request.app.state.server_mode)
+    settings = get_settings()
+    state: sm.ServerModeState = request.app.state.server_mode
+    seats = await state.effective_seats(settings) if state.config.enabled else None
+    return _status_payload(settings, state, seats)
 
 
 @router.post("/server-mode/enable")
@@ -139,7 +162,26 @@ async def server_mode_enable(request: Request, body: EnableRequest) -> dict:
     from datetime import datetime
 
     cfg.enabled_at = datetime.now(UTC).isoformat(timespec="seconds")
+    # v1.2.9: explicit enable-body values for the seat cap / audit toggle.
+    if "max_students" in body.model_fields_set and body.max_students is not None:
+        cfg.max_students = body.max_students
+    if "audit_enabled" in body.model_fields_set and body.audit_enabled is not None:
+        cfg.audit_enabled = body.audit_enabled
+    cfg.sanitize()
     settings.student_token = cfg.student_token
+    # Fresh anonymous numbering + counters for every classroom session.
+    state.reset_classroom_session()
+    audit = state.ensure_audit(settings)
+    audit.write(
+        "classroom_started",
+        mode=cfg.mode,
+        https_port=cfg.https_port,
+        http_port=cfg.http_port,
+        student_model=cfg.student_model,
+        num_parallel=cfg.num_parallel,
+        max_students=cfg.max_students,
+        audit_enabled=cfg.audit_enabled,
+    )
 
     # Fail BEFORE persisting enabled=True if the classroom can't come up.
     try:
@@ -149,10 +191,12 @@ async def server_mode_enable(request: Request, body: EnableRequest) -> dict:
         cfg.enabled = False
         settings.student_token = ""
         state.caddy_error = str(exc)
+        audit.write("classroom_start_failed", error=str(exc))
         raise HTTPException(500, f"Could not start the classroom server: {exc}") from exc
 
     save_config(settings, cfg)
-    return _status_payload(settings, state)
+    seats = await state.effective_seats(settings)
+    return _status_payload(settings, state, seats)
 
 
 @router.post("/server-mode/disable")
@@ -165,9 +209,16 @@ async def server_mode_disable(request: Request) -> dict:
     state: sm.ServerModeState = request.app.state.server_mode
     state.config.enabled = False
     settings.student_token = ""
+    if state.audit is not None:
+        state.audit.write(
+            "classroom_stopped",
+            students_joined_total=state.joined_total,
+            chats_total=state.chats_total,
+        )
     stop_caddy(state)
     save_config(settings, state.config)
-    return _status_payload(settings, state)
+    seats = await state.effective_seats(settings)
+    return _status_payload(settings, state, seats)
 
 
 @router.post("/server-mode/config")
@@ -182,9 +233,18 @@ async def server_mode_config(request: Request, body: ConfigUpdate) -> dict:
         state.config.student_model = body.student_model.strip()
     if body.num_parallel is not None:
         state.config.num_parallel = body.num_parallel
+    # model_fields_set distinguishes "field omitted" from an explicit null
+    # (explicit null on max_students = back to the auto device-sized cap).
+    if "max_students" in body.model_fields_set:
+        state.config.max_students = body.max_students
+    if "audit_enabled" in body.model_fields_set and body.audit_enabled is not None:
+        state.config.audit_enabled = body.audit_enabled
     state.config.sanitize()
+    state.ensure_audit(settings)  # picks up audit_enabled changes
+    state._cap_cache = None  # seat override / model changes take effect now
     save_config(settings, state.config)
-    return _status_payload(settings, state)
+    seats = await state.effective_seats(settings)
+    return _status_payload(settings, state, seats)
 
 
 @router.get("/server-mode/capacity")
@@ -201,25 +261,40 @@ async def server_mode_capacity(request: Request, model: str | None = None) -> di
     state: sm.ServerModeState = request.app.state.server_mode
     wanted = (model or state.config.student_model).strip()
 
-    import httpx
-
-    base = settings.ollama_base_url.rstrip("/")
-    size = 0
-    resolved = None
-    try:
-        r = httpx.get(f"{base}/api/tags", timeout=5.0)
-        if r.status_code == 200:
-            for m in r.json().get("models", []):
-                name = m.get("name", "")
-                if name == wanted or name.split(":")[0] == wanted.split(":")[0]:
-                    size = int(m.get("size", 0))
-                    resolved = name
-                    if name == wanted:
-                        break
-    except Exception:
-        pass
+    size, resolved = await ollama_model_size(settings.ollama_base_url, wanted)
 
     estimate = sm.estimate_students(size, state.config.num_parallel)
     estimate["model"] = resolved
     estimate["model_size_bytes"] = size
     return estimate
+
+
+@router.get("/server-mode/audit")
+async def server_mode_audit(request: Request, limit: int = 200) -> dict:
+    """Anonymous classroom audit tail + summary (teacher-only).
+
+    Returns the most recent ``limit`` events (oldest-first) plus session
+    counters. Entries carry anonymous aliases (S-1, S-2, …) — never IPs,
+    session IDs or tokens, by construction (app/classroom_audit.py).
+    """
+    require_teacher(request)
+    from app.settings import get_settings
+
+    settings = get_settings()
+    state: sm.ServerModeState = request.app.state.server_mode
+    limit = max(1, min(int(limit), 1000))
+    audit = state.audit
+    seats = await state.effective_seats(settings) if state.config.enabled else None
+    return {
+        "enabled": state.config.enabled,
+        "audit_enabled": state.config.audit_enabled,
+        "dir": str(audit_dir(settings)),
+        "file": str(audit.current_file()) if audit else None,
+        "students_active": state.active_students(),
+        "students_max": seats[0] if seats else None,
+        "students_cap_source": seats[1] if seats else "unknown",
+        "students_joined_total": state.joined_total,
+        "chats_total": state.chats_total,
+        "summary": audit.summarize() if audit else {},
+        "entries": audit.read_tail(limit) if audit else [],
+    }

@@ -56,6 +56,30 @@ Caddy sidecar, PWA client, Settings, docs.
     model, OLLAMA_NUM_PARALLEL guidance, capacity estimate, live status).
     The pre-existing pedagogy toggle is renamed "Guided Student Mode
     (AI reveal)" to disambiguate. All new UI strings ship in EN + AR.
+  - **Anonymous classroom audit log** (on by default, toggleable in the
+    card). While the classroom runs, the engine writes an append-only
+    JSONL file per UTC day (`<data>/classroom/audit/`, 5 MB rotation)
+    recording: student joins (anonymous aliases `S-1`, `S-2`, … assigned
+    in first-seen order), every analysis request (tool, route, status,
+    duration), **each question a student asked the local LM together with
+    the full answer the model produced** (model name + response time), and
+    every denial (403 route rejections, 429 classroom-full). Anonymity is
+    enforced by construction: aliases are keyed by the PWA's random
+    per-session ID (`X-CorpusMind-Session`, salted-IP fallback) and the
+    mapping lives in process memory only — no IPs, session IDs, or tokens
+    are ever written, so the file cannot be de-anonymised later. Teacher
+    surfaces: `GET /server-mode/audit` (teacher-only) plus a **Classroom
+    audit log** panel in the Settings card with a session summary.
+  - **Enforced seat limit** (protects the teacher's machine). Concurrent
+    student connections are capped by the device's capabilities and the
+    LM's compute/memory footprint: a manual override, or by default the
+    auto estimate from the shared RAM/VRAM probe re-checked every 60 s,
+    with a conservative fallback ceiling when measurement is impossible.
+    When the classroom is full, NEW students receive a friendly 429
+    ("classroom is full", `Retry-After`) while already-seated students
+    keep working and the teacher is never capped. The Settings card shows
+    live seat usage (`Seats: N active of M`), the cap's source, and the
+    override/auto controls.
 - **Persuasion Index install guidance** (review #1). The four optional
   PI resources (single/multi-word concreteness, LIWC, NRC-VAD) are
   license-restricted and can never be bundled — the resource panel now

@@ -161,6 +161,13 @@ async def chat(
     except Exception as e:
         error_msg = str(e)
         log.error("chat_failed", error=error_msg)
+        # v1.2.9 audit: failed classroom chats are recorded too (anonymously).
+        _sm = getattr(request.app.state, "server_mode", None)
+        if _sm is not None and getattr(request.state, "role", "") == "student":
+            try:
+                _sm.log_chat(request, question=req.message, error=error_msg, model=req.model or "")
+            except Exception:
+                pass
         if "connection refused" in error_msg.lower() or "connect" in error_msg.lower():
             raise HTTPException(
                 status_code=502,
@@ -169,6 +176,24 @@ async def chat(
             ) from e
         else:
             raise HTTPException(status_code=502, detail=f"Model call failed: {error_msg}") from e
+
+    # v1.2.9 Student Mode audit: record the exact question the student sent
+    # to the local LM and the full response it produced (anonymously — the
+    # alias mapping lives in process memory only; see app/classroom_audit.py).
+    _sm = getattr(request.app.state, "server_mode", None)
+    if _sm is not None and getattr(request.state, "role", "") == "student":
+        try:
+            _sm.log_chat(
+                request,
+                question=req.message,
+                response=turn.content,
+                model=req.model or "",
+                elapsed_ms=turn.elapsed_ms,
+                grounded=turn.grounded,
+                turn_id=turn.turn_id,
+            )
+        except Exception:
+            pass  # audit must never break a lesson
 
     return ChatResponse(
         turn_id=turn.turn_id,

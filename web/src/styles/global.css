@@ -7462,3 +7462,69 @@ html[dir="rtl"] .toggle-switch input:checked + .toggle-slider::before {
   font-size: 13.5px;
 }
 .sm-capacity p { margin: 2px 0 0; }
+
+/* v1.2.9 (follow-up): enforced seat limit + anonymous audit log */
+.sm-seats {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: var(--space-2) var(--space-3);
+  font-size: 13.5px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.sm-seats .sm-port-row { align-items: end; margin-block: 2px; }
+.sm-audit { display: flex; flex-direction: column; gap: var(--space-2); }
+.sm-audit-summary { margin: 0; font-weight: 600; }
+.sm-audit-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.sm-audit-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 300px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.sm-audit-item {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  font-size: 12px;
+  padding: 4px 6px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-subtle);
+}
+.sm-audit-meta { color: var(--text-muted); font-variant-numeric: tabular-nums; flex: none; }
+.sm-audit-badge {
+  flex: none;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  border-radius: 999px;
+  padding: 1px 7px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+}
+.sm-audit-chat { border-color: var(--ok, #2e7d32); color: var(--ok, #2e7d32); }
+.sm-audit-chat_error { border-color: var(--danger-500, #c62828); color: var(--danger-500, #c62828); }
+.sm-audit-student_join { border-color: var(--brand-500); color: var(--brand-500); }
+.sm-audit-denied { border-color: var(--warning-600, #b26a00); color: var(--warning-600, #b26a00); }
+.sm-audit-text { min-width: 0; overflow-wrap: anywhere; }
+.sm-audit-q { display: block; }
+.sm-audit-a {
+  display: block;
+  color: var(--text-muted);
+  white-space: pre-wrap;
+  max-height: 5.5em;
+  overflow: hidden;
+}
