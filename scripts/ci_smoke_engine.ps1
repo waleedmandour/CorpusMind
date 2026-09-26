@@ -127,4 +127,6 @@ if ($Failures.Count -gt 0) {
     $Failures | ForEach-Object { Write-Host "[smoke]   - $_" -ForegroundColor Red }
     exit 1
 }
-Write-Host "[smoke] PASS: bundle content verified" + $(if ($ready) { " + boot assertions" } else { " (boot probe skipped by runner limitation)" })
+$passMsg = "[smoke] PASS: bundle content verified"
+if ($ready) { $passMsg += " + boot assertions" } else { $passMsg += " (boot probe skipped by runner limitation)" }
+Write-Host $passMsg
