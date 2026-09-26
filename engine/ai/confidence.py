@@ -41,7 +41,7 @@ Given:
   3. The AI's interpretation
 
 Assess how confident you are that the interpretation is fully supported
-by the cited evidence. Be strict — if the interpretation makes claims
+by the cited evidence. Be strict - if the interpretation makes claims
 not directly supported by the evidence, lower the confidence.
 
 Output EXACTLY this JSON (no markdown, no prose):
@@ -65,7 +65,7 @@ MCQ_SYSTEM_PROMPT = """You are a validation question generator for a corpus ling
 The AI produced an interpretation with LOW confidence. Generate 2-3
 multiple-choice questions that test whether the user can verify the
 KEY claims from the retrieved evidence. The questions should be
-answerable directly from the evidence — not from external knowledge.
+answerable directly from the evidence - not from external knowledge.
 
 Output EXACTLY this JSON array (no markdown, no prose):
 [

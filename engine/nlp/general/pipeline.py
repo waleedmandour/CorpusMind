@@ -142,7 +142,7 @@ class SpaCyPipeline:
             log.warning(
                 "spacy_model_not_found_fallback_blank",
                 model=self._model_name,
-                hint="Using spacy.blank() — tokenization only, no POS/lemma/parse. "
+                hint="Using spacy.blank() - tokenization only, no POS/lemma/parse. "
                      "The full model was not bundled correctly in PyInstaller.",
             )
             nlp = spacy.blank(self._language)

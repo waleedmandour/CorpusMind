@@ -180,7 +180,7 @@ function friendlyEngineError(e: unknown): Error {
     )
   ) {
     return new Error(
-      "The analysis engine is not responding. It was restarted automatically — " +
+      "The analysis engine is not responding. It was restarted automatically - " +
         "try again in a few seconds. If this persists, open Settings → System and " +
         "click 'Restart engine', then check the engine logs there.",
     );

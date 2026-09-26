@@ -43,7 +43,7 @@ class ReferenceCorpusSpec:
     ASCII, no spaces. Example: ``be06-top1000``."""
 
     display_name: str
-    """Human-readable label shown in the UI. Example: ``BE06 — British
+    """Human-readable label shown in the UI. Example: ``BE06 - British
     English Written (top 1000)``."""
 
     language: ReferenceLanguage
@@ -116,7 +116,7 @@ class ReferenceCorpusSpec:
 BUNDLED_REFERENCES: list[ReferenceCorpusSpec] = [
     ReferenceCorpusSpec(
         name="be06-top1000",
-        display_name="BE06 — British English Written (top 1000)",
+        display_name="BE06 - British English Written (top 1000)",
         language="en",
         description=(
             "Top-1000 word-frequency list derived from BE06, a 1-million-token "
@@ -153,7 +153,7 @@ BUNDLED_REFERENCES: list[ReferenceCorpusSpec] = [
     # v0.1.17: New freely-licensed reference corpora
     ReferenceCorpusSpec(
         name="leipzig-english-news",
-        display_name="Leipzig English News — top 100",
+        display_name="Leipzig English News - top 100",
         language="en",
         description=(
             "Top-100 word-frequency list from the Leipzig Corpora Collection "
@@ -178,7 +178,7 @@ BUNDLED_REFERENCES: list[ReferenceCorpusSpec] = [
     ),
     ReferenceCorpusSpec(
         name="quranic-arabic",
-        display_name="Quranic Arabic — word frequency",
+        display_name="Quranic Arabic - word frequency",
         language="ar",
         description=(
             "Word-frequency list derived from the Quranic Arabic Corpus "
@@ -204,12 +204,12 @@ BUNDLED_REFERENCES: list[ReferenceCorpusSpec] = [
     ),
     ReferenceCorpusSpec(
         name="camel-arabic",
-        display_name="Arabic MSA Frequency List — top 1000",
+        display_name="Arabic MSA Frequency List - top 1000",
         language="ar",
         description=(
             "Top-1000 Modern Standard Arabic word-frequency list derived "
             "from the Leipzig Corpora Collection 'ara_news_2022_10K' news "
-            "corpus (v1.0.1 rebuild — the original committed file was a "
+            "corpus (v1.0.1 rebuild - the original committed file was a "
             "corrupted download). Tokens: Arabic script only, diacritics "
             "and tatweel removed, orthographic variants folded. Suitable "
             "as a broad MSA reference for keyness analysis."
@@ -237,13 +237,13 @@ BUNDLED_REFERENCES: list[ReferenceCorpusSpec] = [
     # the NLP pipeline, stored as proper Corpus rows with subcorpus support)
     ReferenceCorpusSpec(
         name="bnc-baby",
-        display_name="BNC Baby — British National Corpus sample (4M words)",
+        display_name="BNC Baby - British National Corpus sample (4M words)",
         language="en",
         description=(
             "BNC Baby is a 4-million-word sample of the British National "
             "Corpus, containing four 1-million-word subcorpora: academic "
             "writing, fiction, newspapers, and spoken conversation. "
-            "Downloaded as a ZIP from the Oxford Text Archive (22 MB) — a "
+            "Downloaded as a ZIP from the Oxford Text Archive (22 MB) - a "
             "gateway that routinely 504s on large responses, so if the "
             "download fails, fetch the ZIP manually on the source page and "
             "install it via 'Import archive'. NOTE: the BNC User Licence "
@@ -274,7 +274,7 @@ BUNDLED_REFERENCES: list[ReferenceCorpusSpec] = [
     ),
     ReferenceCorpusSpec(
         name="bawe",
-        display_name="BAWE — British Academic Written English (6.5M words)",
+        display_name="BAWE - British Academic Written English (6.5M words)",
         language="en",
         description=(
             "BAWE is a 6.5-million-word corpus of British academic written "
@@ -284,7 +284,7 @@ BUNDLED_REFERENCES: list[ReferenceCorpusSpec] = [
             "Masters). Installs a 500-assignment sample ingested through "
             "the full NLP pipeline with discipline and level metadata for "
             "subcorpus filtering. Download sources: a processed mirror ZIP "
-            "hosted on this project's GitHub releases (tried first — CC-"
+            "hosted on this project's GitHub releases (tried first - CC-"
             "BY-NC-SA-3.0 permits redistribution with attribution), then "
             "the canonical Oxford Text Archive ZIP (108 MB), whose gateway "
             "routinely 504s on large responses. If both fail, download the "
@@ -323,7 +323,7 @@ BUNDLED_REFERENCES: list[ReferenceCorpusSpec] = [
     ),
     ReferenceCorpusSpec(
         name="leipzig-english-news-10k",
-        display_name="Leipzig English News — 10K sentences (full corpus)",
+        display_name="Leipzig English News - 10K sentences (full corpus)",
         language="en",
         description=(
             "10,000-sentence English news corpus from the Leipzig Corpora "
@@ -348,7 +348,7 @@ BUNDLED_REFERENCES: list[ReferenceCorpusSpec] = [
     ),
     ReferenceCorpusSpec(
         name="leipzig-arabic-news-10k",
-        display_name="Leipzig Arabic News — 10K sentences (full corpus)",
+        display_name="Leipzig Arabic News - 10K sentences (full corpus)",
         language="ar",
         description=(
             "10,000-sentence Arabic news corpus from the Leipzig Corpora "
@@ -378,7 +378,7 @@ BUNDLED_REFERENCES: list[ReferenceCorpusSpec] = [
     # a stale or tampered list fails CI.
     ReferenceCorpusSpec(
         name="dialectal-arabic-tweets",
-        display_name="Dialectal Arabic Tweets — multi-dialect (top 1000)",
+        display_name="Dialectal Arabic Tweets - multi-dialect (top 1000)",
         language="ar",
         description=(
             "Top-1000 word-frequency list built from ~148,000 "
@@ -386,7 +386,7 @@ BUNDLED_REFERENCES: list[ReferenceCorpusSpec] = [
             "amgadhasan/arabic_tweets_dialects, 5 dialect groups; "
             "mentions/URLs/hashtags stripped, diacritics and tatweel "
             "removed, ~1.96M tokens). A genuine colloquial/dialectal "
-            "register reference — the register MSA news corpora lack — "
+            "register reference - the register MSA news corpora lack - "
             "for dialect/register keyness against MSA or classical "
             "targets. Honest caveat: social-media register, so hashtag "
             "culture and short-form orthography apply."
@@ -409,7 +409,7 @@ BUNDLED_REFERENCES: list[ReferenceCorpusSpec] = [
     ),
     ReferenceCorpusSpec(
         name="pd-persuasive",
-        display_name="Persuasive Essays & Oratory — public domain (top 1000)",
+        display_name="Persuasive Essays & Oratory - public domain (top 1000)",
         language="en",
         description=(
             "Top-1000 word-frequency list built from ~301,000 tokens of "
@@ -417,7 +417,7 @@ BUNDLED_REFERENCES: list[ReferenceCorpusSpec] = [
             "Federalist Papers (Hamilton, Madison & Jay, 1788), Common "
             "Sense (Paine, 1776) and A Vindication of the Rights of "
             "Woman (Wollstonecraft, 1792). A persuasive-GENRE comparable "
-            "corpus: argumentation, exhortation and polemic — pairs with "
+            "corpus: argumentation, exhortation and polemic - pairs with "
             "the persuasion_gong2026 lens for genre-aware interpretation "
             "of rhetorical-strategy scores."
         ),
@@ -441,7 +441,7 @@ BUNDLED_REFERENCES: list[ReferenceCorpusSpec] = [
     ),
     ReferenceCorpusSpec(
         name="ellipse-learner",
-        display_name="ELLIPSE — learner English essays (top 1000)",
+        display_name="ELLIPSE - learner English essays (top 1000)",
         language="en",
         description=(
             "Top-1000 word-frequency list from the ELLIPSE corpus "
@@ -449,7 +449,7 @@ BUNDLED_REFERENCES: list[ReferenceCorpusSpec] = [
             "argumentative essays (~1.69M tokens) written by English "
             "language learners in US secondary standardized testing "
             "(grades 8-12). An open ICLE-STYLE learner-English reference "
-            "for keyness against native/expert English target corpora — "
+            "for keyness against native/expert English target corpora - "
             "the closed ICLE itself is not redistributable. Note the "
             "non-commercial license before reuse."
         ),

@@ -67,7 +67,7 @@ def create_app() -> FastAPI:
         description=(
             "Local-first, AI-native research environment for corpus linguistics and "
             "multimodal discourse analysis. Phase 6: collaboration, self-hosting, "
-            "polish — saved searches, bookmarks, favorites, project sharing, "
+            "polish - saved searches, bookmarks, favorites, project sharing, "
             "at-rest encryption, accessibility hardening."
         ),
         version=__version__,

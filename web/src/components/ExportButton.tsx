@@ -37,13 +37,13 @@ const FORMAT_LABELS: Record<string, string> = {
 };
 
 const FORMAT_HINTS: Record<string, string> = {
-  xlsx: "Styled spreadsheet — opens in Excel/Sheets",
-  csv: "Universal comma-separated — any tool",
-  tsv: "Tab-separated — paste into Excel/Sheets",
-  txt: "Plain text table — for emails / quick view",
-  json: "Structured — for programmatic use / re-import",
-  svg: "Vector diagram — scales to any size, for papers/slides",
-  png: "Raster image 1600x1200 — for Word docs / social media",
+  xlsx: "Styled spreadsheet - opens in Excel/Sheets",
+  csv: "Universal comma-separated - any tool",
+  tsv: "Tab-separated - paste into Excel/Sheets",
+  txt: "Plain text table - for emails / quick view",
+  json: "Structured - for programmatic use / re-import",
+  svg: "Vector diagram - scales to any size, for papers/slides",
+  png: "Raster image 1600x1200 - for Word docs / social media",
 };
 
 export function ExportButton({

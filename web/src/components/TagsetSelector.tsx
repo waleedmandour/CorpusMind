@@ -25,11 +25,11 @@ const GRAMMATICAL_AR = ["upos", "calima"];
 const SEMANTIC = ["usas"];
 
 const TAGSET_HINTS: Record<string, string> = {
-  upos: "The 17-tag universal inventory — language-independent default.",
-  ptb: "The classic Penn Treebank tags (NN, VBD, IN, ...) — English treebank standard.",
+  upos: "The 17-tag universal inventory - language-independent default.",
+  ptb: "The classic Penn Treebank tags (NN, VBD, IN, ...) - English treebank standard.",
   claws7: "The ~150-tag BNC/Sketch Engine tagset, mapped from Penn Treebank (approximation).",
   calima: "Native CAMeL Tools morphological tags (noun, verb, adj, prep, ...).",
-  usas: "UCREL Semantic Analysis System top-level categories (A=abstract ... Z=grammatical words). Lexicon-based, experimental — cite the USAS taxonomy.",
+  usas: "UCREL Semantic Analysis System top-level categories (A=abstract ... Z=grammatical words). Lexicon-based, experimental - cite the USAS taxonomy.",
 };
 
 export function TagsetSelector({ cid }: { cid: string }) {
@@ -56,7 +56,7 @@ export function TagsetSelector({ cid }: { cid: string }) {
     <div className="corpus-card tagset-card">
       <h3>Tagset</h3>
       <p className="settings-text-muted">
-        Step 1 — choose the grammatical or semantic tagset used when the corpus
+        Step 1 - choose the grammatical or semantic tagset used when the corpus
         is tagged, parsed and (re)compiled. Files uploaded afterwards are
         annotated with this scheme; the choice is saved with the corpus.
       </p>

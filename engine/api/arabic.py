@@ -64,7 +64,7 @@ async def analyze_arabic_route(body: AnalyzeArabicRequest) -> dict:
         if body.tagset not in ("calima", "upos"):
             raise HTTPException(
                 422,
-                f"Unknown tagset '{body.tagset}' — valid: calima, upos.",
+                f"Unknown tagset '{body.tagset}' - valid: calima, upos.",
             )
         from nlp.arabic.pipeline import ArabicPipeline
 

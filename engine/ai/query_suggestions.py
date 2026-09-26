@@ -144,8 +144,8 @@ PREFABRICATED_QUERIES: list[QueryTemplate] = [
         category="keyness",
         label_en="Top negative keywords (under-represented)",
         label_ar="أهم الكلمات المفتاحية السلبية (ناقصة التمثيل)",
-        query_en="What are the top 20 negative keywords — words significantly under-represented in this corpus compared to the reference?",
-        query_ar="ما هي أهم 20 كلمة مفتاحية سلبية — كلمات ناقصة التمثيل بشكل معنوي في هذه الذخيرة مقارنة بالمرجع؟",
+        query_en="What are the top 20 negative keywords - words significantly under-represented in this corpus compared to the reference?",
+        query_ar="ما هي أهم 20 كلمة مفتاحية سلبية - كلمات ناقصة التمثيل بشكل معنوي في هذه الذخيرة مقارنة بالمرجع؟",
         requires_reference=True,
         description="Identify what this corpus avoids relative to the reference.",
     ),
@@ -240,7 +240,7 @@ PREFABRICATED_QUERIES: list[QueryTemplate] = [
 
 DYNAMIC_SYSTEM_PROMPT = """You are a corpus-linguistics research assistant. Given a summary of a corpus and (optionally) the user's most recent analysis results, suggest 3 to 5 follow-up research questions that:
 
-1. Build on what the user has already found — do not repeat their current analysis verbatim.
+1. Build on what the user has already found - do not repeat their current analysis verbatim.
 2. Leverage the corpus's unique characteristics (size, language, genre, register).
 3. Are answerable by the available grounded tools: search_concordance, get_frequency, compute_collocations, compute_keyness, get_dispersion.
 4. Are concrete enough that the user can paste them directly into the chat (no placeholders the user has to fill in).
@@ -478,7 +478,7 @@ VISION_QUERIES: list[QueryTemplate] = [
         query_en="Which vision-capable model should I install for Lens, and how do I pull it with Ollama? Include the recommended default and its size.",
         query_ar="أي نموذج مدعوم للرؤية يجب أن أثبّته لـ Lens، وكيف أجلبه عبر Ollama؟ اذكر الافتراضي الموصى به وحجمه.",
         requires_corpus=False,
-        description="Setup guidance — available even before any corpus is loaded.",
+        description="Setup guidance - available even before any corpus is loaded.",
     ),
 ]
 

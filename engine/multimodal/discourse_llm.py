@@ -127,7 +127,7 @@ follow these rules:
    Never state ideology, bias, or power relations as fact.
 
 2. Cite the specific visual or textual feature that triggered each
-   claim. A claim without evidence is not a claim — it's a guess.
+   claim. A claim without evidence is not a claim - it's a guess.
 
 3. Include a confidence score (0.0–1.0) for each claim. Be honest:
    if the image doesn't clearly support a claim, confidence should
@@ -161,9 +161,9 @@ follow these rules:
 _FRAMEWORK_PROMPTS: dict[str, tuple[str, str]] = {
     "social_semiotic": (
         "Kress & van Leeuwen (Social Semiotics 2006)",
-        "Analyse the image's representational meaning (what it depicts — "
+        "Analyse the image's representational meaning (what it depicts - "
         "narrative processes, participants, vectors), interactive meaning "
-        "(the relationship it constructs between viewer and represented — "
+        "(the relationship it constructs between viewer and represented - "
         "gaze, social distance, angle, modality), and compositional meaning "
         "(information value, framing, salience). Look at the actual visual "
         "content: who/what is depicted, how they are arranged, where the "
@@ -200,12 +200,12 @@ _FRAMEWORK_PROMPTS: dict[str, tuple[str, str]] = {
         "social actors (individualised vs genericised, personalised vs "
         "impersonalised), actions (what is done, by whom, to whom), "
         "settings and contexts, and the relationship offered to the viewer. "
-        "Look at who is depicted and how — not just colours.",
+        "Look at who is depicted and how - not just colours.",
     ),
     "persuasion": (
         "Aristotle's Rhetoric + Toulmin's Argumentation Model",
         "Analyse the image for persuasive strategies: ethos (credibility, "
-        "authority cues), pathos (emotional appeals — depicted expressions, "
+        "authority cues), pathos (emotional appeals - depicted expressions, "
         "colours, composition), logos (logical argument, evidence depicted), "
         "and Toulmin's elements (claim, grounds, warrant, backing, qualifier, "
         "rebuttal). Look at what the image actually shows and how it tries "
@@ -214,7 +214,7 @@ _FRAMEWORK_PROMPTS: dict[str, tuple[str, str]] = {
     "framing": (
         "Entman (1993) Framing Theory",
         "Analyse how the image frames its subject: what is selected "
-        "(included/excluded), what is emphasised (salience — size, position, "
+        "(included/excluded), what is emphasised (salience - size, position, "
         "contrast), how it's framed as a problem (definition), what causes "
         "are implied (causal diagnosis), what moral judgments are suggested "
         "(evaluation), and what remedies are implied (treatment). Look at "
@@ -223,11 +223,11 @@ _FRAMEWORK_PROMPTS: dict[str, tuple[str, str]] = {
     "narrative": (
         "Labov (1972) Narrative Structure",
         "Analyse the image for narrative elements: orientation (who, what, "
-        "where, when — the depicted setting), complicating action (what is "
+        "where, when - the depicted setting), complicating action (what is "
         "happening, what event is captured), evaluation (why this is "
-        "noteworthy — expressions, salience), resolution (what is the "
+        "noteworthy - expressions, salience), resolution (what is the "
         "outcome or implied outcome), and coda (connection to the present). "
-        "A single image is a frozen moment — infer the narrative around it.",
+        "A single image is a frozen moment - infer the narrative around it.",
     ),
     "visual_metaphor": (
         "MIPVU-inspired Visual Metaphor Analysis",

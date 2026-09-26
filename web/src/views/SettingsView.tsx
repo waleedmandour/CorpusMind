@@ -213,11 +213,11 @@ export function SettingsView() {
         <div className="settings-card-body">
           <dl className="settings-dl">
             <dt>Status</dt>
-            <dd>{health.data?.status ?? "—"}</dd>
+            <dd>{health.data?.status ?? "-"}</dd>
             <dt>Engine</dt>
-            <dd><code>{health.data?.engine ?? "—"}</code></dd>
+            <dd><code>{health.data?.engine ?? "-"}</code></dd>
             <dt>Version</dt>
-            <dd><code>{version.data?.version ?? "—"}</code></dd>
+            <dd><code>{version.data?.version ?? "-"}</code></dd>
             <dt>Endpoint</dt>
             <dd><code>http://127.0.0.1:8765</code></dd>
           </dl>
@@ -323,8 +323,8 @@ export function SettingsView() {
               name="Cloud"
               icon={"\u2601"}
               healthy={cloudOk}
-              baseUrl="—"
-              defaultModel="—"
+              baseUrl="-"
+              defaultModel="-"
               description="Opt-in cloud provider (Google Gemini, OpenAI, Anthropic, or any OpenAI-compatible API). Off by default for privacy."
             />
           </div>
@@ -361,7 +361,7 @@ export function SettingsView() {
             <div className="settings-status-row" style={{ marginTop: "var(--space-3)", flexDirection: "column", alignItems: "stretch" }}>
               <strong style={{ color: "var(--danger)" }}>LM Studio is not detected</strong>
               <p className="settings-text-muted">
-                LM Studio is a GUI app — the CorpusMind app cannot auto-start it.
+                LM Studio is a GUI app - the CorpusMind app cannot auto-start it.
                 Open LM Studio, load a model, then click
                 <strong> Developer {"\u2192"} Start Local Server</strong>.
                 Once the server is running on port 1234, click "Recheck" below.
@@ -386,7 +386,7 @@ export function SettingsView() {
         </div>
       </section>
 
-      {/* v1.2.6: Gemini Interpretation is its OWN block (user request) —
+      {/* v1.2.6: Gemini Interpretation is its OWN block (user request) -
           previously it sat inside the Smart Troubleshooting card. */}
       <section className="settings-card">
         <div className="settings-card-header">
@@ -433,7 +433,7 @@ export function SettingsView() {
             When a backend error occurs during use, CorpusMind captures it and shows
             the details in the taskbar at the bottom of the window. If a Gemini API
             key is configured (Gemini Interpretation block above), the error is
-            automatically interpreted by Google&apos;s Gemini model — you get a
+            automatically interpreted by Google&apos;s Gemini model - you get a
             plain-language explanation, the likely cause, and a suggested fix.
           </p>
 
@@ -498,14 +498,14 @@ export function SettingsView() {
         </div>
       </section>
 
-      {/* v1.0.9: Ethics — Facial Analysis toggle. The engine and the
+      {/* v1.0.9: Ethics - Facial Analysis toggle. The engine and the
           redaction notices always pointed users here, but the toggle itself
           never existed. Additive card: nothing else in Settings changes. */}
       <section className="settings-card">
         <div className="settings-card-header">
           <span className="settings-card-icon" aria-hidden>{"\u2696"}</span>
           <div>
-            <h2>Ethics — Facial Analysis</h2>
+            <h2>Ethics - Facial Analysis</h2>
             <p className="settings-card-desc">
               Opt-in module (§18). Off by default; never performs identity recognition.
             </p>
@@ -519,7 +519,7 @@ export function SettingsView() {
           <p className="settings-text">
             Facial analysis detects faces and produces <strong>descriptive visual
             cues only</strong> (estimated age group, gender presentation, expression,
-            gaze) — it never identifies or re-identifies real individuals. Opt-in is
+            gaze) - it never identifies or re-identifies real individuals. Opt-in is
             persisted next to your data; delete the marker or toggle off to revoke.
           </p>
           <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
@@ -753,7 +753,7 @@ function GeminiKeyInput({
   const [showKey, setShowKey] = useState(false);
   const [savedMsg, setSavedMsg] = useState("");
   // Issue 12 fix: saving a Gemini key sends error context (which may embed
-  // corpus text) to Google — require the same explicit data-leaves-device
+  // corpus text) to Google - require the same explicit data-leaves-device
   // acknowledgment the cloud providers use.
   const [ackDataLeaves, setAckDataLeaves] = useState(false);
 
@@ -824,8 +824,8 @@ function GeminiKeyInput({
               style={{ marginTop: 2 }}
             />
             <span>
-              I understand that using Gemini sends this app&apos;s error context —
-              which may include snippets of corpus text — to Google&apos;s servers
+              I understand that using Gemini sends this app&apos;s error context -
+              which may include snippets of corpus text - to Google&apos;s servers
               (data leaves this device).
             </span>
           </label>
@@ -887,7 +887,7 @@ function MuteToggle() {
 }
 
 
-// v1.2.0: rule-of-thumb fit badge — colored per machine-memory verdict.
+// v1.2.0: rule-of-thumb fit badge - colored per machine-memory verdict.
 // Labels come from i18n (set_fit_*); the tooltip prefers the engine's own
 // fit_note and falls back to the generic set_fit_note disclaimer.
 function FitChip({ fit, fitNote }: { fit: string; fitNote?: string }) {
@@ -1183,7 +1183,7 @@ function OllamaModelManager({ ollamaHealthy }: { ollamaHealthy: boolean }) {
       {catalogue.data?.machine && (
         <p className="settings-text-muted ollama-machine-line">
           {t(lang, "set_machine")}: {t(lang, "set_machine_ram")} {catalogue.data.machine.ram_total_human}
-          {" · "}{t(lang, "set_machine_vram")} {catalogue.data.machine.vram_total_human || "—"}
+          {" · "}{t(lang, "set_machine_vram")} {catalogue.data.machine.vram_total_human || "-"}
           {catalogue.data.machine.gpu_name ? ` · ${catalogue.data.machine.gpu_name}` : ""}
         </p>
       )}

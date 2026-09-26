@@ -99,7 +99,7 @@ class VectorKwicRequest(BaseModel):
     most similar to ``query`` (bounded scan).
     """
     query: str = Field(..., min_length=1, description="The research query / semantic target")
-    node: str | None = Field(None, description="Optional node word — Mode A when set, Mode B when empty")
+    node: str | None = Field(None, description="Optional node word - Mode A when set, Mode B when empty")
     level: Literal["word", "lemma", "pos"] = "word"
     regex: bool = False
     case_sensitive: bool = False
@@ -185,7 +185,7 @@ async def concordance_vector(cid: str, body: VectorKwicRequest, request: Request
             detail={
                 "error": "embedding_unreachable",
                 "model": e.model,
-                "hint": "Ollama dropped or refused the connection — it may have "
+                "hint": "Ollama dropped or refused the connection - it may have "
                         "crashed, restarted, or is not running. Start (or restart) "
                         "Ollama, press “Warm up model” in the Vector KWIC panel, "
                         "then run the search again. The model is installed; no "
@@ -218,10 +218,10 @@ async def concordance_vector(cid: str, body: VectorKwicRequest, request: Request
                 "model": e.model,
                 "hint": "The embedding model did not respond in time. Two common "
                         "causes: (1) the first call after Ollama starts must load "
-                        "the model into memory (1-2 minutes) — press “Warm up "
+                        "the model into memory (1-2 minutes) - press “Warm up "
                         "model” in the Vector KWIC panel first; once warm, it "
                         "stays resident. (2) On a CPU-only host a large search "
-                        "can outlast the timeout even when the model is warm — "
+                        "can outlast the timeout even when the model is warm - "
                         "search a rarer word or narrow the filters to embed "
                         "fewer lines, or raise CORPUSMIND_EMBED_TIMEOUT_S.",
                 "note": e.detail,

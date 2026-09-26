@@ -565,7 +565,7 @@ async def export_methods_pdf(cid: str, session: AsyncSession = Depends(get_sessi
         Paragraph(
             "AI assistance was available via the CorpusMind AI Assistant during this analysis. "
             "All statistical results (frequency, collocation, keyness, dispersion, etc.) were "
-            "computed by deterministic, pure mathematical functions &mdash; the AI model never "
+            "computed by deterministic, pure mathematical functions - the AI model never "
             "computed a statistic. The AI Assistant's role was limited to interpreting "
             "pre-computed results and answering questions about the corpus using a grounded, "
             "citation-enforced protocol. Every AI claim is either backed by a cited tool call "
@@ -703,7 +703,7 @@ async def delete_export_job(job_id: str) -> dict:
     if job is None:
         raise HTTPException(404, f"Export job '{job_id}' not found")
     if job.status.value not in ("done", "failed", "cancelled"):
-        raise HTTPException(409, "Cannot delete an in-flight job — cancel it first")
+        raise HTTPException(409, "Cannot delete an in-flight job - cancel it first")
     # Manually drop it from the queue's internal map.
     queue._jobs.pop(job_id, None)
     if job_id in queue._order:

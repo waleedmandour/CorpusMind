@@ -66,7 +66,7 @@ class POSRequest(BaseModel):
     n: int = Field(2, ge=1, le=5, description="POS n-gram size (1=distribution, 2=bigrams, etc.)")
     min_freq: int = Field(2, ge=1)
     limit: int = Field(100, ge=1, le=1000)
-    tagset: str = Field("upos", description="upos | ptb | claws7 (en) | calima (ar) — v1.2.0")
+    tagset: str = Field("upos", description="upos | ptb | claws7 (en) | calima (ar) - v1.2.0")
 
 
 @router.post("/corpora/{cid}/pos-analysis")

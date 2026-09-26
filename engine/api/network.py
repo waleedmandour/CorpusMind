@@ -86,7 +86,7 @@ class NetworkRequest(BaseModel):
 class ExpandRequest(NetworkRequest):
     known_nodes: list[str] = Field(
         default_factory=list,
-        description="Nodes already in the graph — used to attach mesh edges.",
+        description="Nodes already in the graph - used to attach mesh edges.",
     )
 
 

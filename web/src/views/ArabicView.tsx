@@ -130,7 +130,7 @@ export function ArabicView() {
         <div className="backends-bar">
           {backends.data.backends.map((b) => (
             <span key={b.name} className={clsx("backend-chip", { available: b.available })}>
-              {b.name} {b.available ? `✓ (${b.model})` : "— stubbed"}
+              {b.name} {b.available ? `✓ (${b.model})` : "- stubbed"}
             </span>
           ))}
         </div>
@@ -233,11 +233,11 @@ function ArabicResult({ result }: { result: any }) {
               {result.data.tokens.map((t: any, i: number) => (
                 <tr key={i}>
                   <td dir="rtl" lang="ar" className="arabic-cell">{t.text}</td>
-                  <td dir="rtl" lang="ar" className="arabic-cell root-cell">{t.root || "—"}</td>
-                  <td dir="rtl" lang="ar" className="arabic-cell pattern-cell">{t.pattern || "—"}</td>
-                  <td dir="rtl" lang="ar" className="arabic-cell">{t.lemma || "—"}</td>
+                  <td dir="rtl" lang="ar" className="arabic-cell root-cell">{t.root || "-"}</td>
+                  <td dir="rtl" lang="ar" className="arabic-cell pattern-cell">{t.pattern || "-"}</td>
+                  <td dir="rtl" lang="ar" className="arabic-cell">{t.lemma || "-"}</td>
                   <td><span className={posClass(t.pos)}>{t.pos}</span></td>
-                  <td dir="rtl" lang="ar" className="arabic-cell">{t.stem || "—"}</td>
+                  <td dir="rtl" lang="ar" className="arabic-cell">{t.stem || "-"}</td>
                   <td className="buckwalter-cell">{t.buckwalter}</td>
                 </tr>
               ))}
@@ -264,8 +264,8 @@ function ArabicResult({ result }: { result: any }) {
               {result.data.roots.map((r: any, i: number) => (
                 <tr key={i}>
                   <td dir="rtl" lang="ar" className="arabic-cell">{r.token}</td>
-                  <td dir="rtl" lang="ar" className="arabic-cell root-cell">{r.root || "—"}</td>
-                  <td dir="rtl" lang="ar" className="arabic-cell pattern-cell">{r.pattern || "—"}</td>
+                  <td dir="rtl" lang="ar" className="arabic-cell root-cell">{r.root || "-"}</td>
+                  <td dir="rtl" lang="ar" className="arabic-cell pattern-cell">{r.pattern || "-"}</td>
                   <td dir="rtl" lang="ar" className="arabic-cell">{r.lemma}</td>
                   <td><span className="pos-tag pos-other">{r.pos}</span></td>
                 </tr>

@@ -102,7 +102,7 @@ async def prepublication_check(cid: str, session: AsyncSession = Depends(get_ses
             "id": "ai_nondeterminism",
             "label": "AI interpretations flagged as non-deterministic",
             "status": "warn",
-            "detail": f"{ai_turns_count} AI-generated interpretation(s) found. These are stochastic — re-running the same query may produce different text. Report the model + provider in your Methods section.",
+            "detail": f"{ai_turns_count} AI-generated interpretation(s) found. These are stochastic - re-running the same query may produce different text. Report the model + provider in your Methods section.",
         })
     else:
         checks.append({

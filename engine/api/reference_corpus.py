@@ -347,7 +347,7 @@ async def _download_archive(name: str, spec, job_id: str) -> tuple[Path, list[st
                     f"Downloading {name} "
                     f"(source {url_index}/{len(urls)}, "
                     f"attempt {attempt + 1}/{DOWNLOAD_ATTEMPTS_PER_URL})"
-                    f"{' — resuming' if existing > 0 else ''}"
+                    f"{' - resuming' if existing > 0 else ''}"
                 )
                 _set_job(job_id, status="downloading", message=label + "…")
                 try:
@@ -422,7 +422,7 @@ async def _download_archive(name: str, spec, job_id: str) -> tuple[Path, list[st
     raise RuntimeError(
         "All download sources failed ("
         + "; ".join(errors[-4:])
-        + f"). The source server may be down or overloaded — try again "
+        + f"). The source server may be down or overloaded - try again "
         f"later, or download the archive manually in your browser and "
         f"install it via 'Import archive' "
         f"(POST /reference-corpora/{name}/import-archive)."
@@ -714,7 +714,7 @@ async def download_full_reference(name: str) -> dict:
             "job_id": job_id,
             "message": (
                 f"An install for '{spec.display_name}' is already in "
-                f"progress — polling the existing job."
+                f"progress - polling the existing job."
             ),
         }
 

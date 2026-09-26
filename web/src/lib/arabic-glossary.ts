@@ -216,7 +216,7 @@ export const ACADEMIC_GLOSSARY: GlossaryEntry[] = [
     en: "genre",
     ar: "النوع الأدبي",
     alt: ["الجنس الأدبي"],
-    note: "In corpus design, النوع is broader than الأدبي — use النوع الأدبي only for literary genres; otherwise just النوع.",
+    note: "In corpus design, النوع is broader than الأدبي - use النوع الأدبي only for literary genres; otherwise just النوع.",
   },
 
   // -----------------------------------------------------------------
@@ -269,7 +269,7 @@ export const ACADEMIC_GLOSSARY: GlossaryEntry[] = [
     en: "simple maths",
     ar: "المعادلة البسيطة",
     alt: ["Simple Maths", "Kilgarriff's measure"],
-    note: "Kilgarriff (2009) — keep the English name in parentheses for clarity.",
+    note: "Kilgarriff (2009) - keep the English name in parentheses for clarity.",
   },
   {
     en: "Delta P",

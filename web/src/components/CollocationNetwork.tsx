@@ -95,8 +95,8 @@ function getPreferredRendererMode(): NetworkRendererMode {
 function nodeTooltipText(g: Graph, node: string, measure: CollocationMeasure): string {
   const attrs = g.getNodeAttributes(node);
   const parts = [
-    `${node}${attrs.isCenter ? " — center" : ""}`,
-    `corpus freq: ${attrs.freq ?? "—"}`,
+    `${node}${attrs.isCenter ? " - center" : ""}`,
+    `corpus freq: ${attrs.freq ?? "-"}`,
     `collocates in graph: ${g.degree(node)}`,
   ];
   // Strongest incident edge, with the exact numbers for every measure.
@@ -672,7 +672,7 @@ export function CollocationNetwork({
           {mode === "canvas2d" && (
             <span
               className="network-mode-badge"
-              title="WebGL2 is not available in this window — the network is rendered with the built-in 2D canvas engine. Every interaction still works."
+              title="WebGL2 is not available in this window - the network is rendered with the built-in 2D canvas engine. Every interaction still works."
             >
               2D mode
             </span>
@@ -720,7 +720,7 @@ export function CollocationNetwork({
       )}
 
       {empty && !flash && !loadError && (
-        <div className="network-flash">No collocates met the thresholds — try a lower min frequency.</div>
+        <div className="network-flash">No collocates met the thresholds - try a lower min frequency.</div>
       )}
 
       {tooltip && (
@@ -737,7 +737,7 @@ export function CollocationNetwork({
         node size = corpus frequency. Switching the measure re-weights every edge instantly (no
         refetch, ±{win} words, min freq {minFreq}).
         {mode === "canvas2d"
-          ? " Rendered with the built-in 2D engine (no WebGL2 available) — all interactions are identical."
+          ? " Rendered with the built-in 2D engine (no WebGL2 available) - all interactions are identical."
           : ""}
       </p>
     </div>

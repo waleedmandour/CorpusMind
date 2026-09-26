@@ -454,7 +454,7 @@ async def _search_leipzig(query: str, limit: int, language: str) -> dict:
                     "results": [
                         {
                             "id": f"{lang_code}_newscrawl_2013_1M",
-                            "title": f"Leipzig News Crawl 2013 ({language}) — 1M sentences",
+                            "title": f"Leipzig News Crawl 2013 ({language}) - 1M sentences",
                             "has_full_text": True,
                             "source": "leipzig",
                             "download_url": f"https://downloads.wortschatz-leipzig.de/corpora/{lang_code}_newscrawl_2013_1M.tar.gz",
@@ -462,7 +462,7 @@ async def _search_leipzig(query: str, limit: int, language: str) -> dict:
                         },
                         {
                             "id": f"{lang_code}_newscrawl_2019_1M",
-                            "title": f"Leipzig News Crawl 2019 ({language}) — 1M sentences",
+                            "title": f"Leipzig News Crawl 2019 ({language}) - 1M sentences",
                             "has_full_text": True,
                             "source": "leipzig",
                             "download_url": f"https://downloads.wortschatz-leipzig.de/corpora/{lang_code}_newscrawl_2019_1M.tar.gz",
@@ -489,7 +489,7 @@ async def _search_leipzig(query: str, limit: int, language: str) -> dict:
             "results": [
                 {
                     "id": f"{lang_code}_newscrawl_2013_1M",
-                    "title": f"Leipzig News Crawl 2013 ({language}) — 1M sentences",
+                    "title": f"Leipzig News Crawl 2013 ({language}) - 1M sentences",
                     "has_full_text": True,
                     "source": "leipzig",
                     "download_url": f"https://downloads.wortschatz-leipzig.de/corpora/{lang_code}_newscrawl_2013_1M.tar.gz",

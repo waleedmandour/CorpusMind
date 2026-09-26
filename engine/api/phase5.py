@@ -255,7 +255,7 @@ async def social_semiotic_route(
 
     colours, composition, ocr, caption = await _get_image_sub_analyses(img)
     result = analyse_social_semiotic(colours, composition, ocr, caption)
-    fallback = "LLM mode requested but unavailable — using heuristic." if mode_params.mode == "llm" else None
+    fallback = "LLM mode requested but unavailable - using heuristic." if mode_params.mode == "llm" else None
     return _heuristic_response_with_fallback(result, fallback_reason=fallback)
 
 
@@ -294,7 +294,7 @@ async def cda_route(
 
     colours, composition, ocr, caption = await _get_image_sub_analyses(img)
     result = analyse_cda(colours, composition, ocr, caption, framework=body.framework)  # type: ignore[arg-type]
-    fallback = "LLM mode requested but unavailable — using heuristic." if mode_params.mode == "llm" else None
+    fallback = "LLM mode requested but unavailable - using heuristic." if mode_params.mode == "llm" else None
     return _heuristic_response_with_fallback(result, fallback_reason=fallback)
 
 
@@ -327,7 +327,7 @@ async def persuasion_route(
 
     _, _, ocr, caption = await _get_image_sub_analyses(img)
     result = analyse_persuasion(ocr, caption)
-    fallback = "LLM mode requested but unavailable — using heuristic." if mode_params.mode == "llm" else None
+    fallback = "LLM mode requested but unavailable - using heuristic." if mode_params.mode == "llm" else None
     return _heuristic_response_with_fallback(result, fallback_reason=fallback)
 
 
@@ -355,7 +355,7 @@ async def framing_route(
 
     _, _, ocr, caption = await _get_image_sub_analyses(img)
     result = analyse_framing(ocr, caption)
-    fallback = "LLM mode requested but unavailable — using heuristic." if mode_params.mode == "llm" else None
+    fallback = "LLM mode requested but unavailable - using heuristic." if mode_params.mode == "llm" else None
     return _heuristic_response_with_fallback(result, fallback_reason=fallback)
 
 
@@ -383,7 +383,7 @@ async def narrative_route(
 
     _, _, ocr, caption = await _get_image_sub_analyses(img)
     result = analyse_narrative(ocr, caption)
-    fallback = "LLM mode requested but unavailable — using heuristic." if mode_params.mode == "llm" else None
+    fallback = "LLM mode requested but unavailable - using heuristic." if mode_params.mode == "llm" else None
     return _heuristic_response_with_fallback(result, fallback_reason=fallback)
 
 
@@ -411,7 +411,7 @@ async def visual_metaphor_route(
 
     colours, composition, ocr, caption = await _get_image_sub_analyses(img)
     result = analyse_visual_metaphor(colours, composition, ocr, caption)
-    fallback = "LLM mode requested but unavailable — using heuristic." if mode_params.mode == "llm" else None
+    fallback = "LLM mode requested but unavailable - using heuristic." if mode_params.mode == "llm" else None
     return _heuristic_response_with_fallback(result, fallback_reason=fallback)
 
 
@@ -439,7 +439,7 @@ async def emotion_route(
 
     colours, _, ocr, caption = await _get_image_sub_analyses(img)
     result = analyse_combined_emotion(colours, ocr, caption)
-    fallback = "LLM mode requested but unavailable — using heuristic." if mode_params.mode == "llm" else None
+    fallback = "LLM mode requested but unavailable - using heuristic." if mode_params.mode == "llm" else None
     return _heuristic_response_with_fallback(result, fallback_reason=fallback)
 
 
@@ -467,7 +467,7 @@ async def cultural_route(
 
     colours, _, ocr, caption = await _get_image_sub_analyses(img)
     result = analyse_cultural(colours, ocr, caption)
-    fallback = "LLM mode requested but unavailable — using heuristic." if mode_params.mode == "llm" else None
+    fallback = "LLM mode requested but unavailable - using heuristic." if mode_params.mode == "llm" else None
     return _heuristic_response_with_fallback(result, fallback_reason=fallback)
 
 

@@ -102,7 +102,7 @@ Output STRICT JSON in this exact shape:
 Rules:
 1. Only align text spans that actually refer to something visible in
    the image. If a text span doesn't refer to anything visible, skip it.
-2. Use exact text fragments from the input text — do not paraphrase.
+2. Use exact text fragments from the input text - do not paraphrase.
 3. Confidence 0.0–1.0: how sure are you that this text refers to this
    region?
 4. Do not include any text outside the JSON. Do not wrap in code fences."""

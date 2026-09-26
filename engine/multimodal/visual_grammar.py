@@ -88,7 +88,7 @@ def analyse_visual_grammar(
             category="information_value:given_new",
             claim=(
                 "Under a Kress & van Leeuwen reading, the right-weighted salience "
-                "may emphasize the 'New' — the novel or contested element the viewer "
+                "may emphasize the 'New' - the novel or contested element the viewer "
                 "is being asked to accept."
             ),
             evidence=["composition.information_value.left", "composition.information_value.right"],
@@ -114,7 +114,7 @@ def analyse_visual_grammar(
             category="information_value:ideal_real",
             claim=(
                 "Under a Kress & van Leeuwen reading, the bottom-weighted salience may "
-                "emphasize the 'Real' — the factual, the evidence, the practical grounding."
+                "emphasize the 'Real' - the factual, the evidence, the practical grounding."
             ),
             evidence=["composition.information_value.top", "composition.information_value.bottom"],
             confidence=min(1.0, abs(iv["top"] - iv["bottom"]) * 2),
@@ -141,7 +141,7 @@ def analyse_visual_grammar(
         category="salience",
         claim=(
             f"Under a Kress & van Leeuwen reading, the salience centre at "
-            f"({cx:.2f}, {cy:.2f}) — normalized coordinates with origin at top-left — "
+            f"({cx:.2f}, {cy:.2f}) - normalized coordinates with origin at top-left - "
             f"identifies the visually most prominent element. Higher salience = greater "
             f"attention-grabbing weight."
         ),
@@ -156,7 +156,7 @@ def analyse_visual_grammar(
             category="framing",
             claim=(
                 "Under a Kress & van Leeuwen reading, the edge-weighted salience may "
-                "indicate weak framing — elements are dispersed rather than contained, "
+                "indicate weak framing - elements are dispersed rather than contained, "
                 "potentially connoting openness or lack of connection."
             ),
             evidence=["composition.framing_balance"],
@@ -168,7 +168,7 @@ def analyse_visual_grammar(
             category="framing",
             claim=(
                 "Under a Kress & van Leeuwen reading, the centred salience may indicate "
-                "strong framing — elements are contained and connected, potentially "
+                "strong framing - elements are contained and connected, potentially "
                 "connoting coherence or institutional structure."
             ),
             evidence=["composition.framing_balance"],
@@ -186,7 +186,7 @@ def analyse_visual_grammar(
             category="modality",
             claim=(
                 "Under a Kress & van Leeuwen reading, the high saturation + brightness "
-                "may indicate high sensory modality — the image presents itself as vivid, "
+                "may indicate high sensory modality - the image presents itself as vivid, "
                 "immediate, 'real'. Common in advertising and documentary."
             ),
             evidence=["colours.saturation", "colours.brightness"],
@@ -198,7 +198,7 @@ def analyse_visual_grammar(
             category="modality",
             claim=(
                 "Under a Kress & van Leeuwen reading, the low saturation + brightness "
-                "may indicate low sensory modality — the image abstracts from reality, "
+                "may indicate low sensory modality - the image abstracts from reality, "
                 "potentially connoting distance, abstraction, or conceptual rather than "
                 "sensory meaning."
             ),
@@ -230,7 +230,7 @@ def analyse_visual_grammar(
             claim=(
                 f"Under a Kress & van Leeuwen reading, the presence of {ocr.word_count} "
                 f"words of text in the image (OCR confidence: {ocr.confidence:.2f}) may "
-                f"indicate a conceptual process — the image classifies or defines via "
+                f"indicate a conceptual process - the image classifies or defines via "
                 f"labeling rather than depicting a narrative action."
             ),
             evidence=["ocr.word_count", "ocr.confidence"],

@@ -118,10 +118,10 @@ export function ProjectSelector() {
           onChange={(e) => setActiveProject(e.target.value || null)}
           className="project-selector-select"
         >
-          <option value="">— Select a project —</option>
+          <option value="">- Select a project -</option>
           {projects.data?.map((p) => (
             <option key={p.id} value={p.id}>
-              {p.name} ({p.language}) — {p.corpus_count} corpora
+              {p.name} ({p.language}) - {p.corpus_count} corpora
             </option>
           ))}
         </select>
@@ -129,7 +129,7 @@ export function ProjectSelector() {
       {activeProjectId && (
         <button
           className="btn-small"
-          title="Delete the active project and all of its corpora — cannot be undone"
+          title="Delete the active project and all of its corpora - cannot be undone"
           onClick={() => {
             const p = projects.data?.find((x) => x.id === activeProjectId);
             setConfirmDeleteProject({
@@ -268,8 +268,8 @@ function CorpusListPanel({ mode }: { mode: CorpusMode }) {
             <button
               className="corpus-delete-btn"
               title={isReference
-                ? "Delete this reference corpus — cannot be undone"
-                : "Delete this corpus (and all its documents) — cannot be undone"}
+                ? "Delete this reference corpus - cannot be undone"
+                : "Delete this corpus (and all its documents) - cannot be undone"}
               aria-label={`Delete corpus ${c.name}`}
               onClick={(e) => {
                 e.stopPropagation();
@@ -350,7 +350,7 @@ function CorpusStatsDashboard({ cid }: { cid: string }) {
       </div>
       {tokens === 0 && (
         <div className="dashboard-hint">
-          No tokens yet — upload files to start the annotation pipeline.
+          No tokens yet - upload files to start the annotation pipeline.
         </div>
       )}
     </div>
@@ -1050,7 +1050,7 @@ function BundledReferences() {
                         className="btn-small"
                         onClick={() => openImportPicker(r.name)}
                         disabled={downloadingName !== null}
-                        title="Already downloaded the archive manually? Install it from the file — always works even when the source server is down"
+                        title="Already downloaded the archive manually? Install it from the file - always works even when the source server is down"
                       >
                         Import archive
                       </button>
@@ -1278,7 +1278,7 @@ function DocumentList({ cid }: { cid: string }) {
     refetchInterval: 3_000,
   });
   // v1.0.7: corpus stats power the compile gate ("compiled successfully before
-  // moving on") — token_count === 0 means the pipeline has not produced an
+  // moving on") - token_count === 0 means the pipeline has not produced an
   // annotation yet (or compilation failed outright).
   const corpus = useQuery({
     queryKey: ["corpus", cid],
@@ -1346,13 +1346,13 @@ function DocumentList({ cid }: { cid: string }) {
       if (result.success) {
         setLastCompile({
           ok: true,
-          msg: `Compiled successfully — ${result.recompiled}/${result.total_documents} documents, ${result.token_count.toLocaleString()} tokens, ${result.type_count.toLocaleString()} types. The corpus is ready for analysis.`,
+          msg: `Compiled successfully - ${result.recompiled}/${result.total_documents} documents, ${result.token_count.toLocaleString()} tokens, ${result.type_count.toLocaleString()} types. The corpus is ready for analysis.`,
         });
         showStatus(`✓ Compiled ${result.recompiled}/${result.total_documents} documents. ${result.token_count} tokens, ${result.type_count} types.`, "success");
       } else {
         setLastCompile({
           ok: false,
-          msg: `Compilation finished WITH FAILURES — ${result.recompiled}/${result.total_documents} documents recompiled. Fix the failing files and recompile before analysing.`,
+          msg: `Compilation finished WITH FAILURES - ${result.recompiled}/${result.total_documents} documents recompiled. Fix the failing files and recompile before analysing.`,
         });
         showStatus(`✗ Compile incomplete: only ${result.recompiled}/${result.total_documents} documents recompiled.`, "error");
       }
@@ -1451,7 +1451,7 @@ function DocumentList({ cid }: { cid: string }) {
 
   const docCount = docs.data?.length ?? 0;
   const compiledTokens = ((corpus.data?.stats as Record<string, number> | undefined)?.token_count as number) ?? 0;
-  // v1.0.7 compile gate — three states:
+  // v1.0.7 compile gate - three states:
   //   notCompiled : documents exist but the pipeline never produced tokens
   //   staleMeta   : bulk/per-file metadata changed after the last compile
   //   compiled    : token_count > 0 and no pending metadata changes
@@ -1494,7 +1494,7 @@ function DocumentList({ cid }: { cid: string }) {
         </div>
       </div>
 
-      {/* v1.0.7: compile gate banner — the corpus must compile successfully
+      {/* v1.0.7: compile gate banner - the corpus must compile successfully
           before the user moves on to analysis. */}
       {docCount > 0 && (notCompiled || needsRecompile || lastCompile) && (
         <div
@@ -1508,15 +1508,15 @@ function DocumentList({ cid }: { cid: string }) {
           {lastCompile ? (
             lastCompile.msg
           ) : notCompiled ? (
-            <>⚠ Corpus is not compiled yet — click <strong>⚙ Compile Corpus</strong> to run the annotation pipeline (tokenize → tag → lemmatize → parse) before analysis.</>
+            <>⚠ Corpus is not compiled yet - click <strong>⚙ Compile Corpus</strong> to run the annotation pipeline (tokenize → tag → lemmatize → parse) before analysis.</>
           ) : (
-            <>ℹ Tags changed — click <strong>↻ Recompile</strong> so the new genre/register classification is applied to the compiled corpus.</>
+            <>ℹ Tags changed - click <strong>↻ Recompile</strong> so the new genre/register classification is applied to the compiled corpus.</>
           )}
         </div>
       )}
       {compiled && !lastCompile && docCount > 0 && (
         <div className="uploader-status success" role="status" style={{ marginBottom: "var(--space-2)" }}>
-          ✓ Corpus compiled — {compiledTokens.toLocaleString()} tokens ready for analysis.
+          ✓ Corpus compiled - {compiledTokens.toLocaleString()} tokens ready for analysis.
         </div>
       )}
 
@@ -1623,8 +1623,8 @@ function DocumentList({ cid }: { cid: string }) {
                   </>
                 ) : (
                   <>
-                    <td style={{ padding: "var(--space-2)", color: "var(--text-muted)" }}>{(d.meta as any)?.genre || "—"}</td>
-                    <td style={{ padding: "var(--space-2)", color: "var(--text-muted)" }}>{(d.meta as any)?.register || "—"}</td>
+                    <td style={{ padding: "var(--space-2)", color: "var(--text-muted)" }}>{(d.meta as any)?.genre || "-"}</td>
+                    <td style={{ padding: "var(--space-2)", color: "var(--text-muted)" }}>{(d.meta as any)?.register || "-"}</td>
                   </>
                 )}
                 <td style={{ padding: "var(--space-2)", color: "var(--text-muted)" }}>{(d.raw_size_bytes / 1024).toFixed(1)} KB</td>
@@ -1795,7 +1795,7 @@ function ReferenceUpload() {
       {/* v1.0.7: max-size guidance based on engine limits + machine specs */}
       <div className="reference-upload-section" style={{ fontSize: "12px", color: "var(--text-muted)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", padding: "var(--space-2)" }}>
         <strong style={{ color: "var(--text)" }}>Size limits on this machine</strong>
-        <div>• Maximum file size: <strong>50 MB per file</strong> (engine-enforced — larger files are rejected).</div>
+        <div>• Maximum file size: <strong>50 MB per file</strong> (engine-enforced - larger files are rejected).</div>
         {(() => {
           const g = referenceSizeGuidance();
           const recM = (g.recTokens / 1_000_000).toFixed(1);
@@ -1817,9 +1817,9 @@ function ReferenceUpload() {
           onChange={(e) => setActive(e.target.value || null)}
           className="reference-select"
         >
-          <option value="">— Select a corpus —</option>
+          <option value="">- Select a corpus -</option>
           {corpora.data?.map((c) => (
-            <option key={c.id} value={c.id}>{c.name} ({c.language}) — {c.stats?.document_count ?? 0} docs</option>
+            <option key={c.id} value={c.id}>{c.name} ({c.language}) - {c.stats?.document_count ?? 0} docs</option>
           ))}
         </select>
       </div>
@@ -1980,7 +1980,7 @@ function NewCorpusDialog({ onCreate }: { onCreate: (name: string, language: stri
               <label>
                 {t(lang, "lr_proficiency")}:
                 <select value={proficiency} onChange={(e) => setProficiency(e.target.value)}>
-                  <option value="">—</option>
+                  <option value="">-</option>
                   <option value="A1">A1</option>
                   <option value="A2">A2</option>
                   <option value="B1">B1</option>

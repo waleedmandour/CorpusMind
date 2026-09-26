@@ -264,7 +264,7 @@ class ReferenceCorpusManager:
         spec = self.spec(name)
         if not spec.source_url or not spec.sha256:
             raise DownloadFailedError(
-                f"Reference '{name}' has no source URL or checksum — not "
+                f"Reference '{name}' has no source URL or checksum - not "
                 f"available for download. It will be added in a future release."
             )
         # Already installed? Short-circuit.

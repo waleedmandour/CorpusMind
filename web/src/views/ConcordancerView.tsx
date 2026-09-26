@@ -165,7 +165,7 @@ export function ConcordancerView() {
             {submitted?.nm && " (Arabic-normalized)"}
             {submitted?.rs && " (random sample of 100, seed " + (result.data.query.sample_seed ?? submitted.seed) + ")"}
             {submitted?.sort?.length ? " (sorted " + submitted.sort.map((s) => (s.side === "left" ? "L" : "R") + s.offset).join(", ") + ")" : ""}
-            {result.data.query.total_capped ? " (match set capped at 20,000 — total is a lower bound)" : ""}
+            {result.data.query.total_capped ? " (match set capped at 20,000 - total is a lower bound)" : ""}
             {total > PAGE_SIZE && (
               <span className="pagination-info">
                 {" "} - showing {offset + 1}-{Math.min(offset + PAGE_SIZE, total)}

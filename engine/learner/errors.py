@@ -108,12 +108,12 @@ def _detect_en_article(tokens: list[dict]) -> list[tuple[int, str, str]]:
         if cur == "a" and nxt_key[0] in _VOWELS:
             out.append((tokens[i].get("token_idx", 0), "en_article",
                         f"orthographic heuristic: 'a' before vowel-initial '{nxt}' "
-                        f"— possible article error (candidate only; silent-h and "
+                        f"- possible article error (candidate only; silent-h and "
                         f"yu/wo-glide words are exceptions)"))
         elif cur == "an" and nxt_key[0] not in _VOWELS:
             out.append((tokens[i].get("token_idx", 0), "en_article",
                         f"orthographic heuristic: 'an' before consonant-initial '{nxt}' "
-                        f"— possible article error (candidate only; silent-h words "
+                        f"- possible article error (candidate only; silent-h words "
                         f"like 'hour' are exceptions)"))
     return out
 
@@ -126,7 +126,7 @@ def _detect_en_prep(tokens: list[dict]) -> list[tuple[int, str, str]]:
         note = _EN_PREP_BIGRAMS.get(bigram)
         if note:
             out.append((tokens[i + 1].get("token_idx", 0), "en_prep",
-                        f"lexical dependency confusion: '{bigram[0]} {bigram[1]}' — {note}"))
+                        f"lexical dependency confusion: '{bigram[0]} {bigram[1]}' - {note}"))
     return out
 
 
@@ -137,7 +137,7 @@ def _detect_en_agreement(tokens: list[dict]) -> list[tuple[int, str, str]]:
         bigram = (_norm(tokens[i].get("text", "")), _norm(tokens[i + 1].get("text", "")))
         if bigram in _EN_AGREEMENT_BIGRAMS:
             out.append((tokens[i + 1].get("token_idx", 0), "en_agreement",
-                        f"subject–verb agreement: '{bigram[0]} {bigram[1]}' — "
+                        f"subject–verb agreement: '{bigram[0]} {bigram[1]}' - "
                         f"possible agreement error (candidate only)"))
     return out
 
@@ -149,7 +149,7 @@ def _detect_en_spelling(tokens: list[dict]) -> list[tuple[int, str, str]]:
         key = _norm(tok.get("text", ""))
         if key in _EN_SPELLING:
             out.append((tok.get("token_idx", 0), "en_spelling",
-                        f"common misspelling: '{tok.get('text')}' — standard form "
+                        f"common misspelling: '{tok.get('text')}' - standard form "
                         f"'{_EN_SPELLING[key]}' (candidate only)"))
     return out
 
@@ -209,7 +209,7 @@ def _ar_word_map_detector(map_: dict[str, str], rule_id: str, phenomenon: str):
             correct = map_.get(key)
             if correct:
                 out.append((tok.get("token_idx", 0), rule_id,
-                            f"{phenomenon}: '{surface}' — standard form '{correct}' "
+                            f"{phenomenon}: '{surface}' - standard form '{correct}' "
                             f"(candidate only)"))
         return out
 
@@ -232,11 +232,11 @@ EN_RULES: dict[str, dict] = {
 }
 
 AR_RULES: dict[str, dict] = {
-    "ar_hamza": {"label": "Hamza seat (أ/إ/آ) omitted — word list",
+    "ar_hamza": {"label": "Hamza seat (أ/إ/آ) omitted - word list",
                  "language": "ar", "detect": _ar_word_map_detector(_AR_HAMZA, "ar_hamza", "hamza spelling")},
-    "ar_ta_marbuta": {"label": "Ta marbuta (ة) written as ه — word list",
+    "ar_ta_marbuta": {"label": "Ta marbuta (ة) written as ه - word list",
                       "language": "ar", "detect": _ar_word_map_detector(_AR_TA_MARBUGA, "ar_ta_marbuta", "ta marbuta spelling")},
-    "ar_alef_maksura": {"label": "Alef maksura (ى) vs ya (ي) confusion — word list",
+    "ar_alef_maksura": {"label": "Alef maksura (ى) vs ya (ي) confusion - word list",
                         "language": "ar", "detect": _ar_word_map_detector(_AR_ALEF_MAKSURA, "ar_alef_maksura", "alef maksura/ya spelling")},
 }
 
@@ -293,7 +293,7 @@ class ErrorCandidatesResult:
 
 _PIPELINE = (
     "rule-based seed rules (ERRANT-lineage; cf. Bryant & Ng 2024-25 "
-    "multilingual GEC extensions) — candidates only, human/LLM review required"
+    "multilingual GEC extensions) - candidates only, human/LLM review required"
 )
 
 
@@ -316,13 +316,13 @@ async def detect_error_candidates(
     rules = _rules_for(language, rule_ids)
     lang = "ar" if language.startswith("ar") else "en"
     notes: list[str] = [
-        "Candidates are heuristic, not validated errors — triage with the AI "
+        "Candidates are heuristic, not validated errors - triage with the AI "
         "Assistant and confirm by hand before reporting them as error counts."
     ]
 
     version_id = await _latest_version_id(session, corpus_id)
     if not version_id:
-        notes.append("Corpus has no ingested annotation version — nothing to scan.")
+        notes.append("Corpus has no ingested annotation version - nothing to scan.")
         return ErrorCandidatesResult(
             candidates=[], counts={}, total_tokens=0, pipeline=_PIPELINE,
             verified_count=0, notes=notes,

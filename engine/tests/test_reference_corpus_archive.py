@@ -204,7 +204,7 @@ def test_old_url_suffix_check_fails_on_ota_query_string():
     # Old logic (the bug):
     assert not bnc_baby_url.endswith(".zip"), (
         "If this assertion fails, the URL has changed and the bug may no "
-        "longer reproduce — revisit the fix."
+        "longer reproduce - revisit the fix."
     )
     assert not bnc_baby_url.endswith(".tar.gz") and not bnc_baby_url.endswith(".tgz")
 
@@ -235,7 +235,7 @@ async def test_zip_with_query_string_url_is_extracted(client, monkeypatch):
         {
             "Texts/Aca/AA.txt": "Academic writing sample one. Another sentence here.",
             "Texts/Fic/FN.txt": "Once upon a time, in a galaxy far far away.",
-            "Texts/News/ABC.txt": "LONDON — The government announced new policy today.",
+            "Texts/News/ABC.txt": "LONDON - The government announced new policy today.",
             "Texts/Dem/KS.txt": "Right so I was walking down the pub the other day.",
         }
     )
@@ -285,7 +285,7 @@ async def test_bawe_zip_with_query_string_url_is_extracted(client, monkeypatch):
         f"BAWE URL changed unexpectedly: {bawe_spec.source_url!r}"
     )
     assert not bawe_spec.source_url.endswith(".zip"), (
-        "BAWE URL now ends in '.zip' literally — this test no longer "
+        "BAWE URL now ends in '.zip' literally - this test no longer "
         "reproduces the bug; please revisit."
     )
     assert bawe_spec.source_url.endswith("isAllowed=y"), (
@@ -395,7 +395,7 @@ async def test_unrecognized_format_produces_clear_error(client, monkeypatch):
     # Must mention magic bytes (the new clearer message) — NOT the old one.
     assert "magic bytes" in msg, f"Expected clearer error, got: {msg!r}"
     assert "No text files found in archive." not in msg, (
-        f"Old misleading error surfaced — got: {msg!r}"
+        f"Old misleading error surfaced - got: {msg!r}"
     )
 
 

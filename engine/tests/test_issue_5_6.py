@@ -63,7 +63,7 @@ async def test_issue6_analysis_read_redacts_cached_descriptions(client):
     assert r.status_code == 200, r.text
     analysis = r.json()["analysis"]
     vlm = (analysis or {}).get("vision_llm", {})
-    assert vlm, "test setup failed — no cached vision_llm"
+    assert vlm, "test setup failed - no cached vision_llm"
     for cached in vlm.values():
         desc = cached.get("description", "")
         assert "woman" not in desc
@@ -79,7 +79,7 @@ async def test_issue6_batch_analysis_redacts_cached_descriptions(client):
     r = await client.get(f"/api/v1/image-sets/{iset_id}/batch-analysis")
     assert r.status_code == 200, r.text
     descriptions = r.json().get("descriptions", [])
-    assert descriptions, "test setup failed — no descriptions in batch view"
+    assert descriptions, "test setup failed - no descriptions in batch view"
     for d in descriptions:
         assert "woman" not in d["description"]
         assert "person-descriptive" in d["description"]

@@ -60,12 +60,12 @@ SCHEMA: list[dict] = [
         "label_en": "Visual Morphology",
         "label_ar": "البنية الصرفية البصرية",
         "description_en": (
-            "The structural makeup of drawn or iconic signs — the visual analogue "
+            "The structural makeup of drawn or iconic signs - the visual analogue "
             "of morphemes in spoken language (Cohn 2013; Engelhardt 2002). Tag the "
             "minimal graphic units and combinatorial structures the image is built from."
         ),
         "description_ar": (
-            "البنية التركيبية للعلامات المرسومة أو الأيقونية — المقابل البصري "
+            "البنية التركيبية للعلامات المرسومة أو الأيقونية - المقابل البصري "
             "للوحدات الصرفية في اللغة المنطوقة (كون 2013). وسِم الوحدات الرسومية "
             "الدنيا والبنى التركيبية التي تتألف منها الصورة."
         ),
@@ -85,7 +85,7 @@ SCHEMA: list[dict] = [
             {"id": "texture_pattern", "label_en": "Texture pattern", "label_ar": "النقش السطحي",
              "description_en": "A repeated surface micro-pattern."},
             {"id": "part_whole", "label_en": "Part-whole composition", "label_ar": "علاقة الجزء بالكل",
-             "description_en": "Meronymic structure — components of a larger whole."},
+             "description_en": "Meronymic structure - components of a larger whole."},
             {"id": "repetition", "label_en": "Repetition", "label_ar": "التكرار",
              "description_en": "Iterated identical units (multiplicative structure)."},
             {"id": "symmetry", "label_en": "Symmetry", "label_ar": "التناظر",
@@ -104,11 +104,11 @@ SCHEMA: list[dict] = [
         "label_ar": "التأطير الانتباهي",
         "description_en": (
             "The layout, boundaries and panel structures that direct the viewer's "
-            "focus — functioning like punctuation or syntactic chunking in text "
+            "focus - functioning like punctuation or syntactic chunking in text "
             "(Kress & van Leeuwen 2006; Bateman 2008)."
         ),
         "description_ar": (
-            "التخطيط والحدود وبنى اللوحات التي توجّه انتباه المشاهد — بأدوار تشبه "
+            "التخطيط والحدود وبنى اللوحات التي توجّه انتباه المشاهد - بأدوار تشبه "
             "علامات الترقيم أو التقسيم التركيبي في النص (كرس وفان ليوين 2006؛ باتمان 2008)."
         ),
         "framework": "Kress & van Leeuwen 2006; Bateman 2008",
@@ -151,13 +151,13 @@ SCHEMA: list[dict] = [
         "label_en": "Filmic Shot Scale",
         "label_ar": "مقياس اللقطة",
         "description_en": (
-            "The relative distance or size of visual objects and characters — the "
+            "The relative distance or size of visual objects and characters - the "
             " interpersonal-distance system of the image (Kress & van Leeuwen's "
             "social distance mapped to the standard film taxonomy; Bordwell & "
             "Thompson 2013). Conveys interpersonal distance and modal prominence."
         ),
         "description_ar": (
-            "المسافة النسبية أو حجم الأشياء والشخصيات في الصورة — نظام المسافة "
+            "المسافة النسبية أو حجم الأشياء والشخصيات في الصورة - نظام المسافة "
             "التفاعلية للصورة (المسافة الاجتماعية عند كرس وفان ليوين مطابقةً "
             "لتصنيف اللقطات السينمائية). يعبّر عن المسافة الشخصية والبروز الأسلوبي."
         ),
@@ -165,21 +165,21 @@ SCHEMA: list[dict] = [
         "multi": True,
         "categories": [
             {"id": "extreme_close_up", "label_en": "Extreme close-up", "label_ar": "لقطة قريبة جداً",
-             "description_en": "Intimate distance — a detail fills the frame."},
+             "description_en": "Intimate distance - a detail fills the frame."},
             {"id": "close_up", "label_en": "Close-up", "label_ar": "لقطة قريبة",
-             "description_en": "Close personal distance — head and shoulders."},
+             "description_en": "Close personal distance - head and shoulders."},
             {"id": "medium_close_up", "label_en": "Medium close-up", "label_ar": "لقطة متوسطة القرب",
-             "description_en": "Personal distance — chest up."},
+             "description_en": "Personal distance - chest up."},
             {"id": "medium_shot", "label_en": "Medium shot", "label_ar": "لقطة متوسطة",
-             "description_en": "Social distance — waist up."},
+             "description_en": "Social distance - waist up."},
             {"id": "medium_long_shot", "label_en": "Medium long shot", "label_ar": "لقطة متوسطة بعيدة",
-             "description_en": "Social-impersonal distance — knees up."},
+             "description_en": "Social-impersonal distance - knees up."},
             {"id": "full_shot", "label_en": "Full shot", "label_ar": "لقطة كاملة",
-             "description_en": "Impersonal distance — the full figure."},
+             "description_en": "Impersonal distance - the full figure."},
             {"id": "long_shot", "label_en": "Long shot", "label_ar": "لقطة بعيدة",
-             "description_en": "Public distance — figure within its setting."},
+             "description_en": "Public distance - figure within its setting."},
             {"id": "extreme_long_shot", "label_en": "Extreme long shot", "label_ar": "لقطة بعيدة جداً",
-             "description_en": "Distant public — the vista dominates the figure."},
+             "description_en": "Distant public - the vista dominates the figure."},
         ],
     },
     {
@@ -188,12 +188,12 @@ SCHEMA: list[dict] = [
         "label_ar": "البنية المسارية والانتقالات",
         "description_en": (
             "The sequential flow or narrative progression from one visual frame to "
-            "the next — functioning like conjunctive or transitional markers in text "
+            "the next - functioning like conjunctive or transitional markers in text "
             "(McCloud 1993; Halliday & Hasan 1976). Annotate the shift FROM this "
             "frame TO the following frame (the set's reading order is ingest order)."
         ),
         "description_ar": (
-            "التدفق التتابعي أو التقدم السردي من لوحة بصرية إلى التالية — بأدوار "
+            "التدفق التتابعي أو التقدم السردي من لوحة بصرية إلى التالية - بأدوار "
             "تشبه أدوات الربط والانتقال في النص (ماكلاود 1993؛ هاليداي وحسن 1976). "
             "وسِم الانتقال من هذه اللوحة إلى اللوحة التالية وفق ترتيب الإدخال."
         ),

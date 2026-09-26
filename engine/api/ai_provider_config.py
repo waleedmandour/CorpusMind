@@ -60,7 +60,7 @@ async def set_cloud_config(req: CloudConfigRequest, request: Request) -> dict:
     if req.provider == "custom" and not (req.base_url or settings.cloud_base_url):
         raise HTTPException(
             400,
-            "The 'custom' provider requires a Base URL — any OpenAI-compatible "
+            "The 'custom' provider requires a Base URL - any OpenAI-compatible "
             "endpoint (e.g. https://api.deepseek.com/v1).",
         )
     # Push config into the shared Settings object so the next provider

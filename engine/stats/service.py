@@ -417,7 +417,7 @@ async def search_concordance(
         query_meta["normalize_arabic"] = True
         if regex:
             query_meta["normalization_skipped"] = (
-                "Regex matching runs on raw text — the Arabic normalization "
+                "Regex matching runs on raw text - the Arabic normalization "
                 "toggle was ignored for this query."
             )
     if phrase:
@@ -852,7 +852,7 @@ async def compute_collocations(
             row["chi2_min_expected"] = round(chi2_min_expected(a, b, c, d), 4)
             if not chi2_warned and row["chi2_min_expected"] < 5:
                 warnings.append(
-                    "Some χ² expected cell counts are below 5 (Cochran rule) — "
+                    "Some χ² expected cell counts are below 5 (Cochran rule) - "
                     "treat χ² as indicative for sparse pairs; prefer log-likelihood or Fisher."
                 )
                 chi2_warned = True
@@ -944,7 +944,7 @@ async def compute_keyness(
             f"Reference corpus '{reference_corpus_id}' has no ingested annotation version. "
             f"The reference corpus must contain real tokens for keyness to be meaningful. "
             f"If you used 'Bundled → Load' to create this reference, that flow only "
-            f"created an empty corpus row — use the new /api/v1/reference-corpora/ "
+            f"created an empty corpus row - use the new /api/v1/reference-corpora/ "
             f"endpoints to install a real bundled reference, or upload a reference "
             f"corpus file via the Upload tab."
         )

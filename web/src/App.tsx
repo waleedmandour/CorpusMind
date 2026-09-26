@@ -110,7 +110,7 @@ export default function App() {
         {activeCorpusId && (
           <div
             className="app-active-corpus"
-            title={activeCorpusName ? `${activeCorpusName} — ${t(lang, "status_corpus_ready")}` : t(lang, "status_corpus_ready")}
+            title={activeCorpusName ? `${activeCorpusName} - ${t(lang, "status_corpus_ready")}` : t(lang, "status_corpus_ready")}
           >
             <span className="dot" />
             {activeCorpusName ? (

@@ -74,7 +74,7 @@ def test_issue7_cloud_chat_url_has_single_v1(provider, expected):
     p = _make_cloud_provider(provider)
     req = p._client.build_request("POST", "/v1/chat/completions", json={})
     assert str(req.url) == expected, (
-        f"{provider} chat URL wrong — the httpx base-path concatenation bug is back"
+        f"{provider} chat URL wrong - the httpx base-path concatenation bug is back"
     )
 
 

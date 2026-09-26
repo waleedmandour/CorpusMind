@@ -175,7 +175,7 @@ const NAV_TO_TAB: Record<string, Tab> = {
 };
 
 // ---------------------------------------------------------------------------
-// v1.2.3 — Analysis tool CARDS (replace the flat text tab strip).
+// v1.2.3 - Analysis tool CARDS (replace the flat text tab strip).
 //
 // - Order mirrors the sidebar “Analyze” group EXACTLY (Concordance first,
 //   then Vector KWIC … Metaphor), so the top strip and the sidebar never
@@ -216,7 +216,7 @@ const TOOL_CARDS: ToolCard[] = [
   { id: "vocab", nav: "vocab", labelKey: "nav_vocab", icon: "\u4E00", hue: 6 },
   { id: "sentiment", nav: "sentiment", labelKey: "nav_sentiment", icon: "\u263A", hue: 7 },
   { id: "metaphor", nav: "metaphor", labelKey: "nav_metaphor", icon: "\u2248", hue: 8 },
-  // Corpus-level metrics — this shell only (no sidebar entry), kept last.
+  // Corpus-level metrics - this shell only (no sidebar entry), kept last.
   { id: "documents", nav: null, label: "Documents", icon: "\u25A4", hue: 3 },
   { id: "readability", nav: null, label: "Readability", icon: "\u25D0", hue: 1 },
   { id: "groups", nav: null, label: "Compare groups", icon: "\u21C4", hue: 2 },
@@ -364,7 +364,7 @@ function FrequencyPanel({ cid }: { cid: string }) {
           </div>
           <DataTable
             headers={[unit, "Frequency", "Per million", "%", "Range", "Range %"]}
-            rows={result.data.rows.map((r) => [r.item, r.freq, r.per_million, r.percent, r.range, r.range_percent ?? "—"])}
+            rows={result.data.rows.map((r) => [r.item, r.freq, r.per_million, r.percent, r.range, r.range_percent ?? "-"])}
           />
           <div className="hint" style={{ marginTop: "var(--space-2)" }}>
             Range = number of documents containing the item; Range % = share of documents in scope.
@@ -531,7 +531,7 @@ function CollocationPanel({ cid }: { cid: string }) {
                 headers={["Collocate", "O", "f(node)", "f(y)", "N", ...measureKeys]}
                 rows={result.data.rows.map((r) => [
                   r.collocate, r.O, r.fx, r.fy, r.N,
-                  ...measureKeys.map((k) => (r as any)[k] ?? "—"),
+                  ...measureKeys.map((k) => (r as any)[k] ?? "-"),
                 ])}
               />
               <CollocationNetwork
@@ -774,7 +774,7 @@ function DispersionPanel({ cid }: { cid: string }) {
             <div>Range = <strong>{result.data.range}</strong> documents ({result.data.range_percent}%)</div>
             <div className="hint">
               Juilland's D: 1 = perfectly even, 0 = maximally concentrated (assumes roughly equal-sized parts).
-              Gries' DP: 0 = perfectly even, 1 = concentrated — expected proportions are weighted by document size (v1.0.1).
+              Gries' DP: 0 = perfectly even, 1 = concentrated - expected proportions are weighted by document size (v1.0.1).
               DP-norm makes DP comparable across different numbers of documents.
             </div>
           </div>
@@ -871,7 +871,7 @@ function DataTable({ headers, rows }: { headers: string[]; rows: (string | numbe
 
 
 function fmt(v: number | null): string {
-  if (v === null || v === undefined) return "—";
+  if (v === null || v === undefined) return "-";
   if (!isFinite(v)) return v > 0 ? "∞" : "-∞";
   return v.toFixed(4);
 }
@@ -1021,7 +1021,7 @@ function POSPanel({ cid }: { cid: string }) {
           <div className="grounding-notice">
             <strong>Note:</strong> USAS top-level semantic categories via the bundled
             Multilingual-USAS lexicon (CC BY-NC-SA; see reference-data/tagsets). Lexicon-based
-            approximation — cite the USAS taxonomy in publications.
+            approximation - cite the USAS taxonomy in publications.
           </div>
           <h3>Semantic distribution (USAS top-level)</h3>
           <DataTable
@@ -1130,7 +1130,7 @@ function GrammarPanel({ cid }: { cid: string }) {
 }
 
 
-// v1.2.7 (§2): displaCy-style arc diagram (in-house SVG, offline-safe —
+// v1.2.7 (§2): displaCy-style arc diagram (in-house SVG, offline-safe -
 // no external renderer dependency). Tokens sit on a baseline; every
 // non-root dependency is an arc from head to dependent with the relation
 // label on its apex. Arc height scales with head-dependent distance.
@@ -1259,7 +1259,7 @@ function DependencyPanel({ cid }: { cid: string }) {
       <div className="grounding-notice">
         <strong>Note:</strong> Built as thin queries over the same dependency parses already
         produced in 8.1 - not a separate pipeline. Relation labels are normalized onto the
-        UD v2 universal inventory (37 relations) — spaCy ClearNLP labels like
+        UD v2 universal inventory (37 relations) - spaCy ClearNLP labels like
         <code> dobj</code>/<code>ROOT</code> map onto <code>obj</code>/<code>root</code> at read time.
       </div>
 
@@ -1371,11 +1371,11 @@ type DiscourseSortKey =
 // Named fmtNum to stay clear of the 4-decimal fmt() helper used by the
 // dispersion panel; the discourse table wants short per-column precision.
 const fmtNum = (v: number | null | undefined, digits: number) =>
-  v == null ? "—" : v.toLocaleString(undefined, { maximumFractionDigits: digits });
+  v == null ? "-" : v.toLocaleString(undefined, { maximumFractionDigits: digits });
 
 function DiscoursePanel({ cid }: { cid: string }) {
   const lang = useUI((s) => s.lang);
-  // v1.2.6: multi-taxonomy support — the lens is user-selectable and each
+  // v1.2.6: multi-taxonomy support - the lens is user-selectable and each
   // result names + cites its taxonomy. Default stays Hyland 2005.
   const [taxonomy, setTaxonomy] = useState("hyland2005");
   // v1.2.7 (§3): optional comparison corpus → per-category keyness battery.
@@ -1416,7 +1416,7 @@ function DiscoursePanel({ cid }: { cid: string }) {
       { key: "martinwhite2005", name: "Martin & White 2005" },
       { key: "usas", name: "CLAWS/USAS semantic tagset (top-level)" },
       { key: "sfg_hm2014", name: "SFG Transitivity & Modality (Halliday & Matthiessen 2014)" },
-      { key: "persuasion_gong2026", name: "Persuasion Index (Wang & Gong 2026) — 15 dimensions" },
+      { key: "persuasion_gong2026", name: "Persuasion Index (Wang & Gong 2026) - 15 dimensions" },
     ];
   const isUsas = result.data?.taxonomy_key === "usas";
   const isPersuasion = result.data?.taxonomy_key === "persuasion_gong2026";
@@ -1543,7 +1543,7 @@ function DiscoursePanel({ cid }: { cid: string }) {
           {isPersuasion && result.data.categories && Object.keys(result.data.categories).length > 0 && (
             <PersuasionRadar categories={result.data.categories} />
           )}
-          {/* v1.2.7 (§3): sortable DataTable — replaces the v1.2.6 card list.
+          {/* v1.2.7 (§3): sortable DataTable - replaces the v1.2.6 card list.
               DP is always available; LL / Log Ratio / %DIFF / SM appear when
               a comparison corpus is selected. The Examples column keeps the
               evidence list from the old cards behind an expandable row. */}
@@ -1588,7 +1588,7 @@ function DiscoursePanel({ cid }: { cid: string }) {
                       {isUsas && (info.label || info.group) && (
                         <div className="cat-meta">
                           {info.label}
-                          {info.group ? ` — ${info.group}` : ""}
+                          {info.group ? ` - ${info.group}` : ""}
                         </div>
                       )}
                     </td>
@@ -1608,14 +1608,14 @@ function DiscoursePanel({ cid }: { cid: string }) {
                           )}
                         </>
                       ) : (
-                        "—"
+                        "-"
                       )}
                     </td>
                     <td className="num" title={t(lang, "discourse_lr_hint")}>
-                      {hasCompare ? fmtNum(info.log_ratio ?? null, 2) : "—"}
+                      {hasCompare ? fmtNum(info.log_ratio ?? null, 2) : "-"}
                     </td>
-                    <td className="num">{hasCompare ? fmtNum(info.pct_diff ?? null, 1) : "—"}</td>
-                    <td className="num">{hasCompare ? fmtNum(info.simple_maths, 2) : "—"}</td>
+                    <td className="num">{hasCompare ? fmtNum(info.pct_diff ?? null, 1) : "-"}</td>
+                    <td className="num">{hasCompare ? fmtNum(info.simple_maths, 2) : "-"}</td>
                     <td>
                       {info.examples.length > 0 ? (
                         <details className="discourse-examples-details">
@@ -1631,7 +1631,7 @@ function DiscoursePanel({ cid }: { cid: string }) {
                           </ul>
                         </details>
                       ) : (
-                        <span className="cat-meta">—</span>
+                        <span className="cat-meta">-</span>
                       )}
                     </td>
                   </tr>
@@ -1871,14 +1871,14 @@ function DocumentStatsPanel({ cid }: { cid: string }) {
       ))}
       <div className="hint" style={{ marginTop: "var(--space-2)" }}>
         LIX/RIX are language-neutral readability indices (long words &gt; 6 chars).
-        TTR per document is sample-size-sensitive — compare documents of similar length.
+        TTR per document is sample-size-sensitive - compare documents of similar length.
       </div>
     </div>
   );
 }
 
 async function downloadTable(rows: (string | number)[][], headers: string[], _fmt: string): Promise<Blob> {
-  // CSV serialization (client-side; the table is small — one row per document)
+  // CSV serialization (client-side; the table is small - one row per document)
   void _fmt;
   const esc = (v: string | number) => {
     const s = String(v ?? "");
@@ -1921,9 +1921,9 @@ function ReadabilityPanelView({ cid }: { cid: string }) {
       {d && (
         <>
           <div className="stat-row" style={{ display: "flex", gap: "var(--space-4)", flexWrap: "wrap", margin: "var(--space-3) 0" }}>
-            <Stat label="Flesch Reading Ease" value={d.flesch_reading_ease != null ? d.flesch_reading_ease.toFixed(1) : "—"}
+            <Stat label="Flesch Reading Ease" value={d.flesch_reading_ease != null ? d.flesch_reading_ease.toFixed(1) : "-"}
                   hint="100 = very easy, 0 = very difficult (English only)" />
-            <Stat label="Flesch–Kincaid grade" value={d.flesch_kincaid_grade != null ? d.flesch_kincaid_grade.toFixed(1) : "—"}
+            <Stat label="Flesch–Kincaid grade" value={d.flesch_kincaid_grade != null ? d.flesch_kincaid_grade.toFixed(1) : "-"}
                   hint="U.S. school-grade level (English only)" />
             <Stat label="LIX" value={d.lix.toFixed(1)}
                   hint="< 30 very easy · 30–40 easy · 40–50 medium · 50–60 difficult · > 60 very difficult" />
@@ -2023,7 +2023,7 @@ function GroupFrequencyPanel({ cid }: { cid: string }) {
             />
           )}
           <div className="hint" style={{ marginTop: "var(--space-2)" }}>
-            Columns show per-million frequencies in each metadata group —
+            Columns show per-million frequencies in each metadata group -
             normalized so groups of different sizes are directly comparable.
             Documents without the field are grouped under "(uncategorised)".
           </div>
@@ -2384,7 +2384,7 @@ function VectorKwicPanel({ cid }: { cid: string }) {
             </span>
             {" "}{t(lang, "vk_model").replace("{m}", data.model)}
             {" · "}{t(lang, "vk_scanned").replace("{n}", String(data.scanned))}
-            {data.note ? <span className="hint"> — {data.note}</span> : null}
+            {data.note ? <span className="hint"> - {data.note}</span> : null}
           </div>
 
           {data.lines.length === 0 ? (

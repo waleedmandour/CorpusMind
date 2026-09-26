@@ -215,7 +215,7 @@ async def bulk_save_annotations(
         k: v for k, v in normalised["dimensions"].items() if v["values"] or v["note"].strip()
     }
     if not apply_dims and body.tags is None:
-        raise HTTPException(400, "Nothing to apply — supply dimensions or tags")
+        raise HTTPException(400, "Nothing to apply - supply dimensions or tags")
 
     images = await _sequence(session, iset_id)
     for img in images:
@@ -689,7 +689,7 @@ async def visual_kwic(
 
     def _ctx(tok: str | None) -> dict | None:
         if tok is None or tok == GAP:
-            return {"category": tok, "label_en": tok or "—"} if tok else None
+            return {"category": tok, "label_en": tok or "-"} if tok else None
         return {"category": tok, "label_en": labels.get(tok, tok)}
 
     hits = []

@@ -256,7 +256,7 @@ async def upload_images(
     if len(files) > MAX_FILES_PER_UPLOAD:
         raise HTTPException(
             400,
-            f"Too many files in one upload ({len(files)}). Maximum is {MAX_FILES_PER_UPLOAD} — split the batch.",
+            f"Too many files in one upload ({len(files)}). Maximum is {MAX_FILES_PER_UPLOAD} - split the batch.",
         )
 
     corpus = await session.get(Corpus, iset.corpus_id)
@@ -279,7 +279,7 @@ async def upload_images(
                     filename=filename,
                     error=(
                         f"{len(raw) / (1024 * 1024):.1f} MB exceeds the "
-                        f"{MAX_IMAGE_BYTES / (1024 * 1024):.0f} MB per-image limit — "
+                        f"{MAX_IMAGE_BYTES / (1024 * 1024):.0f} MB per-image limit - "
                         f"downscale or recompress and retry"
                     ),
                 ))
@@ -289,13 +289,13 @@ async def upload_images(
             if sniffed is None:
                 failed.append(UploadFailure(
                     filename=filename,
-                    error="magic-byte check failed — not a real image; re-export as PNG/JPEG",
+                    error="magic-byte check failed - not a real image; re-export as PNG/JPEG",
                 ))
                 continue
             if sniffed != fmt and not {fmt, sniffed} <= {"jpg", "jpeg", "tif", "tiff"}:
                 failed.append(UploadFailure(
                     filename=filename,
-                    error=f"named .{fmt} but content is {sniffed.upper()} — Rename the file to match its real format",
+                    error=f"named .{fmt} but content is {sniffed.upper()} - Rename the file to match its real format",
                 ))
                 continue
 
@@ -699,7 +699,7 @@ async def ocr_keyness(
             "target": {"id": iset_id, "name": iset.name, "tokens": n1},
             "reference": {"id": other_iset_id, "name": other.name, "tokens": n2},
             "rows": [],
-            "note": "One of the sets has no OCR text yet — run the batch analyser first.",
+            "note": "One of the sets has no OCR text yet - run the batch analyser first.",
         }
 
     rows = []
@@ -886,7 +886,7 @@ async def reanalyse_image(
     if not img:
         raise HTTPException(404, "Image not found")
     if not img.storage_path or not Path(img.storage_path).exists():
-        raise HTTPException(410, "Stored image bytes are gone — re-upload the file")
+        raise HTTPException(410, "Stored image bytes are gone - re-upload the file")
 
     iset = await session.get(ImageSet, img.image_set_id)
     corpus = await session.get(Corpus, iset.corpus_id) if iset else None
@@ -1072,7 +1072,7 @@ async def align_route(
         "provenance": {"mode": "heuristic"},
     }
     if mode_params.mode == "llm":
-        response["fallback_reason"] = "LLM mode requested but unavailable — using heuristic."
+        response["fallback_reason"] = "LLM mode requested but unavailable - using heuristic."
     return response
 
 
@@ -1119,7 +1119,7 @@ class DescribeRequest(BaseModel):
         default="Describe this image.",
         description=(
             "The prompt to send to the vision-LM along with the image. "
-            "Keep it short — small vision models (qwen3-vl:2b, moondream, etc.) can "
+            "Keep it short - small vision models (qwen3-vl:2b, moondream, etc.) can "
             "return empty output when the prompt is too long or complex. "
             "If you need text transcription, use a dedicated prompt like "
             "'Transcribe all text visible in this image.'"
@@ -1236,7 +1236,7 @@ async def _describe_fresh(
                 detail=(
                     "Ollama is not running or no vision model is loaded. "
                     "Start Ollama and pull a vision model (e.g. "
-                    "`ollama pull qwen3-vl:2b` — small, multilingual OCR incl. Arabic — "
+                    "`ollama pull qwen3-vl:2b` - small, multilingual OCR incl. Arabic - "
                     "or `ollama pull qwen3-vl:8b` for higher quality)."
                 ),
             )
@@ -1312,9 +1312,9 @@ async def _describe_fresh(
                 status_code=400,
                 detail=(
                     f"The auto-selected model '{model_name}' does not support image input. "
-                    f"Install a vision model — for Ollama: `ollama pull qwen3-vl:2b` "
+                    f"Install a vision model - for Ollama: `ollama pull qwen3-vl:2b` "
                     f"(small, OCR in 32 languages incl. Arabic) or `ollama pull qwen3-vl:8b` "
-                    f"(higher quality) — or specify a model name in the request."
+                    f"(higher quality) - or specify a model name in the request."
                 ),
             )
 
@@ -1355,7 +1355,7 @@ async def _describe_fresh(
             detail=(
                 f"Vision-LM returned empty content. Model: {model_name}. "
                 f"This can happen with small models if the prompt doesn't "
-                f"match their expected template — try a different prompt "
+                f"match their expected template - try a different prompt "
                 f"or a larger model."
             ),
         )
@@ -1681,7 +1681,7 @@ class BatchRunRequest(BaseModel):
         description=(
             "describe: vision-LM description per image. "
             "all: describe + all eight discourse lenses. "
-            "analyse: re-run the base heuristic analysis (OCR/colours/composition) — "
+            "analyse: re-run the base heuristic analysis (OCR/colours/composition) - "
             "fills gaps by default, refresh=True re-runs everything. "
             "Or a single lens key (social_semiotic, cda, ...)."
         ),
@@ -1769,7 +1769,7 @@ async def _batch_runner(iset_id: str, request: Request, body: BatchRunRequest) -
                             if ocr_ok and not body.refresh:
                                 continue
                             if not img.storage_path or not Path(img.storage_path).exists():
-                                raise HTTPException(410, "stored bytes missing — re-upload")
+                                raise HTTPException(410, "stored bytes missing - re-upload")
                             raw = read_image_bytes(img.storage_path)
                             await asyncio.to_thread(
                                 _refresh_base_analysis, img, raw, analyse_lang

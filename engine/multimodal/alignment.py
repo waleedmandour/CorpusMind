@@ -292,7 +292,7 @@ def detect_cross_modal_relations(alignment_result: AlignmentResult) -> list[Cros
         relations.append(CrossModalRelation(
             relation_type="silence",
             alignment_refs=[],
-            description="No image-text alignments found — the image and text may not reference each other.",
+            description="No image-text alignments found - the image and text may not reference each other.",
             confidence=0.6,
         ))
         return relations
@@ -304,7 +304,7 @@ def detect_cross_modal_relations(alignment_result: AlignmentResult) -> list[Cros
             alignment_refs=[f"{a.region_id}↔{a.span_id}" for a in high_conf],
             description=(
                 f"{len(high_conf)} high-confidence alignment(s) suggest the text "
-                f"reinforces the image's visual content — both modalities convey "
+                f"reinforces the image's visual content - both modalities convey "
                 f"overlapping information."
             ),
             confidence=min(1.0, len(high_conf) / 5.0),
@@ -316,7 +316,7 @@ def detect_cross_modal_relations(alignment_result: AlignmentResult) -> list[Cros
             relation_type="complementarity",
             alignment_refs=[f"{a.region_id}↔{a.span_id}" for a in low_conf[:3]],
             description=(
-                "Most alignments are low-confidence — the text and image may "
+                "Most alignments are low-confidence - the text and image may "
                 "complement rather than reinforce each other, contributing "
                 "different information."
             ),

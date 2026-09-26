@@ -213,7 +213,7 @@ async def test_llm_mode_claims_are_hedged(client):
     # 1. Claims phrased as hypotheses (check case-insensitively — the
     #    prompt uses "HYPOTHESES" plural)
     assert "hypothes" in system_prompt.lower(), (
-        "System prompt must mention hypotheses — the hedging contract "
+        "System prompt must mention hypotheses - the hedging contract "
         "requires claims to be phrased as hypotheses, not settled fact."
     )
     # 2. The "Under a [Framework] reading" form

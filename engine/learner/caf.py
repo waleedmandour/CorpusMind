@@ -51,7 +51,7 @@ _SENT_LEN_BUCKETS = (("1-5", 1, 5), ("6-10", 6, 10), ("11-15", 11, 15),
 
 _ACCURACY_DISCLAIMER = (
     "Accuracy indices are HEURISTIC PROXIES computed from seed rule-based "
-    "error candidates (learner.errors) — NOT validated error counts. "
+    "error candidates (learner.errors) - NOT validated error counts. "
     "Human/LLM verification is required before reporting them."
 )
 _COMPLEXITY_DISCLAIMER = (
@@ -189,14 +189,14 @@ def compute_caf(sentences: list[list[dict]], *, language: str | None = None) -> 
         clauses_per_sentence = None
         mean_clause_length = None
         notes.append(
-            "Dependency parsing unavailable for this language — clause indices omitted."
+            "Dependency parsing unavailable for this language - clause indices omitted."
         )
 
     # --- morphology: root-type ratio ----------------------------------------
     root_ratio = _root_type_ratio(flat)
     if root_ratio is None:
         notes.append(
-            "No morphological root layer on these tokens — root_type_ratio omitted."
+            "No morphological root layer on these tokens - root_type_ratio omitted."
         )
 
     # --- accuracy proxy (heuristic!) ----------------------------------------

@@ -891,7 +891,7 @@ USAS_CITATION = (
     "Rayson, P., Archer, D., Piao, S., & McEnery, T. (2004). "
     "The UCREL Semantic Analysis System. Lancaster: UCREL "
     "(CLAWS-family semantic tagset). Bundled top-level lexicon: "
-    "CC BY-NC-SA 4.0 — lexicon-based lookup, not the licensed "
+    "CC BY-NC-SA 4.0 - lexicon-based lookup, not the licensed "
     "CLAWS/USAS tagger."
 )
 
@@ -985,7 +985,7 @@ def discourse_taxonomy_list() -> list[dict]:
     items.append(
         {
             "key": PERSUASION_TAXONOMY_KEY,
-            "name": "Persuasion Index (Wang & Gong 2026) — 15 dimensions",
+            "name": "Persuasion Index (Wang & Gong 2026) - 15 dimensions",
             "citation": PERSUASION_CITATION,
             "categories": sorted(
                 f"pi.{family}.{dim}" for dim, family in PI_DIMENSION_FAMILIES.items()
@@ -1737,7 +1737,7 @@ SFG_CITATION = (
     "Halliday, M.A.K., & Matthiessen, C.M.I.M. (2014). Halliday's "
     "Introduction to Functional Grammar (4th ed.). London: Routledge. "
     "Process types and modality detected via a structural+lexicon starter "
-    "heuristic over dependency parses — an approximation, not the full "
+    "heuristic over dependency parses - an approximation, not the full "
     "IFG system; unmatched clauses are reported, not force-bucketed."
 )
 
@@ -2125,7 +2125,7 @@ async def compute_persuasion_discourse_analysis(
     return DiscourseResult(
         categories=categories,
         total_tokens=total_tokens,
-        taxonomy="Persuasion Index (Wang & Gong 2026) — 15 dimensions",
+        taxonomy="Persuasion Index (Wang & Gong 2026) - 15 dimensions",
         taxonomy_key=PERSUASION_TAXONOMY_KEY,
         citation=PERSUASION_CITATION,
         compare_corpus_id=None,
@@ -2567,7 +2567,7 @@ async def compute_metaphor_candidates(
                         "subject_lemma": subj["lemma"],
                         "sentence": " ".join(t["text"] for t in sent),
                         "evidence_id": f"{tok['doc']}:{tok['sent']}:{tok['idx']}",
-                        "reason": f"Verb '{lemma}' with abstract subject '{subj['lemma']}' — possible personification/metaphor",
+                        "reason": f"Verb '{lemma}' with abstract subject '{subj['lemma']}' - possible personification/metaphor",
                     }
                 )
                 if len(candidates) >= limit:

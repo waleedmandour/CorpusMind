@@ -128,13 +128,13 @@ const INDEX_KEYS: { key: keyof CafIndices; i18n: TranslationKey; dec: number }[]
 
 /** null = not computable (missing parse/morph layer) → render "—", never 0. */
 function fmtVal(v: number | null | undefined, dec = 4): string {
-  if (v === null || v === undefined) return "—";
+  if (v === null || v === undefined) return "-";
   if (!isFinite(v)) return String(v);
   return v.toFixed(dec);
 }
 
 function cafValue(caf: CafIndices | undefined, key: keyof CafIndices, dec = 4): string {
-  if (!caf) return "—";
+  if (!caf) return "-";
   return fmtVal(caf[key] as number | null | undefined, dec);
 }
 
@@ -416,12 +416,12 @@ function AiComparator({ cid, corpusLanguage }: { cid: string; corpusLanguage: st
               {INDEX_KEYS.map((e) => (
                 <tr key={e.key}>
                   <td className="learner-index-name">{t(lang, e.i18n)}</td>
-                  <td>{data.corpus_caf ? cafValue(data.corpus_caf, e.key, e.dec) : "—"}</td>
+                  <td>{data.corpus_caf ? cafValue(data.corpus_caf, e.key, e.dec) : "-"}</td>
                   <td>{cafValue(data.text_caf, e.key, e.dec)}</td>
                   <td className="learner-index-value">
                     {data.deltas && data.deltas[e.key] !== undefined && data.deltas[e.key] !== null
                       ? (data.deltas[e.key] as number).toFixed(e.dec)
-                      : "—"}
+                      : "-"}
                   </td>
                 </tr>
               ))}
@@ -490,7 +490,7 @@ function CiaComparePanel({ cid, lang }: { cid: string; lang: "en" | "ar" }) {
   };
 
   const fmtN = (v: number | null | undefined): string =>
-    v === null || v === undefined ? "—" : Number(v).toFixed(4);
+    v === null || v === undefined ? "-" : Number(v).toFixed(4);
 
   return (
     <div className="learner-view">
@@ -615,7 +615,7 @@ function CiaComparePanel({ cid, lang }: { cid: string; lang: "en" | "ar" }) {
                         <tr key={e.key}>
                           <td className="learner-index-name">{t(lang, e.i18n)}</td>
                           <td className="learner-index-value">
-                            {deltas[e.key] === undefined || deltas[e.key] === null ? "—" : (deltas[e.key] as number).toFixed(e.dec)}
+                            {deltas[e.key] === undefined || deltas[e.key] === null ? "-" : (deltas[e.key] as number).toFixed(e.dec)}
                           </td>
                         </tr>
                       ))}

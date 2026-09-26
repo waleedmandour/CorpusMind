@@ -92,7 +92,7 @@ def _debug_raw(data: Any) -> str:
 
     if os.environ.get("CORPUSMIND_DEBUG_RAW") == "1":
         return str(data)[:300]
-    return "(raw response withheld — set CORPUSMIND_DEBUG_RAW=1 to include)"
+    return "(raw response withheld - set CORPUSMIND_DEBUG_RAW=1 to include)"
 
 
 def canonical_model_name(name: str) -> str:
@@ -1083,7 +1083,7 @@ class OllamaProvider(ModelProvider):
                     server_body = ""
             raise ModelProviderError(
                 f"[ollama] tool-call request failed: {e}"
-                + (f" — server said: {server_body}" if server_body else "")
+                + (f" - server said: {server_body}" if server_body else "")
             ) from e
 
         data = r.json()
@@ -1256,7 +1256,7 @@ class OllamaProvider(ModelProvider):
                     model=model_name,
                     error_type=type(e).__name__,
                     hint="cold loads exceed the timeout; dropped connections "
-                    "and refused dials are often transient — keep_alive keeps "
+                    "and refused dials are often transient - keep_alive keeps "
                     "a warm model resident between attempts",
                 )
         # v1.2.5: report the request size and name BOTH failure modes. The
@@ -1269,7 +1269,7 @@ class OllamaProvider(ModelProvider):
                 f"[ollama] embed timed out: {type(last).__name__} after {timeout_s:.0f}s "
                 f"x{self._EMBED_ATTEMPTS} attempts (model '{model_name}', {n_texts} "
                 "text(s) in the request). If the model was already warm, the batch is "
-                "likely too large for CPU-only inference — narrow the search or raise "
+                "likely too large for CPU-only inference - narrow the search or raise "
                 "CORPUSMIND_EMBED_TIMEOUT_S. Otherwise the first call after Ollama "
                 "starts loads the model into memory and can take 1-2 minutes; the "
                 "automatic retry also timed out, so the host may be slow or low on RAM.",
@@ -1278,7 +1278,7 @@ class OllamaProvider(ModelProvider):
         raise EmbeddingConnectionError(
             f"[ollama] embed connection failed: {type(last).__name__} after "
             f"{self._EMBED_ATTEMPTS} attempts (model '{model_name}', {n_texts} "
-            "text(s) in the request). Ollama dropped or refused the connection — "
+            "text(s) in the request). Ollama dropped or refused the connection - "
             "it may have crashed, restarted, or is not running. Check Ollama "
             "(system tray or `ollama serve`), then press 'Warm up model' and run "
             "the search again. The model is installed; no pull is needed."

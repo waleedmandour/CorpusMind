@@ -91,7 +91,7 @@ def analyse_social_semiotic(
             category="power_relation",
             claim=(
                 "Under a Social Semiotic reading, the centrality of the salient "
-                "element may construct it as the nucleus of power — the central "
+                "element may construct it as the nucleus of power - the central "
                 "actor around whom other participants are arranged. This is a "
                 "hypothesis, not a settled fact about the depicted relationship."
             ),
@@ -110,7 +110,7 @@ def analyse_social_semiotic(
                 claim=(
                     "Under a Social Semiotic reading, the presence of first-person "
                     "pronouns in the caption may construct a personal identity "
-                    "narrative — the image positions its subject as an 'I' or 'we'."
+                    "narrative - the image positions its subject as an 'I' or 'we'."
                 ),
                 evidence=["caption.text"],
                 confidence=0.6,
@@ -163,9 +163,9 @@ def analyse_cda(
                 category="textual_analysis",
                 claim=(
                     "Under a Fairclough CDA reading, the textual content may be "
-                    "analysed at three levels: (1) text — vocabulary, grammar, "
-                    "cohesion; (2) discursive practice — production, distribution, "
-                    "consumption; (3) social practice — ideological effects. "
+                    "analysed at three levels: (1) text - vocabulary, grammar, "
+                    "cohesion; (2) discursive practice - production, distribution, "
+                    "consumption; (3) social practice - ideological effects. "
                     "The presence of specific lexical choices may signal "
                     "ideological positioning."
                 ),
@@ -180,7 +180,7 @@ def analyse_cda(
                 claim=(
                     "Under a Fairclough CDA reading, the high-saturation visual "
                     "modality may naturalize a particular ideological view of "
-                    "reality — making the depicted scene appear 'how things are' "
+                    "reality - making the depicted scene appear 'how things are' "
                     "rather than 'how things are represented'. This is a hypothesis."
                 ),
                 evidence=["colours.saturation", "colours.brightness"],
@@ -201,7 +201,7 @@ def analyse_cda(
                         f"Under a van Dijk Socio-Cognitive reading, the presence of "
                         f"in-group ({us_markers} 'we/us/our') and out-group "
                         f"({them_markers} 'they/them/their') markers may indicate "
-                        f"an ideological polarization — constructing an 'us vs them' "
+                        f"an ideological polarization - constructing an 'us vs them' "
                         f"mental model. This is a hypothesis about the text's "
                         f"ideological work, not a fact about the author's intent."
                     ),
@@ -233,7 +233,7 @@ def analyse_cda(
                 category="visual_evaluative_loading",
                 claim=(
                     "Under a Machin & Mayr Multimodal CDA reading, the warm-toned "
-                    "colour palette may carry evaluative loading — warm colours are "
+                    "colour palette may carry evaluative loading - warm colours are "
                     "often used to connote positivity, intimacy, or tradition. "
                     "This may function ideologically to position the depicted "
                     "subject favourably. This is a hypothesis."
@@ -247,7 +247,7 @@ def analyse_cda(
                 category="visual_evaluative_loading",
                 claim=(
                     "Under a Machin & Mayr Multimodal CDA reading, the cold-toned "
-                    "colour palette may carry evaluative loading — cold colours are "
+                    "colour palette may carry evaluative loading - cold colours are "
                     "often used to connote distance, objectivity, or modernity. "
                     "This may function ideologically to position the depicted "
                     "subject as neutral or technical. This is a hypothesis."
@@ -294,7 +294,7 @@ def analyse_persuasion(
             claim=(
                 f"Under an Aristotelian reading, the presence of {ethos_count} "
                 f"credibility marker(s) (e.g. 'expert', 'research', 'official') "
-                f"may constitute an ethos appeal — persuading via the source's "
+                f"may constitute an ethos appeal - persuading via the source's "
                 f"credibility. This is an analytical observation about the text's "
                 f"rhetorical strategy, not an endorsement."
             ),
@@ -312,7 +312,7 @@ def analyse_persuasion(
             category="pathos",
             claim=(
                 f"Under an Aristotelian reading, the presence of {pathos_count} "
-                f"emotion marker(s) may constitute a pathos appeal — persuading "
+                f"emotion marker(s) may constitute a pathos appeal - persuading "
                 f"via the audience's emotions. This is an analytical observation."
             ),
             evidence=["ocr.text", "caption.text"],
@@ -329,7 +329,7 @@ def analyse_persuasion(
             category="logos",
             claim=(
                 f"Under an Aristotelian reading, the presence of {logos_count} "
-                f"logical connector(s) may constitute a logos appeal — persuading "
+                f"logical connector(s) may constitute a logos appeal - persuading "
                 f"via reasoned argument. This is an analytical observation."
             ),
             evidence=["ocr.text", "caption.text"],
@@ -400,7 +400,7 @@ def analyse_framing(
             category="causal_interpretation",
             claim=(
                 "Under an Entman framing reading, the presence of causal markers "
-                "may attribute the problem to specific causes — which is itself a "
+                "may attribute the problem to specific causes - which is itself a "
                 "framing choice, since competing causes could have been named."
             ),
             evidence=["ocr.text", "caption.text"],
@@ -416,7 +416,7 @@ def analyse_framing(
             category="moral_evaluation",
             claim=(
                 "Under an Entman framing reading, the presence of moral-evaluation "
-                "markers may judge the actors or actions — framing them as worthy "
+                "markers may judge the actors or actions - framing them as worthy "
                 "of praise or blame."
             ),
             evidence=["ocr.text", "caption.text"],
@@ -432,7 +432,7 @@ def analyse_framing(
             category="treatment_recommendation",
             claim=(
                 "Under an Entman framing reading, the presence of treatment-markers "
-                "may recommend a remedy — which, combined with the problem definition "
+                "may recommend a remedy - which, combined with the problem definition "
                 "and causal interpretation, completes the framing package."
             ),
             evidence=["ocr.text", "caption.text"],
@@ -469,7 +469,7 @@ def analyse_narrative(
         claims.append(DiscourseClaim(
             framework="Labov (1972) Narrative Structure",
             category="abstract",
-            claim="Under a Labov reading, the opening may function as an abstract — summarizing the whole narrative.",
+            claim="Under a Labov reading, the opening may function as an abstract - summarizing the whole narrative.",
             evidence=["ocr.text[0]"],
             confidence=0.5,
         ))
@@ -491,7 +491,7 @@ def analyse_narrative(
         claims.append(DiscourseClaim(
             framework="Labov (1972) Narrative Structure",
             category="complicating_action",
-            claim="Under a Labov reading,转折 markers (then/but/suddenly) may signal complicating actions — the narrative's turning points.",
+            claim="Under a Labov reading,转折 markers (then/but/suddenly) may signal complicating actions - the narrative's turning points.",
             evidence=["ocr.text", "caption.text"],
             confidence=0.5,
         ))
@@ -541,7 +541,7 @@ def analyse_visual_metaphor(
             claim=(
                 "Under a Visual Metaphor reading, the warm + saturated colour "
                 "palette MAY function as a visual metaphor mapping WARMTH IS "
-                "EMOTION/INTIMACY. This is a candidate only — the LLM must triage "
+                "EMOTION/INTIMACY. This is a candidate only - the LLM must triage "
                 "via MIPVU decision steps, and a human must verify before this "
                 "counts as a confirmed metaphor (§9.16, load-bearing)."
             ),
@@ -562,7 +562,7 @@ def analyse_visual_metaphor(
                     "Under a Cross-modal Metaphor reading, the mismatch between "
                     "cold-related text and warm-coloured image MAY function as an "
                     "ironic or metaphorical cross-modal mapping. This is a candidate "
-                    "only — human verification required (§9.16)."
+                    "only - human verification required (§9.16)."
                 ),
                 evidence=["caption.text", "ocr.text", "colours.warm_cold_balance"],
                 confidence=0.3,
@@ -685,7 +685,7 @@ def analyse_cultural(
             category="colour_symbolism_cultural",
             claim=(
                 f"Under a Cultural reading, {note} Note: cultural symbolism is "
-                f"NEVER universal — the same colour may carry different or "
+                f"NEVER universal - the same colour may carry different or "
                 f"opposite meanings in different cultural contexts (§9.18)."
             ),
             evidence=["colours.dominant_colours"],
@@ -704,7 +704,7 @@ def analyse_cultural(
             claim=(
                 f"Under a Cultural reading, the presence of religious marker(s) "
                 f"({', '.join(found_religious)}) may invoke a specific cultural-religious "
-                f"frame. The meaning of these markers is culture-relative — they "
+                f"frame. The meaning of these markers is culture-relative - they "
                 f"may function differently for insider vs outsider audiences (§9.18)."
             ),
             evidence=["ocr.text", "caption.text"],
@@ -721,7 +721,7 @@ def analyse_cultural(
             claim=(
                 f"Under a Cultural reading, the presence of national-identity "
                 f"marker(s) ({', '.join(found_national)}) may construct an "
-                f"'imagined community' (Anderson 1983) — invoking shared national "
+                f"'imagined community' (Anderson 1983) - invoking shared national "
                 f"belonging. This is a hypothesis about the text's cultural work."
             ),
             evidence=["ocr.text", "caption.text"],

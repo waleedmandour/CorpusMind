@@ -206,7 +206,7 @@ class FilterResult:
 
 # The redaction marker. Bracketed so it's visually distinct in the UI
 # and clearly machine-generated, not model-generated.
-_REDACTION_MARKER = "[redacted: person-descriptive content — enable facial analysis in Settings to view]"
+_REDACTION_MARKER = "[redacted: person-descriptive content - enable facial analysis in Settings to view]"
 
 
 def _redact_segment(text: str, matched_keywords: list[str]) -> str:

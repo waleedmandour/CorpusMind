@@ -171,7 +171,7 @@ impl OllamaManager {
         };
 
         if already_running {
-            info!(target: "ollama", "ollama already running — not starting a new instance");
+            info!(target: "ollama", "ollama already running - not starting a new instance");
             return Ok(true);
         }
 
@@ -293,7 +293,7 @@ impl EngineSidecar {
     fn spawn(&self, app: &tauri::AppHandle) -> Result<(), SidecarError> {
         let mut child_opt = self.child.lock().unwrap();
         if child_opt.is_some() {
-            warn!("engine sidecar already running — skipping spawn");
+            warn!("engine sidecar already running - skipping spawn");
             return Ok(());
         }
 
@@ -310,7 +310,7 @@ impl EngineSidecar {
         {
             if resp.status().is_success() {
                 info!(
-                    "engine already running on port {} (likely from another CorpusMind app) — connecting instead of spawning",
+                    "engine already running on port {} (likely from another CorpusMind app) - connecting instead of spawning",
                     ENGINE_PORT
                 );
                 return Ok(());
@@ -402,7 +402,7 @@ impl EngineSidecar {
                      Attempted to run:\n  program: {program_clean}\n  args: {args:?}\n\n\
                      OS error: {e}\n\n\
                      This is a native process-launch failure (the operating system \
-                     could not start the executable) — the engine's own Python \
+                     could not start the executable) - the engine's own Python \
                      logging never got a chance to run, which is why this log was \
                      otherwise empty. On Windows, the most common causes are:\n\n\
                      1. Missing Microsoft Visual C++ Redistributable (x64), required \
@@ -413,7 +413,7 @@ impl EngineSidecar {
                         Windows Security > Protection history, restore/allow the \
                         item if found, then add a folder exclusion for:\n\
                         {sidecar_dir}\n\n\
-                     3. The installed files are corrupted or incomplete — try \
+                     3. The installed files are corrupted or incomplete - try \
                         reinstalling CorpusMind.\n\n\
                      You can also double-click the executable below directly to see \
                      a live console window with the exact error:\n  {program_clean}\n"
@@ -453,7 +453,7 @@ impl EngineSidecar {
                          (exit status: {status}) with NO output on stdout or stderr.\n\n\
                          Since Python's stderr is always unbuffered (Python 3.9+), zero \
                          output means the crash happened BEFORE the Python interpreter \
-                         started — a native/OS-level failure, not an application bug. \
+                         started - a native/OS-level failure, not an application bug. \
                          Most likely causes on Windows:\n\n\
                          1. Missing Microsoft Visual C++ Redistributable (x64):\n\
                             https://aka.ms/vs/17/release/vc_redist.x64.exe\n\n\
@@ -463,13 +463,13 @@ impl EngineSidecar {
                             error window:\n  {program_clean}\n"
                     );
                     let _ = std::fs::write(&stderr_path, &msg);
-                    error!(target: "sidecar", "engine stderr is EMPTY — process may have crashed before writing any output (broken venv, missing python.exe, or antivirus interference)");
+                    error!(target: "sidecar", "engine stderr is EMPTY - process may have crashed before writing any output (broken venv, missing python.exe, or antivirus interference)");
                 }
                 // Don't store the dead child — let the caller know spawn failed
                 return Err(SidecarError::Spawn(format!(
                     "Engine process exited immediately: {}. stderr: {}",
                     status,
-                    if stderr_content.is_empty() { "(empty — likely broken venv or missing deps)" } else { stderr_content.trim() }
+                    if stderr_content.is_empty() { "(empty - likely broken venv or missing deps)" } else { stderr_content.trim() }
                 )));
             }
             Err(e) => {
@@ -634,7 +634,7 @@ impl EngineSidecar {
         }
 
         // Final fallback: hope the wheel's console script is on PATH.
-        warn!(target: "sidecar", "no engine dir found — trying corpusmind-engine on PATH");
+        warn!(target: "sidecar", "no engine dir found - trying corpusmind-engine on PATH");
         ("corpusmind-engine".into(), vec![], None)
     }
 
@@ -676,10 +676,10 @@ impl EngineSidecar {
                             .and_then(|p| std::fs::read_to_string(p).ok())
                             .unwrap_or_default();
                         let detail = if stderr_content.trim().is_empty() {
-                            "stderr was empty — the process produced no output before dying. \
+                            "stderr was empty - the process produced no output before dying. \
                              This is consistent with a native/OS-level crash (missing VC++ \
                              Redistributable, or antivirus interference) that happened after \
-                             the initial launch succeeded — for example during a delayed DLL load."
+                             the initial launch succeeded - for example during a delayed DLL load."
                                 .to_string()
                         } else {
                             format!("stderr:\n{}", stderr_content.trim())
@@ -690,7 +690,7 @@ impl EngineSidecar {
                             start.elapsed()
                         );
                         return Err(SidecarError::Health(format!(
-                            "engine process exited unexpectedly (status: {status}) after {:?} — {detail}",
+                            "engine process exited unexpectedly (status: {status}) after {:?} - {detail}",
                             start.elapsed()
                         )));
                     }
@@ -868,7 +868,7 @@ async fn ensure_engine(app: tauri::AppHandle) -> String {
             }
         }
     }
-    info!(target: "sidecar", "ensure_engine: health probe failed — restarting engine");
+    info!(target: "sidecar", "ensure_engine: health probe failed - restarting engine");
     restart_engine(app).await
 }
 
@@ -940,7 +940,7 @@ async fn restart_engine(app: tauri::AppHandle) -> String {
             let hint = if is_bundled {
                 "The bundled engine executable failed to launch. Most common causes on Windows:\n\
                  1. Missing Microsoft Visual C++ Redistributable (x64): https://aka.ms/vs/17/release/vc_redist.x64.exe\n\
-                 2. Windows Defender quarantined a file — check Protection history.\n\
+                 2. Windows Defender quarantined a file - check Protection history.\n\
                  3. Try double-clicking the executable directly to see the live error."
             } else {
                 "Make sure the engine venv exists at Documents\\CorpusMind\\engine\\.venv"
@@ -1430,7 +1430,7 @@ fn verify_sidecar(app: tauri::AppHandle) -> String {
         "resolved_args": args.join(" "),
         "resolved_working_dir": wd.map(|d| d.display().to_string()).unwrap_or_else(|| "(none)".to_string()),
         "message": if sidecar_found {
-            format!("Bundled sidecar found ({layout} layout) — engine should work.")
+            format!("Bundled sidecar found ({layout} layout) - engine should work.")
         } else {
             "Bundled sidecar NOT found. The installer was built without the engine embedded. Use the GitHub Actions release build, or rebuild with the full build script.".to_string()
         }
@@ -1793,7 +1793,7 @@ pub fn run() {
                                 Err(_) => false,
                             };
                             if !engine_ok {
-                                info!(target: "lifecycle", "reopen: engine down — restarting it");
+                                info!(target: "lifecycle", "reopen: engine down - restarting it");
                                 let msg = restart_engine(handle.clone()).await;
                                 info!(target: "lifecycle", "reopen: engine restart result: {msg}");
                             }
@@ -1807,7 +1807,7 @@ pub fn run() {
                                 Err(_) => false,
                             };
                             if !ollama_ok {
-                                info!(target: "lifecycle", "reopen: Ollama down — restarting it");
+                                info!(target: "lifecycle", "reopen: Ollama down - restarting it");
                                 let msg = restart_ollama(handle).await;
                                 info!(target: "lifecycle", "reopen: Ollama restart result: {msg}");
                             }

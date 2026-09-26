@@ -70,52 +70,52 @@ export function suggestFix(
     return "Install a vision model: run `ollama pull qwen3-vl:2b` in a terminal (1.9 GB, multilingual OCR incl. Arabic), then retry.";
   }
   if (m.includes("magic-byte")) {
-    return "The file isn't a real image — re-export it as PNG or JPEG and upload it again.";
+    return "The file isn't a real image - re-export it as PNG or JPEG and upload it again.";
   }
   if (m.includes("rename the file")) {
-    return "The file extension doesn't match its content — rename it to the real format before uploading.";
+    return "The file extension doesn't match its content - rename it to the real format before uploading.";
   }
   if (m.includes("per-image limit") || (code === 413 && ep.includes("image"))) {
-    return "The image exceeds the 25 MB limit — downscale or recompress it and upload again.";
+    return "The image exceeds the 25 MB limit - downscale or recompress it and upload again.";
   }
   if (m.includes("too many files")) {
     return "Split the upload into smaller batches (max 50 images per upload).";
   }
   if (m.includes("batch run is already in progress")) {
-    return "A batch run is already running for this set — watch its progress bar or cancel it first.";
+    return "A batch run is already running for this set - watch its progress bar or cancel it first.";
   }
   // Reference-corpus download hints (engine messages mention these paths)
   if (m.includes("import archive") || ep.includes("reference-corpora")) {
     if (m.includes("504") || m.includes("gateway") || m.includes("timed out") || m.includes("timeout")) {
-      return "The source server is down or overloaded. Try again later, or use 'Import archive' with the file downloaded in your browser — that always works.";
+      return "The source server is down or overloaded. Try again later, or use 'Import archive' with the file downloaded in your browser - that always works.";
     }
     if (m.includes("checksum") || m.includes("magic bytes")) {
-      return "The downloaded file looks wrong — re-download the archive and try the offline 'Import archive' option.";
+      return "The downloaded file looks wrong - re-download the archive and try the offline 'Import archive' option.";
     }
   }
   if (code === 504 || (typeof code === "string" && code.toLowerCase().includes("504")) || m.includes("gateway time-out")) {
     return "The remote server timed out. Wait a minute and retry; large downloads retry automatically.";
   }
   if (code === 429 || m.includes("429") || m.includes("rate limit")) {
-    return "Rate limit reached — wait a few seconds before retrying.";
+    return "Rate limit reached - wait a few seconds before retrying.";
   }
   if (code === 404 || m.includes("404")) {
     if (ep.includes("corpora") || m.includes("corpus")) {
-      return "This corpus no longer exists — re-select it from 'Your Corpus'.";
+      return "This corpus no longer exists - re-select it from 'Your Corpus'.";
     }
-    return "The requested item was not found — it may have been deleted; refresh the view.";
+    return "The requested item was not found - it may have been deleted; refresh the view.";
   }
   if (code === 413) {
-    return "The file is too large — split it into smaller documents or use a lower-size archive.";
+    return "The file is too large - split it into smaller documents or use a lower-size archive.";
   }
   if (code === 422 || m.includes("422")) {
-    return "The request was rejected — check your input values and try again.";
+    return "The request was rejected - check your input values and try again.";
   }
   if (code === "NETWORK" || (typeof code === "string" && code.toUpperCase().includes("NETWORK"))) {
     return "Check that the CorpusMind engine is running on port 8765 (the desktop app starts it automatically).";
   }
   if (code === 500 || m.includes("500") || m.includes("internal server error")) {
-    return "Internal engine error — retry the action; if it repeats, use 'Report to developer' below.";
+    return "Internal engine error - retry the action; if it repeats, use 'Report to developer' below.";
   }
   return "Retry the action; if it persists, use 'Report to developer' below.";
 }

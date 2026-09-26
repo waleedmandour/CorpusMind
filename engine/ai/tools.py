@@ -201,7 +201,7 @@ async def _metaphor_candidates(session: AsyncSession, *, corpus_id: str,
         "verified_count": r.verified_count,
         "candidate_count": len(r.candidates),
         "candidates": r.candidates[:limit],
-        "note": ("These are candidates only — the LLM triages via MIPVU decision "
+        "note": ("These are candidates only - the LLM triages via MIPVU decision "
                  "steps, and a human must verify before any candidate counts as a "
                  "confirmed metaphor in export/statistics (§8.17)."),
     }
@@ -711,7 +711,7 @@ TOOL_SCHEMAS: list[dict] = [
             "description": (
                 "Compute n-grams (2-10) with the frequency-and-range criterion (§8.8). "
                 "Lexical bundles require BOTH a minimum frequency AND a minimum number "
-                "of distinct documents — report both when summarizing."
+                "of distinct documents - report both when summarizing."
             ),
             "parameters": {
                 "type": "object",
@@ -810,7 +810,7 @@ TOOL_SCHEMAS: list[dict] = [
         "function": {
             "name": "vocab_profile",
             "description": (
-                "Profile vocabulary into frequency bands (K1, K2-K9, AWL, Off-list) — §8.10. "
+                "Profile vocabulary into frequency bands (K1, K2-K9, AWL, Off-list) - §8.10. "
                 "Also reports rare words and academic words. Uses a starter AWL subset; "
                 "Phase 3 swaps in a proper open frequency corpus."
             ),
@@ -842,7 +842,7 @@ TOOL_SCHEMAS: list[dict] = [
         "function": {
             "name": "metaphor_candidates",
             "description": (
-                "Find metaphor candidates (§8.17) — verbs with abstract subjects. These are "
+                "Find metaphor candidates (§8.17) - verbs with abstract subjects. These are "
                 "CANDIDATES ONLY. You (the LLM) triage them via MIPVU decision steps, and a "
                 "HUMAN must verify before any candidate counts as a confirmed metaphor in "
                 "export/statistics. This verification gate is load-bearing for validity."
@@ -970,7 +970,7 @@ TOOL_SCHEMAS: list[dict] = [
         "function": {
             "name": "social_semiotic",
             "description": (
-                "Social semiotic analysis (§9.11) — actors, processes, symbolic meaning, "
+                "Social semiotic analysis (§9.11) - actors, processes, symbolic meaning, "
                 "power, identity. Grounded in Kress & van Leeuwen's Social Semiotics."
             ),
             "parameters": {
@@ -1016,7 +1016,7 @@ TOOL_SCHEMAS: list[dict] = [
         "function": {
             "name": "persuasion",
             "description": (
-                "Persuasion analysis (§9.13) — Aristotle's ethos/pathos/logos + "
+                "Persuasion analysis (§9.13) - Aristotle's ethos/pathos/logos + "
                 "Toulmin's argument structure. This is analysis of existing texts, "
                 "not content generation."
             ),
@@ -1035,7 +1035,7 @@ TOOL_SCHEMAS: list[dict] = [
         "function": {
             "name": "framing",
             "description": (
-                "Framing analysis (§9.14) — Entman's 4 functions: problem definition, "
+                "Framing analysis (§9.14) - Entman's 4 functions: problem definition, "
                 "causal interpretation, moral evaluation, treatment recommendation."
             ),
             "parameters": {
@@ -1062,7 +1062,7 @@ TOOL_SCHEMAS: list[dict] = [
             "name": "list_image_sets",
             "description": (
                 "List the image sets inside a corpus (id, name, image count). "
-                "Use this first when the user asks about images or visual material — "
+                "Use this first when the user asks about images or visual material - "
                 "then feed an image_set_id into get_image_set_summary."
             ),
             "parameters": {

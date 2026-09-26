@@ -93,7 +93,7 @@ camel_data -i morphology-db-msa-r13`}</pre>
     body: (
       <>
         <p>
-          The <strong>Concordance</strong> view (KWIC — Key Word In Context) is the workhorse of
+          The <strong>Concordance</strong> view (KWIC - Key Word In Context) is the workhorse of
           corpus linguistics. It shows every occurrence of a search term with a window of context
           on either side, sorted and filterable.
         </p>
@@ -123,13 +123,13 @@ camel_data -i morphology-db-msa-r13`}</pre>
         </p>
         <ul>
           <li>
-            <strong>Mode A — keyword + semantic re-rank:</strong> give a node word; the classic KWIC
+            <strong>Mode A - keyword + semantic re-rank:</strong> give a node word; the classic KWIC
             match set is fetched, then re-ranked by the similarity of each line to your semantic
             query, so related-but-different wordings surface first (e.g. node <em>rain</em>, query
             "heavy rainfall destroying crops").
           </li>
           <li>
-            <strong>Mode B — semantic sentence search:</strong> leave the node empty and describe the
+            <strong>Mode B - semantic sentence search:</strong> leave the node empty and describe the
             phenomenon in your own words; the engine scans sentences and returns the closest matches
             with their similarity scores.
           </li>
@@ -141,11 +141,11 @@ camel_data -i morphology-db-msa-r13`}</pre>
           <strong>Settings → Models → Embedding</strong>. When the model is missing, the panel offers
           a one-click pull. The <em>first</em> search after Ollama starts loads the model into memory
           (1–2 minutes); if that load exceeds the wait limit the panel explains it and asks you to
-          retry — the model stays warm afterwards.
+          retry - the model stays warm afterwards.
         </p>
         <h4>Reading the scores</h4>
         <p>
-          <strong>Similarity is a raw cosine value</strong> between query and line embeddings — there
+          <strong>Similarity is a raw cosine value</strong> between query and line embeddings - there
           is no confidence claim attached. Use "Min. similarity" to filter weak matches, and report
           the model name and threshold (shown in the result header) alongside your analysis. Export
           files include the Similarity column.
@@ -174,7 +174,7 @@ camel_data -i morphology-db-msa-r13`}</pre>
           (mean clause length, clauses per sentence) for English syntactic complexity; and Arabic
           proxies (root type ratio, spelling-candidate rate). Accuracy is reported through honest
           heuristic proxies (error-free sentence ratio, candidates per 100 tokens) computed from the
-          same seed rules as the Error Patterns tool — the numbers are labelled as heuristics, not
+          same seed rules as the Error Patterns tool - the numbers are labelled as heuristics, not
           judged errors. Results can be grouped by L1 or CEFR proficiency, with formulas and
           citations included, plus an AI-vs-learner comparator that runs the identical battery over a
           pasted AI-produced text and shows per-index deltas.
@@ -189,7 +189,7 @@ camel_data -i morphology-db-msa-r13`}</pre>
         <p>
           Rule-based error <strong>candidates</strong> (ERRANT-lineage seed rules: articles,
           prepositions, agreement, spelling for English; hamza, ta-marbuta, alef maksura for Arabic).
-          Every candidate is a flag for human verification — nothing is counted as an error
+          Every candidate is a flag for human verification - nothing is counted as an error
           automatically.
         </p>
         <h4>Learner metadata</h4>
@@ -236,12 +236,12 @@ camel_data -i morphology-db-msa-r13`}</pre>
           for words that co-occur with a node word within a window:
         </p>
         <ul>
-          <li><strong>MI</strong> (Mutual Information) — sensitive to low-frequency, tightly-bound pairs.</li>
-          <li><strong>T-score</strong> — favors high-frequency pairs; more stable on small corpora.</li>
-          <li><strong>Log-Likelihood (LL)</strong> — the most widely used; good balance.</li>
-          <li><strong>Dice</strong> and <strong>LogDice</strong> — normalized co-occurrence.</li>
-          <li><strong>Chi-square</strong> — classic significance test.</li>
-          <li><strong>Delta P</strong> — directional; shows which word predicts the other.</li>
+          <li><strong>MI</strong> (Mutual Information) - sensitive to low-frequency, tightly-bound pairs.</li>
+          <li><strong>T-score</strong> - favors high-frequency pairs; more stable on small corpora.</li>
+          <li><strong>Log-Likelihood (LL)</strong> - the most widely used; good balance.</li>
+          <li><strong>Dice</strong> and <strong>LogDice</strong> - normalized co-occurrence.</li>
+          <li><strong>Chi-square</strong> - classic significance test.</li>
+          <li><strong>Delta P</strong> - directional; shows which word predicts the other.</li>
         </ul>
         <p>
           The window size defaults to 5 words left and right. Use MI &gt; 3 and T-score &gt; 2 as
@@ -265,14 +265,14 @@ camel_data -i morphology-db-msa-r13`}</pre>
           CorpusMind computes three keyness statistics side by side:
         </p>
         <ul>
-          <li><strong>Log-Likelihood (LL)</strong> — the most widely reported.</li>
-          <li><strong>Log Ratio</strong> — an effect-size measure (LL alone can flag trivially
+          <li><strong>Log-Likelihood (LL)</strong> - the most widely reported.</li>
+          <li><strong>Log Ratio</strong> - an effect-size measure (LL alone can flag trivially
             small differences as "significant" on large corpora).</li>
-          <li><strong>%DIFF</strong> — percentage difference in relative frequency.</li>
+          <li><strong>%DIFF</strong> - percentage difference in relative frequency.</li>
         </ul>
         <p>
           To run keyness: select your target corpus (the one you're studying), then pick a
-          reference corpus (the one to compare against — often a large reference corpus like a
+          reference corpus (the one to compare against - often a large reference corpus like a
           general-language sample). The result is a sortable table of keywords with their
           statistics. A positive keyness means the word is <em>more</em> frequent in the target;
           a negative keyness means <em>less</em> frequent.
@@ -289,17 +289,17 @@ camel_data -i morphology-db-msa-r13`}</pre>
         <p>
           The <strong>N-grams</strong> view extracts recurring multi-word sequences. You can
           search by length (2-gram, 3-gram, etc.), minimum frequency, and minimum range (the
-          number of distinct documents the n-gram must appear in — this filters out one-off
+          number of distinct documents the n-gram must appear in - this filters out one-off
           repetitions).
         </p>
         <p>
           Use n-grams to identify:
         </p>
         <ul>
-          <li><strong>Lexical bundles</strong> — frequent multi-word units that characterize a
+          <li><strong>Lexical bundles</strong> - frequent multi-word units that characterize a
             register (e.g. "on the other hand" in academic prose).</li>
-          <li><strong>Formulaic language</strong> — idioms and fixed phrases.</li>
-          <li><strong>Collostructions</strong> — patterns like "X is Y" or "the N of the N".</li>
+          <li><strong>Formulaic language</strong> - idioms and fixed phrases.</li>
+          <li><strong>Collostructions</strong> - patterns like "X is Y" or "the N of the N".</li>
         </ul>
       </>
     ),
@@ -321,9 +321,9 @@ camel_data -i morphology-db-msa-r13`}</pre>
           Detects and counts structural patterns:
         </p>
         <ul>
-          <li><strong>Passive voice</strong> — "was written", "is being done", etc.</li>
-          <li><strong>Modals</strong> — can, could, may, might, must, shall, should, will, would.</li>
-          <li><strong>Negation</strong> — not, never, no, n't, and their scope.</li>
+          <li><strong>Passive voice</strong> - "was written", "is being done", etc.</li>
+          <li><strong>Modals</strong> - can, could, may, might, must, shall, should, will, would.</li>
+          <li><strong>Negation</strong> - not, never, no, n't, and their scope.</li>
         </ul>
         <h4>Dependency Patterns</h4>
         <p>
@@ -354,9 +354,9 @@ camel_data -i morphology-db-msa-r13`}</pre>
         </ul>
         <h4>Appraisal (Martin &amp; White 2005)</h4>
         <ul>
-          <li><strong>Affect</strong> — emotional responses.</li>
-          <li><strong>Judgment</strong> — moral evaluations of behavior.</li>
-          <li><strong>Appreciation</strong> — aesthetic evaluations.</li>
+          <li><strong>Affect</strong> - emotional responses.</li>
+          <li><strong>Judgment</strong> - moral evaluations of behavior.</li>
+          <li><strong>Appreciation</strong> - aesthetic evaluations.</li>
         </ul>
       </>
     ),
@@ -382,7 +382,7 @@ camel_data -i morphology-db-msa-r13`}</pre>
         </p>
         <h4>Metaphor Candidates</h4>
         <p>
-          Applies the MIP (Metaphor Identification Procedure) — flags words whose contextual
+          Applies the MIP (Metaphor Identification Procedure) - flags words whose contextual
           meaning differs from their basic meaning. These are <em>candidates</em> for metaphor,
           not confirmed metaphors; a human analyst must verify each one.
         </p>
@@ -451,7 +451,7 @@ camel_data -i morphology-db-msa-r13`}</pre>
           </a>
         </p>
         <p className="hint">
-          The parent-app "Vision Suite" tab was removed in v1.2.0 — the vision workbench (image sets,
+          The parent-app "Vision Suite" tab was removed in v1.2.0 - the vision workbench (image sets,
           Visual Grammar, vision-LM descriptions) now lives in the Lens companion; the engine's
           vision endpoints are untouched and Lens uses them.
         </p>
@@ -469,12 +469,12 @@ camel_data -i morphology-db-msa-r13`}</pre>
           vision-LM-powered multimodal discourse analysis. It ships its own window, branding, and
           onboarding, but under the hood it connects to the <strong>same engine</strong> and the{" "}
           <strong>same data directory</strong> as the main CorpusMind app. Nothing is synced or
-          copied — there is only one database, one engine, one port (8765).
+          copied - there is only one database, one engine, one port (8765).
         </p>
         <h4>Reading the main app's data from Lens</h4>
         <p>
           If the main CorpusMind app is installed on the same device, every text corpus you
-          ingested there is <strong>already visible in Lens</strong> — open{" "}
+          ingested there is <strong>already visible in Lens</strong> - open{" "}
           <strong>Your Corpus</strong> in the sidebar and pick it. If both apps are launched, they
           share a single engine instance automatically (the second app connects instead of
           spawning a duplicate). This means you can ingest texts in the main app, analyse images
@@ -483,7 +483,7 @@ camel_data -i morphology-db-msa-r13`}</pre>
         <h4>Building an image corpus (v1.0.9)</h4>
         <p>
           In Lens, <strong>Your Corpus</strong> is the <em>image-corpus workbench</em>: create a
-          corpus, then create <strong>image sets</strong> inside it — each with provenance/sampling
+          corpus, then create <strong>image sets</strong> inside it - each with provenance/sampling
           notes (source, period, selection criteria), set-level statistics (formats, orientation,
           resolution and date ranges, OCR coverage), per-image metadata aligned with the IPTC Core
           descriptive fields (source, date, licence/rights, genre, language of embedded text),
@@ -494,7 +494,7 @@ camel_data -i morphology-db-msa-r13`}</pre>
           word-frequency list with the shared English/Arabic stopword lists, and set-vs-set
           keyword comparison ranked by log-likelihood. <strong>Export OCR corpus</strong> writes
           the set's text out as a <code>&lt;doc&gt;</code>-marked corpus file you can load into
-          the main app's text tools — closing the cross-modal loop.
+          the main app's text tools - closing the cross-modal loop.
         </p>
         <h4>Interpreting text and images together</h4>
         <p>
@@ -503,16 +503,16 @@ camel_data -i morphology-db-msa-r13`}</pre>
           keyness, and so on) <em>and</em> tools to summarise image sets (cached vision-LM
           descriptions, recurring discourse themes, OCR vocabulary). Ask questions like{" "}
           <em>"compare the OCR vocabulary of this image set with the keywords of the corpus
-          text"</em> and it will ground its answer on both — with every cross-modal claim phrased
+          text"</em> and it will ground its answer on both - with every cross-modal claim phrased
           as a framework-lensed hypothesis, never as settled fact.
         </p>
         <h4>What Lens shows, and what it doesn't</h4>
         <p>
           Lens deliberately hides the text-analysis toolbars: its sidebar keeps Home, Your Corpus
-          (the image-corpus workbench — reference corpora are a text-only concept), Vision, AI
+          (the image-corpus workbench - reference corpora are a text-only concept), Vision, AI
           Assistant, and System, and the boundary is enforced (links to text-analysis views
           redirect to the Vision view). To run full text analysis (concordance, collocation,
-          keyness, Arabic pipelines), open the same corpus in the main CorpusMind app — the
+          keyness, Arabic pipelines), open the same corpus in the main CorpusMind app - the
           corpus, its documents and its image sets are identical in both.
         </p>
         <h4>Installing a vision model for Lens</h4>
@@ -548,10 +548,10 @@ camel_data -i morphology-db-msa-r13`}</pre>
         </ol>
         <h4>Providers</h4>
         <ul>
-          <li><strong>Ollama</strong> (default, local) — runs on 127.0.0.1:11434. Start it with
+          <li><strong>Ollama</strong> (default, local) - runs on 127.0.0.1:11434. Start it with
             <code> ollama serve</code> after installing from ollama.com.</li>
-          <li><strong>LM Studio</strong> (local) — runs on 127.0.0.1:1234.</li>
-          <li><strong>Cloud</strong> (opt-in) — Anthropic or OpenAI. Off by default; activating
+          <li><strong>LM Studio</strong> (local) - runs on 127.0.0.1:1234.</li>
+          <li><strong>Cloud</strong> (opt-in) - Anthropic or OpenAI. Off by default; activating
             it requires explicit user action, and an unmissable indicator shows whenever a cloud
             request is in flight.</li>
         </ul>
@@ -559,7 +559,7 @@ camel_data -i morphology-db-msa-r13`}</pre>
         <p>
           A <strong>grounded</strong> answer has every claim backed by a cited tool call with a
           stable evidence ID. An <strong>ungrounded</strong> answer is the LLM's opinion without
-          corpus evidence — it is clearly flagged so you never mistake it for a finding.
+          corpus evidence - it is clearly flagged so you never mistake it for a finding.
         </p>
       </>
     ),
@@ -587,7 +587,7 @@ camel_data -i morphology-db-msa-r13`}</pre>
         <p>
           Zero analytics, zero error reporting, zero phone-home. By design. The Smart
           Troubleshooting feature only sends error text to Google Gemini if you explicitly
-          configure a Gemini API key in the engine environment — and even then, only the error
+          configure a Gemini API key in the engine environment - and even then, only the error
           text is sent, never your corpus data.
         </p>
         <h4>Framework-lensed hypotheses</h4>
@@ -612,21 +612,21 @@ camel_data -i morphology-db-msa-r13`}</pre>
       <>
         <p>
           CorpusMind includes a <strong>Smart Troubleshooting</strong> system that watches for
-          backend errors during normal use. It only fires when something actually goes wrong —
+          backend errors during normal use. It only fires when something actually goes wrong -
           you won't see it when everything is working.
         </p>
         <h4>Common issues (v1.2.6)</h4>
         <ul>
-          <li><strong>HTTP 500 errors on AI features — security or grammar software intercepting Ollama.</strong>{" "}
+          <li><strong>HTTP 500 errors on AI features - security or grammar software intercepting Ollama.</strong>{" "}
             Desktop apps that inspect local HTTP traffic can hijack CorpusMind's requests to Ollama
             (<code>127.0.0.1:11434</code>). Confirmed real-world case: <strong>Grammarly</strong> running in the
-            background caused exactly this — quitting it stopped the errors. Antivirus web shields, VPNs and
+            background caused exactly this - quitting it stopped the errors. Antivirus web shields, VPNs and
             corporate proxies can do the same. Quit/disable the interfering app or add CorpusMind and Ollama
             to its exclusions, then retry.</li>
           <li><strong>"Ollama is not running" (503).</strong> Start Ollama (the desktop app tries to start it
-            automatically) and pull a model: <code>ollama pull llama3.2:3b</code> — or use one-click downloads
+            automatically) and pull a model: <code>ollama pull llama3.2:3b</code> - or use one-click downloads
             in Settings → Model Providers.</li>
-          <li><strong>"Model not found — run ollama pull" (409).</strong> The selected model is not installed.
+          <li><strong>"Model not found - run ollama pull" (409).</strong> The selected model is not installed.
             Download it from Settings → Model Providers. If it <em>is</em> installed, update the app: v1.2.2
             fixed a false 409 after successful downloads (tag mismatch).</li>
           <li><strong>Vector KWIC slow or timing out (CPU-only machines).</strong> Embedding a large corpus on
@@ -637,7 +637,7 @@ camel_data -i morphology-db-msa-r13`}</pre>
             and check <code>http://127.0.0.1:8765/api/v1/health</code>. Busy port: set <code>CORPUSMIND_PORT</code>.
             Allow the engine through the firewall if prompted.</li>
           <li><strong>macOS: closed the window and nothing responds.</strong> Since v1.2.5 the engine and Ollama
-            stay alive when the window closes — click the dock icon to reopen; a dead backend is restarted
+            stay alive when the window closes - click the dock icon to reopen; a dead backend is restarted
             automatically on reopen (v1.2.6).</li>
           <li><strong>Arabic tools missing.</strong> Install CAMeL Tools and its data
             (<code>camel_data -i morphology-db-msa-r13</code>, <code>camel_data -i dialectid-model6</code>).</li>
@@ -661,7 +661,7 @@ camel_data -i morphology-db-msa-r13`}</pre>
         <h4>Configuring Gemini interpretation (optional)</h4>
         <p>
           The easiest way is in-app: <strong>Settings → Gemini Interpretation</strong>
-          {" "}— enter your key there (it is stored in-memory in the engine, never written to disk, and never
+          {" "}- enter your key there (it is stored in-memory in the engine, never written to disk, and never
           sent back to the browser). For environment-based setup:
         </p>
         <pre>{`# In the engine environment (e.g. engine/.env or your shell):
@@ -679,7 +679,7 @@ corpusmind-engine`}</pre>
         <p>
           Only the error text (message, HTTP code, endpoint, and what you were doing) is sent to
           Gemini. Your <strong>corpus data is never sent</strong>. If you don't configure a
-          Gemini key, the feature still captures errors and shows them in the taskbar — you just
+          Gemini key, the feature still captures errors and shows them in the taskbar - you just
           don't get the AI interpretation.
         </p>
       </>
@@ -702,11 +702,11 @@ corpusmind-engine`}</pre>
             <tr><th>Format</th><th>Use case</th></tr>
           </thead>
           <tbody>
-            <tr><td><strong>Excel (.xlsx)</strong></td><td>Styled spreadsheet — opens in Excel or Google Sheets. Good for sharing with collaborators.</td></tr>
-            <tr><td><strong>CSV (.csv)</strong></td><td>Universal comma-separated — opens in any tool (R, Python, Excel, SPSS).</td></tr>
-            <tr><td><strong>TSV (.tsv)</strong></td><td>Tab-separated — paste directly into Excel or Google Sheets.</td></tr>
-            <tr><td><strong>Plain text (.txt)</strong></td><td>Fixed-width table — for emails, quick inspection, or plain-text notes.</td></tr>
-            <tr><td><strong>JSON (.json)</strong></td><td>Structured — for programmatic use, re-import into scripts, or feeding into another pipeline.</td></tr>
+            <tr><td><strong>Excel (.xlsx)</strong></td><td>Styled spreadsheet - opens in Excel or Google Sheets. Good for sharing with collaborators.</td></tr>
+            <tr><td><strong>CSV (.csv)</strong></td><td>Universal comma-separated - opens in any tool (R, Python, Excel, SPSS).</td></tr>
+            <tr><td><strong>TSV (.tsv)</strong></td><td>Tab-separated - paste directly into Excel or Google Sheets.</td></tr>
+            <tr><td><strong>Plain text (.txt)</strong></td><td>Fixed-width table - for emails, quick inspection, or plain-text notes.</td></tr>
+            <tr><td><strong>JSON (.json)</strong></td><td>Structured - for programmatic use, re-import into scripts, or feeding into another pipeline.</td></tr>
           </tbody>
         </table>
         <h4>Diagram export (collocations)</h4>
@@ -715,10 +715,10 @@ corpusmind-engine`}</pre>
           that produces a collocation network diagram:
         </p>
         <ul>
-          <li><strong>SVG (.svg)</strong> — vector graphics. Scales to any size
+          <li><strong>SVG (.svg)</strong> - vector graphics. Scales to any size
             without quality loss. Open in a browser, Inkscape, or Adobe Illustrator.
             Best for papers, posters, and slides.</li>
-          <li><strong>PNG (.png)</strong> — raster image at 1600×1200. Best for
+          <li><strong>PNG (.png)</strong> - raster image at 1600×1200. Best for
             Word documents, social media, or anywhere SVG isn&apos;t supported.
             Requires the optional <code>cairosvg</code> package (<code>pip install -e &quot;.[export]&quot;</code>).</li>
         </ul>
@@ -749,11 +749,11 @@ corpusmind-engine`}</pre>
           three hubs:
         </p>
         <ul>
-          <li><strong>HuggingFace Datasets</strong> — Wikipedia (Arabic + English),
+          <li><strong>HuggingFace Datasets</strong> - Wikipedia (Arabic + English),
             OSCAR, CC-100, Arabic Pile. Full-text search inside Wikipedia.</li>
-          <li><strong>Wikipedia (live)</strong> — fetch fresh articles directly
+          <li><strong>Wikipedia (live)</strong> - fetch fresh articles directly
             from Arabic or English Wikipedia. CC-BY-SA 3.0.</li>
-          <li><strong>OPUS</strong> — 1,200+ parallel corpora (Arabic ↔ English
+          <li><strong>OPUS</strong> - 1,200+ parallel corpora (Arabic ↔ English
             translation pairs). Per-corpus licensing.</li>
         </ul>
         <h4>How to use it</h4>
@@ -763,7 +763,7 @@ corpusmind-engine`}</pre>
           <li>Pick a language: English, Arabic, or Arabic-English (parallel).</li>
           <li>Optionally filter to a specific hub.</li>
           <li>Click <strong>Search</strong>.</li>
-          <li>Review the results — each shows the hub, title, description,
+          <li>Review the results - each shows the hub, title, description,
             language, size, license, and format.</li>
           <li>Click <strong>Download</strong> on the result you want.</li>
           <li>The file downloads to your browser&apos;s default location.</li>
@@ -777,7 +777,7 @@ corpusmind-engine`}</pre>
         <h4>Privacy</h4>
         <p>
           Searches and downloads are proxied through the CorpusMind engine on your
-          machine. Your existing corpus data is never sent to any hub — only search
+          machine. Your existing corpus data is never sent to any hub - only search
           queries and the IDs of corpora you choose to download.
         </p>
       </>
@@ -798,7 +798,7 @@ corpusmind-engine`}</pre>
         <h4>Methods PDF export</h4>
         <p>
           The <strong>Export Methods PDF</strong> feature auto-drafts a methodology paragraph
-          naming the exact tools, versions, and formulas used for a given analysis — including
+          naming the exact tools, versions, and formulas used for a given analysis - including
           AI usage disclosure and human verification sections. You can paste this directly into
           a manuscript's Methods section so peer reviewers can verify your workflow.
         </p>

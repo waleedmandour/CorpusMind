@@ -241,19 +241,19 @@ def analyse_colours(img: Any, *, max_colours: int = 5) -> ColourAnalysis:
     notes = []
     top_r, top_g, top_b = dominant[0]["rgb"] if dominant else [128, 128, 128]
     if top_r > 150 and top_g < 100 and top_b < 100:
-        notes.append("Red-dominant — in many Western contexts: passion/danger; in many East Asian contexts: luck/celebration.")
+        notes.append("Red-dominant - in many Western contexts: passion/danger; in many East Asian contexts: luck/celebration.")
     elif top_r > 200 and top_g > 200 and top_b < 100:
-        notes.append("Yellow-dominant — commonly: warmth/caution; in some contexts: sacred/royal.")
+        notes.append("Yellow-dominant - commonly: warmth/caution; in some contexts: sacred/royal.")
     elif top_g > 120 and top_r < 120 and top_b < 120:
-        notes.append("Green-dominant — commonly: nature/growth; in some Islamic contexts: religious significance.")
+        notes.append("Green-dominant - commonly: nature/growth; in some Islamic contexts: religious significance.")
     elif top_b > 120 and top_r < 100 and top_g < 100:
-        notes.append("Blue-dominant — commonly: calm/trust; in some contexts: melancholy.")
+        notes.append("Blue-dominant - commonly: calm/trust; in some contexts: melancholy.")
     elif top_r > 150 and top_g < 100 and top_b > 150:
-        notes.append("Magenta/purple-dominant — commonly: luxury/spirituality.")
+        notes.append("Magenta/purple-dominant - commonly: luxury/spirituality.")
     if brightness > 200:
-        notes.append("High-key (very bright) — often connotes openness/optimism.")
+        notes.append("High-key (very bright) - often connotes openness/optimism.")
     elif brightness < 60:
-        notes.append("Low-key (very dark) — often connotes gravity/mystery.")
+        notes.append("Low-key (very dark) - often connotes gravity/mystery.")
 
     return ColourAnalysis(
         dominant_colours=dominant,

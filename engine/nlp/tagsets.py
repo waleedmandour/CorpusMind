@@ -107,11 +107,11 @@ TAGSETS: list[TagsetSpec] = [
             "analyzers (noun, verb, adj, prep, pron, part_neg, ...), "
             "standard for MSA and dialect Arabic morphology."
         ),
-        source_note="CAMeL Tools — https://camel.readthedocs.io/",
+        source_note="CAMeL Tools - https://camel.readthedocs.io/",
     ),
     TagsetSpec(
         id="usas",
-        display_name="USAS — semantic (top-level)",
+        display_name="USAS - semantic (top-level)",
         kind="semantic",
         languages=("en", "ar"),
         description=(
@@ -120,7 +120,7 @@ TAGSETS: list[TagsetSpec] = [
             "Z = names & grammatical words, ...). Lexicon-based "
             "approximation, experimental."
         ),
-        source_note="https://ucrel.lancs.ac.uk/usas/ — lexicon: UCREL Multilingual-USAS (CC BY-NC-SA 4.0)",
+        source_note="https://ucrel.lancs.ac.uk/usas/ - lexicon: UCREL Multilingual-USAS (CC BY-NC-SA 4.0)",
     ),
 ]
 

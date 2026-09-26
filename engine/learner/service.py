@@ -48,16 +48,16 @@ FORMULAS: dict[str, str] = {
     "mean_clause_length": "tokens / clause-head tokens (VERB/AUX heads of acl|advcl|ccomp|xcomp|csubj|relcl|conj)",
     "clauses_per_sentence": "clause-head tokens / sentences",
     "mean_word_length": "mean character length of word forms",
-    "root_type_ratio": "distinct morphological roots ('root=X|…' layer) / tokens — Arabic only",
-    "error_free_sentence_ratio": "sentences with no seed-rule firing / sentences — HEURISTIC PROXY, not validated accuracy",
-    "error_candidates_per_100": "unique rule-flagged tokens per 100 tokens — HEURISTIC PROXY",
-    "spelling_candidate_rate": "spelling-rule flagged tokens / tokens — HEURISTIC PROXY",
+    "root_type_ratio": "distinct morphological roots ('root=X|…' layer) / tokens - Arabic only",
+    "error_free_sentence_ratio": "sentences with no seed-rule firing / sentences - HEURISTIC PROXY, not validated accuracy",
+    "error_candidates_per_100": "unique rule-flagged tokens per 100 tokens - HEURISTIC PROXY",
+    "spelling_candidate_rate": "spelling-rule flagged tokens / tokens - HEURISTIC PROXY",
 }
 
 CITATIONS: list[str] = [
     "Housen, A., Kuiken, F., & Vedder, I. (Eds.) (2012). Dimensions of L2 "
     "Performance and Proficiency: Complexity, Accuracy and Fluency. John Benjamins.",
-    "Crosslinguistic CAF volume (2022) — Complexity, Accuracy and Fluency "
+    "Crosslinguistic CAF volume (2022) - Complexity, Accuracy and Fluency "
     "approaches across languages, as adopted in the CorpusMind v1.2.0 plan.",
     "Lu, X. (2010). Automatic analysis of syntactic complexity in second "
     "language writing. International Journal of Applied Linguistics, 20(1), 47–74.",
@@ -76,7 +76,7 @@ CITATIONS: list[str] = [
 _KEYNESS_CITATIONS: list[str] = [
     "Dunning, T. (1993). Accurate methods for the statistics of surprise and "
     "coincidence. Computational Linguistics, 19(1), 61–74. (log-likelihood)",
-    "Hardie, A. (2014). Log Ratio — an informal introduction. ESRC Centre for "
+    "Hardie, A. (2014). Log Ratio - an informal introduction. ESRC Centre for "
     "Corpus Approaches to Social Science. (effect size)",
     "Gabrielatos, C., & Marchi, A. (2012). Keyness: Appropriate metrics and "
     "practical issues. AAICLaB, University of Pisa. (%DIFF)",
@@ -85,7 +85,7 @@ _KEYNESS_CITATIONS: list[str] = [
 ]
 
 _CIA_CITATION: str = (
-    "Granger, S. (1998). The computer learner corpus — Chapter introduces the "
+    "Granger, S. (1998). The computer learner corpus - Chapter introduces the "
     "Contrastive Interlanguage Analysis (CIA) design: learner L2 vs native "
     "target language, and learner L2 vs other learner varieties."
 )
@@ -354,7 +354,7 @@ async def cia_compare(
     target, target_caf = _corpus_block(corpus, target_sentences)
     if not target_sentences:
         warnings.append(
-            "Target corpus has no ingested annotation version — CAF indices are empty."
+            "Target corpus has no ingested annotation version - CAF indices are empty."
         )
 
     reference: dict | None = None
@@ -379,7 +379,7 @@ async def cia_compare(
 
     if keyness is None:
         warnings.append(
-            "No keyness arm requested — pass reference_corpus_id (uploaded "
+            "No keyness arm requested - pass reference_corpus_id (uploaded "
             "reference corpus) or reference_list (bundled reference) for the "
             "corpus-contrast half of CIA."
         )

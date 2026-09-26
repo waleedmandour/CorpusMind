@@ -219,7 +219,7 @@ async def compute_keyness_with_reference_list(
     ref_types = len(ref_freqs)
     if ref_types < 5000:
         warnings.append(
-            f"The reference list '{reference_name}' covers only {ref_types} types — "
+            f"The reference list '{reference_name}' covers only {ref_types} types - "
             f"it is a top-N frequency list, not a full corpus. Words absent from "
             f"the list are excluded from this ranking; for publishable keyness, "
             f"install and use a full bundled reference corpus (e.g. BNC Baby, "

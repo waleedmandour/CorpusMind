@@ -53,7 +53,7 @@ def test_new_specs_sha256_matches_committed_files():
         path = _committed_path(spec)
         digest = hashlib.sha256(path.read_bytes()).hexdigest()
         assert spec.sha256 == digest, (
-            f"{name}: registry sha256 does not match committed file — "
+            f"{name}: registry sha256 does not match committed file - "
             "refresh the list (scripts/build_v127_ref_freq_lists.py) and "
             "re-pin the hash."
         )
