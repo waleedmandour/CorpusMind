@@ -17,6 +17,30 @@ BIN="${1:?usage: ci_smoke_engine.sh <engine-binary>}"
 PORT="${CORPUSMIND_SMOKE_PORT:-8799}"
 BASE="http://127.0.0.1:${PORT}"
 
+# Content gate (hard): the data files the regressed features need must be
+# in THIS bundle before anything else is checked. Mirrors the Windows
+# gate's content checks so all three platforms enforce them.
+INTERNAL_DIR="$(dirname "${BIN}")/_internal"
+for rel in \
+  "reference-data/tagsets/usas-en-top.tsv" \
+  "reference-data/tagsets/usas-ar-top.tsv" \
+  "reference-data/wordlists/awl-sublists.tsv" \
+  "reference-data/wordlists/en/top200.tsv" \
+  "reference-data/reference-corpora/en/be06-freq-top1000.tsv"; do
+  if [ -f "${INTERNAL_DIR}/${rel}" ]; then
+    echo "[smoke] OK   ${rel}"
+  else
+    echo "[smoke] FAIL: missing data file in bundle: ${rel}"
+    exit 1
+  fi
+done
+if [ -d "${INTERNAL_DIR}/wordfreq/data" ]; then
+  echo "[smoke] OK   wordfreq data ($(find "${INTERNAL_DIR}/wordfreq/data" -type f | wc -l) files)"
+else
+  echo "[smoke] FAIL: missing wordfreq data directory in bundle"
+  exit 1
+fi
+
 echo "[smoke] launching ${BIN} on port ${PORT}"
 CORPUSMIND_PORT="${PORT}" "${BIN}" &
 ENGINE_PID=$!

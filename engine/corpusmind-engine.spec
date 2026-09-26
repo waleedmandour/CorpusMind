@@ -123,11 +123,23 @@ _hidden_imports = [
     "vaderSentiment.vaderSentiment",
 ]
 
+# Data files to bundle (non-Python assets the engine reads at runtime).
+# We include the reference-data/ directory so frameworks + wordlists ship
+# inside the binary.
+_datas = []
+_repo_root = Path(SPECPATH).parent  # noqa: F821 — SPECPATH is provided by PyInstaller
+_reference_data = _repo_root / "reference-data"
+if _reference_data.exists():
+    _datas.append((str(_reference_data), "reference-data"))
+
 # v1.2.8 (review #6): pull in the persuasion-index package's own data
-# (bundled lexicons) and helper_features submodules, plus wordfreq's
-# per-language frequency data. Guarded like en_core_web_sm: a build venv
-# without the package still produces a bundle, and the release workflow's
-# post-build smoke gate fails the release if the lens ends up missing.
+# (bundled lexicons), the helper_features submodules, and wordfreq's
+# per-language frequency data. NOTE: this block MUST come after `_datas`
+# is initialised — an earlier placement raised NameError inside the broad
+# except below, silently dropping the collected data (the Windows content
+# gate caught the empty wordfreq data dir). Guarded like en_core_web_sm: a
+# build venv without the package still produces a bundle, and the release
+# smoke gate fails the release if the stack ends up missing.
 try:
     _hidden_imports += collect_submodules("helper_features")
     _hidden_imports += collect_submodules("persuasion_index")
@@ -138,15 +150,6 @@ except Exception:
     # persuasion-index not installed in this build venv — non-fatal here,
     # but the release smoke gate will refuse to publish such a bundle.
     pass
-
-# Data files to bundle (non-Python assets the engine reads at runtime).
-# We include the reference-data/ directory so frameworks + wordlists ship
-# inside the binary.
-_datas = []
-_repo_root = Path(SPECPATH).parent  # noqa: F821 — SPECPATH is provided by PyInstaller
-_reference_data = _repo_root / "reference-data"
-if _reference_data.exists():
-    _datas.append((str(_reference_data), "reference-data"))
 
 # Bundle the spaCy `en_core_web_sm` model as a COMPLETE package (Python files
 # + data files). PyInstaller's static analysis picks up the model package via
