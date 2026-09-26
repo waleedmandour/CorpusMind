@@ -83,6 +83,17 @@ def detect_platform() -> str:
     return "linux"
 
 
+def _utf8_stdio() -> None:
+    """Windows CI consoles default to cp1252, which cannot encode arrows
+    and other box-drawing punctuation (→ crashed Release run #161). Force
+    UTF-8 with a replace fallback so logging can never kill the job."""
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:  # noqa: BLE001, S110 — best-effort; any console is fine
+            pass
+
+
 def fetch(platform: str, dest_root: Path = DEST_DIR) -> int:
     asset = ASSETS[platform]
     url = f"{BASE_URL}/{asset}"
@@ -105,7 +116,7 @@ def fetch(platform: str, dest_root: Path = DEST_DIR) -> int:
             req = urllib.request.Request(url, headers={"User-Agent": "CorpusMind-fetch_caddy/1.0"})
             with urllib.request.urlopen(req, timeout=120) as resp, archive.open("wb") as out:
                 shutil.copyfileobj(resp, out)
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 — report any network failure
             print(f"[FAIL] download failed: {exc}")
             return 1
 
@@ -114,7 +125,7 @@ def fetch(platform: str, dest_root: Path = DEST_DIR) -> int:
             if got != expected:
                 print(f"[FAIL] checksum mismatch for {asset}:\n  expected {expected}\n  got      {got}")
                 return 1
-            print(f"[ok  ] sha512 verified against Caddy's official checksums.txt: {got[:16]}…")
+            print(f"[ok  ] sha512 verified against Caddy's official checksums.txt: {got[:16]}...")
         else:
             print(f"[warn] no pinned checksum for {platform} in this script version — "
                   f"archive sha512 is {sha512_of(archive)}")
@@ -134,44 +145,50 @@ def fetch(platform: str, dest_root: Path = DEST_DIR) -> int:
         exe_dest.chmod(0o755)
     if expected:
         (dest_root / f".sha512-{platform}").write_text(expected + "\n")
-    print(f"[ok  ] {platform} → {exe_dest} ({exe_dest.stat().st_size:,} bytes)")
+    print(f"[ok  ] {platform} -> {exe_dest} ({exe_dest.stat().st_size:,} bytes)")
     return 0
 
 
 def main() -> int:
+    _utf8_stdio()
     ap = argparse.ArgumentParser(description=__doc__)
     g = ap.add_mutually_exclusive_group()
     g.add_argument("--os", choices=list(ASSETS), help="platform to fetch (default: current)")
     g.add_argument("--all", action="store_true", help="fetch every release platform into caddy-bin/<platform>/")
-    ap.add_argument("--print-checksums", action="store_true", help="print the sha256 of the archives (to pin new versions)")
+    g.add_argument(
+        "--print-checksums",
+        action="store_true",
+        help="re-download each archive and print the sha512 line to pin (bypasses the cache)",
+    )
     args = ap.parse_args()
 
-    if args.all or args.print_checksums:
+    if args.print_checksums:
+        # Download each archive fresh and print its sha512 (the digest this
+        # script pins, matching Caddy's official checksums.txt format).
+        rc = 0
+        for platform, asset in ASSETS.items():
+            url = f"{BASE_URL}/{asset}"
+            print(f"[get ] {platform}: {url}")
+            try:
+                with tempfile.TemporaryDirectory() as tmp:
+                    archive = Path(tmp) / asset
+                    req = urllib.request.Request(
+                        url, headers={"User-Agent": "CorpusMind-fetch_caddy/1.0"}
+                    )
+                    with urllib.request.urlopen(req, timeout=120) as resp, archive.open("wb") as out:
+                        shutil.copyfileobj(resp, out)
+                    print(f'    "{platform}": "{sha512_of(archive)}",')
+            except Exception as exc:  # noqa: BLE001 — report any network failure
+                print(f"[FAIL] {platform}: {exc}")
+                rc = 1
+        return rc
+
+    if args.all:
         rc = 0
         for platform in ASSETS:
             per_platform_dir = DEST_DIR / platform
-            if args.print_checksums:
-                # download without checksum pinning, then report
-                global_sha = SHA256.get(platform, "")
-                SHA256[platform] = ""  # force download path
-                if fetch(platform, per_platform_dir) != 0:
-                    rc = 1
-                    continue
-                archive_name = ASSETS[platform]
-                # re-download archive hash is lost post-extract; fetch again to hash
-                import urllib.request as _u
-                import tempfile as _t
-
-                with _t.TemporaryDirectory() as tmp:
-                    archive = Path(tmp) / archive_name
-                    req = _u.Request(f"{BASE_URL}/{archive_name}", headers={"User-Agent": "CorpusMind-fetch_caddy/1.0"})
-                    with _u.urlopen(req, timeout=120) as resp, archive.open("wb") as out:
-                        shutil.copyfileobj(resp, out)
-                SHA256[platform] = sha256_of(archive)
-                print(f'    "{platform}": "{SHA256[platform]}",')
-            else:
-                if fetch(platform, per_platform_dir) != 0:
-                    rc = 1
+            if fetch(platform, per_platform_dir) != 0:
+                rc = 1
         return rc
 
     return fetch(args.os or detect_platform())
