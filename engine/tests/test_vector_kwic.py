@@ -273,3 +273,53 @@ async def test_vector_kwic_corpus_missing_404(client):
         "query": "x", "node": "y",
     })
     assert r.status_code == 404
+
+
+# --------------------------------------------------------------------------- #
+# v1.2.8 (review #4): vectorised search + latency profiling
+# --------------------------------------------------------------------------- #
+
+
+def test_cosine_batch_matches_scalar():
+    """The numpy batch path must agree with the scalar cosine exactly."""
+    import random
+
+    from semantic.vector_kwic import cosine, cosine_batch
+
+    rng = random.Random(7)
+    q = [rng.uniform(-1, 1) for _ in range(32)]
+    vecs = [[rng.uniform(-1, 1) for _ in range(32)] for _ in range(20)]
+    sims = cosine_batch(q, vecs)
+    assert len(sims) == len(vecs)
+    for i, v in enumerate(vecs):
+        assert sims[i] == pytest.approx(cosine(q, v), abs=1e-9)
+
+
+def test_cosine_batch_handles_misshapen_and_empty():
+    """Stale cache rows with the wrong dimensionality score 0, not crash."""
+    from semantic.vector_kwic import cosine_batch
+
+    assert cosine_batch([1.0, 0.0], []) == []
+    assert cosine_batch([1.0, 0.0], [[1.0, 0.0], [1.0, 0.0, 0.0], [0.0, 0.0]]) == pytest.approx(
+        [1.0, 0.0, 0.0]
+    )
+
+
+async def test_vector_kwic_response_carries_timing(client):
+    """Every response reports where the time went (embed vs search)."""
+    ac, cid, _fake = client
+    body = {"query": "climate policy", "node": "climate", "model": "test-embed"}
+    r1 = await ac.post(f"/api/v1/corpora/{cid}/concordance/vector", json=body)
+    assert r1.status_code == 200
+    timing = r1.json()["timing"]
+    assert timing["similarity_backend"] == "numpy"
+    assert timing["candidates_embedded"] >= 1
+    assert timing["candidates_cached"] == 0
+    for phase in ("candidates_ms", "embed_ms", "search_ms", "total_ms"):
+        assert timing[phase] >= 0.0
+    # second identical query: contexts come from cache, only search runs
+    r2 = await ac.post(f"/api/v1/corpora/{cid}/concordance/vector", json=body)
+    assert r2.status_code == 200
+    timing2 = r2.json()["timing"]
+    assert timing2["candidates_cached"] >= 1
+    assert timing2["candidates_embedded"] == 0

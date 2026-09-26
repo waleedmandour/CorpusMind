@@ -1,8 +1,11 @@
 /**
  * PersuasionRadar — v1.2.7 (§4) radar over the 15 persuasion-index
  * dimensions, grouped into the classical rhetorical triad
- * (logos / ethos / pathos — 5 dimensions each; the grouping is our
- * analysis-facing interpretation, stated in the UI citation).
+ * (logos / ethos / pathos). v1.2.8 (review #1): the grouping now mirrors
+ * the package's own dimension inventory exactly (grounded against
+ * persuasion-index 0.3.0): Logos 5, Ethos 4, Pathos 6 — so the UI can
+ * never silently drop or misfile a dimension. The grouping itself is our
+ * analysis-facing interpretation, stated in the UI citation.
  *
  * Pure inline SVG, no chart dependency — consistent with the repo's
  * offline-first PWA stance. Axis order is fixed (logos → ethos → pathos,
@@ -12,8 +15,15 @@ import type { DiscourseCategory } from "@/lib/api";
 
 export const PI_FAMILY_AXES: Record<string, string[]> = {
   logos: ["Evidence", "Logic/Cohesion", "Specificity", "Argumentation", "Opponent’s View"],
-  ethos: ["Authority/Credibility", "Commitment", "Engagement", "Politeness", "Reciprocity"],
-  pathos: ["Sentiment", "Impact", "Scarcity/Urgency", "Style", "Propaganda"],
+  ethos: ["Authority/Credibility", "Commitment", "Politeness", "Style"],
+  pathos: [
+    "Engagement",
+    "Impact",
+    "Propaganda",
+    "Reciprocity",
+    "Scarcity/Urgency",
+    "Sentiment",
+  ],
 };
 
 const FAMILY_COLOR: Record<string, string> = {

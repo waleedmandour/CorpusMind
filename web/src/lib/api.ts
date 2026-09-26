@@ -1752,6 +1752,29 @@ export const api = {
       body: JSON.stringify({ doc, sent }),
     }),
 
+  // v1.2.8 (review #2): KWIC-style concordance over dependency hits.
+  depConcordance: (
+    cid: string,
+    req: {
+      node_query?: string;
+      level?: "word" | "lemma";
+      regex?: boolean;
+      case_sensitive?: boolean;
+      relation?: string | null;
+      pos?: string | null;
+      window?: number;
+      limit?: number;
+    },
+  ) =>
+    jsonFetch<DepConcordanceResult>(`/api/v1/corpora/${cid}/dep-concordance`, {
+      method: "POST",
+      body: JSON.stringify(req),
+    }),
+
+  // v1.2.8 (review #1): persuasion-index resource status.
+  persuasionHealth: () =>
+    jsonFetch<PersuasionHealth>("/api/v1/discourse/persuasion/health"),
+
   discourse: (cid: string, taxonomy = "hyland2005", compareCorpusId?: string | null) =>
     jsonFetch<DiscourseResult>(`/api/v1/corpora/${cid}/discourse`, {
       method: "POST",
@@ -2642,6 +2665,66 @@ export interface VectorKwicResponse {
   model: string;
   query: Record<string, unknown>;
   note: string;
+  // v1.2.8 (review #4): per-phase latency profile (milliseconds).
+  timing?: {
+    candidates_ms?: number;
+    embed_ms?: number;
+    search_ms?: number;
+    total_ms?: number;
+    similarity_backend?: string;
+    candidates_cached?: number;
+    candidates_embedded?: number;
+  };
+}
+
+// v1.2.8 (review #2): KWIC-style concordance over dependency hits.
+export interface DepConcordanceRow {
+  evidence_id: string;
+  document_filename: string;
+  doc: string;
+  sentence_idx: number;
+  token_idx: number;
+  left: string;
+  node: string;
+  node_pos: string;
+  node_lemma: string;
+  relation: string;
+  head: string;
+  head_pos: string;
+  right: string;
+}
+
+export interface DepConcordanceResult {
+  rows: DepConcordanceRow[];
+  total: number;
+  node_query: string;
+  relation: string | null;
+  pos: string | null;
+  citation: string;
+}
+
+// v1.2.8 (review #1): persuasion-index resource status (doctor payload).
+export interface PersuasionHealthResource {
+  available: boolean;
+  configured_by?: string | null;
+  detail?: string | null;
+  features?: string[];
+  license_note?: string | null;
+  path?: string | null;
+  source_url?: string | null;
+  version?: unknown;
+}
+
+export interface PersuasionHealth {
+  installed: boolean;
+  version: string | null;
+  install_hint: string | null;
+  resources_required: boolean;
+  policy: string;
+  complete: boolean;
+  missing: string[];
+  resources: Record<string, PersuasionHealthResource>;
+  citation: string;
 }
 
 export interface CafIndices {

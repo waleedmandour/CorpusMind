@@ -11,13 +11,14 @@ import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
 
-import { api, exportWithFeedback, type ExportFormat, type ReferenceCorpusEntry, type POSAnalysisResult, type SemanticAnalysisResult, type DiscourseCategory, type SentenceTreeToken } from "@/lib/api";
+import { api, exportWithFeedback, type ExportFormat, type ReferenceCorpusEntry, type POSAnalysisResult, type SemanticAnalysisResult, type DiscourseCategory, type SentenceTreeToken, type DepConcordanceRow } from "@/lib/api";
 import { useApp } from "@/store/app";
 import { useUI, type NavTarget } from "@/store/ui";
 import { t, type TranslationKey } from "@/lib/i18n";
 import { ExportButton } from "@/components/ExportButton";
 import { CollocationNetwork } from "@/components/CollocationNetwork";
 import { PersuasionRadar } from "@/components/PersuasionRadar";
+import { DiscourseBarChart } from "@/components/DiscourseBarChart";
 
 // Issue 5: shared export-status hook so every analysis panel gets the same
 // user-visible success/error feedback without duplicating the boilerplate.
@@ -1060,6 +1061,7 @@ const GRAMMAR_PATTERNS = ["passive_voice", "modal", "negation", "relative_clause
 
 
 function GrammarPanel({ cid }: { cid: string }) {
+  const lang = useUI((s) => s.lang);
   const [selected, setSelected] = useState<string[]>(GRAMMAR_PATTERNS as unknown as string[]);
   const result = useQuery({
     queryKey: ["grammar", cid, selected],
@@ -1090,6 +1092,13 @@ function GrammarPanel({ cid }: { cid: string }) {
         <strong>Note:</strong> Grammar pattern detectors are <em>dependency-parse-driven</em>,
         not regex over surface text - so they generalize across genres.
       </div>
+
+      {result.isError && (
+        <div className="lens-error-card" role="alert">
+          <strong>{t(lang, "grammar_error_title")}</strong>
+          <p>{String(result.error)}</p>
+        </div>
+      )}
 
       {result.data && (
         <>
@@ -1129,6 +1138,44 @@ function GrammarPanel({ cid }: { cid: string }) {
   );
 }
 
+
+// v1.2.8 (review #2): fixed part-of-speech palette for the dependency
+// concordance table, following the displaCy convention of colour-coding
+// POS with a fixed legend. Values are tuned for contrast on both the light
+// and dark theme backgrounds; the legend under the table maps every color
+// back to its tag, so the coding never depends on memory.
+const DEP_POS_COLORS: Record<string, string> = {
+  NOUN: "#4a90d9",
+  PROPN: "#7c5cd6",
+  VERB: "#2e9e5b",
+  AUX: "#8a8f98",
+  ADJ: "#d9862c",
+  ADV: "#c2578e",
+  PRON: "#b04a5a",
+  DET: "#6b7f9e",
+  ADP: "#a0793d",
+  NUM: "#3aa0a8",
+  CCONJ: "#9462bd",
+  SCONJ: "#7d8bc0",
+  PART: "#8b8147",
+  INTJ: "#c2703e",
+  PUNCT: "#8a8f98",
+  X: "#8a8f98",
+};
+const DEP_POS_LEGEND_ORDER = [
+  "NOUN", "PROPN", "VERB", "AUX", "ADJ", "ADV", "PRON", "DET",
+  "ADP", "NUM", "CCONJ", "SCONJ", "PART", "INTJ", "X",
+];
+
+function PosChip({ pos }: { pos: string }) {
+  const tag = (pos || "X").toUpperCase();
+  const color = DEP_POS_COLORS[tag] ?? DEP_POS_COLORS.X;
+  return (
+    <span className="pos-chip" style={{ color, borderColor: color }}>
+      {tag}
+    </span>
+  );
+}
 
 // v1.2.7 (§2): displaCy-style arc diagram (in-house SVG, offline-safe -
 // no external renderer dependency). Tokens sit on a baseline; every
@@ -1198,10 +1245,10 @@ function DependencyTreeSVG({ tokens }: { tokens: SentenceTreeToken[] }) {
 }
 
 function DependencyPanel({ cid }: { cid: string }) {
+  const lang = useUI((s) => s.lang);
   const [relation, setRelation] = useState("nsubj");
   const [valencyLemma, setValencyLemma] = useState("");
   const [valencyQuery, setValencyQuery] = useState("");
-  const [selectedSentence, setSelectedSentence] = useState("");
   const result = useQuery({
     queryKey: ["dep", cid, relation],
     queryFn: () => api.dependencies(cid, relation, 100),
@@ -1221,20 +1268,54 @@ function DependencyPanel({ cid }: { cid: string }) {
     enabled: valencyQuery.trim().length > 0,
   });
 
-  // v1.2.7 (§2): sentence picker + arc-diagram tree
-  const sentenceList = useQuery({
-    queryKey: ["sentences", cid],
-    queryFn: () => api.sentences(cid, 30, 0),
-    staleTime: 5 * 60 * 1000,
+  // v1.2.8 (review #2): KWIC-style dependency concordance — one row per
+  // hit (left | node | right | head | relation | source), replacing the
+  // per-instance sentence dropdown. A relation filter is pre-applied so
+  // the table shows content immediately; the node query narrows it.
+  const [concNode, setConcNode] = useState("");
+  const [concNodeApplied, setConcNodeApplied] = useState("");
+  const [concRelation, setConcRelation] = useState("nsubj");
+  const [concPos, setConcPos] = useState("");
+  const [concSort, setConcSort] = useState<{ key: "source" | "node" | "relation" | "head"; dir: 1 | -1 } | null>(null);
+  const conc = useQuery({
+    queryKey: ["dep-conc", cid, concNodeApplied, concRelation, concPos],
+    queryFn: () =>
+      api.depConcordance(cid, {
+        node_query: concNodeApplied,
+        relation: concRelation || null,
+        pos: concPos || null,
+        window: 6,
+        limit: 200,
+      }),
   });
-  const firstItem = sentenceList.data?.items[0];
-  const treeTarget = selectedSentence || (firstItem ? `${firstItem.doc}:${firstItem.sent}` : "");
-  const [treeDoc, treeSent] = treeTarget ? treeTarget.split(/:(?=\d+$)/) : ["", "0"];
+
+  // Selected row's sentence, rendered as the arc diagram below the table.
+  const [selectedTree, setSelectedTree] = useState("");
+  const [treeDoc, treeSent] = selectedTree ? selectedTree.split(/:(?=\d+$)/) : ["", "0"];
   const tree = useQuery({
     queryKey: ["tree", cid, treeDoc, treeSent],
     queryFn: () => api.sentenceTree(cid, treeDoc, Number(treeSent)),
     enabled: !!treeDoc,
   });
+
+  const concRows: DepConcordanceRow[] = conc.data?.rows ?? [];
+  const sortedRows = [...concRows];
+  if (concSort) {
+    const { key, dir } = concSort;
+    sortedRows.sort((a, b) => {
+      // "source" sorts on the filename column (the row field name differs).
+      const va = String(key === "source" ? a.document_filename : a[key] ?? "");
+      const vb = String(key === "source" ? b.document_filename : b[key] ?? "");
+      return va.localeCompare(vb) * dir;
+    });
+  }
+  const onConcSort = (key: "source" | "node" | "relation" | "head") => {
+    setConcSort((prev) =>
+      prev && prev.key === key ? { key, dir: prev.dir === 1 ? -1 : 1 } : { key, dir: 1 },
+    );
+  };
+  const concArrow = (key: "source" | "node" | "relation" | "head") =>
+    concSort?.key === key ? (concSort.dir === 1 ? " ▲" : " ▼") : "";
 
   const exportStatus = useExportStatus();
 
@@ -1328,22 +1409,150 @@ function DependencyPanel({ cid }: { cid: string }) {
         )
       )}
 
-      {/* v1.2.7 (§2): syntax tree (arc diagram) */}
-      <h3>Syntax tree</h3>
-      {sentenceList.data && sentenceList.data.items.length > 0 && (
-        <div className="toolbar">
-          <label>Sentence
-            <select
-              value={treeTarget}
-              onChange={(e) => setSelectedSentence(e.target.value)}
-            >
-              {sentenceList.data.items.map((s) => (
-                <option key={`${s.doc}:${s.sent}`} value={`${s.doc}:${s.sent}`}>
-                  [{s.token_count} tokens] {s.preview}
-                </option>
+      {/* v1.2.8 (review #2): dependency concordance — one row per hit */}
+      <h3>{t(lang, "dep_conc_title")}</h3>
+      <div className="grounding-notice">
+        {t(lang, "dep_conc_intro")}
+      </div>
+      <div className="toolbar">
+        <label htmlFor="dep-conc-node">{t(lang, "dep_conc_node")}</label>
+        <input
+          id="dep-conc-node"
+          type="text"
+          value={concNode}
+          placeholder={t(lang, "dep_conc_node_hint")}
+          onChange={(e) => setConcNode(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") setConcNodeApplied(concNode.trim()); }}
+        />
+        <button
+          type="button"
+          onClick={() => setConcNodeApplied(concNode.trim())}
+          disabled={!concNode.trim() && !concRelation && !concPos}
+        >
+          {t(lang, "dep_conc_search")}
+        </button>
+        <select
+          aria-label={t(lang, "dep_conc_col_rel")}
+          value={concRelation}
+          onChange={(e) => setConcRelation(e.target.value)}
+        >
+          <option value="">{t(lang, "dep_conc_relation_all")}</option>
+          <option value="nsubj">nsubj</option>
+          <option value="obj">obj</option>
+          <option value="iobj">iobj</option>
+          <option value="obl">obl</option>
+          <option value="amod">amod</option>
+          <option value="compound">compound</option>
+          <option value="conj">conj</option>
+          <option value="advcl">advcl</option>
+          <option value="ccomp">ccomp</option>
+          <option value="xcomp">xcomp</option>
+        </select>
+        <select
+          aria-label={t(lang, "dep_conc_col_node")}
+          value={concPos}
+          onChange={(e) => setConcPos(e.target.value)}
+        >
+          <option value="">{t(lang, "dep_conc_pos_all")}</option>
+          {DEP_POS_LEGEND_ORDER.map((p) => (
+            <option key={p} value={p}>{p}</option>
+          ))}
+        </select>
+        <ExportButton
+          onExport={(fmt_) => { if (conc.data) { downloadJsonResult(conc.data, `dep-concordance.${fmt_}`, exportStatus.set); } }}
+          disabled={!conc.data}
+        />
+      </div>
+      {conc.isError && (
+        <div className="grounding-notice"><strong>⚠</strong> {String(conc.error)}</div>
+      )}
+      {conc.data && (
+        <div className="result-meta">
+          {t(lang, "dep_conc_total")
+            .replace("{n}", conc.data.total.toLocaleString())
+            .replace("{m}", String(conc.data.rows.length))}
+        </div>
+      )}
+      {conc.data && conc.data.rows.length === 0 && (
+        <div className="empty-state">{t(lang, "dep_conc_no_rows")}</div>
+      )}
+      {sortedRows.length > 0 && (
+        <div className="dep-conc-table-wrap">
+          <table className="dep-conc-table">
+            <thead>
+              <tr>
+                <th className="num">{t(lang, "dep_conc_col_left")}</th>
+                <th
+                  className={clsx("sortable", concSort?.key === "node" && "sorted")}
+                  onClick={() => onConcSort("node")}
+                  aria-sort={concSort?.key === "node" ? (concSort.dir === 1 ? "ascending" : "descending") : undefined}
+                >
+                  {t(lang, "dep_conc_col_node")}{concArrow("node")}
+                </th>
+                <th className="num">{t(lang, "dep_conc_col_right")}</th>
+                <th
+                  className={clsx("sortable", concSort?.key === "head" && "sorted")}
+                  onClick={() => onConcSort("head")}
+                  aria-sort={concSort?.key === "head" ? (concSort.dir === 1 ? "ascending" : "descending") : undefined}
+                >
+                  {t(lang, "dep_conc_col_head")}{concArrow("head")}
+                </th>
+                <th
+                  className={clsx("sortable", concSort?.key === "relation" && "sorted")}
+                  onClick={() => onConcSort("relation")}
+                  aria-sort={concSort?.key === "relation" ? (concSort.dir === 1 ? "ascending" : "descending") : undefined}
+                >
+                  {t(lang, "dep_conc_col_rel")}{concArrow("relation")}
+                </th>
+                <th
+                  className={clsx("sortable", concSort?.key === "source" && "sorted")}
+                  onClick={() => onConcSort("source")}
+                  aria-sort={concSort?.key === "source" ? (concSort.dir === 1 ? "ascending" : "descending") : undefined}
+                >
+                  {t(lang, "dep_conc_col_source")}{concArrow("source")}
+                </th>
+                <th aria-label="tree" />
+              </tr>
+            </thead>
+            <tbody>
+              {sortedRows.map((r) => (
+                <tr
+                  key={r.evidence_id}
+                  className={clsx(selectedTree === `${r.doc}:${r.sentence_idx}` && "selected")}
+                >
+                  <td className="num ctx">{r.left}</td>
+                  <td className="node-cell">
+                    <strong>{r.node}</strong> <PosChip pos={r.node_pos} />
+                  </td>
+                  <td className="num ctx">{r.right}</td>
+                  <td>{r.head}{r.head_pos && <span className="cat-meta"> ({r.head_pos})</span>}</td>
+                  <td><code className="dep-rel-label">{r.relation}</code></td>
+                  <td className="source" title={r.evidence_id}>
+                    {r.document_filename} · {t(lang, "dep_conc_sent_n").replace("{n}", String(r.sentence_idx + 1))}
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      className="btn-small"
+                      onClick={() => setSelectedTree(`${r.doc}:${r.sentence_idx}`)}
+                    >
+                      {t(lang, "dep_conc_view_tree")}
+                    </button>
+                  </td>
+                </tr>
               ))}
-            </select>
-          </label>
+            </tbody>
+          </table>
+        </div>
+      )}
+      {sortedRows.length > 0 && (
+        <div className="dep-conc-legend" aria-label={t(lang, "dep_conc_legend")}>
+          <span className="dep-conc-legend-title">{t(lang, "dep_conc_legend")}:</span>
+          {DEP_POS_LEGEND_ORDER.map((p) => (
+            <span key={p} className="pos-chip" style={{ color: DEP_POS_COLORS[p], borderColor: DEP_POS_COLORS[p] }}>
+              {p}
+            </span>
+          ))}
         </div>
       )}
       {tree.data && tree.data.tokens.length > 0 && (
@@ -1387,6 +1596,30 @@ function DiscoursePanel({ cid }: { cid: string }) {
     queryKey: ["discourse", cid, taxonomy, compareId],
     queryFn: () => api.discourse(cid, taxonomy, compareId || null),
   });
+  // v1.2.8 (review #1): the 503s (missing package / lexicon) used to be
+  // invisible in this panel — only the status-bar counter showed them.
+  // Surface the error inline and, for the persuasion lens, the resource
+  // health payload (doctor status) instead of a blanket failure.
+  const piHealth = useQuery({
+    queryKey: ["pi-health"],
+    queryFn: () => api.persuasionHealth(),
+    enabled: taxonomy === "persuasion_gong2026",
+    staleTime: 60 * 1000,
+  });
+  const httpError = (() => {
+    if (!result.isError) return null;
+    const raw = String(result.error ?? "");
+    const m = raw.match(/^HTTP (\d+): ([\s\S]*)$/);
+    const status = m ? Number(m[1]) : 0;
+    let detail = m ? m[2] : raw;
+    try {
+      const parsed = JSON.parse(detail);
+      if (parsed && typeof parsed.detail === "string") detail = parsed.detail;
+    } catch {
+      /* body was not JSON — show the raw message */
+    }
+    return { status, detail };
+  })();
   const taxonomies = useQuery({
     queryKey: ["discourse-taxonomies", cid],
     queryFn: () => api.discourseTaxonomies(cid),
@@ -1527,6 +1760,69 @@ function DiscoursePanel({ cid }: { cid: string }) {
         </div>
       )}
 
+      {/* v1.2.8 (review #1): engine errors are now visible in the panel */}
+      {httpError && (
+        <div className="lens-error-card" role="alert">
+          <strong>{t(lang, "discourse_error_title")}</strong>
+          {httpError.status > 0 && <span className="lens-error-status"> HTTP {httpError.status}</span>}
+          <p>{httpError.detail}</p>
+          <button type="button" className="btn-small" onClick={() => result.refetch()}>
+            {t(lang, "discourse_error_retry")}
+          </button>
+        </div>
+      )}
+
+      {/* v1.2.8 (review #1): persuasion resource health — what is active vs
+          degraded to neutral baselines, so the fallback choice is explicit */}
+      {taxonomy === "persuasion_gong2026" && piHealth.data && (
+        <div className="pi-health-card">
+          <div className="pi-health-head">
+            <strong>{t(lang, "pi_health_title")}</strong>
+            {piHealth.data.installed ? (
+              <span className="pi-health-badge ok">
+                {t(lang, "pi_health_installed")} {piHealth.data.version}
+              </span>
+            ) : (
+              <span className="pi-health-badge warn">{t(lang, "pi_health_not_installed")}</span>
+            )}
+          </div>
+          <p className="cat-meta">{piHealth.data.policy}</p>
+          {piHealth.data.installed && !piHealth.data.complete && (
+            <p className="cat-meta">
+              {t(lang, "pi_health_missing_n").replace("{n}", String(piHealth.data.missing.length))}
+            </p>
+          )}
+          {piHealth.data.installed && piHealth.data.complete && (
+            <p className="cat-meta">{t(lang, "pi_health_complete")}</p>
+          )}
+          {piHealth.data.installed && (
+            <ul className="pi-health-resources">
+              {Object.entries(piHealth.data.resources).map(([name, res]) => (
+                <li key={name}>
+                  <span className={clsx("pi-health-badge", res.available ? "ok" : "warn")}>
+                    {res.available ? "✓" : "○"} {name}
+                  </span>
+                  {!res.available && (
+                    <details className="pi-health-resource-detail">
+                      <summary>
+                        {t(lang, "pi_health_features")}
+                        {res.features?.length ? ` (${res.features.length})` : ""}
+                      </summary>
+                      <p>{res.detail}</p>
+                      {res.features?.length ? <p>{res.features.join(" · ")}</p> : null}
+                      {res.license_note ? <p className="cat-meta">{res.license_note}</p> : null}
+                    </details>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+          {!piHealth.data.installed && piHealth.data.install_hint && (
+            <p><code>{piHealth.data.install_hint}</code></p>
+          )}
+        </div>
+      )}
+
       {result.data && (
         <>
           <div className="result-meta">
@@ -1539,6 +1835,11 @@ function DiscoursePanel({ cid }: { cid: string }) {
               <> · {t(lang, "pi_scored_docs")}: <strong>{result.data.scored_documents}</strong></>
             )}
           </div>
+          {/* v1.2.8 (review #3): chart matching the table below - the same
+              rows, the same sort. The persuasion lens keeps its radar. */}
+          {!isPersuasion && rows.length > 0 && (
+            <DiscourseBarChart rows={rows.slice(0, 25)} hasCompare={hasCompare} />
+          )}
           {/* v1.2.7 (§4): radar over the 15 dimensions before the table */}
           {isPersuasion && result.data.categories && Object.keys(result.data.categories).length > 0 && (
             <PersuasionRadar categories={result.data.categories} />
@@ -2386,6 +2687,16 @@ function VectorKwicPanel({ cid }: { cid: string }) {
             {" · "}{t(lang, "vk_scanned").replace("{n}", String(data.scanned))}
             {data.note ? <span className="hint"> - {data.note}</span> : null}
           </div>
+          {data.timing && (
+            <div className="hint vk-timing">
+              {t(lang, "vk_timing")
+                .replace("{c}", String(data.timing.candidates_ms ?? "-"))
+                .replace("{e}", String(data.timing.embed_ms ?? "-"))
+                .replace("{s}", String(data.timing.search_ms ?? "-"))
+                .replace("{t}", String(data.timing.total_ms ?? "-"))
+                .replace("{b}", String(data.timing.similarity_backend ?? "numpy"))}
+            </div>
+          )}
 
           {data.lines.length === 0 ? (
             <div className="empty-state">{t(lang, "vk_no_lines")}</div>

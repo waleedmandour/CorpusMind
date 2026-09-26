@@ -240,6 +240,8 @@ async def concordance_vector(cid: str, body: VectorKwicRequest, request: Request
         "model": r.model,
         "query": r.query,
         "note": r.note,
+        # v1.2.8 (review #4): per-phase latency profile (embed vs search).
+        "timing": r.timing,
     }
 
 

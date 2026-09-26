@@ -7062,3 +7062,194 @@ html[dir="rtl"] .toggle-switch input:checked + .toggle-slider::before {
   background: var(--bg-subtle);
   padding: var(--space-3);
 }
+
+/* ------------------------------------------------------------------------ */
+/* v1.2.8 (review #2): dependency concordance table + POS colour legend      */
+/* ------------------------------------------------------------------------ */
+.pos-chip {
+  display: inline-block;
+  padding: 0 7px;
+  border-radius: 999px;
+  border: 1.4px solid currentColor;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+.dep-conc-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.dep-conc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+.dep-conc-table th,
+.dep-conc-table td {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  text-align: start;
+  vertical-align: middle;
+}
+.dep-conc-table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-subtle);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted, var(--text-subtle));
+}
+.dep-conc-table th.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+.dep-conc-table th.sortable:hover {
+  color: var(--brand-500);
+}
+.dep-conc-table tbody tr:hover {
+  background: color-mix(in srgb, var(--brand-500) 6%, transparent);
+}
+.dep-conc-table tbody tr.selected {
+  background: color-mix(in srgb, var(--brand-500) 12%, transparent);
+}
+.dep-conc-table .ctx {
+  color: var(--text-muted, var(--text-subtle));
+  font-variant-numeric: tabular-nums;
+}
+.dep-conc-table .node-cell strong {
+  font-weight: 700;
+}
+.dep-conc-table .source {
+  color: var(--text-muted, var(--text-subtle));
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+.dep-rel-label {
+  font-size: 12px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+}
+.dep-conc-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  align-items: center;
+  margin-block-start: var(--space-2);
+  font-size: 12px;
+}
+.dep-conc-legend-title {
+  color: var(--text-muted, var(--text-subtle));
+  font-weight: 600;
+}
+
+/* ------------------------------------------------------------------------ */
+/* v1.2.8 (review #1): lens error card + persuasion resource health card     */
+/* ------------------------------------------------------------------------ */
+.lens-error-card {
+  border: 1px solid color-mix(in srgb, var(--danger, #c53030) 45%, transparent);
+  border-left: 4px solid var(--danger, #c53030);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--danger, #c53030) 7%, transparent);
+  padding: var(--space-3);
+  margin-block: var(--space-3);
+}
+.lens-error-card p {
+  margin: var(--space-2) 0;
+  white-space: pre-wrap;
+}
+.lens-error-status {
+  font-weight: 700;
+  color: var(--danger, #c53030);
+}
+.pi-health-card {
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--brand-500);
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+  padding: var(--space-3);
+  margin-block: var(--space-3);
+  font-size: 13.5px;
+}
+.pi-health-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.pi-health-badge {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.pi-health-badge.ok {
+  background: color-mix(in srgb, var(--success, #2d8a4e) 14%, transparent);
+  color: var(--success, #2d8a4e);
+  border: 1px solid color-mix(in srgb, var(--success, #2d8a4e) 45%, transparent);
+}
+.pi-health-badge.warn {
+  background: color-mix(in srgb, var(--warning, #b7791f) 14%, transparent);
+  color: var(--warning, #b7791f);
+  border: 1px solid color-mix(in srgb, var(--warning, #b7791f) 45%, transparent);
+}
+.pi-health-resources {
+  list-style: none;
+  padding: 0;
+  margin: var(--space-2) 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.pi-health-resource-detail {
+  margin-inline-start: var(--space-2);
+  font-size: 12.5px;
+}
+.pi-health-resource-detail p {
+  margin: 4px 0;
+}
+
+/* ------------------------------------------------------------------------ */
+/* v1.2.8 (review #3): discourse bar chart (single + diverging)              */
+/* ------------------------------------------------------------------------ */
+.discourse-chart-wrap {
+  margin: var(--space-3) 0;
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+}
+.discourse-chart-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-muted, var(--text-subtle));
+  margin-block-end: var(--space-2);
+}
+.discourse-chart-label {
+  font-size: 12px;
+  fill: var(--text, currentColor);
+}
+.discourse-chart-value {
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  fill: var(--text-muted, var(--text-subtle));
+}
+.discourse-chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  margin-block-start: var(--space-2);
+  font-size: 12px;
+}
+
+/* v1.2.8 (review #4): vector KWIC latency profile line */
+.vk-timing {
+  margin-block-start: 2px;
+}

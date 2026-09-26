@@ -25,10 +25,15 @@ Honesty rules enforced here:
   ("Run: ollama pull bge-m3") instead of a cryptic 500.
 - Vectors are cached per (corpus, line key, model) in SQLite; the cache is
   only reused when the model name matches exactly.
+- v1.2.8 (review #4): the similarity search is vectorised (numpy matrix
+  product, not a per-line Python loop), and every response carries a
+  ``timing`` breakdown (query embed / context embeds / similarity search)
+  so latency is profiled, not guessed at.
 """
 from __future__ import annotations
 
 import json
+import time
 from dataclasses import dataclass, field
 
 from sqlalchemy import select
@@ -117,7 +122,7 @@ def _normalize_for_embedding(text: str) -> str:
 
 
 def cosine(a: list[float], b: list[float]) -> float:
-    """Pure-Python cosine similarity (no numpy dependency on this path)."""
+    """Pure-Python cosine similarity (kept for single-pair callers/tests)."""
     if not a or not b or len(a) != len(b):
         return 0.0
     dot = 0.0
@@ -130,6 +135,49 @@ def cosine(a: list[float], b: list[float]) -> float:
     if na == 0.0 or nb == 0.0:
         return 0.0
     return dot / ((na ** 0.5) * (nb ** 0.5))
+
+
+def cosine_batch(qvec: list[float], vectors: list[list[float]]) -> list[float]:
+    """Vectorised cosine similarity: one query vector vs a stack of candidates.
+
+    v1.2.8 (review #4): the similarity search previously ran a pure-Python
+    loop per candidate line — for 1,500 cached bge-m3 vectors (1024-dim) that
+    is ~1.5M multiply-adds in interpreted bytecode, measurably slower than
+    the embedding HTTP call on warm caches. A single numpy matrix product
+    does the same work in compiled code. Vectors whose dimensionality does
+    not match the query (stale cache rows from a different model revision)
+    score 0.0 instead of crashing the batch.
+    """
+    if not vectors:
+        return []
+    try:
+        import numpy as np
+    except ImportError:  # pragma: no cover — numpy is a hard engine dependency
+        return [cosine(qvec, v) for v in vectors]
+
+    q = np.asarray(qvec, dtype=np.float64)
+    qn = float(np.linalg.norm(q))
+    if qn == 0.0:
+        return [0.0] * len(vectors)
+
+    aligned: list[list[float]] = []
+    aligned_idx: list[int] = []
+    sims = [0.0] * len(vectors)
+    for i, v in enumerate(vectors):
+        if v and len(v) == len(qvec):
+            aligned.append(v)
+            aligned_idx.append(i)
+    if not aligned:
+        return sims
+
+    M = np.asarray(aligned, dtype=np.float64)
+    norms = np.linalg.norm(M, axis=1)
+    dots = M @ q
+    with np.errstate(divide="ignore", invalid="ignore"):
+        row_sims = np.where(norms > 0.0, dots / (norms * qn), 0.0)
+    for row, i in enumerate(aligned_idx):
+        sims[i] = float(row_sims[row])
+    return sims
 
 
 # --------------------------------------------------------------------------- #
@@ -294,6 +342,11 @@ class VectorKwicResult:
         "vectors (higher = semantically closer to the query). It is not a "
         "confidence score and carries no certainty claim."
     )
+    # v1.2.8 (review #4): per-phase latency profile (milliseconds) so the
+    # bottleneck — embedding generation vs similarity search — is measured,
+    # not guessed. Search runs vectorised (numpy); embedding is an HTTP call
+    # to the model provider (GPU/CPU execution is the provider's domain).
+    timing: dict = field(default_factory=dict)
 
 
 async def vector_kwic(
@@ -327,6 +380,7 @@ async def vector_kwic(
     """
     embed_model = resolve_embed_model(model)
 
+    t_start = time.perf_counter()
     query_text = _normalize_for_embedding(query) if normalize_arabic else query
 
     # ------------------------------------------------------------------ #
@@ -341,6 +395,7 @@ async def vector_kwic(
         )
         candidates = conc.lines
         keys = [_line_key(l.line_id, window, "kwic") for l in candidates]
+        t_candidates = time.perf_counter()
         cached = await _load_cached_vectors(session, corpus_id, embed_model, keys)
 
         to_embed: list[str] = []
@@ -362,17 +417,27 @@ async def vector_kwic(
 
         vectors = {**cached, **new_vecs}
         qvec = (await _embed_texts(provider, [query_text], embed_model))[0]
+        t_embed = time.perf_counter()
 
+        # v1.2.8: vectorised similarity search (numpy matrix product).
+        ordered_vecs = [vectors.get(key) or [] for key in keys]
+        sims = cosine_batch(qvec, ordered_vecs)
         scored: list[tuple[float, object]] = []
-        for line, key in zip(candidates, keys, strict=False):
-            vec = vectors.get(key)
-            if not vec:
-                continue
-            sim = cosine(qvec, vec)
+        for line, sim in zip(candidates, sims, strict=False):
             if sim >= min_similarity:
                 scored.append((sim, line))
         scored.sort(key=lambda p: p[0], reverse=True)
         scored = scored[:top_k]
+        t_search1 = time.perf_counter()
+        timing = {
+            "candidates_ms": round((t_candidates - t_start) * 1000, 1),
+            "embed_ms": round((t_embed - t_candidates) * 1000, 1),
+            "search_ms": round((t_search1 - t_embed) * 1000, 1),
+            "total_ms": round((t_search1 - t_start) * 1000, 1),
+            "similarity_backend": "numpy",
+            "candidates_cached": len(cached),
+            "candidates_embedded": len(to_embed),
+        }
 
         lines_out = []
         for sim, line in scored:
@@ -399,6 +464,7 @@ async def vector_kwic(
             query={"query": query, "node": node.strip(), "level": level,
                    "window": window, "top_k": top_k, "min_similarity": min_similarity,
                    "normalize_arabic": normalize_arabic},
+            timing=timing,
         )
 
     # ------------------------------------------------------------------ #
@@ -464,6 +530,7 @@ async def vector_kwic(
     scanned = len(sentences)
 
     keys = [_line_key(f"{d}:{s}", 0, "sent") for d, s in sentences]
+    t_candidates = time.perf_counter()
     cached = await _load_cached_vectors(session, corpus_id, embed_model, keys)
 
     to_embed: list[str] = []
@@ -485,17 +552,27 @@ async def vector_kwic(
 
     vectors = {**cached, **new_vecs}
     qvec = (await _embed_texts(provider, [query_text], embed_model))[0]
+    t_embed = time.perf_counter()
 
+    # v1.2.8: vectorised similarity search (numpy matrix product).
+    ordered_vecs = [vectors.get(key) or [] for key in keys]
+    sims = cosine_batch(qvec, ordered_vecs)
     scored: list[tuple[float, tuple, dict]] = []
-    for (sent_key, entry), key in zip(sentences.items(), keys, strict=False):
-        vec = vectors.get(key)
-        if not vec:
-            continue
-        sim = cosine(qvec, vec)
+    for (sent_key, entry), sim in zip(sentences.items(), sims, strict=False):
         if sim >= min_similarity:
             scored.append((sim, sent_key, entry))
     scored.sort(key=lambda p: p[0], reverse=True)
     scored = scored[:top_k]
+    t_search1 = time.perf_counter()
+    timing = {
+        "candidates_ms": round((t_candidates - t_start) * 1000, 1),
+        "embed_ms": round((t_embed - t_candidates) * 1000, 1),
+        "search_ms": round((t_search1 - t_embed) * 1000, 1),
+        "total_ms": round((t_search1 - t_start) * 1000, 1),
+        "similarity_backend": "numpy",
+        "candidates_cached": len(cached),
+        "candidates_embedded": len(to_embed),
+    }
 
     lines_out = []
     for sim, _key, entry in scored:
@@ -521,4 +598,5 @@ async def vector_kwic(
         model=embed_model,
         query={"query": query, "top_k": top_k, "min_similarity": min_similarity,
                "normalize_arabic": normalize_arabic, "scan_cap": SENTENCE_SCAN_CAP},
+        timing=timing,
     )

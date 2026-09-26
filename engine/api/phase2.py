@@ -251,6 +251,52 @@ async def sentence_tree(
     return asdict(r)
 
 
+# v1.2.8 (review #2): KWIC-style concordance over dependency hits.
+class DepConcordanceRequest(BaseModel):
+    node_query: str = Field("", description="Node word/lemma (concordancer semantics: wildcard and regex supported).")
+    level: str = Field("word", description="word | lemma")
+    regex: bool = False
+    case_sensitive: bool = False
+    relation: str | None = Field(None, description="Filter by the node's base UD relation (raw subtypes match too).")
+    pos: str | None = Field(None, description="Filter by the node's UPOS tag (e.g. NOUN, VERB).")
+    window: int = Field(6, ge=1, le=20)
+    limit: int = Field(100, ge=1, le=1000)
+
+
+@router.post("/corpora/{cid}/dep-concordance")
+async def dep_concordance(
+    cid: str, body: DepConcordanceRequest, session: AsyncSession = Depends(get_session)
+) -> dict:
+    """One row per dependency hit: left | node | right | head | relation | source."""
+    from discourse.service import compute_dep_concordance
+
+    if not await session.get(Corpus, cid):
+        raise HTTPException(404, "Corpus not found")
+    try:
+        r = await compute_dep_concordance(
+            session,
+            cid,
+            node_query=body.node_query,
+            level=body.level,
+            regex=body.regex,
+            case_sensitive=body.case_sensitive,
+            relation=body.relation,
+            pos=body.pos,
+            window=body.window,
+            limit=body.limit,
+        )
+    except ValueError as e:
+        msg = str(e)
+        if msg.startswith("dep_concordance_empty_query:"):
+            raise HTTPException(
+                422,
+                "Give a node query, a relation filter, or a POS filter - "
+                "at least one is required.",
+            ) from e
+        raise HTTPException(400, msg) from e
+    return asdict(r)
+
+
 # --------------------------------------------------------------------------- #
 # §8.15 Discourse analysis — multi-taxonomy (v1.2.6)
 # --------------------------------------------------------------------------- #
@@ -280,6 +326,67 @@ async def discourse_taxonomies(cid: str) -> dict:
     from discourse.service import discourse_taxonomy_list
 
     return {"taxonomies": discourse_taxonomy_list()}
+
+
+# v1.2.8 (review #1): resource health for the optional persuasion-index lens.
+# This is a STATUS endpoint (always 200): it tells the UI whether the package
+# is installed and, when it is, which optional resources are active versus
+# degraded to neutral baselines - instead of a blanket "not installed" error.
+@router.get("/discourse/persuasion/health")
+async def persuasion_health() -> dict:
+    """persuasion-index resource status (mirrors `persuasion-index doctor --json`)."""
+    from discourse.service import PERSUASION_CITATION
+
+    try:
+        import persuasion_index
+    except ImportError:
+        return {
+            "installed": False,
+            "version": None,
+            "install_hint": (
+                "pip install persuasion-index (Apache-2.0, Wang & Gong 2026) "
+                "or pip install -e '.[persuasion]' in the engine directory"
+            ),
+            "resources_required": False,
+            "policy": (
+                "The lens ships on the package's bundled lexicons; optional "
+                "resources only refine specific subfeatures."
+            ),
+            "complete": False,
+            "missing": [],
+            "resources": {},
+            "citation": PERSUASION_CITATION,
+        }
+
+    import importlib.metadata
+
+    from persuasion_index import check_resources, missing_resources
+
+    try:
+        version = persuasion_index.__version__ or importlib.metadata.version(
+            "persuasion-index"
+        )
+    except Exception:  # pragma: no cover — version metadata always present in practice
+        version = None
+
+    resources = check_resources()
+    missing = missing_resources()
+    return {
+        "installed": True,
+        "version": version,
+        "install_hint": None,
+        "resources_required": False,
+        "policy": (
+            "Scores are computed with the bundled lexicons; optional resources "
+            "marked unavailable degrade their subfeatures to neutral baselines. "
+            "Dimension comparisons across texts are only valid when scored with "
+            "the same PI version and resource configuration."
+        ),
+        "complete": len(missing) == 0,
+        "missing": missing,
+        "resources": resources,
+        "citation": PERSUASION_CITATION,
+    }
 
 
 @router.post("/corpora/{cid}/discourse")

@@ -1721,6 +1721,189 @@ async def compute_sentence_tree(
 
 
 # --------------------------------------------------------------------------- #
+# §8.15a Dependency concordance (v1.2.8, review #2)
+#
+# One row per dependency hit: left context | node | right context | head |
+# relation | source. This is the KWIC-style layout familiar from Sketch
+# Engine / AntConc, applied to dependency hits, so the syntax panel no
+# longer depends on a per-instance sentence dropdown.
+# --------------------------------------------------------------------------- #
+
+DEP_CONCORDANCE_WINDOW = 6
+
+DEP_CONCORDANCE_CITATION = (
+    "Rows come from the corpus dependency parses (UD v2; Nivre et al. 2020, "
+    "https://universaldependencies.org). The node is colour-coded by "
+    "part of speech following the displaCy convention; Relation is the "
+    "node's base UD relation, with the raw subtype in parentheses when the "
+    "parse carries one."
+)
+
+
+@dataclass
+class DepConcordanceResult:
+    rows: list[dict]  # one row per hit (see compute_dep_concordance)
+    total: int
+    node_query: str
+    relation: str | None
+    pos: str | None
+    citation: str = DEP_CONCORDANCE_CITATION
+
+
+def _dep_matcher(
+    node_query: str, *, level: str, regex: bool, case_sensitive: bool
+):
+    """Build a token predicate with concordancer semantics: whole-token
+    match (word/lemma), ``*``/``?`` wildcards, or Python regex."""
+    import fnmatch
+    import re
+
+    if not node_query:
+        return None
+    if regex:
+        pattern = re.compile(node_query, 0 if case_sensitive else re.IGNORECASE)
+
+        def matches(tok: dict) -> bool:
+            hay = tok.get("text") if level == "word" else (tok.get("lemma") or "")
+            return bool(hay) and bool(pattern.search(hay))
+
+        return matches
+
+    needle = node_query if case_sensitive else node_query.lower()
+    if "*" in needle or "?" in needle:
+        rx = re.compile(fnmatch.translate(needle), 0 if case_sensitive else re.IGNORECASE)
+
+        def matches(tok: dict) -> bool:
+            hay = tok.get("text") if level == "word" else (tok.get("lemma") or "")
+            return bool(hay) and bool(rx.fullmatch(hay))
+
+        return matches
+
+    def matches(tok: dict) -> bool:
+        hay = tok.get("text") if level == "word" else (tok.get("lemma") or "")
+        if not hay:
+            return False
+        return hay if case_sensitive else hay.lower() == needle
+
+    return matches
+
+
+async def compute_dep_concordance(
+    session: AsyncSession,
+    corpus_id: str,
+    *,
+    node_query: str = "",
+    level: str = "word",
+    regex: bool = False,
+    case_sensitive: bool = False,
+    relation: str | None = None,
+    pos: str | None = None,
+    window: int = DEP_CONCORDANCE_WINDOW,
+    limit: int = 100,
+) -> DepConcordanceResult:
+    """Concordance over dependency hits (v1.2.8, review #2).
+
+    Every token whose base UD relation and/or surface form matches the
+    filters becomes one row: left context | node | right context | head
+    token | relation label | source reference. Row order is deterministic
+    (document, sentence, token). ``relation`` matches the node's base UD
+    relation OR its raw subtype (so ``nsubj`` also catches ``nsubj:pass``).
+    """
+    from nlp.ud_relations import base_relation
+    from storage.models import Document as DocumentModel
+
+    version_id = await _latest_version_id(session, corpus_id)
+    if not version_id:
+        return DepConcordanceResult(
+            rows=[], total=0, node_query=node_query, relation=relation, pos=pos
+        )
+
+    matcher = _dep_matcher(
+        node_query.strip(), level=level, regex=regex, case_sensitive=case_sensitive
+    )
+    if matcher is None and not (relation and relation.strip()) and not (pos and pos.strip()):
+        raise ValueError("dep_concordance_empty_query: give a node query, a relation, or a POS")
+
+    sentences = await _load_parses(session, version_id)
+    sentences.sort(key=lambda s: (s[0]["doc"], s[0]["sent"]) if s else ("", 0))
+
+    rel_filter = relation.strip() if relation and relation.strip() else None
+    pos_filter = pos.strip().upper() if pos and pos.strip() else None
+
+    rows: list[dict] = []
+    total = 0
+    for sent_tokens in sentences:
+        if not sent_tokens:
+            continue
+        surface = [t for t in sent_tokens if (t.get("pos") or "") != "SPACE"]
+        if not surface:
+            continue
+        for i, tok in enumerate(surface):
+            tok_rel_base = base_relation(tok.get("rel"))
+            if rel_filter and rel_filter not in (tok_rel_base, tok.get("rel") or ""):
+                continue
+            if pos_filter and (tok.get("pos") or "").upper() != pos_filter:
+                continue
+            if matcher is not None and not matcher(tok):
+                continue
+            total += 1
+            if len(rows) >= limit:
+                continue  # keep counting, stop storing
+
+            left = " ".join(t["text"] for t in surface[max(0, i - window) : i])
+            right = " ".join(t["text"] for t in surface[i + 1 : i + 1 + window])
+
+            raw_head = tok.get("head") or 0
+            head_text, head_pos = "ROOT", ""
+            if raw_head > 0 and raw_head != tok["idx"] + 1:
+                head = next((t for t in sent_tokens if t["idx"] == raw_head - 1), None)
+                if head is not None and (head.get("pos") or "") != "SPACE":
+                    head_text = head.get("text") or ""
+                    head_pos = head.get("pos") or ""
+
+            rel_full = tok.get("rel") or ""
+            rel_label = tok_rel_base
+            if rel_full and rel_full != tok_rel_base:
+                rel_label = f"{tok_rel_base} ({rel_full})"
+
+            rows.append(
+                {
+                    "evidence_id": f"{tok['doc']}:{tok['sent']}:{tok['idx']}",
+                    "document_filename": "",
+                    "doc": tok["doc"],
+                    "sentence_idx": tok["sent"],
+                    "token_idx": tok["idx"],
+                    "left": left,
+                    "node": tok.get("text") or "",
+                    "node_pos": tok.get("pos") or "",
+                    "node_lemma": tok.get("lemma") or "",
+                    "relation": rel_label,
+                    "head": head_text,
+                    "head_pos": head_pos,
+                    "right": right,
+                }
+            )
+
+    # Filenames in one extra query (keeps the row builder a pure function).
+    if rows:
+        doc_ids = {r["doc"] for r in rows}
+        name_rows = (
+            await session.execute(
+                select(DocumentModel.id, DocumentModel.filename).where(
+                    DocumentModel.id.in_(doc_ids)
+                )
+            )
+        ).all()
+        names = {d_id: fname for d_id, fname in name_rows}
+        for r in rows:
+            r["document_filename"] = names.get(r["doc"], r["doc"])
+
+    return DepConcordanceResult(
+        rows=rows, total=total, node_query=node_query, relation=relation, pos=pos
+    )
+
+
+# --------------------------------------------------------------------------- #
 # §8.15b SFG Transitivity & Modality lens (v1.2.7, §2)
 #
 # Halliday & Matthiessen (2014) transitivity process types and the
@@ -2018,32 +2201,117 @@ PERSUASION_CITATION = (
     "degrades those subfeatures to neutral baselines."
 )
 
-# Our grouping of the 15 PI dimensions onto the classical rhetorical
-# triad for the radar chart — an analysis-facing interpretation, not a
-# claim about the PI paper's own taxonomy. 5 dimensions per family.
+# Grouping of the 15 PI dimensions onto the classical rhetorical triad,
+# grounded against the package's own dimension inventory (persuasion-index
+# 0.3.0, verified against PyPI/GitHub): Logos 5, Ethos 4, Pathos 6. This is
+# an analysis-facing interpretation, not a claim about the PI paper's own
+# taxonomy — but the membership counts below ARE the package's, so the UI
+# can never silently drop or misfile a dimension.
 PI_DIMENSION_FAMILIES: dict[str, str] = {
+    # Logos (5)
     "Evidence": "logos",
-    "Specificity": "logos",
     "Logic/Cohesion": "logos",
     "Argumentation": "logos",
+    "Specificity": "logos",
     "Opponent’s View": "logos",
+    # Ethos (4)
     "Authority/Credibility": "ethos",
     "Politeness": "ethos",
-    "Reciprocity": "ethos",
     "Commitment": "ethos",
-    "Engagement": "ethos",
+    "Style": "ethos",
+    # Pathos (6)
     "Sentiment": "pathos",
     "Impact": "pathos",
+    "Engagement": "pathos",
+    "Reciprocity": "pathos",
     "Scarcity/Urgency": "pathos",
     "Propaganda": "pathos",
-    "Style": "pathos",
 }
+
+# Canonical 15-dimension inventory. Every lens run emits ALL of these —
+# a dimension the scorer returns no mean for shows as a 0 baseline instead
+# of being silently dropped from the table/radar.
+PI_DIMENSIONS: tuple[str, ...] = tuple(PI_DIMENSION_FAMILIES)
 
 PI_DISCLAIMER = (
     "The Persuasion Index measures rhetorical STRATEGIES (how a text "
     "persuades), not whether its arguments are TRUE. A high score is not "
     "a quality verdict and a low score is not a refutation."
 )
+
+
+def _log_pi_resource_status() -> None:
+    """Log the persuasion-index `doctor` resource status (v1.2.8).
+
+    The lens deliberately ships on the package's bundled lexicons: optional
+    resources (spaCy NER, concreteness ratings, LIWC, NRC-VAD) only refine
+    specific subfeatures and degrade to neutral baselines when absent. Each
+    run logs which ones are missing so the choice is visible in the engine
+    log, and `GET /discourse/persuasion/health` reports the same payload to
+    the UI.
+    """
+    try:
+        from persuasion_index import check_resources
+
+        resources = check_resources()
+        missing = sorted(k for k, v in resources.items() if not v.get("available"))
+        if missing:
+            log.info(
+                "persuasion_optional_resources_missing",
+                missing=missing,
+                policy="shipping on bundled lexicons; affected subfeatures use neutral baselines",
+            )
+        else:
+            log.info("persuasion_optional_resources_complete")
+    except Exception as e:  # pragma: no cover — diagnostics must never kill the lens
+        log.warning("persuasion_resource_check_failed", error=str(e))
+
+
+async def _pi_dimension_means(docs: list[tuple[str, str, str]]) -> list[dict[str, float]]:
+    """Return per-document {dimension: mean} maps using persuasion-index.
+
+    Multi-document corpora go through ``score_batch`` (index-preserving, one
+    pass over the package's vectorised pipeline); single documents use
+    ``score``. If the batch path fails for any reason the loop degrades to
+    per-document ``score`` calls so one bad document never kills the lens.
+    """
+    from persuasion_index import score as pi_score
+
+    doc_ids = [d[0] for d in docs]
+    texts = [d[2] for d in docs]
+    out: list[dict[str, float]] = [{} for _ in docs]
+
+    if len(texts) > 1:
+        try:
+            from persuasion_index import score_batch as pi_score_batch
+
+            _subfeatures, meta = pi_score_batch(texts)
+            # meta is index-aligned; columns are '<dimension>.mean' floats.
+            for i in range(len(doc_ids)):
+                row = meta.iloc[i]
+                for dim in PI_DIMENSIONS:
+                    col = f"{dim}.mean"
+                    if col in row.index:
+                        val = row[col]
+                        if val is not None and val == val:  # NaN-safe
+                            out[i][dim] = float(val)
+            return out
+        except Exception as e:
+            log.warning(
+                "persuasion_score_batch_failed_falling_back", docs=len(texts), error=str(e)
+            )
+
+    for i, text in enumerate(texts):
+        try:
+            result = pi_score(text)
+        except Exception as e:  # per-doc resilience
+            log.warning("persuasion_score_failed", doc=doc_ids[i], error=str(e))
+            continue
+        for dim, sub in result.items():
+            mean = sub.get("mean") if isinstance(sub, dict) else None
+            if mean is not None:
+                out[i][dim] = float(mean)
+    return out
 
 
 async def compute_persuasion_discourse_analysis(
@@ -2059,16 +2327,20 @@ async def compute_persuasion_discourse_analysis(
     Documents are iterated in id order (deterministic); up to ``max_docs``
     documents are scored and the count is reported so aggregation scope is
     never hidden. Examples cite the highest-scoring document per dimension.
+    All 15 canonical dimensions are always present in the output — a
+    dimension with no score shows its 0 baseline instead of being dropped.
     """
     from storage.models import Document as DocumentModel
 
     try:
-        from persuasion_index import score as pi_score
+        from persuasion_index import score as pi_score  # noqa: F401 — presence check
     except ImportError as e:  # optional dependency — honest 503 upstream
         raise ValueError(
             "persuasion_index_missing: install the optional dependency with "
             "`pip install persuasion-index` (or `pip install -e \".[persuasion]\"`)"
         ) from e
+
+    _log_pi_resource_status()
 
     version_id = await _latest_version_id(session, corpus_id)
     total_tokens = await _corpus_size(session, version_id) if version_id else 0
@@ -2082,30 +2354,29 @@ async def compute_persuasion_discourse_analysis(
     docs = (await session.execute(stmt)).all()
     docs = [(d_id, name, text) for d_id, name, text in docs if (text or "").strip()]
 
-    dim_scores: dict[str, list[float]] = defaultdict(list)
+    dim_scores: dict[str, list[float]] = {dim: [] for dim in PI_DIMENSIONS}
     top_docs: dict[str, tuple[float, str, str]] = {}  # dim -> (score, doc_id, filename)
     scored_docs = 0
-    for d_id, name, text in docs:
-        try:
-            result = pi_score(text)
-        except Exception as e:  # per-doc resilience: one bad doc never kills the lens
-            log.warning("persuasion_score_failed", doc=d_id, error=str(e))
-            continue
+
+    per_doc_means = await _pi_dimension_means(docs)
+    for (d_id, name, _text), means in zip(docs, per_doc_means, strict=False):
+        if not means:
+            continue  # every scoring path failed for this document
         scored_docs += 1
-        for dim, sub in result.items():
-            mean = sub.get("mean") if isinstance(sub, dict) else None
-            if mean is None:
+        for dim in PI_DIMENSIONS:
+            if dim not in means:
                 continue
-            dim_scores[dim].append(float(mean))
+            mean = means[dim]
+            dim_scores[dim].append(mean)
             top = top_docs.get(dim)
-            if top is None or float(mean) > top[0]:
-                top_docs[dim] = (float(mean), d_id, name)
+            if top is None or mean > top[0]:
+                top_docs[dim] = (mean, d_id, name)
 
     categories: dict[str, dict] = {}
-    for dim in sorted(dim_scores):
+    for dim in PI_DIMENSIONS:
         scores = dim_scores[dim]
-        index = round(sum(scores) / len(scores) * 100, 1)
-        family = PI_DIMENSION_FAMILIES.get(dim, "logos")
+        index = round(sum(scores) / len(scores) * 100, 1) if scores else 0.0
+        family = PI_DIMENSION_FAMILIES[dim]
         top = top_docs.get(dim)
         categories[f"pi.{family}.{dim}"] = {
             "freq": index,  # 0–100 index, not a token count — see the UI note
