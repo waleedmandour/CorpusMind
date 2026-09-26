@@ -15,9 +15,12 @@ from discourse.service import (
     compute_metaphor_candidates,
     compute_ngrams,
     compute_pos_analysis,
-    compute_sentiment,
     compute_vocab_profile,
 )
+
+# v1.2.8 (review #8): the layered sentiment implementation moved to its own
+# package (sentiment.service); the endpoint contract is unchanged.
+from sentiment.service import compute_sentiment
 from storage.models import Corpus
 from storage.session import get_session
 

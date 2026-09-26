@@ -73,6 +73,17 @@ dependencies = [
     # Export
     "openpyxl>=3.1.5",
     "reportlab>=4.2.5",
+    # v1.2.8 (review #6): the Persuasion Index lens is a SHIPPED feature of
+    # the packaged desktop app, so persuasion-index must be a MAIN
+    # dependency. In v1.2.7/v1.2.8 it lived only in the [persuasion] extra
+    # while the release workflow ran plain `pip install -e .`, so the
+    # packaged engine never contained the package and every lens request
+    # 503ed ("The persuasion-index package is not installed").
+    # Pinned (==, not >=) — PI's docs note that dimension comparisons
+    # across texts are only valid when scored with the same PI version +
+    # lexicon + resource configuration. The [persuasion] extra is kept as
+    # an alias for `pip install -e ".[persuasion]"` users.
+    "persuasion-index==0.3.0",
     # Web framework support — python-multipart is needed by FastAPI for
     # FormData / file uploads (UploadFile). Without it, POST /corpora/{cid}/documents
     # crashes with a 500. cryptography is needed by httpx for HTTPS to some
@@ -89,12 +100,9 @@ arabic = [
     "camel-tools>=1.5.5",
 ]
 # v1.2.7 (§4): Persuasion Index lens (Wang & Gong 2026, Apache-2.0).
-# OPTIONAL on purpose — pandas + wordfreq + vaderSentiment add real weight
-# to the PyInstaller sidecar, so the desktop bundle does not ship it by
-# default; the engine degrades to an honest 503 when it is absent.
-# v1.2.8 (review #5): pinned (==, not >=) — PI's own docs note that dimension
-# comparisons across texts are only valid when scored with the same PI
-# version + lexicon + resource configuration.
+# v1.2.8 (review #6): promoted to MAIN dependencies above — the packaged
+# engine must ship the lens, so the extra is now only a compatibility
+# alias. Still pinned to 0.3.0 (see the main-dependency comment).
 persuasion = [
     "persuasion-index==0.3.0",
 ]

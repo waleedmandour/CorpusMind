@@ -332,6 +332,10 @@ async def public_settings() -> dict:
         # available (key presence only — never the key itself).
         "gemini_available": bool(s.gemini_api_key),
         "gemini_model": s.gemini_model if s.gemini_api_key else "",
+        # v1.2.8 (review #8): where the engine looks for user-configured
+        # emotion lexicons (NRC EmoLex converted TSVs). Visible so users can
+        # verify the configured path; empty means the data-dir default.
+        "sentiment_lexicon_dir": s.sentiment_lexicon_dir,
     }
 
 

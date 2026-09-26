@@ -847,7 +847,44 @@ export interface SentimentResult {
   negative: number;
   neutral: number;
   avg_score: number;
-  timeline: Array<{ doc: string; sent: number; score: number; pos_hits: number; neg_hits: number }>;
+  timeline: Array<{
+    doc: string;
+    sent: number;
+    score: number;
+    pos_hits: number;
+    neg_hits: number;
+    dominant_emotion?: string | null;
+    attitude?: string[];
+  }>;
+  // v1.2.8 (review #8): layered, Appraisal-grounded analysis (additive).
+  language?: string;
+  method?: string;
+  framework_citation?: string;
+  lexicons?: {
+    emolex: {
+      available: boolean;
+      source: string;
+      coverage: "full" | "starter";
+      expected_path: string;
+      upgrade_hint: string;
+    };
+    appraisal_cues: { available: boolean; categories: string[]; note: string };
+  };
+  appraisal?: {
+    available: boolean;
+    categories: Record<
+      string,
+      { count: number; sentence_coverage: number; group: string }
+    >;
+  };
+  emotions?: Record<string, number>;
+  emotion_mentions?: Record<string, number>;
+  top_emotional?: Array<{
+    lemma: string;
+    freq: number;
+    polarity: number;
+    emotions: string[];
+  }>;
 }
 
 export interface MetaphorCandidate {

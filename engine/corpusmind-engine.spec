@@ -99,7 +99,45 @@ _hidden_imports = [
     "httpx",                  # AI provider HTTP client
     "multipart",              # FastAPI form data parsing (python-multipart)
     "charset_normalizer.md",  # charset_normalizer sub-module
+    # v1.2.8 (review #6): persuasion-index stack. The package's public API
+    # is imported LAZILY (persuasion_index/__init__ uses import_module), so
+    # PyInstaller's static analysis cannot see the real modules — they must
+    # be listed explicitly. The wheel also ships top-level companion
+    # modules (persuasion_profile, persuasion_runner, PI_score_generator,
+    # pi_config, helper_features) that are imported by bare module name.
+    # Hard deps of the wheel: pandas (imported at api.py import time),
+    # wordfreq (ships msgpack data files — collected below),
+    # vaderSentiment; numpy is already a hidden import above.
+    "persuasion_index",
+    "persuasion_index.api",
+    "persuasion_index.cli",
+    "persuasion_index.resources",
+    "persuasion_index.liwc",
+    "persuasion_profile",
+    "persuasion_runner",
+    "PI_score_generator",
+    "pi_config",
+    "pandas",
+    "wordfreq",
+    "vaderSentiment",
+    "vaderSentiment.vaderSentiment",
 ]
+
+# v1.2.8 (review #6): pull in the persuasion-index package's own data
+# (bundled lexicons) and helper_features submodules, plus wordfreq's
+# per-language frequency data. Guarded like en_core_web_sm: a build venv
+# without the package still produces a bundle, and the release workflow's
+# post-build smoke gate fails the release if the lens ends up missing.
+try:
+    _hidden_imports += collect_submodules("helper_features")
+    _hidden_imports += collect_submodules("persuasion_index")
+    _hidden_imports += collect_submodules("wordfreq")
+    _datas += collect_data_files("persuasion_index")
+    _datas += collect_data_files("wordfreq")
+except Exception:
+    # persuasion-index not installed in this build venv — non-fatal here,
+    # but the release smoke gate will refuse to publish such a bundle.
+    pass
 
 # Data files to bundle (non-Python assets the engine reads at runtime).
 # We include the reference-data/ directory so frameworks + wordlists ship
@@ -161,7 +199,11 @@ a = Analysis(
         "opencv-python",
         "sklearn",
         "scikit-learn",
-        "pandas",
+        # NOTE: "pandas" was removed from this exclude list in v1.2.8
+        # (review #6) — persuasion_index.api imports pandas at module
+        # scope, so excluding it crashed the Persuasion Index lens inside
+        # the packaged engine. torch/tensorflow/keras stay excluded: the
+        # engine has no runtime use for them.
         "torch",
         "torchvision",
         "tensorflow",

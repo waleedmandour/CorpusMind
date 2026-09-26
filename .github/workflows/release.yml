@@ -226,6 +226,16 @@ jobs:
             Write-Host "OK: Versioned model dir: $($versionedDir.Name)" -ForegroundColor Green
           }
 
+      # v1.2.8 (review #6): launch the bundled engine and assert that the
+      # resources behind the two features that regressed in the shipped
+      # v1.2.8 actually resolve inside THIS bundle: the USAS semantic
+      # lexicon (503ed in the field), the AWL wordlist (silently missing)
+      # and the persuasion-index package (503ed in the field). A failure
+      # here fails the release instead of shipping another dark feature.
+      - name: Smoke-test engine sidecar (USAS + AWL + persuasion-index)
+        shell: pwsh
+        run: scripts/ci_smoke_engine.ps1 -Bin "desktop/src-tauri/binaries/corpusmind-engine/corpusmind-engine.exe"
+
       - name: Build web PWA
         working-directory: web
         env:
@@ -361,6 +371,15 @@ jobs:
           fi
           size=$(du -sh "$model_dir" | cut -f1)
           echo "OK: spaCy model bundled ($size)"
+
+      # v1.2.8 (review #6): launch the bundled engine and assert that the
+      # resources behind the two features that regressed in the shipped
+      # v1.2.8 actually resolve inside THIS bundle: the USAS semantic
+      # lexicon (503ed in the field), the AWL wordlist (silently missing)
+      # and the persuasion-index package (503ed in the field). A failure
+      # here fails the release instead of shipping another dark feature.
+      - name: Smoke-test engine sidecar (USAS + AWL + persuasion-index)
+        run: bash scripts/ci_smoke_engine.sh desktop/src-tauri/binaries/corpusmind-engine/corpusmind-engine
 
       - name: Build web PWA
         working-directory: web
@@ -519,6 +538,15 @@ jobs:
           size=$(du -sh "$model_dir" | cut -f1)
           echo "OK: spaCy model bundled ($size)"
 
+      # v1.2.8 (review #6): launch the bundled engine and assert that the
+      # resources behind the two features that regressed in the shipped
+      # v1.2.8 actually resolve inside THIS bundle: the USAS semantic
+      # lexicon (503ed in the field), the AWL wordlist (silently missing)
+      # and the persuasion-index package (503ed in the field). A failure
+      # here fails the release instead of shipping another dark feature.
+      - name: Smoke-test engine sidecar (USAS + AWL + persuasion-index)
+        run: bash scripts/ci_smoke_engine.sh desktop/src-tauri/binaries/corpusmind-engine/corpusmind-engine
+
       - name: Build web PWA
         working-directory: web
         env:
@@ -662,6 +690,15 @@ jobs:
           size=$(du -sh "$model_dir" | cut -f1)
           echo "OK: spaCy model bundled ($size)"
 
+      # v1.2.8 (review #6): launch the bundled engine and assert that the
+      # resources behind the two features that regressed in the shipped
+      # v1.2.8 actually resolve inside THIS bundle: the USAS semantic
+      # lexicon (503ed in the field), the AWL wordlist (silently missing)
+      # and the persuasion-index package (503ed in the field). A failure
+      # here fails the release instead of shipping another dark feature.
+      - name: Smoke-test engine sidecar (USAS + AWL + persuasion-index)
+        run: bash scripts/ci_smoke_engine.sh desktop/src-tauri/binaries/corpusmind-engine/corpusmind-engine
+
       - name: Build web PWA
         working-directory: web
         env:
@@ -739,6 +776,17 @@ jobs:
       - name: Attach the 2-page User Guide PDF
         run: |
           PDF=$(ls download/CorpusMind_User_Guide_v*.pdf | sort -V | tail -1)
+          # v1.2.8 (review #7): the v1.2.8 release shipped with the stale
+          # v1.2.6 PDF because nothing asserted the guide matches the tag.
+          # Refuse to publish when the newest committed guide is older
+          # than the release tag (strip the leading v from both).
+          TAG_NUM="${{ github.ref_name }}"
+          PDF_NUM=$(basename "$PDF" | sed -E 's/.*_v([0-9.]+)\.pdf/\1/')
+          if [ "$PDF_NUM" != "${TAG_NUM#v}" ]; then
+            echo "ERROR: newest guide PDF is v$PDF_NUM but release tag is ${TAG_NUM}"
+            echo "Regenerate the User Guide for this version (scripts/generate_user_guide_pdf.py) and commit it."
+            exit 1
+          fi
           gh release upload "${{ github.ref_name }}" "$PDF" --clobber
           echo "Attached $PDF to the release"
         env:

@@ -2017,12 +2017,26 @@ function VocabPanel({ cid }: { cid: string }) {
 }
 
 
+const EMOTION_COLORS: Record<string, string> = {
+  joy: "var(--bar-positive)",
+  sadness: "var(--bar-negative)",
+  anger: "var(--tool4-accent)",
+  fear: "var(--tool5-accent)",
+  disgust: "var(--tool6-accent)",
+  surprise: "var(--tool2-accent)",
+  trust: "var(--tool1-accent)",
+  anticipation: "var(--tool3-accent)",
+};
+
 function SentimentPanel({ cid }: { cid: string }) {
+  const lang = useUI((s) => s.lang);
   const result = useQuery({
     queryKey: ["sentiment", cid],
     queryFn: () => api.sentiment(cid),
   });
   const exportStatus = useExportStatus();
+  const d = result.data;
+  const emoLabel = (e: string) => t(lang, `emo_${e}` as TranslationKey);
 
   return (
     <div className="panel-content">
@@ -2031,41 +2045,144 @@ function SentimentPanel({ cid }: { cid: string }) {
         <ExportButton onExport={(fmt) => { if (result.data) { downloadJsonResult(result.data, `sentiment.${fmt}`, exportStatus.set); } } } disabled={!result.data} />
       </div>
       <div className="grounding-notice">
-        <strong>Note:</strong> Phase 2 uses a lexicon-based sentiment scorer. Phase 3 will swap
-        in VADER or a transformers-based model behind the same interface - results stay comparable
-        because the model + version is pinned per project (4 Principle 8).
+        <strong>{t(lang, "sent_note")}</strong>
       </div>
 
-      {result.data && (
+      {d && (
         <>
+          <h3>{t(lang, "sent_layers_title")}</h3>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "12px" }}>
+            <span
+              className="cat-meta"
+              title={d.lexicons?.appraisal_cues?.note}
+              style={{ border: "1px solid var(--border-strong)", borderRadius: "6px", padding: "2px 8px" }}
+            >
+              {t(lang, "sent_layer_appraisal")}:{" "}
+              <strong>
+                {d.appraisal?.available
+                  ? t(lang, "sent_coverage_full")
+                  : t(lang, "sent_layer_unavailable_ar")}
+              </strong>
+            </span>
+            <span
+              className="cat-meta"
+              style={{ border: "1px solid var(--border-strong)", borderRadius: "6px", padding: "2px 8px" }}
+            >
+              {t(lang, "sent_layer_emotions")}:{" "}
+              <strong>
+                {d.lexicons?.emolex?.coverage === "full"
+                  ? t(lang, "sent_coverage_full")
+                  : t(lang, "sent_coverage_starter")}
+              </strong>
+            </span>
+          </div>
+          {d.lexicons?.emolex?.coverage !== "full" && d.lexicons?.emolex?.upgrade_hint && (
+            <div className="cat-meta" style={{ marginBottom: "12px" }}>
+              {d.lexicons.emolex.upgrade_hint}
+            </div>
+          )}
+
           <div className="result-meta">
-            <strong>{result.data.total_sentences}</strong> sentences ·
-            avg score = <strong>{result.data.avg_score}</strong> (-1 to +1)
+            <strong>{d.total_sentences}</strong> sentences ·
+            avg score = <strong>{d.avg_score}</strong> (-1 to +1) ·
+            method = <strong>{d.method}</strong>
           </div>
           <div className="sentiment-bars">
             <div className="bar-row">
               <span className="bar-label">Positive</span>
-              <div className="bar-track"><div className="bar-fill" style={{ width: `${(result.data.positive / result.data.total_sentences) * 100}%`, background: "var(--bar-positive)" }} /></div>
-              <span className="bar-value">{result.data.positive}</span>
+              <div className="bar-track"><div className="bar-fill" style={{ width: `${(d.positive / d.total_sentences) * 100}%`, background: "var(--bar-positive)" }} /></div>
+              <span className="bar-value">{d.positive}</span>
             </div>
             <div className="bar-row">
               <span className="bar-label">Neutral</span>
-              <div className="bar-track"><div className="bar-fill" style={{ width: `${(result.data.neutral / result.data.total_sentences) * 100}%`, background: "var(--bar-neutral)" }} /></div>
-              <span className="bar-value">{result.data.neutral}</span>
+              <div className="bar-track"><div className="bar-fill" style={{ width: `${(d.neutral / d.total_sentences) * 100}%`, background: "var(--bar-neutral)" }} /></div>
+              <span className="bar-value">{d.neutral}</span>
             </div>
             <div className="bar-row">
               <span className="bar-label">Negative</span>
-              <div className="bar-track"><div className="bar-fill" style={{ width: `${(result.data.negative / result.data.total_sentences) * 100}%`, background: "var(--bar-negative)" }} /></div>
-              <span className="bar-value">{result.data.negative}</span>
+              <div className="bar-track"><div className="bar-fill" style={{ width: `${(d.negative / d.total_sentences) * 100}%`, background: "var(--bar-negative)" }} /></div>
+              <span className="bar-value">{d.negative}</span>
             </div>
           </div>
-          <h3>Sentiment timeline (per sentence) {result.data.timeline.length > 100 && <span style={{ fontSize: "12px", fontWeight: "normal", color: "var(--text-subtle)" }}>(showing first 100 of {result.data.timeline.length})</span>}</h3>
+
+          {d.appraisal?.available && d.appraisal.categories && (
+            <>
+              <h3>{t(lang, "sent_appraisal_title")}</h3>
+              <div className="sentiment-bars">
+                {Object.entries(d.appraisal.categories).map(([cat, info]) => {
+                  const max = Math.max(
+                    ...Object.values(d.appraisal!.categories).map((c) => c.count),
+                    1,
+                  );
+                  return (
+                    <div className="bar-row" key={cat}>
+                      <span className="bar-label" title={cat}>{cat.replace(/^\w+\./, "")}</span>
+                      <div className="bar-track">
+                        <div className="bar-fill" style={{ width: `${(info.count / max) * 100}%`, background: cat.startsWith("attitude.") ? "var(--brand-500)" : "var(--tool2-accent)" }} />
+                      </div>
+                      <span className="bar-value">{info.count}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
+
+          {d.emotions && Object.values(d.emotions).some((v) => v > 0) && (
+            <>
+              <h3>{t(lang, "sent_emotions_title")}</h3>
+              <div className="sentiment-bars">
+                {Object.entries(d.emotions).map(([emotion, n]) => {
+                  const max = Math.max(...Object.values(d.emotions!), 1);
+                  return (
+                    <div className="bar-row" key={emotion}>
+                      <span className="bar-label">{emoLabel(emotion)}</span>
+                      <div className="bar-track">
+                        <div className="bar-fill" style={{ width: `${(n / max) * 100}%`, background: EMOTION_COLORS[emotion] ?? "var(--brand-500)" }} />
+                      </div>
+                      <span className="bar-value">{n}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
+
+          {d.top_emotional && d.top_emotional.length > 0 && (
+            <>
+              <h3>{t(lang, "sent_top_words_title")}</h3>
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Lemma</th>
+                    <th>Polarity</th>
+                    <th>Emotions</th>
+                    <th>Freq</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {d.top_emotional.map((w) => (
+                    <tr key={w.lemma}>
+                      <td>{w.lemma}</td>
+                      <td style={{ color: w.polarity > 0 ? "var(--bar-positive)" : "var(--bar-negative)" }}>
+                        {w.polarity > 0 ? t(lang, "sent_top_word_polarity_pos") : t(lang, "sent_top_word_polarity_neg")}
+                      </td>
+                      <td>{w.emotions.length > 0 ? w.emotions.map(emoLabel).join(", ") : "-"}</td>
+                      <td>{w.freq}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          )}
+
+          <h3>Sentiment timeline (per sentence) {d.timeline.length > 100 && <span style={{ fontSize: "12px", fontWeight: "normal", color: "var(--text-subtle)" }}>(showing first 100 of {d.timeline.length})</span>}</h3>
           <div className="sentiment-timeline">
-            {result.data.timeline.slice(0, 100).map((t, i) => (
+            {d.timeline.slice(0, 100).map((tl, i) => (
               <div key={i} className="timeline-bar"
-                style={{ height: `${Math.abs(t.score) * 40 + 2}px`,
-                         background: t.score > 0 ? "var(--bar-positive)" : t.score < 0 ? "var(--bar-negative)" : "var(--bar-neutral)" }}
-                title={`Sent ${t.sent}: score=${t.score} (pos=${t.pos_hits}, neg=${t.neg_hits})`}
+                style={{ height: `${Math.abs(tl.score) * 40 + 2}px`,
+                         background: tl.score > 0 ? "var(--bar-positive)" : tl.score < 0 ? "var(--bar-negative)" : "var(--bar-neutral)" }}
+                title={`Sent ${tl.sent}: score=${tl.score} (pos=${tl.pos_hits}, neg=${tl.neg_hits})${tl.dominant_emotion ? ` · ${t(lang, "sent_timeline_emotion")} ${emoLabel(tl.dominant_emotion)}` : ""}${tl.attitude && tl.attitude.length > 0 ? ` · ${tl.attitude.join(", ")}` : ""}`}
               />
             ))}
           </div>

@@ -451,8 +451,14 @@ async def list_bundled_references() -> dict:
     needing a full reference corpus.
     """
     import os
-    ref_dir = os.path.join(os.path.dirname(__file__), "..", "..", "reference-data", "reference-corpora", "en")
-    ref_dir = os.path.normpath(ref_dir)
+
+    # v1.2.8 (review #1): bundle-safe resolution (PyInstaller _MEIPASS or repo).
+    try:
+        from app.resource_paths import reference_data_dir
+
+        ref_dir = os.path.join(str(reference_data_dir()), "reference-corpora", "en")
+    except FileNotFoundError:
+        ref_dir = ""
 
     bundled = []
     # BE06
@@ -501,8 +507,13 @@ async def get_bundled_reference(name: str) -> dict:
     import csv
     import os
 
-    ref_dir = os.path.join(os.path.dirname(__file__), "..", "..", "reference-data", "reference-corpora", "en")
-    ref_dir = os.path.normpath(ref_dir)
+    # v1.2.8 (review #1): bundle-safe resolution (PyInstaller _MEIPASS or repo).
+    try:
+        from app.resource_paths import reference_data_dir
+
+        ref_dir = os.path.join(str(reference_data_dir()), "reference-corpora", "en")
+    except FileNotFoundError:
+        ref_dir = ""
 
     # Map name to file
     file_map = {

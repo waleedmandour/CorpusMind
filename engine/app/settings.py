@@ -65,6 +65,16 @@ class Settings(BaseSettings):
     # --- Reproducibility ---
     enable_methods_export: bool = True
 
+    # --- Layered sentiment (v1.2.8, review #8) ---
+    # Directory holding user-configured emotion lexicons (our converted
+    # TSVs: nrc-emolex-en.tsv / nrc-emolex-ar.tsv). NRC's Terms of Use
+    # forbid redistribution, so the app cannot ship the data; the user
+    # converts the official download once with
+    # scripts/build_sentiment_lexicons.py and points this setting at the
+    # output. When unset, the emotion layer runs on the bundled starter
+    # lexicon and the API reports coverage honestly.
+    sentiment_lexicon_dir: str = ""
+
     # --- Embeddings (v1.2.0 Vector KWIC) ---
     # Model used by OllamaProvider.embed() when the caller does not name one.
     # Chain: request model → this setting (env CORPUSMIND_EMBEDDING_MODEL)

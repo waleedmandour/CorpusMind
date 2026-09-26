@@ -2425,15 +2425,16 @@ class VocabProfileResult:
 @lru_cache(maxsize=1)
 def _load_awl() -> frozenset[str]:
     """All AWL forms (headwords + family members), lowercased."""
-    from pathlib import Path
-
-    path = (
-        Path(__file__).resolve().parent.parent.parent
-        / "reference-data"
-        / "wordlists"
-        / "awl-sublists.tsv"
-    )
     forms: set[str] = set()
+    # v1.2.8 (review #1): bundle-safe resolution via app.resource_paths —
+    # the old three-parent walk missed reference-data inside the packaged
+    # engine and silently degraded every vocab profile to STARTER_AWL.
+    try:
+        from app.resource_paths import resource_path
+
+        path = resource_path("wordlists", "awl-sublists.tsv")
+    except FileNotFoundError:
+        return frozenset(forms)
     if path.exists():
         for line in path.read_text(encoding="utf-8").splitlines():
             if not line or line.startswith("#"):
@@ -2531,18 +2532,15 @@ async def compute_vocab_profile(
             total_tokens=0, total_types=0, bands=[], rare_words=[], academic_words=[]
         )
 
-    # Load bundled K1 wordlist
-    from pathlib import Path
-
-    k1_path = (
-        Path(__file__).resolve().parent.parent.parent
-        / "reference-data"
-        / "wordlists"
-        / "en"
-        / "top200.tsv"
-    )
+    # Load bundled K1 wordlist (bundle-safe resolution, review #1)
     k1_set: set[str] = set()
-    if k1_path.exists():
+    try:
+        from app.resource_paths import resource_path
+
+        k1_path = resource_path("wordlists", "en", "top200.tsv")
+    except FileNotFoundError:
+        k1_path = None
+    if k1_path is not None and k1_path.exists():
         for line in k1_path.read_text().splitlines():
             if line and not line.startswith("#"):
                 parts = line.split("\t")
@@ -2598,162 +2596,14 @@ async def compute_vocab_profile(
 
 
 # --------------------------------------------------------------------------- #
-# §8.18 Sentiment analysis (lexicon-based, offline)
+# §8.18 Sentiment analysis (v1.2.8, review #8)
 # --------------------------------------------------------------------------- #
+# The layered, Appraisal-grounded implementation now lives in
+# engine/sentiment/. The re-export below keeps every existing importer
+# (`from discourse.service import compute_sentiment, SentimentResult`)
+# working unchanged; new code should import from sentiment.service.
 
-
-# A small starter sentiment lexicon. Phase 3 will swap in VADER or a
-# transformers-based sentiment model behind the same interface.
-STARTER_POSITIVE = {
-    "good",
-    "great",
-    "excellent",
-    "wonderful",
-    "amazing",
-    "fantastic",
-    "best",
-    "better",
-    "love",
-    "like",
-    "enjoy",
-    "happy",
-    "pleased",
-    "delighted",
-    "beautiful",
-    "perfect",
-    "brilliant",
-    "superb",
-    "outstanding",
-    "remarkable",
-    "success",
-    "successful",
-    "win",
-    "victory",
-    "triumph",
-    "achieve",
-    "benefit",
-    "improve",
-    "progress",
-    "advance",
-    "innovative",
-    "positive",
-    "strong",
-    "powerful",
-    "effective",
-    "efficient",
-    "valuable",
-    "important",
-    "significant",
-}
-STARTER_NEGATIVE = {
-    "bad",
-    "terrible",
-    "awful",
-    "horrible",
-    "worst",
-    "worse",
-    "hate",
-    "dislike",
-    "sad",
-    "unhappy",
-    "angry",
-    "furious",
-    "disappointed",
-    "frustrated",
-    "ugly",
-    "broken",
-    "fail",
-    "failure",
-    "lose",
-    "loss",
-    "defeat",
-    "decline",
-    "weak",
-    "poor",
-    "negative",
-    "wrong",
-    "mistake",
-    "error",
-    "problem",
-    "difficult",
-    "hard",
-    "painful",
-    "suffering",
-    "danger",
-    "threat",
-    "risk",
-    "fear",
-    "worry",
-    "anxiety",
-    "concern",
-    "criticism",
-    "attack",
-    "damage",
-}
-
-
-@dataclass
-class SentimentResult:
-    total_sentences: int
-    positive: int
-    negative: int
-    neutral: int
-    avg_score: float  # -1 (very negative) to +1 (very positive)
-    timeline: list[dict]  # [{doc, sent, score}] — for diachronic/narrative corpora
-
-
-async def compute_sentiment(
-    session: AsyncSession,
-    corpus_id: str,
-) -> SentimentResult:
-    """Lexicon-based sentiment per sentence (§8.18).
-
-    Each sentence gets a score in [-1, +1] = (pos_count - neg_count) / (pos + neg + 1).
-    Phase 3 will swap in a proper sentiment model behind the same interface.
-    """
-    version_id = await _latest_version_id(session, corpus_id)
-    if not version_id:
-        return SentimentResult(
-            total_sentences=0, positive=0, negative=0, neutral=0, avg_score=0.0, timeline=[]
-        )
-
-    sentences = await _load_parses(session, version_id)
-    pos_count = neg_count = neu_count = 0
-    total_score = 0.0
-    timeline: list[dict] = []
-
-    for sent in sentences:
-        p = sum(1 for t in sent if t["text"].lower() in STARTER_POSITIVE)
-        n = sum(1 for t in sent if t["text"].lower() in STARTER_NEGATIVE)
-        score = (p - n) / (p + n + 1)  # +1 smoothing to avoid div-by-zero
-        total_score += score
-        if score > 0.05:
-            pos_count += 1
-        elif score < -0.05:
-            neg_count += 1
-        else:
-            neu_count += 1
-        timeline.append(
-            {
-                "doc": sent[0]["doc"] if sent else "",
-                "sent": sent[0]["sent"] if sent else 0,
-                "score": round(score, 3),
-                "pos_hits": p,
-                "neg_hits": n,
-            }
-        )
-
-    total = len(sentences)
-    avg = total_score / total if total else 0.0
-    return SentimentResult(
-        total_sentences=total,
-        positive=pos_count,
-        negative=neg_count,
-        neutral=neu_count,
-        avg_score=round(avg, 3),
-        timeline=timeline,
-    )
-
+from sentiment.service import SentimentResult, compute_sentiment  # noqa: E402,F401
 
 # --------------------------------------------------------------------------- #
 # §8.17 Metaphor detection — LLM-assisted MIPVU pipeline scaffold

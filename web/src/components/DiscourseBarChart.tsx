@@ -11,8 +11,11 @@
  * - Compare mode: one diverging bar per category around a zero axis,
  *   length proportional to Log Ratio (Hardie 2014, log2 effect size):
  *   right = more frequent in the target corpus, left = more frequent in
- *   the reference corpus. Categories with an undefined Log Ratio (absent
- *   from one side) are listed separately below the chart.
+ *   the reference corpus. Each category label sits on the OPPOSITE side
+ *   of its bar's direction (bar right -> text left, and vice versa) so a
+ *   growing bar can never paint over its own text. Categories with an
+ *   undefined Log Ratio (absent from one side) are listed separately
+ *   below the chart.
  *
  * Pure inline SVG, no chart dependency — consistent with the repo's
  * offline-first PWA stance and the PersuasionRadar approach.
@@ -42,6 +45,13 @@ export interface DiscourseChartRow {
 
 const fmt = (v: number, digits = 1) =>
   v.toLocaleString(undefined, { maximumFractionDigits: digits });
+
+// Category keys can be long ("transitivity.material", USAS group names);
+// overlong labels would overflow the SVG viewBox and get clipped, which
+// reads as broken data. Truncate with an ellipsis and keep the full text
+// as a hover <title> (v1.2.8 review #4).
+const truncateLabel = (s: string, max: number) =>
+  s.length > max ? s.slice(0, Math.max(1, max - 1)) + "\u2026" : s;
 
 export function DiscourseBarChart({ rows, hasCompare }: { rows: DiscourseChartRow[]; hasCompare: boolean }) {
   const lang = useUI((s) => s.lang);
@@ -95,7 +105,8 @@ function SingleCorpusChart({ rows, lang }: { rows: DiscourseChartRow[]; lang: La
           return (
             <g key={r.cat}>
               <text x={LABEL_W - 8} y={y + 11} textAnchor="end" className="discourse-chart-label">
-                {label}
+                <title>{label}</title>
+                {truncateLabel(label, 30)}
               </text>
               <rect
                 x={LABEL_W}
@@ -137,12 +148,17 @@ function DivergingChart({ rows, lang }: { rows: DiscourseChartRow[]; lang: Lang 
   if (withLr.length === 0) return null;
 
   const maxAbs = Math.max(...withLr.map((r) => Math.abs(r.lr)), 0.000001);
-  const LABEL_W = 190;
+  // Compare-mode geometry (v1.2.8 review #4): there is no fixed label
+  // column. Each row's label sits on the OPPOSITE side of its bar's
+  // direction (bar right -> label left of the zero axis, bar left ->
+  // label right of it), so a growing bar can never paint over its own
+  // text. The reserved 60px per side holds the numeric value at the bar
+  // tip without clipping at the viewBox edge.
   const W = 640;
   const ROW_H = 20;
   const H = withLr.length * ROW_H + 26;
-  const half = (W - LABEL_W - 16) / 2;
-  const midX = LABEL_W + half + 8;
+  const half = W / 2 - 60;
+  const midX = W / 2;
 
   return (
     <figure className="discourse-chart-wrap">
@@ -158,8 +174,14 @@ function DivergingChart({ rows, lang }: { rows: DiscourseChartRow[]; lang: Lang 
           const label = r.cat.startsWith("pi.") ? r.cat.split(".").slice(2).join(".") : r.cat;
           return (
             <g key={r.cat}>
-              <text x={midX + (positive ? 0 : 0)} y={y + 11} textAnchor="end" className="discourse-chart-label">
-                {label}
+              <text
+                x={positive ? midX - 6 : midX + 6}
+                y={y + 11}
+                textAnchor={positive ? "end" : "start"}
+                className="discourse-chart-label"
+              >
+                <title>{label}</title>
+                {truncateLabel(label, 34)}
               </text>
               <rect
                 x={positive ? midX + 2 : midX - 2 - w}
@@ -170,7 +192,7 @@ function DivergingChart({ rows, lang }: { rows: DiscourseChartRow[]; lang: Lang 
                 fill={positive ? "var(--brand-500)" : "var(--tool6-accent)"}
               />
               <text
-                x={positive ? midX + w + 10 : midX - w - 4}
+                x={positive ? midX + w + 10 : midX - w - 10}
                 y={y + 11}
                 textAnchor={positive ? "start" : "end"}
                 className="discourse-chart-value"

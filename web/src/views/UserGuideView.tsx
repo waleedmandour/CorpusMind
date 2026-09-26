@@ -341,9 +341,11 @@ camel_data -i morphology-db-msa-r13`}</pre>
     body: (
       <>
         <p>
-          The <strong>Discourse</strong> view applies Hyland's metadiscourse taxonomy and Martin
-          &amp; White's appraisal framework to identify how writers position themselves and their
-          readers.
+          The <strong>Discourse</strong> view reads your corpus through six selectable
+          lenses. Each result names and cites its framework, so you always know what a
+          number means and can cite it directly. Pick a lens from the dropdown at the
+          top of the view: the statistics table, the dispersion (DP) values and the
+          chart update together.
         </p>
         <h4>Metadiscourse (Hyland 2005)</h4>
         <ul>
@@ -352,12 +354,53 @@ camel_data -i morphology-db-msa-r13`}</pre>
           <li><strong>Interactional markers:</strong> hedges, boosters, attitude markers,
             self-mentions, engagement markers.</li>
         </ul>
+        <h4>Cohesion (Halliday &amp; Hasan 1976)</h4>
+        <ul>
+          <li><strong>Reference, conjunction, substitution cues</strong> plus automatic
+            detection of lexical repetition chains across adjacent sentences.</li>
+        </ul>
         <h4>Appraisal (Martin &amp; White 2005)</h4>
         <ul>
           <li><strong>Affect</strong> - emotional responses.</li>
           <li><strong>Judgment</strong> - moral evaluations of behavior.</li>
           <li><strong>Appreciation</strong> - aesthetic evaluations.</li>
         </ul>
+        <h4>CLAWS/USAS semantic tagset (top-level)</h4>
+        <p>
+          Maps every word to one of the USAS top-level semantic categories
+          (A = general and abstract terms, Z = names and grammatical words, and so on)
+          using a bundled lexicon, then groups the categories into discourse-functional
+          readings: communication, cognition, emotion, ideology, and more. This is a
+          lexicon-based approximation, not the licensed CLAWS/USAS tagger; cite it as
+          such in publications. Availability is shown in Settings, so you can confirm
+          the lexicon is active before running an analysis.
+        </p>
+        <h4>SFG Transitivity &amp; Modality (Halliday &amp; Matthiessen 2014)</h4>
+        <p>
+          Process types (material, mental, relational, behavioural, verbal, existential)
+          and modality values, derived from the stored Universal Dependencies parse.
+        </p>
+        <h4>Persuasion Index (Wang &amp; Gong 2026)</h4>
+        <p>
+          Scores every document on 15 interpretable dimensions of persuasive language,
+          grouped by the classical appeals (Logos, Ethos, Pathos) and shown as a radar
+          chart. The package is version-pinned (persuasion-index 0.3.0, Apache-2.0) and
+          ships inside the app. It measures rhetorical <em>strategies</em>, not whether
+          arguments are true: a high score is not a quality verdict and a low score is
+          not a refutation. The lens reports which optional linguistic resources are
+          active versus degraded to neutral baselines, and it never fails silently: an
+          unavailable lens says so explicitly.
+        </p>
+        <h4>Comparing two corpora (keyness)</h4>
+        <p>
+          Pick a comparison corpus and every category row gains the standard keyness
+          battery: log-likelihood, Log Ratio (Hardie 2014), %DIFF and the simple-maths
+          heuristic, with a low-power warning when counts are small. The diverging chart
+          plots Log Ratio around a zero axis; each category label sits on the opposite
+          side of its bar's direction (bar right, text left, and vice versa) so text and
+          bar never overlap. Categories absent from one corpus (undefined Log Ratio) are
+          listed under the chart instead of being drawn with a fake zero.
+        </p>
       </>
     ),
   },
@@ -376,9 +419,24 @@ camel_data -i morphology-db-msa-r13`}</pre>
         </p>
         <h4>Sentiment</h4>
         <p>
-          A lexicon-based sentiment analysis (positive, negative, neutral) with a per-sentence
-          timeline. The lexicon is opt-in and configurable; no machine-learning model is used, so
-          the results are fully transparent and reproducible.
+          Layered, Appraisal-grounded sentiment analysis. One layer profiles the text
+          with Appraisal cues (Attitude: Affect, Judgment, Appreciation; Engagement;
+          Graduation; Martin &amp; White 2005). Another scores every sentence for
+          valence (-1 to +1) and emotion with a lemma-level lexicon. The grammar layer
+          reads the stored dependency parse: negation flips the polarity of what it
+          scopes over ("not good" scores negative) and intensifiers strengthen it
+          ("very good" scores stronger than "good"). No machine-learning model is
+          used, so the results stay fully transparent and reproducible.
+        </p>
+        <p>
+          The emotion layer ships with a bundled starter lexicon and reports its
+          coverage honestly in the Sentiment view. For full 8-emotion coverage
+          (anger, anticipation, disgust, fear, joy, sadness, surprise, trust) in
+          English and Arabic, download the NRC Emotion Lexicon from its official page,
+          convert it once with scripts/build_sentiment_lexicons.py, and set the
+          engine's CORPUSMIND_SENTIMENT_LEXICON_DIR to that folder (the
+          Sentiment view shows the expected path). The app cannot ship the NRC
+          data itself: its terms of use forbid redistribution.
         </p>
         <h4>Metaphor Candidates</h4>
         <p>

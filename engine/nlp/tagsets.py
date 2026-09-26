@@ -332,10 +332,17 @@ def strip_diacritics(text: str) -> str:
     return "".join(c for c in text if c not in ARABIC_DIACRITICS)
 
 
-def _tagsets_data_dir() -> str:
-    # Same resolution pattern as api/research.py for reference-data:
-    # engine/nlp/../../reference-data/tagsets
-    return os.path.join(os.path.dirname(__file__), "..", "..", "reference-data", "tagsets")
+def _tagsets_data_dir() -> str | None:
+    # v1.2.8 (review #1): resolve through app.resource_paths so BOTH the
+    # dev checkout and the PyInstaller bundle find the lexicon. The old
+    # hardcoded dirname(__file__)/../.. walk landed one level too high in
+    # the packaged app and made every USAS request 503.
+    try:
+        from app.resource_paths import reference_data_dir
+
+        return str(reference_data_dir() / "tagsets")
+    except FileNotFoundError:
+        return None
 
 
 @lru_cache(maxsize=4)
@@ -344,19 +351,29 @@ def load_semantic_lexicon(language: str) -> dict[str, str]:
     the lexicon file is missing (the API then reports the tagset as
     unavailable instead of failing)."""
     lang = (language or "en").lower()
-    path = os.path.join(_tagsets_data_dir(), f"usas-{lang}-top.tsv")
     lexicon: dict[str, str] = {}
-    try:
-        with open(path, encoding="utf-8") as fh:
-            next(fh)  # header
-            for line in fh:
-                parts = line.rstrip("\n").split("\t")
-                if len(parts) >= 2 and parts[0]:
-                    lexicon.setdefault(parts[0], parts[1])
-    except FileNotFoundError:
+    dir_path = _tagsets_data_dir()
+    path = os.path.join(dir_path, f"usas-{lang}-top.tsv") if dir_path else f"usas-{lang}-top.tsv"
+    if dir_path:
+        try:
+            with open(path, encoding="utf-8") as fh:
+                next(fh)  # header
+                for line in fh:
+                    parts = line.rstrip("\n").split("\t")
+                    if len(parts) >= 2 and parts[0]:
+                        lexicon.setdefault(parts[0], parts[1])
+        except FileNotFoundError:
+            import logging
+
+            logging.getLogger(__name__).warning(
+                "semantic_lexicon_missing", extra={"path": path}
+            )
+    else:
         import logging
 
-        logging.getLogger(__name__).warning("semantic_lexicon_missing", extra={"path": path})
+        logging.getLogger(__name__).warning(
+            "semantic_lexicon_missing", extra={"path": "reference-data/tagsets (not found)"}
+        )
     return lexicon
 
 

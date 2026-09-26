@@ -197,7 +197,25 @@ governor–dependent pairs.
   cognition, emotion, politics...), each annotated with its
   discourse-functional group. Lexicon-based lookup — where the lexicon has
   no entry, tokens are honestly reported as *unmatched*; this is not the
-  licensed CLAWS/USAS tagger.
+  licensed CLAWS/USAS tagger. Availability is shown in Settings so the
+  lexicon can be confirmed active before an analysis.
+- **SFG Transitivity & Modality (Halliday & Matthiessen 2014)** — process
+  types (material, mental, relational, behavioural, verbal, existential)
+  and modality values, derived from the stored Universal Dependencies
+  parse.
+- **Persuasion Index (Wang & Gong 2026)** — 15 interpretable dimensions of
+  persuasive language per document, grouped by the classical appeals
+  (Logos, Ethos, Pathos) and shown as a radar chart. The package is
+  version-pinned (persuasion-index 0.3.0, Apache-2.0) and ships inside the
+  app. It measures rhetorical *strategies*, not whether arguments are
+  true. The lens reports which optional linguistic resources are active
+  versus degraded to neutral baselines.
+- **Comparing two corpora (keyness)** — pick a comparison corpus and every
+  category row gains the standard keyness battery: log-likelihood, Log
+  Ratio (Hardie 2014), %DIFF and the simple-maths heuristic, with a
+  low-power warning when counts are small. The diverging chart plots Log
+  Ratio around a zero axis, with each category label on the opposite side
+  of its bar's direction so text and bar never overlap.
 
 Every result names and cites its taxonomy, so findings are reportable and
 comparable across studies.
@@ -205,7 +223,20 @@ comparable across studies.
 **Vocabulary**: frequency bands (K1, K2–K9, AWL, Off-list), rare and
 academic words.
 
-**Sentiment**: per-sentence scores (−1 to +1) with a timeline.
+**Sentiment**: layered, Appraisal-grounded analysis. One layer profiles
+the text with Appraisal cues (Attitude: Affect, Judgment, Appreciation;
+Engagement; Graduation; Martin & White 2005). Another scores every
+sentence for valence (−1 to +1) and emotion with a lemma-level lexicon,
+and a timeline shows the flow. The grammar layer reads the stored
+dependency parse: negation flips the polarity of what it scopes over
+("not good" scores negative) and intensifiers strengthen it ("very good"
+scores stronger than "good"). The emotion layer ships with a bundled
+starter lexicon and reports its coverage honestly; for full 8-emotion
+coverage (Plutchik's categories) in English and Arabic, convert the
+official NRC Emotion Lexicon once with scripts/build_sentiment_lexicons.py
+and set the engine's CORPUSMIND_SENTIMENT_LEXICON_DIR to that folder (the
+Sentiment view shows the expected path). The app cannot ship the NRC data
+itself: its terms of use forbid redistribution.
 
 **Metaphor**: verb-based metaphor *candidates*; LLM triage and human
 verification required before counting any as confirmed.

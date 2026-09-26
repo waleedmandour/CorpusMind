@@ -81,6 +81,63 @@ engine and the real package surface (persuasion-index 0.3.0 on PyPI).
   renders, and vector-KWIC tests for batch/scalar cosine agreement plus
   the timing payload.
 
+### Fixed — second review round (v1.2.8 rebuild, 2026-09-26)
+
+The first v1.2.8 build shipped with two features dark inside the packaged
+app and one chart defect. The release was withdrawn and rebuilt; a
+post-build smoke gate now prevents a repeat.
+
+- **CLAWS/USAS lens 503 in the packaged app** (second review #1). The
+  engine resolved `reference-data/` with a hardcoded relative walk that is
+  correct in a dev checkout but one level too high inside the PyInstaller
+  bundle, so every USAS request returned "The USAS semantic lexicon for
+  'en' is not installed" even though the lexicon file was bundled. A new
+  bundle-aware resolver (`app/resource_paths.py`) serves dev, `sys._MEIPASS`
+  and alternative frozen layouts, and all five consumers (USAS lexicon,
+  Academic Word List, K1 list, bundled reference corpora) now share it.
+  The same walk had silently degraded vocab profiling and bundled
+  references to fallback data. A new `GET /api/v1/health/resources` status
+  endpoint reports per-resource availability (USAS en/ar, AWL, K1,
+  be06-top1000, persuasion-index) for Settings, and regression tests pin
+  both layouts.
+- **Compare-mode chart painted bars over labels** (second review #2,
+  compare corpora only). The diverging Log Ratio chart drew every category
+  label left of the zero axis, so bars growing left ran straight through
+  their own text. Labels now sit on the opposite side of each bar's
+  direction (bar right, text left, and vice versa), values keep their bar
+  tip positions with reserved space, and overlong labels truncate with a
+  hover tooltip in both chart modes.
+- **Persuasion Index 503 in the packaged app** (second review #3). The
+  release workflow installed only the engine's main dependencies while
+  `persuasion-index` lived in an optional extra, so the packaged engine
+  never contained the package. `persuasion-index==0.3.0` is now a pinned
+  MAIN dependency; the PyInstaller spec ships the package, its companion
+  top-level modules, `wordfreq` data and `pandas` (previously excluded);
+  and the release pipeline gains a post-build smoke gate on every platform
+  that boots the bundled engine and fails the release unless the USAS
+  lexicon, the AWL wordlist and the persuasion lens all resolve.
+- **Layered, Appraisal-grounded Sentiment** (second review #4). The ~100-word
+  starter lexicon is replaced by a three-layer model: Appraisal cues
+  (Attitude: Affect, Judgment, Appreciation; Engagement; Graduation;
+  Martin & White 2005), valence + emotion over a lemma-level lexicon, and
+  a grammar layer that uses the stored dependency parse - negation flips
+  the polarity of what it scopes over (including through copular chains:
+  "is not good") and Graduation-force cues intensify it. The bundled
+  starter lexicons (EN + AR) report their coverage honestly; full 8-emotion
+  Plutchik coverage (EN + AR) is a user-configured upgrade via the official
+  NRC Emotion Lexicon (its terms of use forbid redistribution, so the data
+  is never shipped; `scripts/build_sentiment_lexicons.py` converts it and
+  `CORPUSMIND_SENTIMENT_LEXICON_DIR` points the engine at it). The API
+  response is additive and backward-compatible; the Sentiment view gains
+  layer-status chips, an Appraisal profile, an emotion distribution chart,
+  a valenced-vocabulary table, and timeline annotations.
+- **User Guide catch-up** (second review #5). The in-app guide, the English
+  PDF and the Arabic PDF now document all six discourse lenses, compare-mode
+  keyness, the Persuasion Index lens and its resource policy, the layered
+  Sentiment implementation, and tagset availability; the release pipeline
+  refuses to attach a guide PDF whose version does not match the tag (the
+  withdrawn build had shipped the stale v1.2.6 PDF).
+
 ## [1.2.7] — 2026-09-26 — Dark-theme audit with WCAG contrast regression, discourse statistics DataTable, UD v2 syntax upgrade, Persuasion Index lens, three register-specialised references
 
 This release ships five coordinated workstreams agreed in the v1.2.7 plan:
