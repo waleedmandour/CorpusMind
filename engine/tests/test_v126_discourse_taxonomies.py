@@ -145,8 +145,9 @@ async def test_discourse_taxonomies_registry(client):
     taxonomies = r.json()["taxonomies"]
     keys = [t["key"] for t in taxonomies]
     # v1.2.7: the registry grew — sfg_hm2014 (§2) and persuasion_gong2026 (§4)
+    # v1.2.10: cialdini2007 persuasion cue lens (Influence, Revised Ed., ch.2-7)
     assert keys == [
-        "hyland2005", "hallidayhasan1976", "martinwhite2005",
+        "hyland2005", "hallidayhasan1976", "martinwhite2005", "cialdini2007",
         "usas", "sfg_hm2014", "persuasion_gong2026",
     ]
     for t in taxonomies:

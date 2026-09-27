@@ -310,6 +310,7 @@ class DiscourseRequest(BaseModel):
         "hyland2005",
         description=(
             "hyland2005 (default) | hallidayhasan1976 | martinwhite2005 | "
+            "cialdini2007 (Influence, Revised Ed., ch.2-7) | "
             "usas (CLAWS/USAS top-level semantic tagset) | sfg_hm2014 "
             "(SFG Transitivity & Modality)"
         ),
