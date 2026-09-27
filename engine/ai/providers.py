@@ -113,6 +113,25 @@ def canonical_model_name(name: str) -> str:
     return n
 
 
+def model_name_matches(name: str, wanted: str) -> bool:
+    """Family-level model-name match for capability/size probes (v1.2.10).
+
+    Ollama's /api/tags reports installed names WITH tags (``llava:13b``,
+    ``bge-m3:latest``), while callers may pass any variant. Capability
+    probing (``supports_tools`` / ``supports_vision``) and the seat-size
+    probe (``app.server_mode.ollama_model_size``) deliberately tolerate a
+    tag mismatch: asking about ``llava:13b`` should probe an installed
+    ``llava:latest`` rather than report "unknown model". This is NOT the
+    catalogue compare (``canonical_model_name``), which stays strict about
+    explicit tags — two different semantics, two named helpers.
+
+    The CI source guard (``scripts/ci_source_guards.sh``) fails any raw
+    colon-split equality compare on model names outside this helper, so the
+    tolerant semantics stay defined in exactly one place.
+    """
+    return name == wanted or name.partition(":")[0] == wanted.partition(":")[0]
+
+
 class ModelProviderError(RuntimeError):
     """Base error for any provider failure (network, auth, model-missing, ...)."""
 
@@ -653,7 +672,11 @@ class _OpenAICompatibleProvider(ModelProvider):
             r = await self._client.post("/v1/chat/completions", json=payload, timeout=timeout)
             r.raise_for_status()
         except httpx.HTTPError as e:
-            raise ModelProviderError(f"[{self.name}] chat request failed: {e}") from e
+            # v1.2.10: same empty-stringify guard as the Ollama chat path —
+            # httpx timeouts stringify to an EMPTY message.
+            raise ModelProviderError(
+                f"[{self.name}] chat request failed: {type(e).__name__}: {e}"
+            ) from e
 
         data = r.json()
         try:
@@ -701,7 +724,10 @@ class _OpenAICompatibleProvider(ModelProvider):
                         log.debug("unparsable_stream_chunk", provider=self.name, line=line[:200])
                         continue
         except httpx.HTTPError as e:
-            raise ModelProviderError(f"[{self.name}] stream failed: {e}") from e
+            # v1.2.10: same empty-stringify guard as the chat path above.
+            raise ModelProviderError(
+                f"[{self.name}] stream failed: {type(e).__name__}: {e}"
+            ) from e
 
     # --- embed ---
     async def embed(
@@ -716,7 +742,11 @@ class _OpenAICompatibleProvider(ModelProvider):
             r = await self._client.post("/v1/embeddings", json=payload, timeout=timeout)
             r.raise_for_status()
         except httpx.HTTPError as e:
-            raise ModelProviderError(f"[{self.name}] embed failed: {e}") from e
+            # v1.2.10: same empty-stringify guard; third and last site of the
+            # bug class in this file (chat/stream above, embed here).
+            raise ModelProviderError(
+                f"[{self.name}] embed failed: {type(e).__name__}: {e}"
+            ) from e
         data = r.json()
         try:
             vec = data["data"][0]["embedding"]
@@ -948,7 +978,13 @@ class OllamaProvider(ModelProvider):
             r = await self._client.post("/api/chat", json=payload, timeout=timeout)
             r.raise_for_status()
         except httpx.HTTPError as e:
-            raise ModelProviderError(f"[ollama] chat request failed: {e}") from e
+            # v1.2.10: include the exception type - httpx timeouts stringify
+            # to an EMPTY message (the exact bug class the v1.2.3 embed fix
+            # describes), so "[ollama] chat request failed: " used to be all
+            # a user saw on a cold-start read timeout.
+            raise ModelProviderError(
+                f"[ollama] chat request failed: {type(e).__name__}: {e}"
+            ) from e
 
         # Capture raw response text BEFORE parsing (for debugging)
         raw_text = r.text
@@ -1152,7 +1188,10 @@ class OllamaProvider(ModelProvider):
                         log.debug("ollama_stream_unparsable", line=line[:200])
                         continue
         except httpx.HTTPError as e:
-            raise ModelProviderError(f"[ollama] stream failed: {e}") from e
+            # v1.2.10: same empty-stringify guard as the chat path above.
+            raise ModelProviderError(
+                f"[ollama] stream failed: {type(e).__name__}: {e}"
+            ) from e
 
     # --- v1.2.3: embed via the modern batch endpoint /api/embed ---
     #
@@ -1458,7 +1497,7 @@ class OllamaProvider(ModelProvider):
         wanted = model or self.default_model
         for m in await self._tags_models():
             name = m.get("name", "")
-            if name == wanted or name.split(":")[0] == wanted.split(":")[0]:
+            if model_name_matches(name, wanted):
                 caps = m.get("capabilities")
                 if not caps:
                     return True  # older Ollama — no capability info
@@ -1493,7 +1532,7 @@ class OllamaProvider(ModelProvider):
         wanted = model or self.default_model
         for m in await self._tags_models():
             name = m.get("name", "")
-            if name == wanted or name.split(":")[0] == wanted.split(":")[0]:
+            if model_name_matches(name, wanted):
                 caps = m.get("capabilities")
                 if caps:
                     return "vision" in caps

@@ -955,13 +955,15 @@ async def ollama_model_size(base_url: str, wanted: str) -> tuple[int, str | None
     resolved full name. 0/None when Ollama is unreachable."""
     import httpx
 
+    from ai.providers import model_name_matches
+
     try:
         async with httpx.AsyncClient(timeout=3.0) as client:
             r = await client.get(f"{base_url.rstrip('/')}/api/tags")
             if r.status_code == 200:
                 for m in r.json().get("models", []):
                     name = m.get("name", "")
-                    if name == wanted or name.split(":")[0] == wanted.split(":")[0]:
+                    if model_name_matches(name, wanted):
                         return int(m.get("size", 0)), name
     except Exception:
         pass

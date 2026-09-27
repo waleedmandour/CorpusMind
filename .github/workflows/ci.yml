@@ -73,6 +73,13 @@ jobs:
       - name: Lint (ruff)
         run: ruff check .
 
+      # v1.2.10: source guards for the two quiet-regression bug classes —
+      # positional-index lookups in registry code and raw model-name
+      # compares outside the ai.providers helpers. See the script header.
+      - name: Source guards (positional lookups, model-name compares)
+        run: bash scripts/ci_source_guards.sh
+        working-directory: .
+
       - name: Test (pytest)
         run: pytest tests/ -v --tb=short
         # All 17 tests in test_phase3_arabic.py run unconditionally in CI
@@ -80,6 +87,38 @@ jobs:
         # The @_needs_camel skipif marker is still in place so that local
         # dev environments without camel_tools get a clean "skipped with
         # reason" signal instead of import-time failures.
+
+  # -----------------------------------------------------------------------
+  # v1.2.10: mypy strict regression report — NON-BLOCKING.
+  # The engine is not mypy-clean (1,767 errors at the v1.2.10 baseline) and
+  # chasing zero is not planned, but the count must never quietly grow.
+  # scripts/mypy_report.py attributes errors per package and fails on any
+  # per-package increase vs engine/mypy-baseline.json; continue-on-error
+  # keeps the report visible without gating merges.
+  # -----------------------------------------------------------------------
+  mypy-report:
+    name: mypy strict report (non-blocking)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    continue-on-error: true
+    defaults:
+      run:
+        working-directory: engine
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: engine/pyproject.toml
+      - name: Install engine + mypy
+        run: |
+          python -m pip install --upgrade pip
+          pip install --no-cache-dir -e ".[dev]"
+          pip install python-multipart cryptography
+      - name: mypy regression report
+        run: python ../scripts/mypy_report.py
 
   # -----------------------------------------------------------------------
   # Web: TypeScript typecheck + build
@@ -244,6 +283,42 @@ jobs:
           echo "engine did not become healthy in time"
           docker logs engine
           exit 1
+      # v1.2.10: the Docker wheel is the artifact class behind the v1.1.0 /
+      # v1.2.0 missing-module releases AND the never-bundled reference-data
+      # gap (USAS 503 by default). reference-data is now baked in, so the
+      # full bundled-resource registry MUST be true inside the container —
+      # the same assertions the PyInstaller smoke gate makes.
+      - name: Probe /health/resources (bundled-resource registry)
+        run: |
+          RES=$(curl -fsS http://127.0.0.1:8765/api/v1/health/resources)
+          echo "$RES"
+          echo "$RES" | python3 -c "
+          import json, sys
+          d = json.load(sys.stdin)
+          problems = []
+          if d.get('usas', {}).get('en') is not True:
+              problems.append('USAS en lexicon missing in Docker image')
+          if d.get('usas', {}).get('ar') is not True:
+              problems.append('USAS ar lexicon missing in Docker image')
+          if d.get('wordlists', {}).get('awl') is not True:
+              problems.append('AWL wordlist missing in Docker image')
+          rc = d.get('reference_corpora', {})
+          for k in ('be06_top1000', 'camel_arabic_top1000', 'quranic_arabic_freq'):
+              if rc.get(k) is not True:
+                  problems.append(f'reference corpus missing in Docker image: {k}')
+          if d.get('frameworks', {}).get('count', 0) < 12:
+              problems.append('framework catalogue incomplete in Docker image')
+          pi = d.get('persuasion_index') or {}
+          if pi.get('installed') is not True:
+              problems.append('persuasion-index not importable in Docker image')
+          if d.get('reference_data_dir') is None:
+              problems.append('reference_data_dir did not resolve in Docker image')
+          if problems:
+              print('Docker resource registry problems:')
+              for p in problems:
+                  print(f'  - {p}')
+              sys.exit(1)
+          "
       - name: Verify container healthcheck passes
         run: |
           sleep 35
