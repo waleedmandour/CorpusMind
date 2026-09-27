@@ -91,3 +91,43 @@ def exists(*parts: str) -> bool:
         return resource_path(*parts).exists()
     except FileNotFoundError:
         return False
+
+
+def spacy_model_available(name: str = "en_core_web_sm") -> bool:
+    """Report whether the spaCy ``name`` model can ACTUALLY be loaded here.
+
+    v1.2.10 release-gate finding: ``spacy.util.is_package`` (importlib) is
+    blind inside a PyInstaller bundle — the model ships as collected
+    package data under ``sys._MEIPASS`` / ``<exe_dir>/_internal`` (with
+    ``meta.json``), where ``spacy.load(model_dir)`` works (pipeline
+    strategy 3, see ``nlp/general/pipeline.py``) but importlib does not
+    resolve the package. A healthy desktop bundle therefore reported
+    ``spacy_model.en_core_web_sm: false`` and failed the release smoke
+    gate even though the model was present and loadable.
+
+    This probe mirrors the pipeline's real load strategies instead:
+      1. importlib — normal dev/venv/conda installs;
+      2. the frozen bundle's data directories (meta.json present),
+         exactly what strategy 3 scans.
+    No cache: cheap filesystem checks, and callers may want live truth.
+    """
+    try:
+        import spacy.util
+
+        if spacy.util.is_package(name):
+            return True
+    except Exception:
+        pass
+
+    candidates: list[str] = []
+    meipass = getattr(sys, "_MEIPASS", None)
+    if meipass:
+        candidates.append(os.path.join(meipass, name))
+    # onedir layout: data collected next to the launcher under _internal/.
+    candidates.append(
+        os.path.join(os.path.dirname(os.path.abspath(sys.executable)), "_internal", name)
+    )
+    for candidate in candidates:
+        if os.path.isfile(os.path.join(candidate, "meta.json")):
+            return True
+    return False

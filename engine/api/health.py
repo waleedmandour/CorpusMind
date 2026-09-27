@@ -125,14 +125,18 @@ async def resources_health() -> dict:
     except Exception:
         pass
 
-    # v1.2.10: environment-dependent facts — reported, never asserted by
-    # smoke gates (the desktop bundle ships the model via hook; Docker
-    # installs it in the builder stage; dev checkouts may not have it).
+    # v1.2.10: the desktop bundle CONTRACTUALLY ships the model (spec
+    # collects it; Windows verify step + release smoke gate assert it), so
+    # this key is asserted for the sidecar. The probe MUST mirror the
+    # pipeline's real load paths — spacy.util.is_package alone is blind to
+    # the frozen bundle's collected package data and made the registry
+    # report a healthy bundle as model-less (caught by the v1.2.10
+    # release gate on Linux/macOS).
     try:
-        import spacy.util
+        from app.resource_paths import spacy_model_available
 
         out["spacy_model"] = {
-            "en_core_web_sm": bool(spacy.util.is_package("en_core_web_sm"))
+            "en_core_web_sm": bool(spacy_model_available("en_core_web_sm"))
         }
     except Exception:
         out["spacy_model"] = {"en_core_web_sm": False}
