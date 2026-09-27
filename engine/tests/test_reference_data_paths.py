@@ -121,3 +121,78 @@ def test_exists_never_raises_when_reference_data_missing(tmp_path, monkeypatch) 
     finally:
         resource_paths.reference_data_dir.cache_clear()
         monkeypatch.undo()
+
+
+# ---------------------------------------------------------------------------
+# v1.2.10 release gate: the /health/resources spaCy probe must mirror the
+# pipeline's real load paths. spacy.util.is_package (importlib) is blind to
+# the PyInstaller bundle's collected package data, so a healthy desktop
+# bundle reported spacy_model.en_core_web_sm=false and failed the release
+# smoke gate. These tests pin the frozen-layout probe WITHOUT requiring the
+# model (or spaCy) to be installed in the test environment.
+# ---------------------------------------------------------------------------
+
+
+def _make_frozen_model(tmp_path, subdir: str, monkeypatch) -> None:
+    """Lay out a fake collected model (meta.json) the way PyInstaller does."""
+    model_dir = tmp_path / subdir / "en_core_web_sm"
+    model_dir.mkdir(parents=True)
+    (model_dir / "meta.json").write_text('{"name": "en_core_web_sm"}', encoding="utf-8")
+
+
+def _no_importlib(monkeypatch) -> None:
+    """Force the importlib leg of the probe to report not-installed.
+
+    Both 'spacy' and 'spacy.util' must be faked together: ``import
+    spacy.util`` binds the PARENT module and resolves ``.util`` as a real
+    attribute, so overriding sys.modules["spacy.util"] alone is a no-op.
+    """
+    import types
+
+    fake_util = types.ModuleType("spacy.util")
+    fake_util.is_package = staticmethod(lambda name: False)
+    fake_spacy = types.ModuleType("spacy")
+    fake_spacy.util = fake_util
+    monkeypatch.setitem(sys.modules, "spacy", fake_spacy)
+    monkeypatch.setitem(sys.modules, "spacy.util", fake_util)
+
+
+def test_spacy_model_found_via_meipass(tmp_path, monkeypatch) -> None:
+    """Frozen layout: sys._MEIPASS/en_core_web_sm with meta.json is loadable."""
+    _make_frozen_model(tmp_path, "data", monkeypatch)
+    _no_importlib(monkeypatch)
+    monkeypatch.setattr(sys, "_MEIPASS", str(tmp_path / "data"), raising=False)
+    monkeypatch.setattr(sys, "executable", str(tmp_path / "bin" / "python"), raising=False)
+    assert resource_paths.spacy_model_available() is True
+
+
+def test_spacy_model_found_via_internal_dir(tmp_path, monkeypatch) -> None:
+    """onedir layout: <exe_dir>/_internal/en_core_web_sm with meta.json."""
+    _no_importlib(monkeypatch)
+    monkeypatch.delattr(sys, "_MEIPASS", raising=False)
+    monkeypatch.setattr(sys, "executable", str(tmp_path / "bin" / "corpusmind-engine"), raising=False)
+    _make_frozen_model(tmp_path / "bin", "_internal", monkeypatch)
+    assert resource_paths.spacy_model_available() is True
+
+
+def test_spacy_model_absent_everywhere_reports_false(tmp_path, monkeypatch) -> None:
+    """No importlib hit and no frozen data dir -> honest False."""
+    _no_importlib(monkeypatch)
+    monkeypatch.delattr(sys, "_MEIPASS", raising=False)
+    monkeypatch.setattr(sys, "executable", str(tmp_path / "bin" / "corpusmind-engine"), raising=False)
+    assert resource_paths.spacy_model_available() is False
+
+
+def test_spacy_model_importlib_hit_wins(tmp_path, monkeypatch) -> None:
+    """A real importable install reports True even with no bundle dirs."""
+    import types
+
+    fake_util = types.ModuleType("spacy.util")
+    fake_util.is_package = staticmethod(lambda name: True)
+    fake_spacy = types.ModuleType("spacy")
+    fake_spacy.util = fake_util
+    monkeypatch.setitem(sys.modules, "spacy", fake_spacy)
+    monkeypatch.setitem(sys.modules, "spacy.util", fake_util)
+    monkeypatch.delattr(sys, "_MEIPASS", raising=False)
+    monkeypatch.setattr(sys, "executable", str(tmp_path / "bin" / "corpusmind-engine"), raising=False)
+    assert resource_paths.spacy_model_available() is True
