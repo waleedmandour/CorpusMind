@@ -210,6 +210,17 @@ governor–dependent pairs.
   app. It measures rhetorical *strategies*, not whether arguments are
   true. The lens reports which optional linguistic resources are active
   versus degraded to neutral baselines.
+- **Cialdini 2007 — Influence, Revised Edition, ch. 2–7 (new in v1.2.10)**
+  — the six persuasion principles (reciprocation, commitment &
+  consistency, social proof, liking, authority, scarcity) as lexical cue
+  sets, with a profile radar chart. Cue hits are **indicator counts, not
+  mechanism classifications**: "expert" in a sentence is evidence of an
+  authority *cue*, not proof an authority *appeal* was deployed. Cue-list
+  precision is unvalidated pending gold-sample review (the words
+  "official", "certified" and "leading" are known precision risks), so
+  read counts as exploratory. The 2021 "Unity" principle is not covered.
+  Each pair of categories also reports **co-occurrence** — the number of
+  sentences containing cues from both; co-occurrence is not causation.
 - **Comparing two corpora (keyness)** — pick a comparison corpus and every
   category row gains the standard keyness battery: log-likelihood, Log
   Ratio (Hardie 2014), %DIFF and the simple-maths heuristic, with a
@@ -221,6 +232,15 @@ governor–dependent pairs.
   scale; the diverging chart plots Log Ratio around a zero axis, with
   each category label on the opposite side of its bar's direction so
   text and bar never overlap.
+
+**Cue-lens reading aids (v1.2.10)**. Every cue-based taxonomy now also
+ships a profile radar (each axis normalized to the most frequent
+category — a shape, not absolute rates), a co-occurrence table, and a
+language-coverage badge declaring which languages the lens's cue sets
+actually support (all four cue lenses are English-only; the USAS lexicon
+covers English and Arabic). The badges come from the engine's registry,
+not from the interface, so what the badge says is what the lens
+covers.
 
 **Enabling the optional Persuasion Index resources (v1.2.9)**. Four
 optional resources refine specific subfeatures but are license-restricted
