@@ -12,7 +12,7 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass
 from typing import Literal
 
-from sqlalchemy import func, select
+from sqlalchemy import ColumnElement, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.logging import get_logger
@@ -74,7 +74,7 @@ async def _corpus_size(
     return await session.scalar(stmt) or 0
 
 
-def _is_real_token():
+def _is_real_token() -> ColumnElement[bool]:
     """SQL condition for 'this token is a real word, not punct/whitespace."""
     return (Token.is_punct == False) & (Token.pos != "SPACE")  # noqa: E712
 

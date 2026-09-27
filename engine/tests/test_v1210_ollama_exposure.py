@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import socket
 import threading
+from collections.abc import Iterator
 
 import pytest
 
@@ -24,7 +25,7 @@ from api.server_mode import _ollama_lan_exposure
 
 
 @pytest.fixture(autouse=True)
-def _no_real_ollama(monkeypatch):
+def _no_real_ollama(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     """Isolate from the host: no OLLAMA_HOST env, probe only our ports."""
     monkeypatch.delenv("OLLAMA_HOST", raising=False)
     monkeypatch.setattr("api.server_mode.lan_ips", lambda: ["127.0.0.1"])
@@ -57,7 +58,9 @@ def _accept_and_close(srv: socket.socket) -> None:
     "value",
     ["0.0.0.0:11434", "0.0.0.0", "192.168.1.10:11434", "192.168.1.10"],
 )
-async def test_ollama_host_off_loopback_is_exposed(monkeypatch, value):
+async def test_ollama_host_off_loopback_is_exposed(
+    monkeypatch: pytest.MonkeyPatch, value: str
+) -> None:
     monkeypatch.setenv("OLLAMA_HOST", value)
     out = await _ollama_lan_exposure()
     assert out["exposed"] is True
@@ -66,7 +69,9 @@ async def test_ollama_host_off_loopback_is_exposed(monkeypatch, value):
 
 
 @pytest.mark.asyncio
-async def test_ollama_host_loopback_forms_fall_through_to_probe(monkeypatch):
+async def test_ollama_host_loopback_forms_fall_through_to_probe(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     # Probe path with nothing answering on the injected port → not exposed.
     monkeypatch.setattr("api.server_mode._OLLAMA_PORT", 54322)
     out = await _ollama_lan_exposure()
@@ -74,7 +79,7 @@ async def test_ollama_host_loopback_forms_fall_through_to_probe(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_probe_detects_lan_listener(monkeypatch):
+async def test_probe_detects_lan_listener(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("api.server_mode._OLLAMA_PORT", 54321)
     srv = _listener(54321)
     try:
@@ -87,7 +92,7 @@ async def test_probe_detects_lan_listener(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_probe_closed_port_is_not_exposed(monkeypatch):
+async def test_probe_closed_port_is_not_exposed(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("api.server_mode._OLLAMA_PORT", 54323)
     # Bind + close so we KNOW the port is free right now.
     srv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

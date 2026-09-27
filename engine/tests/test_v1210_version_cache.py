@@ -16,13 +16,15 @@ for memory-constrained hosts).
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+
 import pytest
 
 from app import version_cache
 
 
 @pytest.fixture(autouse=True)
-def _clean_cache():
+def _clean_cache() -> Iterator[None]:
     version_cache.reset_for_tests()
     yield
     version_cache.reset_for_tests()
@@ -53,7 +55,7 @@ async def test_distinct_versions_load_separately() -> None:
     assert len(seen) == 2
 
 
-async def test_lru_eviction_at_capacity(monkeypatch) -> None:
+async def test_lru_eviction_at_capacity(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("CORPUSMIND_PARSE_CACHE_ENTRIES", "2")
 
     async def loader() -> int:
@@ -68,7 +70,7 @@ async def test_lru_eviction_at_capacity(monkeypatch) -> None:
     assert set(version_cache._CACHE.keys()) == {"v3", "v2"}
 
 
-async def test_zero_entries_disables_cache(monkeypatch) -> None:
+async def test_zero_entries_disables_cache(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("CORPUSMIND_PARSE_CACHE_ENTRIES", "0")
 
     calls = {"n": 0}
