@@ -914,6 +914,7 @@ CIALDINI_2007: dict[str, set[str]] = {
 DISCOURSE_TAXONOMIES: dict[str, dict] = {
     "hyland2005": {
         "name": "Hyland 2005",
+        "languages": ["en"],
         "citation": (
             "Hyland, K. (2005). Metadiscourse: Exploring Interaction in "
             "Writing. London: Continuum."
@@ -925,6 +926,7 @@ DISCOURSE_TAXONOMIES: dict[str, dict] = {
     },
     "hallidayhasan1976": {
         "name": "Halliday & Hasan 1976",
+        "languages": ["en"],
         "citation": (
             "Halliday, M.A.K., & Hasan, R. (1976). Cohesion in English. "
             "London: Longman. (Substitution and ellipsis not covered.)"
@@ -933,6 +935,7 @@ DISCOURSE_TAXONOMIES: dict[str, dict] = {
     },
     "martinwhite2005": {
         "name": "Martin & White 2005",
+        "languages": ["en"],
         "citation": (
             "Martin, J.R., & White, P.R.R. (2005). The Language of "
             "Evaluation: Appraisal in English. Basingstoke: Palgrave "
@@ -942,6 +945,7 @@ DISCOURSE_TAXONOMIES: dict[str, dict] = {
     },
     "cialdini2007": {
         "name": "Cialdini 2007",
+        "languages": ["en"],
         "citation": (
             "Cialdini, R.B. (2007). Influence: The Psychology of Persuasion "
             "(Revised Edition). New York: HarperBusiness. (Chapters 2-7: "
@@ -1019,14 +1023,29 @@ class DiscourseResult:
     compare_total_tokens: int | None = None
     # v1.2.7 (§4): persuasion lens — how many documents were actually scored
     scored_documents: int | None = None
+    # v1.2.10: cue co-occurrence — GENERIC capability of the cue loop, not
+    # Cialdini-specific: for every unordered pair of categories, how many
+    # sentences contain cues from BOTH. Serialized as [{a, b, sentences}]
+    # with a < b, sorted by count desc then alphabetically. None for the
+    # lexicon (usas), parse-driven (sfg) and persuasion lenses — their
+    # detection loops are structured differently, and pretending otherwise
+    # would be the kind of quiet equivalence this codebase avoids.
+    cooccurrence: list[dict[str, Any]] | None = None
 
 
 def discourse_taxonomy_list() -> list[dict]:
-    """Registry for the API/frontend: keys, display names, citations."""
+    """Registry for the API/frontend: keys, display names, citations.
+
+    v1.2.10: each item also carries ``languages`` — the language coverage
+    its cue sets/lexicons actually support, declared IN the registry so the
+    UI badge is traceable to a single source of truth (generalizes the
+    Arabic-gap badge beyond the persuasion lens).
+    """
     items = [
         {
             "key": key,
             "name": spec["name"],
+            "languages": spec.get("languages", ["en"]),
             "citation": spec["citation"],
             "categories": sorted(spec["categories"].keys()),
         }
@@ -1036,6 +1055,7 @@ def discourse_taxonomy_list() -> list[dict]:
         {
             "key": USAS_TAXONOMY_KEY,
             "name": "CLAWS/USAS semantic tagset (top-level)",
+            "languages": ["en", "ar"],
             "citation": USAS_CITATION,
             "categories": sorted(USAS_DISCOURSE_GROUPS.keys()),
         }
@@ -1045,6 +1065,7 @@ def discourse_taxonomy_list() -> list[dict]:
         {
             "key": SFG_TAXONOMY_KEY,
             "name": "SFG Transitivity & Modality (Halliday & Matthiessen 2014)",
+            "languages": ["en"],
             "citation": SFG_CITATION,
             "categories": sorted(
                 [
@@ -1062,6 +1083,7 @@ def discourse_taxonomy_list() -> list[dict]:
         {
             "key": PERSUASION_TAXONOMY_KEY,
             "name": "Persuasion Index (Wang & Gong 2026) - 15 dimensions",
+            "languages": ["en"],
             "citation": PERSUASION_CITATION,
             "categories": sorted(
                 f"pi.{family}.{dim}" for dim, family in PI_DIMENSION_FAMILIES.items()
@@ -1119,7 +1141,7 @@ def _count_cue_categories(
     *,
     limit_examples: int,
     include_lexical_cohesion: bool = False,
-) -> tuple[Counter, dict[str, list[dict]], dict[str, Counter], Counter]:
+) -> tuple[Counter, dict[str, list[dict]], dict[str, Counter], Counter, Counter[tuple[str, str]]]:
     """Count cue matches per category over parsed sentences.
 
     v1.2.7 (§3): factored out of :func:`compute_discourse_analysis` so the
@@ -1128,14 +1150,25 @@ def _count_cue_categories(
     identical detection semantics. Also tracks per-document counts (for
     Gries' DP) and per-document token sizes (the DP expected proportions).
 
+    v1.2.10: additionally returns category co-occurrence — a Counter over
+    unordered ``(cat_a, cat_b)`` pairs (alphabetically ordered, so the key
+    is canonical) counting SENTENCES where at least one cue from each side
+    matched. Set semantics per sentence: a sentence with three scarcity
+    cues still pairs once. This is a generic property of the cue loop (any
+    taxonomy registered in DISCOURSE_TAXONOMIES gets it for free) and
+    reuses the exact same match decisions as the frequency counts, so the
+    two can never drift apart.
+
     Returns (category_counts, category_examples, category_doc_counts,
-    doc_sizes). Doc sizes exclude SPACE/PUNCT tokens so the DP parts match
-    the same token convention as ``_corpus_size`` (punctuation excluded).
+    doc_sizes, category_pair_counts). Doc sizes exclude SPACE/PUNCT tokens
+    so the DP parts match the same token convention as ``_corpus_size``
+    (punctuation excluded).
     """
     category_counts: Counter = Counter()
     category_examples: dict[str, list[dict]] = defaultdict(list)
     category_doc_counts: dict[str, Counter] = defaultdict(Counter)
     doc_sizes: Counter = Counter()
+    category_pair_counts: Counter[tuple[str, str]] = Counter()
 
     for sent in sentences:
         sent_text_tokens = [t["text"].lower() for t in sent]
@@ -1143,9 +1176,11 @@ def _count_cue_categories(
         for tok in sent:
             if tok.get("pos") not in ("SPACE", "PUNCT"):
                 doc_sizes[tok["doc"]] += 1
+        cats_hit_in_sentence: set[str] = set()
         for cat_name, cue_set in categories.items():
             if cat_name == "lexical.repetition":
                 continue  # computed separately across sentence pairs
+            cat_hit = False
             for cue in cue_set:
                 # Multi-word cues: check if it appears as a substring of the sentence
                 if " " in cue:
@@ -1160,6 +1195,7 @@ def _count_cue_categories(
                             )
                         category_counts[cat_name] += 1
                         category_doc_counts[cat_name][sent[0]["doc"]] += 1
+                        cat_hit = True
                 else:
                     # Single-word: match against individual tokens
                     for tok in sent:
@@ -1174,6 +1210,16 @@ def _count_cue_categories(
                                 )
                             category_counts[cat_name] += 1
                             category_doc_counts[cat_name][tok["doc"]] += 1
+                            cat_hit = True
+            if cat_hit:
+                cats_hit_in_sentence.add(cat_name)
+        # v1.2.10: co-occurrence pairs for this sentence (unordered,
+        # alphabetical canonical order, self-pairs excluded).
+        if len(cats_hit_in_sentence) > 1:
+            hit_list = sorted(cats_hit_in_sentence)
+            for i, cat_a in enumerate(hit_list):
+                for cat_b in hit_list[i + 1 :]:
+                    category_pair_counts[(cat_a, cat_b)] += 1
 
     if include_lexical_cohesion:
         _detect_lexical_cohesion(
@@ -1184,7 +1230,13 @@ def _count_cue_categories(
             category_doc_counts=category_doc_counts,
         )
 
-    return category_counts, category_examples, category_doc_counts, doc_sizes
+    return (
+        category_counts,
+        category_examples,
+        category_doc_counts,
+        doc_sizes,
+        category_pair_counts,
+    )
 
 
 def _per_category_dp(
@@ -1289,13 +1341,22 @@ async def compute_discourse_analysis(
     sentences = await _load_parses(session, version_id)
 
     all_categories = spec["categories"]
-    counts, examples, per_doc, doc_sizes = _count_cue_categories(
+    counts, examples, per_doc, doc_sizes, pair_counts = _count_cue_categories(
         sentences,
         all_categories,
         limit_examples=limit_examples,
         include_lexical_cohesion=(key == "hallidayhasan1976"),
     )
     dp_by_cat = _per_category_dp(counts, per_doc, doc_sizes)
+
+    # v1.2.10: generic cue co-occurrence — deterministic serialization
+    # (count desc, then alphabetical pair) so the UI table order is stable.
+    cooccurrence = [
+        {"a": cat_a, "b": cat_b, "sentences": n}
+        for (cat_a, cat_b), n in sorted(
+            pair_counts.items(), key=lambda kv: (-kv[1], kv[0][0], kv[0][1])
+        )
+    ]
 
     categories: dict[str, dict] = {}
     for cat, count in counts.most_common():
@@ -1317,7 +1378,7 @@ async def compute_discourse_analysis(
         if compare_version_id:
             compare_total = await _corpus_size(session, compare_version_id)
             compare_sentences = await _load_parses(session, compare_version_id)
-            c_counts, _c_examples, _c_per_doc, _c_sizes = _count_cue_categories(
+            c_counts, _c_examples, _c_per_doc, _c_sizes, _c_pairs = _count_cue_categories(
                 compare_sentences,
                 all_categories,
                 limit_examples=0,
@@ -1353,6 +1414,7 @@ async def compute_discourse_analysis(
         taxonomy=spec["name"],
         taxonomy_key=key,
         citation=spec["citation"],
+        cooccurrence=cooccurrence,
         compare_corpus_id=compare_corpus_id if compare_total is not None else None,
         compare_total_tokens=compare_total,
     )

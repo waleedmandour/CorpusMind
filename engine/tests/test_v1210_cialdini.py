@@ -12,13 +12,14 @@ from __future__ import annotations
 
 import io
 import os
+from collections.abc import AsyncIterator
 
 import pytest
 from httpx import ASGITransport, AsyncClient
 
 
 @pytest.fixture
-async def client():
+async def client() -> AsyncIterator[AsyncClient]:
     os.environ["CORPUSMIND_DB_URL"] = "sqlite+aiosqlite:///:memory:"
     os.environ["CORPUSMIND_DATA_DIR"] = "/tmp/cm-test-data"
     from app.settings import get_settings
@@ -41,7 +42,7 @@ async def _setup_corpus(client: AsyncClient, content: bytes, name: str = "Cialdi
     r = await client.post(
         f"/api/v1/projects/{pid}/corpora", json={"name": "C", "language": "en"}
     )
-    cid = r.json()["id"]
+    cid: str = r.json()["id"]
     await client.post(
         f"/api/v1/corpora/{cid}/documents",
         files={"files": ("persuasion.txt", io.BytesIO(content), "text/plain")},
@@ -84,12 +85,24 @@ def test_registry_entry_shape() -> None:
     assert "Chapters 2-7" in spec["citation"]
     assert "not covered" in spec["citation"]
     assert set(CIALDINI_2007) == EXPECTED_PRINCIPLES
+    # The Unity exclusion is pinned NEGATIVELY, not just by the positive
+    # six-principle set above: exactly six categories, no 'unity' category,
+    # and no Unity-coded registry key (e.g. a future 'cialdini2021') may
+    # appear unless a review deliberately changes this test.
+    assert len(CIALDINI_2007) == 6
+    assert "unity" not in {c.lower() for c in CIALDINI_2007}
+    assert not any("unity" in c.lower() for c in CIALDINI_2007)
+    assert "cialdini2021" not in DISCOURSE_TAXONOMIES
+    assert not any("unity" in key for key in DISCOURSE_TAXONOMIES)
+    # Language-coverage badge traceability: declared in the registry, not
+    # hardcoded in the UI (same contract as hyland2005/usas below).
+    assert spec["languages"] == ["en"]
     for cat, cues in CIALDINI_2007.items():
         assert cues, f"category {cat} must not be empty"
         assert all(c == c.lower() for c in cues), "cues are matched lowercased"
 
 
-async def test_taxonomies_endpoint_lists_cialdini(client) -> None:
+async def test_taxonomies_endpoint_lists_cialdini(client: AsyncClient) -> None:
     cid = await _setup_corpus(client, PERSUASION_TEXT)
     r = await client.get(f"/api/v1/corpora/{cid}/discourse/taxonomies")
     assert r.status_code == 200
@@ -97,10 +110,17 @@ async def test_taxonomies_endpoint_lists_cialdini(client) -> None:
     assert "cialdini2007" in items
     assert items["cialdini2007"]["name"] == "Cialdini 2007"
     assert set(items["cialdini2007"]["categories"]) == EXPECTED_PRINCIPLES
+    # Language coverage flows from the registry through the API so the UI
+    # badge is traceable: English-only cue lenses vs the bilingual USAS.
+    assert items["cialdini2007"]["languages"] == ["en"]
+    assert items["hyland2005"]["languages"] == ["en"]
+    assert items["martinwhite2005"]["languages"] == ["en"]
+    assert items["hallidayhasan1976"]["languages"] == ["en"]
+    assert items["usas"]["languages"] == ["en", "ar"]
 
 
 @pytest.mark.asyncio
-async def test_cialdini_lens_counts_all_six_principles(client) -> None:
+async def test_cialdini_lens_counts_all_six_principles(client: AsyncClient) -> None:
     cid = await _setup_corpus(client, PERSUASION_TEXT)
     r = await client.post(
         f"/api/v1/corpora/{cid}/discourse", json={"taxonomy": "cialdini2007"}
@@ -125,7 +145,7 @@ async def test_cialdini_lens_counts_all_six_principles(client) -> None:
 
 
 @pytest.mark.asyncio
-async def test_cialdini_multilabel_sentence_counts_in_both(client) -> None:
+async def test_cialdini_multilabel_sentence_counts_in_both(client: AsyncClient) -> None:
     """s1 matches reciprocation (free trial, no obligation) AND scarcity
     (act now, while supplies last). Cue counting is multi-label by
     construction — the sentence must add to BOTH counters."""
@@ -141,3 +161,47 @@ async def test_cialdini_multilabel_sentence_counts_in_both(client) -> None:
     assert any("act now" in e["sentence_preview"] for e in scarc_examples)
     assert cats["reciprocation"]["freq"] >= 1
     assert cats["scarcity"]["freq"] >= 1
+
+
+@pytest.mark.asyncio
+async def test_cialdini_cooccurrence_counts_shared_sentences(client: AsyncClient) -> None:
+    """Co-occurrence is a GENERIC cue-lens capability exposed on the same
+    response as the frequency counts. In the seed text only s1 matches two
+    categories (reciprocation: 'free'/'trial'/'no obligation'; scarcity:
+    'act now'/'while supplies last') — exactly that unordered pair must be
+    reported with sentence count 1, canonical alphabetical ordering, and
+    no self-pairs or phantom categories."""
+    cid = await _setup_corpus(client, PERSUASION_TEXT)
+    r = await client.post(
+        f"/api/v1/corpora/{cid}/discourse", json={"taxonomy": "cialdini2007"}
+    )
+    assert r.status_code == 200
+    data = r.json()
+    assert data["cooccurrence"] is not None
+    pairs = {(p["a"], p["b"]): p["sentences"] for p in data["cooccurrence"]}
+    assert pairs.get(("reciprocation", "scarcity")) == 1
+    for (a, b), n in pairs.items():
+        assert a < b, "pair keys must be canonically ordered"
+        assert a in EXPECTED_PRINCIPLES and b in EXPECTED_PRINCIPLES
+        assert n >= 1
+    # Deterministic serialization: count desc, then alphabetical.
+    counts_in_order = [p["sentences"] for p in data["cooccurrence"]]
+    assert counts_in_order == sorted(counts_in_order, reverse=True)
+
+
+@pytest.mark.asyncio
+async def test_cooccurrence_is_generic_across_cue_lenses(client: AsyncClient) -> None:
+    """The response field is populated for the PRE-EXISTING cue lenses too
+    (hyland2005) — this is registry-wide capability, not Cialdini sugar.
+    The lexicon/parse/persuasion lenses legitimately return null."""
+    cid = await _setup_corpus(client, PERSUASION_TEXT, name="Generic")
+    r = await client.post(
+        f"/api/v1/corpora/{cid}/discourse", json={"taxonomy": "hyland2005"}
+    )
+    assert r.status_code == 200
+    assert isinstance(r.json()["cooccurrence"], list)
+    r2 = await client.post(
+        f"/api/v1/corpora/{cid}/discourse", json={"taxonomy": "usas"}
+    )
+    assert r2.status_code == 200
+    assert r2.json()["cooccurrence"] is None
