@@ -865,6 +865,50 @@ MARTIN_WHITE_2005 = {
 }
 
 
+# Cialdini's six principles (Influence, Revised Edition 2007, ch. 2-7) as
+# lexical cue sets (v1.2.10). House "starter subset" convention, same as
+# the Appraisal lens above: these are the most frequent surface markers of
+# persuasive text, not a closed inventory — chapter concepts like
+# engineered reciprocation or structured commitment sequences are
+# discourse-level and not recoverable from token cues. The 2021 seventh
+# principle (Unity) is deliberately EXCLUDED: it belongs to a different
+# edition and was not part of the approved v1.2.10 scope.
+CIALDINI_2007: dict[str, set[str]] = {
+    "reciprocation": {  # ch.2 — free gift / concession first, then the ask
+        "free", "gift", "complimentary", "bonus", "trial", "favor",
+        "favour", "concession", "reciprocal", "owe", "obligation",
+        "no obligation", "with our compliments", "try before you buy",
+    },
+    "commitment_consistency": {  # ch.3 — small commitments bind later ones
+        "commitment", "committed", "consistent", "consistency", "promise",
+        "pledge", "vow", "start small", "take a stand", "foot in the door",
+        "write it down", "sign below", "make it official",
+    },
+    "social_proof": {  # ch.4 — many others already act this way
+        "everyone", "most people", "many others", "thousands", "millions",
+        "best-selling", "bestselling", "popular", "trending", "join the",
+        "out of 10", "as seen", "others like you", "people are saying",
+    },
+    "liking": {  # ch.5 — similarity + compliments before the request
+        "like you", "just like you", "similar to you", "your friend",
+        "friends like you", "fellow", "great taste", "compliment",
+        "someone like you", "we are alike",
+    },
+    "authority": {  # ch.6 — expertise and credentials as evidence
+        "expert", "experts", "study shows", "studies show", "research shows",
+        "doctors recommend", "scientists", "professor", "certified",
+        "official", "leading", "award-winning", "according to", "proven",
+        "recommended by",
+    },
+    "scarcity": {  # ch.7 — limited availability raises perceived value
+        "limited", "limited time", "only a few", "while supplies last",
+        "act now", "expires", "last chance", "deadline", "running out",
+        "exclusive", "once they're gone", "hurry", "offer ends",
+        "before it's gone",
+    },
+}
+
+
 # --- Taxonomy registry ---------------------------------------------------- #
 
 DISCOURSE_TAXONOMIES: dict[str, dict] = {
@@ -895,6 +939,17 @@ DISCOURSE_TAXONOMIES: dict[str, dict] = {
             "Macmillan. (Lexical starter set; invoked attitude not covered.)"
         ),
         "categories": dict(MARTIN_WHITE_2005),
+    },
+    "cialdini2007": {
+        "name": "Cialdini 2007",
+        "citation": (
+            "Cialdini, R.B. (2007). Influence: The Psychology of Persuasion "
+            "(Revised Edition). New York: HarperBusiness. (Chapters 2-7: "
+            "reciprocation, commitment & consistency, social proof, liking, "
+            "authority, scarcity. Lexical starter set; the 2021 'Unity' "
+            "principle is not covered.)"
+        ),
+        "categories": dict(CIALDINI_2007),
     },
 }
 

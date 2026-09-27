@@ -1657,6 +1657,7 @@ function DiscoursePanel({ cid }: { cid: string }) {
       { key: "hyland2005", name: "Hyland 2005" },
       { key: "hallidayhasan1976", name: "Halliday & Hasan 1976" },
       { key: "martinwhite2005", name: "Martin & White 2005" },
+      { key: "cialdini2007", name: "Cialdini 2007" },
       { key: "usas", name: "CLAWS/USAS semantic tagset (top-level)" },
       { key: "sfg_hm2014", name: "SFG Transitivity & Modality (Halliday & Matthiessen 2014)" },
       { key: "persuasion_gong2026", name: "Persuasion Index (Wang & Gong 2026) - 15 dimensions" },
