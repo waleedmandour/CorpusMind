@@ -835,6 +835,10 @@ export interface DiscourseCategory {
 export interface DiscourseTaxonomyInfo {
   key: string;
   name: string;
+  // v1.2.10: language coverage declared in the engine registry so the UI
+  // badge is traceable to a single source of truth (en-only cue lenses vs
+  // the bilingual en/ar USAS lexicon).
+  languages?: string[];
   citation: string;
   categories: string[];
 }
@@ -853,6 +857,10 @@ export interface DiscourseResult {
   compare_total_tokens?: number | null;
   // v1.2.7 (§4): persuasion lens — documents actually scored
   scored_documents?: number | null;
+  // v1.2.10: generic cue-lens co-occurrence — sentences where cues from
+  // two categories co-occur. Null for usas/sfg/persuasion (different
+  // detection loops); a list (possibly empty) for every cue lens.
+  cooccurrence?: Array<{ a: string; b: string; sentences: number }> | null;
 }
 
 // v1.2.7 (§2): UD v2 syntax upgrade

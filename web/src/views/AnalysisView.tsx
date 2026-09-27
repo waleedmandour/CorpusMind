@@ -20,6 +20,7 @@ import { CollocationNetwork } from "@/components/CollocationNetwork";
 import { SlowQueryNote } from "@/components/SlowQueryNote";
 import { PersuasionRadar } from "@/components/PersuasionRadar";
 import { DiscourseBarChart } from "@/components/DiscourseBarChart";
+import { TaxonomyRadar, RADAR_MIN_AXES, RADAR_MAX_AXES } from "@/components/TaxonomyRadar";
 
 // Issue 5: shared export-status hook so every analysis panel gets the same
 // user-visible success/error feedback without duplicating the boilerplate.
@@ -1662,6 +1663,9 @@ function DiscoursePanel({ cid }: { cid: string }) {
       { key: "sfg_hm2014", name: "SFG Transitivity & Modality (Halliday & Matthiessen 2014)" },
       { key: "persuasion_gong2026", name: "Persuasion Index (Wang & Gong 2026) - 15 dimensions" },
     ];
+  // v1.2.10: language-coverage badge — driven entirely by the engine
+  // registry via /discourse/taxonomies (traceable, not hardcoded here).
+  const txInfo = taxonomies.data?.taxonomies.find((tx) => tx.key === taxonomy);
   const isUsas = result.data?.taxonomy_key === "usas";
   const isPersuasion = result.data?.taxonomy_key === "persuasion_gong2026";
 
@@ -1752,6 +1756,17 @@ function DiscoursePanel({ cid }: { cid: string }) {
         )}
         <ExportButton onExport={(fmt_) => { if (result.data) { downloadJsonResult(result.data, `discourse.${fmt_}`, exportStatus.set); } } } disabled={!result.data} />
       </div>
+      {/* v1.2.10: language-coverage badge — traceable to the registry (the
+          engines declares which languages each lens's cue sets/lexicons
+          actually support); hidden until the taxonomies query resolves. */}
+      {txInfo?.languages && txInfo.languages.length > 0 && (
+        <div className="lang-coverage-note">
+          {t(lang, "lang_coverage")}:{" "}
+          {txInfo.languages.map((l) => (
+            <span key={l} className="lang-chip">{l}</span>
+          ))}
+        </div>
+      )}
       <div className="grounding-notice">
         <strong>Note:</strong> {t(lang, "discourse_note_intro")}{" "}
         {result.data?.citation && <em>{result.data.citation}</em>}
@@ -1889,6 +1904,45 @@ function DiscoursePanel({ cid }: { cid: string }) {
               rows, the same sort. The persuasion lens keeps its radar. */}
           {!isPersuasion && rows.length > 0 && (
             <DiscourseBarChart rows={rows.slice(0, 25)} hasCompare={hasCompare} />
+          )}
+          {/* v1.2.10: generic profile radar for cue lenses with 3-12
+              categories (Cialdini 6, Hyland 10, Appraisal 7, SFG 10; the
+              21-tag USAS stays on the bar chart). Axis length is normalized
+              to the most frequent category — the hint line says so. */}
+          {!isPersuasion && result.data && rows.length >= RADAR_MIN_AXES && rows.length <= RADAR_MAX_AXES && (
+            <div className="taxonomy-radar-wrap">
+              <TaxonomyRadar categories={result.data.categories} />
+              <div className="taxonomy-radar-hint"><em>{t(lang, "discourse_radar_hint")}</em></div>
+            </div>
+          )}
+          {/* v1.2.10: generic cue co-occurrence — sentences matching cues
+              from two categories. Co-occurrence is not causation; the hint
+              says so in both UI languages. */}
+          {!!result.data?.cooccurrence?.length && (
+            <div className="coocc-card">
+              <strong>{t(lang, "discourse_coocc_title")}</strong>
+              <p className="coocc-hint">{t(lang, "discourse_coocc_hint")}</p>
+              <div className="discourse-table-wrap">
+                <table className="discourse-table">
+                  <thead>
+                    <tr>
+                      <th>{t(lang, "discourse_coocc_pair")}</th>
+                      <th className="num">{t(lang, "discourse_coocc_sentences")}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {result.data.cooccurrence.map((p) => (
+                      <tr key={`${p.a}__${p.b}`}>
+                        <td>
+                          <strong>{p.a.replace(/_/g, " ")}</strong> × {p.b.replace(/_/g, " ")}
+                        </td>
+                        <td className="num">{p.sentences.toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           )}
           {/* v1.2.7 (§4): radar over the 15 dimensions before the table */}
           {isPersuasion && result.data.categories && Object.keys(result.data.categories).length > 0 && (
