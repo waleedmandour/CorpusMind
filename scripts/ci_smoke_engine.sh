@@ -99,29 +99,59 @@ fail() {
   exit 1
 }
 
-# 1. USAS lexicon (review #1: 503 "not installed" in the shipped bundle)
+# ---------------------------------------------------------------------------
+# v1.2.10: /health/resources is the SINGLE asserted registry. Every key the
+# build contractually ships must be true here — asserting the whole payload
+# (instead of the three keys that regressed in v1.2.8) is what generalizes
+# the gate: a future resource added to the registry without being added to
+# the bundle fails HERE, on every platform, before release.
+# Report-only keys (spacy_model, sentiment) are printed for the record;
+# user-supplied resources can never be asserted.
+# ---------------------------------------------------------------------------
 echo "${RES_JSON}" | python3 -c "
 import json, sys
 d = json.load(sys.stdin)
-assert d.get('usas', {}).get('en') is True, f\"USAS en lexicon missing: {d.get('usas')}\"
-" || fail "USAS en lexicon did not resolve inside the bundle"
+problems = []
 
-# 2. AWL wordlist (same path-resolution bug class, silent degradation)
-echo "${RES_JSON}" | python3 -c "
-import json, sys
-d = json.load(sys.stdin)
-assert d.get('wordlists', {}).get('awl') is True, f\"AWL wordlist missing: {d.get('wordlists')}\"
-" || fail "AWL wordlist did not resolve inside the bundle"
+def need(path, ok, what):
+    if not ok:
+        problems.append(f'{what} ({path})')
 
-# 3. persuasion-index (review #3: package absent from the shipped bundle)
-echo "${RES_JSON}" | python3 -c "
-import json, sys
-d = json.load(sys.stdin)
+need('usas.en', d.get('usas', {}).get('en') is True, 'USAS en lexicon missing')
+need('usas.ar', d.get('usas', {}).get('ar') is True, 'USAS ar lexicon missing')
+need('wordlists.awl', d.get('wordlists', {}).get('awl') is True, 'AWL wordlist missing')
+need('wordlists.k1_top200', d.get('wordlists', {}).get('k1_top200') is True, 'K1 top200 wordlist missing')
+
+rc = d.get('reference_corpora', {})
+for k in ('be06_top1000', 'leipzig_news_top100', 'ellipse_learner_top1000',
+          'pd_persuasive_top1000', 'camel_arabic_top1000',
+          'quranic_arabic_freq', 'dialectal_tweets_top1000'):
+    need(f'reference_corpora.{k}', rc.get(k) is True, f'reference corpus missing: {k}')
+
+fw = d.get('frameworks', {}).get('count', 0)
+if fw < 12:
+    problems.append(f'framework catalogue incomplete: {fw} YAMLs (floor 12)')
+
+need('spacy_model.en_core_web_sm', d.get('spacy_model', {}).get('en_core_web_sm') is True,
+     'spaCy en_core_web_sm not collected in bundle')
+
+need('wordfreq.installed', d.get('wordfreq', {}).get('installed') is True, 'wordfreq missing')
+
 pi = d.get('persuasion_index') or {}
-assert pi.get('installed') is True, f\"persuasion-index not installed in bundle: {pi}\"
-assert pi.get('version'), f\"persuasion-index version unknown: {pi}\"
-print(f\"[smoke] persuasion-index {pi.get('version')} present\")
-" || fail "persuasion-index did not import inside the bundle"
+need('persuasion_index.installed', pi.get('installed') is True, 'persuasion-index not importable in bundle')
+if not pi.get('version'):
+    problems.append('persuasion-index version unknown')
+
+if d.get('reference_data_dir') is None:
+    problems.append('reference_data_dir did not resolve in bundle')
+
+print(f\"[smoke] report-only: sentiment={d.get('sentiment')}\", flush=True)
+if problems:
+    print('[smoke] registry problems:', flush=True)
+    for p in problems:
+        print(f'[smoke]   - {p}', flush=True)
+    sys.exit(1)
+" || fail "bundled-resource registry incomplete (see problems above)"
 
 # 4. The persuasion health endpoint answers with installed=true
 PI_JSON="$(curl -fsS "${BASE}/api/v1/discourse/persuasion/health")"
@@ -132,4 +162,25 @@ d = json.load(sys.stdin)
 assert d.get('installed') is True, f\"persuasion health installed!=true: {d}\"
 " || fail "persuasion health endpoint reports the lens as not installed"
 
-echo "[smoke] PASS: USAS lexicon, AWL wordlist and persuasion-index all present in the bundle"
+# ---------------------------------------------------------------------------
+# v1.2.10: the stateless status endpoints must all answer. This is the
+# allowlisted subset of "every registered status endpoint" — per-object
+# routes (/image-sets/{id}/run-batch/status, /ollama/pull/status, ...) need
+# runtime state and are intentionally excluded. /health/ready's providers
+# are all expected FALSE on a CI runner (no Ollama/LM Studio/cloud); only
+# the response SHAPE is asserted.
+# ---------------------------------------------------------------------------
+for ep in "health/ready" "server-mode/status" "encryption/status" "facial-analysis/status" "troubleshoot/status"; do
+  if curl -fsS "${BASE}/api/v1/${ep}" >/dev/null 2>&1; then
+    echo "[smoke] OK   /api/v1/${ep}"
+  else
+    fail "status endpoint failed: /api/v1/${ep}"
+  fi
+done
+curl -fsS "${BASE}/api/v1/health/ready" | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+assert isinstance(d.get('providers'), dict), f\"health/ready providers shape wrong: {d}\"
+" || fail "health/ready did not report a providers object"
+
+echo "[smoke] PASS: full resource registry + persuasion + status endpoints verified in the bundle"

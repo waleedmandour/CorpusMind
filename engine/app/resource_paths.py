@@ -18,8 +18,13 @@ Word List / bundled reference lists.
 that exists:
 
   1. ``sys._MEIPASS`` / reference-data — PyInstaller (onedir and onefile)
-  2. repo root via the module's parents — dev checkout / source runs
-  3. one-parent walk                   — alternative frozen layouts
+  2. ``CORPUSMIND_REFERENCE_DATA_DIR`` / reference-data — explicit override
+     (v1.2.10): used by the self-hosted Docker image, which bakes
+     ``reference-data/`` at ``/app/reference-data`` — a location no
+     site-packages-relative walk can find. Also lets labs mount a custom
+     data pack without rebuilding the image.
+  3. repo root via the module's parents — dev checkout / source runs
+  4. one-parent walk                   — alternative frozen layouts
 
 Every consumer of ``reference-data/`` MUST go through this helper so the
 packaged engine and a dev checkout behave identically.
@@ -27,6 +32,7 @@ packaged engine and a dev checkout behave identically.
 
 from __future__ import annotations
 
+import os
 import sys
 from functools import lru_cache
 from pathlib import Path
@@ -39,10 +45,16 @@ def _candidates() -> tuple[Path, ...]:
     meipass = getattr(sys, "_MEIPASS", None)
     if meipass:
         seen.append(Path(meipass) / "reference-data")
-    # 2. Dev checkout / source run: engine/app/../../reference-data.
+    # 2. Explicit override (v1.2.10): the Docker image sets
+    #    CORPUSMIND_REFERENCE_DATA_DIR=/app/reference-data; labs can point
+    #    it at a mounted custom data pack.
+    env_dir = os.environ.get("CORPUSMIND_REFERENCE_DATA_DIR", "").strip()
+    if env_dir:
+        seen.append(Path(env_dir))
+    # 3. Dev checkout / source run: engine/app/../../reference-data.
     here = Path(__file__).resolve().parent
     seen.append(here.parent.parent / "reference-data")
-    # 3. Alternative frozen layouts where modules sit beside the data.
+    # 4. Alternative frozen layouts where modules sit beside the data.
     seen.append(here.parent / "reference-data")
     unique: list[Path] = []
     for c in seen:

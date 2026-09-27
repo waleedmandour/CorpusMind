@@ -41,7 +41,11 @@ COPY engine/semantic /build/semantic
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir .
+    pip install --no-cache-dir . && \
+# v1.2.10: bake the spaCy pipeline model so a freshly pulled image can
+# parse/tokenize with zero out-of-band downloads (the runtime stage has no
+# spacy CLI step, and /health/resources reports it). ~12 MB wheel.
+    python -m spacy download en_core_web_sm
 
 
 FROM python:3.12-slim AS runtime
@@ -56,6 +60,16 @@ WORKDIR /app
 # Copy the venv from builder
 COPY --from=builder /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
+
+# v1.2.10: bake the bundled reference-data pack (USAS tagsets, wordlists,
+# reference corpora, framework YAMLs — ~1.5 MB) into the image. Before this,
+# EVERY Docker deployment ran with the USAS lens 503ing and the Academic
+# Word List silently degraded, because no site-packages-relative walk can
+# find repo-root data and nothing mounted it. The resolver picks this up
+# via CORPUSMIND_REFERENCE_DATA_DIR (see app/resource_paths.py). Labs can
+# still mount a custom pack over /app/reference-data.
+COPY reference-data /app/reference-data
+ENV CORPUSMIND_REFERENCE_DATA_DIR=/app/reference-data
 
 # Storage for projects — mount as a volume in production.
 RUN mkdir -p /data

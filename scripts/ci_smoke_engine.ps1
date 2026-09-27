@@ -121,10 +121,29 @@ try {
         $resJson = & curl.exe -fsS --noproxy "*" "$Base/api/v1/health/resources"
         $res = $resJson | ConvertFrom-Json
         Write-Host ("[smoke] /api/v1/health/resources -> " + ($resJson -join ""))
+        # v1.2.10: /health/resources is the SINGLE asserted registry — the
+        # same full-payload assertions as ci_smoke_engine.sh (Linux/macOS).
         if ($res.usas.en -ne $true) { $Failures += "USAS en lexicon did not resolve at boot" }
+        if ($res.usas.ar -ne $true) { $Failures += "USAS ar lexicon did not resolve at boot" }
         if ($res.wordlists.awl -ne $true) { $Failures += "AWL wordlist did not resolve at boot" }
+        if ($res.wordlists.k1_top200 -ne $true) { $Failures += "K1 top200 wordlist did not resolve at boot" }
+        foreach ($k in @('be06_top1000','leipzig_news_top100','ellipse_learner_top1000','pd_persuasive_top1000','camel_arabic_top1000','quranic_arabic_freq','dialectal_tweets_top1000')) {
+            if ($res.reference_corpora.$k -ne $true) { $Failures += "reference corpus missing at boot: $k" }
+        }
+        if (-not $res.frameworks -or $res.frameworks.count -lt 12) {
+            $fwCount = if ($res.frameworks) { $res.frameworks.count } else { 0 }
+            $Failures += "framework catalogue incomplete: $fwCount YAMLs (floor 12)"
+        }
+        if ($res.spacy_model.en_core_web_sm -ne $true) { $Failures += "spaCy en_core_web_sm not collected in bundle" }
+        if ($res.wordfreq.installed -ne $true) { $Failures += "wordfreq did not import at boot" }
         $pi = $res.persuasion_index
         if (-not $pi -or $pi.installed -ne $true) { $Failures += "persuasion-index did not import at boot" }
+        if (-not $res.reference_data_dir) { $Failures += "reference_data_dir did not resolve in bundle" }
+        # v1.2.10: stateless status endpoints must answer.
+        foreach ($ep in @('health/ready','server-mode/status','encryption/status','facial-analysis/status','troubleshoot/status')) {
+            & curl.exe -fsS --noproxy "*" --max-time 5 "$Base/api/v1/$ep" 2>$null | Out-Null
+            if ($LASTEXITCODE -ne 0) { $Failures += "status endpoint failed: /api/v1/$ep" }
+        }
         $piHealth = (& curl.exe -fsS --noproxy "*" "$Base/api/v1/discourse/persuasion/health") | ConvertFrom-Json
         if ($piHealth.installed -ne $true) { $Failures += "persuasion health endpoint reports the lens as not installed" }
     } else {

@@ -40,9 +40,18 @@ async def resources_health() -> dict:
     """Availability of the bundled optional resources (v1.2.8, review #1).
 
     STATUS endpoint (always 200): reports whether the data files behind the
-    USAS semantic lens, the vocabulary profile (AWL + K1 list) and the
-    bundled reference corpora were found under the resolved reference-data
-    directory, plus whether the optional persuasion-index package imports.
+    USAS semantic lens, the vocabulary profile (AWL + K1 list), the bundled
+    reference corpora and the discourse framework YAMLs were found under the
+    resolved reference-data directory, plus whether the optional
+    persuasion-index package imports.
+
+    v1.2.10: this endpoint is now the SINGLE asserted registry for the
+    release pipeline's post-build smoke gates (ci_smoke_engine.sh/.ps1) and
+    the Docker CI job — every key a build contractually ships must be true
+    here, so a new bundled resource cannot regress silently the way the
+    v1.2.8 PyInstaller bundle did. Report-only (non-contractual) keys are
+    also present: user-supplied resources (NRC EmoLex) and environment-
+    dependent facts (spaCy model installs) are reported, never asserted.
 
     The Settings surface and the release pipeline's post-build smoke gate
     both read this instead of having to run an analysis first.
@@ -51,6 +60,10 @@ async def resources_health() -> dict:
         "usas": {},
         "wordlists": {},
         "reference_corpora": {},
+        "frameworks": {},
+        "spacy_model": {},
+        "wordfreq": {},
+        "sentiment": {},
         "reference_data_dir": None,
         "persuasion_index": {"installed": False, "version": None},
     }
@@ -73,13 +86,74 @@ async def resources_health() -> dict:
             "awl": exists("wordlists", "awl-sublists.tsv"),
             "k1_top200": exists("wordlists", "en", "top200.tsv"),
         }
+        # v1.2.10: every bundled reference corpus is registered, not just
+        # the one that regressed in v1.2.8 — a missing file anywhere in the
+        # pack is a bundle defect the smoke gate must catch.
         out["reference_corpora"] = {
             "be06_top1000": exists("reference-corpora", "en", "be06-freq-top1000.tsv"),
+            "leipzig_news_top100": exists(
+                "reference-corpora", "en", "leipzig-english-news-top100.tsv"
+            ),
+            "ellipse_learner_top1000": exists(
+                "reference-corpora", "en", "ellipse-learner-top1000.tsv"
+            ),
+            "pd_persuasive_top1000": exists(
+                "reference-corpora", "en", "pd-persuasive-top1000.tsv"
+            ),
+            "camel_arabic_top1000": exists(
+                "reference-corpora", "ar", "camel-arabic-top1000.tsv"
+            ),
+            "quranic_arabic_freq": exists(
+                "reference-corpora", "ar", "quranic-arabic-freq.tsv"
+            ),
+            "dialectal_tweets_top1000": exists(
+                "reference-corpora", "ar", "dialectal-arabic-tweets-top1000.tsv"
+            ),
         }
+        # v1.2.10: framework YAML catalogue (12 bundled definitions).
+        try:
+            fw_dir = reference_data_dir() / "frameworks"
+            out["frameworks"] = {
+                "count": len(list(fw_dir.glob("*.yaml"))) if fw_dir.is_dir() else 0
+            }
+        except Exception:
+            out["frameworks"] = {"count": 0}
         try:
             out["reference_data_dir"] = str(reference_data_dir())
         except FileNotFoundError:
             out["reference_data_dir"] = None
+    except Exception:
+        pass
+
+    # v1.2.10: environment-dependent facts — reported, never asserted by
+    # smoke gates (the desktop bundle ships the model via hook; Docker
+    # installs it in the builder stage; dev checkouts may not have it).
+    try:
+        import spacy.util
+
+        out["spacy_model"] = {
+            "en_core_web_sm": bool(spacy.util.is_package("en_core_web_sm"))
+        }
+    except Exception:
+        out["spacy_model"] = {"en_core_web_sm": False}
+
+    try:
+        import importlib.util
+
+        out["wordfreq"] = {
+            "installed": importlib.util.find_spec("wordfreq") is not None
+        }
+    except Exception:
+        out["wordfreq"] = {"installed": False}
+
+    # Sentiment: the curated starter lexicons ship as engine code (always
+    # available); the full NRC EmoLex is user-supplied (license forbids
+    # redistribution) — report whether the operator configured it.
+    out["sentiment"] = {"starter_lexicons": True, "nrc_configured": False}
+    try:
+        from sentiment.lexicons import _lexicon_dirs
+
+        out["sentiment"]["nrc_configured"] = bool(_lexicon_dirs())
     except Exception:
         pass
 
