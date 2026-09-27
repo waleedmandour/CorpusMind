@@ -48,6 +48,37 @@ def test_meipass_layout_wins_when_frozen(tmp_path, monkeypatch) -> None:
     )
 
 
+def test_env_override_resolves_docker_layout(tmp_path, monkeypatch) -> None:
+    """v1.2.10: CORPUSMIND_REFERENCE_DATA_DIR resolves before the walks.
+
+    The self-hosted Docker image bakes reference-data at
+    /app/reference-data — a location no site-packages-relative walk can
+    find — so the resolver gained an explicit env candidate.
+    """
+    fake = tmp_path / "reference-data"
+    fake.mkdir()
+    monkeypatch.setenv("CORPUSMIND_REFERENCE_DATA_DIR", str(fake))
+    assert resource_paths.reference_data_dir() == fake
+
+
+def test_meipass_still_beats_env_override(tmp_path, monkeypatch) -> None:
+    """Frozen bundles must always read their OWN collected data."""
+    env_dir = tmp_path / "env-pack"
+    env_dir.mkdir()
+    meipass_pack = tmp_path / "bundle-pack" / "reference-data"
+    meipass_pack.mkdir(parents=True)
+    monkeypatch.setenv("CORPUSMIND_REFERENCE_DATA_DIR", str(env_dir))
+    monkeypatch.setattr(sys, "_MEIPASS", str(meipass_pack.parent), raising=False)
+    assert resource_paths.reference_data_dir() == meipass_pack
+
+
+def test_env_override_ignored_when_empty_or_missing(tmp_path, monkeypatch) -> None:
+    """A bogus env path falls through to the normal walk candidates."""
+    monkeypatch.setenv("CORPUSMIND_REFERENCE_DATA_DIR", str(tmp_path / "nowhere"))
+    d = resource_paths.reference_data_dir()
+    assert d.is_dir()  # resolved via the dev-layout walk, not the env var
+
+
 def test_load_semantic_lexicon_uses_meipass_layout(tmp_path, monkeypatch) -> None:
     """The USAS lexicon loader must read through the frozen layout too."""
     from nlp.tagsets import load_semantic_lexicon
