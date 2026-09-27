@@ -200,6 +200,9 @@ def _make_response(data: bytes, media_type: str, filename: str) -> StreamingResp
 
 # --------------------------------------------------------------------------- #
 # Backwards-compatible xlsx endpoints (kept so old URLs don't break)
+# v1.2.10: NO frontend consumer — intentional public surface for older
+# clients/scripts (the web app uses the multi-format ?fmt= routes).
+# See docs/ARCHITECTURE.md "API surface notes" before flagging as dead code.
 # --------------------------------------------------------------------------- #
 
 
@@ -628,6 +631,9 @@ class EnqueueExportRequest(BaseModel):
     name: str = _Field("export", max_length=120, description="Filename stem")
 
 
+# v1.2.10: async export queue — NO frontend consumer yet; kept as the API
+# contract for the planned export-queue UI (build-or-cut decision deferred).
+# See docs/ARCHITECTURE.md "API surface notes" before flagging as dead code.
 @router.post("/export/jobs")
 async def enqueue_export(body: EnqueueExportRequest) -> dict:
     """Enqueue an export job. Returns immediately with the job ID.

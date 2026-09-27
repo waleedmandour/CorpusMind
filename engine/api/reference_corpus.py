@@ -155,6 +155,8 @@ async def delete_reference(name: str) -> dict:
         raise HTTPException(404, str(e)) from e
 
 
+# v1.2.10: maintenance surface — operator/CLI-facing, no frontend consumer.
+# See docs/ARCHITECTURE.md "API surface notes" before flagging as dead code.
 @router.post("/reference-corpora/cleanup-orphans")
 async def cleanup_orphans() -> dict:
     """Delete files in the storage dir that aren't in the manifest."""

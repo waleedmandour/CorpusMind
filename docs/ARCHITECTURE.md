@@ -161,6 +161,23 @@ whose license hasn't been recorded there. This is release-blocking because
 silently redistributing a non-redistributable asset is a legal liability for
 both the project and its users.
 
+## API surface notes: intentionally unconsumed routes (v1.2.10)
+
+The engine exposes 200+ routes; most are consumed by the desktop/web
+frontend. A small set has NO frontend consumer **by design** — recorded here
+so future API-usage audits stop flagging them as dead code:
+
+| Routes | Status | Rationale |
+| --- | --- | --- |
+| `POST /corpora/{cid}/export/{concordance,frequency,collocations,keyness}.xlsx` | Intentional public surface | Legacy single-format export endpoints kept for backward compatibility with older clients and scripted workflows. The frontend uses the multi-format variants (`/export/concordance?fmt=…`). |
+| `POST/GET /export/jobs`, `GET/DELETE /export/jobs/{job_id}` | Public surface, UI pending | The asynchronous export queue (large exports with progress polling). No frontend consumer yet; kept as the API contract for the planned export-queue UI. Decision to build or cut deferred. |
+| `POST /reference-corpora/cleanup-orphans` | Intentional maintenance surface | Administrative cleanup of orphaned reference-corpus archives. Operator/CLI-facing, not user-facing. |
+
+Everything else flagged by a textual route-usage audit should be
+cross-checked against `web/src/lib/api.ts` first — the typed API client is
+the frontend's single consumption point, and naive string matching over
+view files produces false positives.
+
 ## Open architectural decisions (§19)
 
 These are tracked in the build prompt's §19. The Phase 0 build has resolved
