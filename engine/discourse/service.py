@@ -348,39 +348,51 @@ class GrammarResult:
 
 
 async def _load_parses(session: AsyncSession, version_id: str) -> list[dict]:
-    """Load tokens with their dep head/rel, grouped by sentence."""
-    stmt = (
-        select(
-            Token.document_id,
-            Token.sentence_idx,
-            Token.token_idx,
-            Token.text,
-            Token.lemma,
-            Token.pos,
-            Token.dep_head,
-            Token.dep_rel,
-            Token.morph,
+    """Load tokens with their dep head/rel, grouped by sentence.
+
+    v1.2.10: memoized through ``app.version_cache`` — annotation versions
+    are append-only, so the same version id always deserializes to the same
+    stream until a document deletion mutates it (which calls
+    ``invalidate_all``). Classroom bursts (up to 20 students, same corpus,
+    same queries) used to pay this full-table load per request.
+    """
+    from app.version_cache import get_or_load
+
+    async def _load() -> list[dict]:
+        stmt = (
+            select(
+                Token.document_id,
+                Token.sentence_idx,
+                Token.token_idx,
+                Token.text,
+                Token.lemma,
+                Token.pos,
+                Token.dep_head,
+                Token.dep_rel,
+                Token.morph,
+            )
+            .where(Token.version_id == version_id)
+            .order_by(Token.document_id, Token.sentence_idx, Token.token_idx)
         )
-        .where(Token.version_id == version_id)
-        .order_by(Token.document_id, Token.sentence_idx, Token.token_idx)
-    )
-    rows = (await session.execute(stmt)).all()
-    sentences: dict[tuple[str, int], list[dict]] = defaultdict(list)
-    for doc_id, sent_idx, tok_idx, text, lemma, pos, dep_head, dep_rel, morph in rows:
-        sentences[(doc_id, sent_idx)].append(
-            {
-                "idx": tok_idx,
-                "text": text,
-                "lemma": lemma,
-                "pos": pos,
-                "head": dep_head,
-                "rel": dep_rel,
-                "morph": morph,
-                "doc": doc_id,
-                "sent": sent_idx,
-            }
-        )
-    return list(sentences.values())
+        rows = (await session.execute(stmt)).all()
+        sentences: dict[tuple[str, int], list[dict]] = defaultdict(list)
+        for doc_id, sent_idx, tok_idx, text, lemma, pos, dep_head, dep_rel, morph in rows:
+            sentences[(doc_id, sent_idx)].append(
+                {
+                    "idx": tok_idx,
+                    "text": text,
+                    "lemma": lemma,
+                    "pos": pos,
+                    "head": dep_head,
+                    "rel": dep_rel,
+                    "morph": morph,
+                    "doc": doc_id,
+                    "sent": sent_idx,
+                }
+            )
+        return list(sentences.values())
+
+    return await get_or_load(version_id, _load)
 
 
 def _detect_passives(sentence: list[dict]) -> list[dict]:
