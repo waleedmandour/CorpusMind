@@ -84,6 +84,11 @@ def test_registry_entry_shape() -> None:
     assert "Revised Edition" in spec["citation"]
     assert "Chapters 2-7" in spec["citation"]
     assert "not covered" in spec["citation"]
+    # Correction #1 (review round): the epistemic hedge must render with the
+    # lens — cue hits are indicator counts, not mechanism classifications,
+    # and cue-list precision is unvalidated until the gold-sample kappa pass.
+    assert "indicator counts, not mechanism classifications" in spec["citation"]
+    assert "unvalidated" in spec["citation"]
     assert set(CIALDINI_2007) == EXPECTED_PRINCIPLES
     # The Unity exclusion is pinned NEGATIVELY, not just by the positive
     # six-principle set above: exactly six categories, no 'unity' category,

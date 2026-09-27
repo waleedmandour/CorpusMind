@@ -895,6 +895,10 @@ CIALDINI_2007: dict[str, set[str]] = {
         "someone like you", "we are alike",
     },
     "authority": {  # ch.6 — expertise and credentials as evidence
+        # Gold-sample watchlist (kappa validation, METHODOLOGY.md):
+        # "official", "certified", "leading" are high-frequency in unrelated
+        # contexts ("certified public accountant", "leading indicator") —
+        # retained for recall in v1.2.10, prune/restrict on gold-sample review.
         "expert", "experts", "study shows", "studies show", "research shows",
         "doctors recommend", "scientists", "professor", "certified",
         "official", "leading", "award-winning", "according to", "proven",
@@ -951,7 +955,9 @@ DISCOURSE_TAXONOMIES: dict[str, dict] = {
             "(Revised Edition). New York: HarperBusiness. (Chapters 2-7: "
             "reciprocation, commitment & consistency, social proof, liking, "
             "authority, scarcity. Lexical starter set; the 2021 'Unity' "
-            "principle is not covered.)"
+            "principle is not covered. Cue hits are indicator counts, not "
+            "mechanism classifications; cue-list precision is unvalidated "
+            "pending gold-sample review.)"
         ),
         "categories": dict(CIALDINI_2007),
     },

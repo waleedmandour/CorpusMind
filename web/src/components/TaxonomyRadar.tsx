@@ -33,7 +33,9 @@ export function TaxonomyRadar({ categories }: { categories: Record<string, Disco
     .sort((a, b) => a.localeCompare(b))
     .map((cat) => ({
       cat,
-      label: cat.replace(/_/g, " "),
+      // Namespace dots and snake_case both become word breaks, so
+      // "interactive.transitions" reads as "interactive transitions".
+      label: cat.replace(/[_.]/g, " "),
       freq: Math.max(0, Number(categories[cat]?.freq) || 0),
       angle: 0,
     }));
@@ -68,12 +70,31 @@ export function TaxonomyRadar({ categories }: { categories: Record<string, Disco
           const outer = pt(a.angle, R);
           const labelPos = pt(a.angle, R + 14);
           const title = `${a.label}: ${a.freq.toLocaleString()} (of max ${max.toLocaleString()})`;
+          // Compound keys ("commitment consistency", "interactive
+          // endophoric markers") read better stacked on two lines than
+          // truncated mid-word ("commitment cons…"); single long words
+          // fall back to character truncation, same convention as the PI
+          // radar. Line 1 keeps the namespace word, line 2 the rest.
+          const words = a.label.split(" ");
+          let lines: string[] | null = null;
+          if (a.label.length > 16 && words.length >= 2) {
+            const l1 = words[0];
+            const l2 = words.slice(1).join(" ");
+            if (l1.length <= 14 && l2.length <= 18) lines = [l1, l2];
+          }
           return (
             <g key={`axis-${i}`}>
               <line x1={C} y1={C} x2={outer.x} y2={outer.y} stroke="var(--border)" strokeWidth="0.7" />
-              <text x={labelPos.x} y={labelPos.y} textAnchor="middle" dominantBaseline="middle" className="pi-axis-label">
-                {a.label.length > 16 ? `${a.label.slice(0, 15)}…` : a.label}
-              </text>
+              {lines ? (
+                <text x={labelPos.x} y={labelPos.y} textAnchor="middle" className="pi-axis-label">
+                  <tspan x={labelPos.x} dy="-4">{lines[0]}</tspan>
+                  <tspan x={labelPos.x} dy="12">{lines[1]}</tspan>
+                </text>
+              ) : (
+                <text x={labelPos.x} y={labelPos.y} textAnchor="middle" dominantBaseline="middle" className="pi-axis-label">
+                  {a.label.length > 16 ? `${a.label.slice(0, 15)}…` : a.label}
+                </text>
+              )}
               <title>{title}</title>
             </g>
           );
