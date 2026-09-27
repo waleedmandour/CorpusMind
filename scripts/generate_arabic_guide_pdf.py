@@ -156,13 +156,28 @@ def parse_markdown(md_text):
         if re.match(r"^\s*[-*] ", line):
             b = []
             while i < len(lines) and re.match(r"^\s*[-*] ", lines[i]):
-                b.append(re.sub(r"^\s*[-*] ", "", lines[i])); i += 1
+                b.append(re.sub(r"^\s*[-*] ", "", lines[i]).strip()); i += 1
+                # Merge indented soft-wrap continuation lines into the same item
+                while i < len(lines) and lines[i].strip() and re.match(r"^\s+\S", lines[i]) \
+                      and not re.match(r"^\s*[-*] ", lines[i]) and not re.match(r"^\s*\d+\. ", lines[i]):
+                    b[-1] += " " + lines[i].strip(); i += 1
             blocks.append(("bullets", b))
             continue
         if re.match(r"^\s*\d+\. ", line):
             n = []
             while i < len(lines) and re.match(r"^\s*\d+\. ", lines[i]):
-                n.append(re.sub(r"^\s*\d+\. ", "", lines[i])); i += 1
+                item = re.sub(r"^\s*\d+\. ", "", lines[i]).strip(); i += 1
+                while i < len(lines) and lines[i].strip() and re.match(r"^\s+\S", lines[i]) \
+                      and not re.match(r"^\s*[-*] ", lines[i]) and not re.match(r"^\s*\d+\. ", lines[i]):
+                    item += " " + lines[i].strip(); i += 1
+                # Nested bullets directly under a numbered step
+                subs = []
+                while i < len(lines) and re.match(r"^\s*[-*] ", lines[i]):
+                    subs.append(re.sub(r"^\s*[-*] ", "", lines[i]).strip()); i += 1
+                    while i < len(lines) and lines[i].strip() and re.match(r"^\s+\S", lines[i]) \
+                          and not re.match(r"^\s*[-*] ", lines[i]) and not re.match(r"^\s*\d+\. ", lines[i]):
+                        subs[-1] += " " + lines[i].strip(); i += 1
+                n.append((item, subs))
             blocks.append(("numbered", n))
             continue
         # Markdown table: consecutive lines starting with |
@@ -261,9 +276,15 @@ def build_arabic_pdf(md_path, pdf_path):
             story.append(ListFlowable(items, bulletType="bullet", bulletColor=BRAND,
                        bulletFontSize=8, rightIndent=16, spaceAfter=6))
         elif btype == "numbered":
-            for idx, line in enumerate(content, 1):
-                story.append(Paragraph(f"{idx}. {shape_arabic_safe(format_inline(escape_xml(line)))}",
+            sub_style = ParagraphStyle("NumSubBullet", parent=style_bullet,
+                rightIndent=40, bulletColor=BRAND, bulletFontSize=8,
+                spaceAfter=3)
+            for idx, (item, subs) in enumerate(content, 1):
+                story.append(Paragraph(f"{idx}. {shape_arabic_safe(format_inline(escape_xml(item)))}",
                     ParagraphStyle("NumItem", parent=style_body, rightIndent=20, spaceAfter=3)))
+                for s in subs:
+                    story.append(Paragraph(shape_arabic_safe(format_inline(escape_xml(s))),
+                        sub_style, bulletText="•"))
             story.append(Spacer(1, 4))
         elif btype == "code":
             story.append(Paragraph(escape_xml(content), style_code))
