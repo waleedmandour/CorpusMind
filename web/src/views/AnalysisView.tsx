@@ -17,6 +17,7 @@ import { useUI, type NavTarget } from "@/store/ui";
 import { t, type TranslationKey } from "@/lib/i18n";
 import { ExportButton } from "@/components/ExportButton";
 import { CollocationNetwork } from "@/components/CollocationNetwork";
+import { SlowQueryNote } from "@/components/SlowQueryNote";
 import { PersuasionRadar } from "@/components/PersuasionRadar";
 import { DiscourseBarChart } from "@/components/DiscourseBarChart";
 
@@ -451,6 +452,9 @@ function CollocationPanel({ cid }: { cid: string }) {
 
   return (
     <div className="panel-content">
+      {/* v1.2.10: queued-under-load feedback instead of a silent spinner —
+          the soak showed ~40 s waits at full classroom width. */}
+      <SlowQueryNote pending={result.isPending} lang={lang} />
       <div className="toolbar">
         <input
           type="text"

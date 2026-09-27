@@ -981,9 +981,17 @@ export const translations = {
     sm_seats_apply: "Apply",
     sm_seats_reset_auto: "Auto",
     sm_audit_title: "Classroom audit log (anonymous)",
+    sm_students_informed: "Students see a notice that their chat is visible to you.",
     sm_audit_summary_joined: "{n} student(s) joined",
     sm_audit_summary_chats: "{n} chat(s) with the local LM",
     sm_audit_summary_events: "{n} events today",
+    // v1.2.10 (classroom consent): shown once above the student chat composer.
+    sm_consent_notice: "Your questions and the assistant's answers are visible to your teacher for classroom oversight.",
+    // v1.2.10 (5a): ONE canonical Ollama LAN-exposure sentence — BUILD_GUIDE.md
+    // §Production Build Checklist quotes this verbatim. {addr} = LAN address.
+    sm_ollama_lan_warning: "Ollama is reachable on your local network ({addr}). Any device on it can use your models — keep Ollama on 127.0.0.1 (the default), or use an authenticated tunnel (SSH or Tailscale) if the engine truly needs a remote Ollama host.",
+    // v1.2.10 (soak follow-up): shown after ~3 s of pending heavy analysis.
+    analysis_class_busy: "Your class is busy — please wait. When the whole classroom queries at once, requests queue and results can take up to a minute.",
     sm_audit_empty: "No classroom activity recorded yet.",
     sm_audit_privacy: "Anonymous by design: students appear as S-1, S-2 … — no names, no device addresses, no tokens are ever stored. Student questions and the model's answers are logged in full so you can review the lesson afterwards. Stored locally under:",
     sm_audit_toggle: "Keep audit log",
@@ -1963,9 +1971,16 @@ export const translations = {
     sm_seats_apply: "تطبيق",
     sm_seats_reset_auto: "تلقائي",
     sm_audit_title: "سجل تدقيق الصف (مجهول الهوية)",
+    sm_students_informed: "يظهر للطلاب تنبيه بأن محادثاتهم مرئية لك.",
     sm_audit_summary_joined: "انضم {n} طالب",
     sm_audit_summary_chats: "{n} محادثة مع النموذج المحلي",
     sm_audit_summary_events: "{n} حدثاً اليوم",
+    // v1.2.10 (classroom consent): shown once above the student chat composer.
+    sm_consent_notice: "أسئلتك وإجابات المساعد مرئية للمعلّم لأغراض متابعة الصف.",
+    // v1.2.10 (5a): نفس الجملة المرجعية الواردة في BUILD_GUIDE.md حرفياً. {addr} = عنوان الشبكة.
+    sm_ollama_lan_warning: "Ollama يمكن الوصول إليه من شبكتك المحلية ({addr}). أي جهاز على الشبكة يمكنه استخدام نماذجك — أبقِ Ollama على 127.0.0.1 (الافتراضي)، أو استخدم نفقًا مُصادقًا مثل SSH أو Tailscale إذا احتاج المحرك فعلًا إلى مضيف Ollama بعيد.",
+    // v1.2.10 (soak follow-up): تظهر بعد ~3 ثوانٍ من الانتظار في التحليلات الثقيلة.
+    analysis_class_busy: "صفّك مشغول — يُرجى الانتظار. عندما يستعلم الصف كله في وقت واحد، تُصطف الطلبات وقد يستغرق الناتج حتى دقيقة.",
     sm_audit_empty: "لا يوجد نشاط صفّي مسجل بعد.",
     sm_audit_privacy: "مجهول الهوية بالتصميم: يظهر الطلاب كـ S-1 وS-2 … — لا أسماء ولا عناوين أجهزة ولا مفاتيح تُخزّن أبداً. تُسجَّل أسئلة الطلاب وإجابات النموذج كاملة لتتمكن من مراجعة الدرس لاحقاً. يُحفظ محلياً تحت:",
     sm_audit_toggle: "الاحتفاظ بسجل التدقيق",

@@ -211,6 +211,17 @@ export function StudentModeServerCard() {
         </div>
       </div>
       <div className="settings-card-body">
+        {/* v1.2.10 (5a): Ollama bound beyond loopback is a classroom-wide
+            risk — every joined device can reach the model server. Uses the
+            one canonical sentence shared with BUILD_GUIDE and Settings. */}
+        {s?.ollama_exposure?.exposed && (
+          <div className="sm-warning sm-lan-warning" role="alert">
+            {t(lang, "sm_ollama_lan_warning").replace(
+              "{addr}",
+              s.ollama_exposure.addr ?? "LAN",
+            )}
+          </div>
+        )}
         {/* Prerequisite problems surface here, not as a generic failure */}
         {s && (!s.caddy_binary_found || !s.web_dist_bundled) && (
           <div className="sm-warning" role="status">
@@ -457,6 +468,8 @@ export function StudentModeServerCard() {
               onToggle={(e) => setAuditOpen((e.target as HTMLDetailsElement).open)}
             >
               <summary>{t(lang, "sm_audit_title")}</summary>
+              {/* v1.2.10: tells the teacher the student-facing consent notice exists. */}
+              <p className="cat-meta sm-students-informed">{t(lang, "sm_students_informed")}</p>
               <div className="sm-audit">
                 {audit.data && (
                   <p className="cat-meta sm-audit-summary">

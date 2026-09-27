@@ -4913,6 +4913,17 @@ html[dir="rtl"] .toggle-switch input:checked + .toggle-slider::before {
   border-radius: var(--radius-md);
   margin-block-end: var(--space-2);
 }
+/* v1.2.10 (classroom consent): one-line visibility notice above the student
+   chat composer. Same visual language as .student-mode-notice but quieter —
+   it must be readable at a glance, not shout. */
+.student-consent-notice {
+  padding: var(--space-2) var(--space-3);
+  background: var(--unground-bg);
+  border-radius: var(--radius-md);
+  margin-block-end: var(--space-2);
+  font-size: 13px;
+  color: var(--unground-fg);
+}
 .student-mode-notice p {
   font-size: 13px;
   color: var(--unground-fg);
@@ -7476,6 +7487,7 @@ html[dir="rtl"] .toggle-switch input:checked + .toggle-slider::before {
 .sm-seats .sm-port-row { align-items: end; margin-block: 2px; }
 .sm-audit { display: flex; flex-direction: column; gap: var(--space-2); }
 .sm-audit-summary { margin: 0; font-weight: 600; }
+.sm-students-informed { margin: 0; }
 .sm-audit-toggle-row {
   display: flex;
   align-items: center;
@@ -7528,3 +7540,12 @@ html[dir="rtl"] .toggle-switch input:checked + .toggle-slider::before {
   max-height: 5.5em;
   overflow: hidden;
 }
+
+/* v1.2.10 (5a): Ollama LAN-exposure warning — danger tone on top of the
+   shared .sm-warning chrome (server card + Settings both render it). */
+.sm-lan-warning {
+  border-color: var(--danger-500, #c62828);
+  background: color-mix(in srgb, var(--danger-500, #c62828) 8%, transparent);
+}
+/* v1.2.10 (soak follow-up): queued-query note under heavy analysis spinners. */
+.sm-busy-note { color: var(--text-muted); font-style: italic; }

@@ -700,7 +700,8 @@ Before deploying to production, verify:
 - [ ] If self-hosting: `CORPUSMIND_CLOUD_DISABLED_HARD=true` is set
 - [ ] If using encryption: `CORPUSMIND_ENCRYPTION_KEY` is set and the key is backed up
 - [ ] CORS origins include your frontend URL
-- [ ] The firewall allows traffic on port 8765 (engine) and 11434 (Ollama) if remote
+- [ ] The firewall allows traffic on port 8765 (engine). Do NOT open 11434 (Ollama) to the network
+- [ ] Ollama stays loopback-only (127.0.0.1:11434 — the default). Student Mode warns at startup when `OLLAMA_HOST` points off loopback or when something answers on a LAN interface's 11434: "Ollama is reachable on your local network ({addr}). Any device on it can use your models — keep Ollama on 127.0.0.1 (the default), or use an authenticated tunnel (SSH or Tailscale) if the engine truly needs a remote Ollama host."
 
 ---
 

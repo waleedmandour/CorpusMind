@@ -19,6 +19,7 @@ import { api, exportWithFeedback, type ExportFormat, type ConcordanceSortSpec } 
 import { useApp } from "@/store/app";
 import { useUI } from "@/store/ui";
 import { t } from "@/lib/i18n";
+import { SlowQueryNote } from "@/components/SlowQueryNote";
 import { ExportButton } from "@/components/ExportButton";
 
 const LEVELS = ["word", "lemma", "pos", "root", "pattern"] as const;
@@ -153,6 +154,8 @@ export function ConcordancerView() {
       )}
 
       {result.isLoading && <div className="empty-state">Searching...</div>}
+      {/* v1.2.10: queued-under-load feedback instead of a silent spinner. */}
+      <SlowQueryNote pending={result.isLoading} lang={lang} />
       {result.isError && <div className="error">Error: {String(result.error)}</div>}
       {result.data && (
         <>

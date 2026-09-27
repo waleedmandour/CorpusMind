@@ -2936,6 +2936,12 @@ export interface ServerModeStatus {
   audit_dir: string;
   ollama_queue_depth: number | null;
   ollama_running_models: number | null;
+  // v1.2.10 (5a): loopback-vs-LAN Ollama exposure, probed per status poll.
+  ollama_exposure?: {
+    exposed: boolean;
+    source: "env" | "probe" | null;
+    addr: string | null;
+  };
   config_path: string;
   // Present only while the classroom is enabled (teacher-only endpoint).
   student_token?: string;
