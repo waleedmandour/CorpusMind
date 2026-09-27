@@ -167,6 +167,14 @@ export const translations = {
     discourse_taxonomy: "Taxonomy",
     discourse_note_intro:
       "Categories follow the selected named taxonomy, so results are citable and comparable across studies.",
+    discourse_radar_hint:
+      "Axis length shows each category's share of the most frequent category — a profile shape, not absolute rates.",
+    discourse_coocc_title: "Cue co-occurrence (same sentence)",
+    discourse_coocc_hint:
+      "Counts sentences where cues from both categories appear — co-occurrence is not causation.",
+    discourse_coocc_pair: "Categories",
+    discourse_coocc_sentences: "Sentences",
+    lang_coverage: "Language coverage",
     discourse_unmatched: "not covered by the lexicon",
     discourse_unmatched_hint:
       "Share of tokens the bundled USAS lexicon could not tag - expected for a lexicon lookup (this is not the licensed CLAWS/USAS tagger).",
@@ -1161,6 +1169,14 @@ export const translations = {
     discourse_taxonomy: "التصنيف",
     discourse_note_intro:
       "تتبع الفئات التصنيف المسمّى المختار، وهذا يجعل النتائج قابلة للتوثيق والمقارنة بين الدراسات.",
+    discourse_radar_hint:
+      "طول كل محور = حصة تلك الفئة من أكثر الفئات تكرارًا (شكل الملف النسبي، وليس معدلات مطلقة).",
+    discourse_coocc_title: "تزامن الإشارات (في الجملة نفسها)",
+    discourse_coocc_hint:
+      "يُحصى عدد الجمل التي تظهر فيها إشارات من الفئتين معًا — التزامن لا يعني السببية.",
+    discourse_coocc_pair: "الفئتان",
+    discourse_coocc_sentences: "الجمل",
+    lang_coverage: "تغطية اللغة",
     discourse_unmatched: "غير مشمول في المعجم",
     discourse_unmatched_hint:
       "نسبة الكلمات التي لم يتمكن معجم USAS المرفق من وسملها - أمر متوقع في البحث المعجمي (هذه ليست الوسّام المرخّص CLAWS/USAS).",
