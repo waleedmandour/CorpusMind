@@ -762,3 +762,57 @@ indices** (the mean across scored documents).
   interpretable analysis of persuasive language (v0.3.0). In *Proceedings
   of EMNLP 2026*. Apache-2.0.
   https://github.com/krystalgong/Persuasion_Index_Code (arXiv:2606.14580)
+
+## Cialdini 2007 persuasion cue lens — new in v1.2.10
+
+A seventh lens on the Discourse page, `cialdini2007`: the six persuasion
+principles of Cialdini's *Influence* (Revised Edition 2007), chapters 2–7 —
+reciprocation, commitment & consistency, social proof, liking, authority,
+scarcity — as lexical cue sets riding the same generic cue machinery as the
+other registered taxonomies (multi-word cues = lowercased sentence
+substring; single-word cues = exact token match). It inherits the v1.2.7
+keyness battery, Gries' DP dispersion and comparison support unchanged. The
+2021 seventh principle (**Unity**) belongs to a different edition and is
+deliberately excluded from the registry and pinned out by test.
+
+- **Indicator counts, not mechanism classifications.** A cue hit is
+  *evidence that a lexical marker of a principle is present*, not proof the
+  persuasion mechanism was actually deployed: "expert" in a sentence is an
+  authority *cue*, and does not establish that an authority *appeal* was
+  made, let alone that it succeeded. Raw category counts must therefore be
+  read as surface-cue frequencies — the direct analogue of the SFG lens's
+  honest `unmatched_percent` hedge. This applies to **every lexical cue
+  lens** in the registry (Hyland 2005, Halliday & Hasan 1976, Martin &
+  White 2005, Cialdini 2007); the Cialdini lens ships the hedge in its
+  UI-visible citation, and generalizing the notice to the older cue lenses'
+  citations is queued for v1.2.11.
+- **Cue-list precision is unvalidated.** The cue sets are house
+  "starter subsets" — the most frequent surface markers, chosen by
+  inspection, not a closed inventory validated against annotated data.
+  **κ-validation against a hand-annotated gold sample is the agreed
+  follow-up** (queued after v1.2.11); until it lands, counts are
+  exploratory and must not be reported as validated instrument scores.
+- **Known precision risks (gold-sample watchlist).** The authority cues
+  "official", "certified" and "leading" are high-frequency in unrelated
+  contexts ("certified public accountant", "leading indicator",
+  "official statement") and top the list for review when the gold sample
+  is built; they are retained in v1.2.10 for recall, flagged here for
+  precision.
+- **Co-occurrence (generic cue-lens capability).** The response carries
+  `cooccurrence` — for every unordered category pair, the number of
+  sentences containing cues from *both* — computed inside the same match
+  loop as the frequency counts so the two can never drift apart. Available
+  to every registered cue lens; `null` for the lexicon (USAS),
+  parse-driven (SFG) and persuasion lenses, whose detection loops are
+  structured differently. Co-occurrence is co-occurrence, not causation.
+- **Language coverage.** Each registry lens declares the languages its cue
+  sets/lexicons actually support (`languages`); the UI badge renders this
+  from the API rather than hardcoding it. All four cue lenses are
+  English-only; the bundled USAS top-level lexicon covers English and
+  Arabic.
+
+**Citation:**
+
+- Cialdini, R.B. (2007). *Influence: The Psychology of Persuasion* (Revised
+  Edition). New York: HarperBusiness. Chapters 2–7. The 2021 "Unity"
+  principle (7th edition, Cialdini 2021) is not covered.
