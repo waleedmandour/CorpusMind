@@ -14,12 +14,13 @@ self-join rewrite that replaced the or_-chain. Tokens are inserted directly
 from __future__ import annotations
 
 import os
+from collections.abc import AsyncIterator
 
 import pytest
 
 
 @pytest.fixture
-async def db_env():
+async def db_env() -> AsyncIterator[None]:
     os.environ["CORPUSMIND_DB_URL"] = "sqlite+aiosqlite:///:memory:"
     os.environ["CORPUSMIND_DATA_DIR"] = "/tmp/cm-test-data"
     from app.settings import get_settings
@@ -33,14 +34,16 @@ async def db_env():
 
 
 @pytest.mark.asyncio
-async def test_collocations_beyond_sqlite_expression_depth(db_env) -> None:
+async def test_collocations_beyond_sqlite_expression_depth(db_env: None) -> None:
     import storage.session as _ss
     from app.main import app
     from stats.service import compute_collocations
     from storage.models import AnnotationVersion, Corpus, Document, Project, Token
 
     async with app.router.lifespan_context(app):
-        async with _ss._sessionmaker() as s:
+        sm = _ss._sessionmaker
+        assert sm is not None
+        async with sm() as s:
             p = Project(name="P", language="en")
             s.add(p)
             await s.flush()
@@ -73,7 +76,9 @@ async def test_collocations_beyond_sqlite_expression_depth(db_env) -> None:
             await s.commit()
             cid = c.id
 
-        async with _ss._sessionmaker() as session:
+        sm = _ss._sessionmaker
+        assert sm is not None
+        async with sm() as session:
             result = await compute_collocations(session, cid, "time", min_freq=2)
 
     collocates = {r["collocate"] for r in result.rows}
@@ -129,14 +134,16 @@ _EQ_SENTENCES: list[tuple[int, list[tuple[str, str, bool]]]] = [
 
 
 @pytest.mark.asyncio
-async def test_collocations_selfjoin_matches_or_chain_numbers(db_env) -> None:
+async def test_collocations_selfjoin_matches_or_chain_numbers(db_env: None) -> None:
     import storage.session as _ss
     from app.main import app
     from stats.service import compute_collocations
     from storage.models import AnnotationVersion, Corpus, Document, Project
 
     async with app.router.lifespan_context(app):
-        async with _ss._sessionmaker() as s:
+        sm = _ss._sessionmaker
+        assert sm is not None
+        async with sm() as s:
             p = Project(name="P", language="en")
             s.add(p)
             await s.flush()
@@ -159,7 +166,9 @@ async def test_collocations_selfjoin_matches_or_chain_numbers(db_env) -> None:
             await s.commit()
             cid, vid = c.id, v.id
 
-        async with _ss._sessionmaker() as session:
+        sm = _ss._sessionmaker
+        assert sm is not None
+        async with sm() as session:
             # --- step 1 + 2 + 3 replicas of the OLD (pre-self-join) code ---
             col = Token.text
             node_lower, node_folded = "time", _fold("time")
@@ -198,7 +207,7 @@ async def test_collocations_selfjoin_matches_or_chain_numbers(db_env) -> None:
                 )
             ).all()
 
-            folded_counts: Counter = Counter()
+            folded_counts: Counter[str] = Counter()
             for text, cnt in vocab_rows:
                 if text and not text.isspace():
                     folded_counts[_fold(text)] += cnt
@@ -211,18 +220,18 @@ async def test_collocations_selfjoin_matches_or_chain_numbers(db_env) -> None:
                 if is_punct or pos == "SPACE" or (text and text.isspace()):
                     continue
                 sentences[(doc_id, sent_idx)].append((tok_idx, text, pos or ""))
-            O: Counter = Counter()
-            surfaces: dict[str, Counter] = defaultdict(Counter)
-            for toks in sentences.values():
-                for i, (_idx, text, _pos) in enumerate(toks):
+            O: Counter[str] = Counter()
+            surfaces: dict[str, Counter[str]] = defaultdict(Counter)
+            for row_toks in sentences.values():
+                for i, (_idx, text, _pos) in enumerate(row_toks):
                     if _fold(text) != node_folded:
                         continue
-                    for j in range(max(0, i - _EQ_WINDOW), min(len(toks), i + _EQ_WINDOW + 1)):
+                    for j in range(max(0, i - _EQ_WINDOW), min(len(row_toks), i + _EQ_WINDOW + 1)):
                         if j == i:
                             continue
-                        key = _fold(toks[j][1])
+                        key = _fold(row_toks[j][1])
                         O[key] += 1
-                        surfaces[key][toks[j][1]] += 1
+                        surfaces[key][row_toks[j][1]] += 1
 
             expected: dict[str, int] = {
                 k: o for k, o in O.items()
@@ -254,8 +263,8 @@ async def test_collocations_selfjoin_matches_or_chain_numbers(db_env) -> None:
                 a = min(o, fx, fy)
                 b = fx - a
                 c_ = fy - a
-                d = N - fx - fy + a
-                assert row["log_likelihood"] == round(log_likelihood_2x2(a, b, c_, d), 4)
+                d_cell = N - fx - fy + a
+                assert row["log_likelihood"] == round(log_likelihood_2x2(a, b, c_, d_cell), 4)
                 assert row["mi"] == round(mutual_information(O=o, R=fx, C=fy, N=N), 4)
                 assert math.isfinite(row["log_likelihood"])
             # Display surface: 'Data' (s2) folds into 'data' (4x 'data', 1x

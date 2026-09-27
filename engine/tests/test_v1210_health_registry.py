@@ -9,6 +9,7 @@ can never drift apart silently.
 from __future__ import annotations
 
 import os
+from collections.abc import AsyncIterator
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -25,7 +26,7 @@ EXPECTED_REFERENCE_CORPORA = {
 
 
 @pytest.fixture
-async def client():
+async def client() -> AsyncIterator[AsyncClient]:
     os.environ["CORPUSMIND_DB_URL"] = "sqlite+aiosqlite:///:memory:"
     os.environ["CORPUSMIND_DATA_DIR"] = "/tmp/cm-test-data"
     from app.main import app

@@ -13,6 +13,7 @@ from __future__ import annotations
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from functools import lru_cache
+from typing import Any, cast
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -347,7 +348,9 @@ class GrammarResult:
 # These are pattern detectors over UD parses, not regex over surface text (§8.12).
 
 
-async def _load_parses(session: AsyncSession, version_id: str) -> list[dict]:
+async def _load_parses(
+    session: AsyncSession, version_id: str
+) -> list[list[dict[str, Any]]]:
     """Load tokens with their dep head/rel, grouped by sentence.
 
     v1.2.10: memoized through ``app.version_cache`` — annotation versions
@@ -358,7 +361,7 @@ async def _load_parses(session: AsyncSession, version_id: str) -> list[dict]:
     """
     from app.version_cache import get_or_load
 
-    async def _load() -> list[dict]:
+    async def _load() -> list[list[dict[str, Any]]]:
         stmt = (
             select(
                 Token.document_id,
@@ -375,7 +378,7 @@ async def _load_parses(session: AsyncSession, version_id: str) -> list[dict]:
             .order_by(Token.document_id, Token.sentence_idx, Token.token_idx)
         )
         rows = (await session.execute(stmt)).all()
-        sentences: dict[tuple[str, int], list[dict]] = defaultdict(list)
+        sentences: dict[tuple[str, int], list[dict[str, Any]]] = defaultdict(list)
         for doc_id, sent_idx, tok_idx, text, lemma, pos, dep_head, dep_rel, morph in rows:
             sentences[(doc_id, sent_idx)].append(
                 {
@@ -392,7 +395,8 @@ async def _load_parses(session: AsyncSession, version_id: str) -> list[dict]:
             )
         return list(sentences.values())
 
-    return await get_or_load(version_id, _load)
+    # get_or_load is typed -> Any (heterogeneous cache); pin the contract here.
+    return cast("list[list[dict[str, Any]]]", await get_or_load(version_id, _load))
 
 
 def _detect_passives(sentence: list[dict]) -> list[dict]:
@@ -1793,29 +1797,29 @@ def _dep_matcher(
     if regex:
         pattern = re.compile(node_query, 0 if case_sensitive else re.IGNORECASE)
 
-        def matches(tok: dict) -> bool:
+        def matches_regex(tok: dict[str, Any]) -> bool:
             hay = tok.get("text") if level == "word" else (tok.get("lemma") or "")
             return bool(hay) and bool(pattern.search(hay))
 
-        return matches
+        return matches_regex
 
     needle = node_query if case_sensitive else node_query.lower()
     if "*" in needle or "?" in needle:
         rx = re.compile(fnmatch.translate(needle), 0 if case_sensitive else re.IGNORECASE)
 
-        def matches(tok: dict) -> bool:
+        def matches_wildcard(tok: dict[str, Any]) -> bool:
             hay = tok.get("text") if level == "word" else (tok.get("lemma") or "")
             return bool(hay) and bool(rx.fullmatch(hay))
 
-        return matches
+        return matches_wildcard
 
-    def matches(tok: dict) -> bool:
+    def matches_plain(tok: dict[str, Any]) -> bool:
         hay = tok.get("text") if level == "word" else (tok.get("lemma") or "")
         if not hay:
             return False
         return hay if case_sensitive else hay.lower() == needle
 
-    return matches
+    return matches_plain
 
 
 async def compute_dep_concordance(
