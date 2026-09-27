@@ -11,6 +11,9 @@ drift apart again.
 from __future__ import annotations
 
 import sys
+from pathlib import Path
+
+import pytest
 
 from app import resource_paths
 
@@ -133,14 +136,14 @@ def test_exists_never_raises_when_reference_data_missing(tmp_path, monkeypatch) 
 # ---------------------------------------------------------------------------
 
 
-def _make_frozen_model(tmp_path, subdir: str, monkeypatch) -> None:
+def _make_frozen_model(tmp_path: Path, subdir: str, monkeypatch: pytest.MonkeyPatch) -> None:
     """Lay out a fake collected model (meta.json) the way PyInstaller does."""
     model_dir = tmp_path / subdir / "en_core_web_sm"
     model_dir.mkdir(parents=True)
     (model_dir / "meta.json").write_text('{"name": "en_core_web_sm"}', encoding="utf-8")
 
 
-def _no_importlib(monkeypatch) -> None:
+def _no_importlib(monkeypatch: pytest.MonkeyPatch) -> None:
     """Force the importlib leg of the probe to report not-installed.
 
     Both 'spacy' and 'spacy.util' must be faked together: ``import
@@ -150,14 +153,14 @@ def _no_importlib(monkeypatch) -> None:
     import types
 
     fake_util = types.ModuleType("spacy.util")
-    fake_util.is_package = staticmethod(lambda name: False)
+    fake_util.is_package = staticmethod(lambda name: False)  # type: ignore[attr-defined]
     fake_spacy = types.ModuleType("spacy")
-    fake_spacy.util = fake_util
+    fake_spacy.util = fake_util  # type: ignore[attr-defined]
     monkeypatch.setitem(sys.modules, "spacy", fake_spacy)
     monkeypatch.setitem(sys.modules, "spacy.util", fake_util)
 
 
-def test_spacy_model_found_via_meipass(tmp_path, monkeypatch) -> None:
+def test_spacy_model_found_via_meipass(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Frozen layout: sys._MEIPASS/en_core_web_sm with meta.json is loadable."""
     _make_frozen_model(tmp_path, "data", monkeypatch)
     _no_importlib(monkeypatch)
@@ -166,7 +169,7 @@ def test_spacy_model_found_via_meipass(tmp_path, monkeypatch) -> None:
     assert resource_paths.spacy_model_available() is True
 
 
-def test_spacy_model_found_via_internal_dir(tmp_path, monkeypatch) -> None:
+def test_spacy_model_found_via_internal_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """onedir layout: <exe_dir>/_internal/en_core_web_sm with meta.json."""
     _no_importlib(monkeypatch)
     monkeypatch.delattr(sys, "_MEIPASS", raising=False)
@@ -175,7 +178,7 @@ def test_spacy_model_found_via_internal_dir(tmp_path, monkeypatch) -> None:
     assert resource_paths.spacy_model_available() is True
 
 
-def test_spacy_model_absent_everywhere_reports_false(tmp_path, monkeypatch) -> None:
+def test_spacy_model_absent_everywhere_reports_false(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """No importlib hit and no frozen data dir -> honest False."""
     _no_importlib(monkeypatch)
     monkeypatch.delattr(sys, "_MEIPASS", raising=False)
@@ -183,14 +186,14 @@ def test_spacy_model_absent_everywhere_reports_false(tmp_path, monkeypatch) -> N
     assert resource_paths.spacy_model_available() is False
 
 
-def test_spacy_model_importlib_hit_wins(tmp_path, monkeypatch) -> None:
+def test_spacy_model_importlib_hit_wins(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """A real importable install reports True even with no bundle dirs."""
     import types
 
     fake_util = types.ModuleType("spacy.util")
-    fake_util.is_package = staticmethod(lambda name: True)
+    fake_util.is_package = staticmethod(lambda name: True)  # type: ignore[attr-defined]
     fake_spacy = types.ModuleType("spacy")
-    fake_spacy.util = fake_util
+    fake_spacy.util = fake_util  # type: ignore[attr-defined]
     monkeypatch.setitem(sys.modules, "spacy", fake_spacy)
     monkeypatch.setitem(sys.modules, "spacy.util", fake_util)
     monkeypatch.delattr(sys, "_MEIPASS", raising=False)
