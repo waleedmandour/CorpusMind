@@ -261,6 +261,11 @@ async def delete_corpus(cid: str, session: AsyncSession = Depends(get_session)) 
     if not c:
         raise HTTPException(404, "Corpus not found")
     await session.delete(c)
+    # v1.2.10: drop cached parse streams for the corpus's versions (see
+    # delete_document) — unreachable keys would otherwise linger in memory.
+    from app.version_cache import invalidate_all
+
+    invalidate_all()
     return {"deleted": cid}
 
 
@@ -375,6 +380,14 @@ async def delete_document(cid: str, did: str, session: AsyncSession = Depends(ge
     filename = doc.filename
     await session.delete(doc)
     await session.flush()
+
+    # v1.2.10: document deletion cascades tokens under EXISTING annotation
+    # versions, so any cached parse stream for this corpus is now stale.
+    # The cache is keyed by version id and versions are append-only — this
+    # is the only mutation path, hence the blunt full clear.
+    from app.version_cache import invalidate_all
+
+    invalidate_all()
 
     # Recompute corpus stats
     from storage.models import AnnotationVersion, Token

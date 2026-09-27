@@ -762,18 +762,49 @@ async def compute_collocations(
                                  min_freq=min_freq, measures=measures, rows=[], warnings=warnings)
 
     # --- 3. fetch node-sentence tokens for the window scan ---------------- #
-    from sqlalchemy import or_
-    sent_filter = or_(*[
-        (Token.document_id == doc_id) & (Token.sentence_idx == sent_idx)
-        for doc_id, sent_idx in node_sentences
-    ])
+    # v1.2.10: this used to build one OR branch per node sentence
+    # (or_(*[(doc==d) & (sent==s), ...])). A frequent node on a ~100K-token
+    # corpus produces thousands of branches and SQLite hard-fails at depth
+    # 1000 ("Expression tree is too large") — a 500 the Student Mode soak
+    # test (scripts/soak_student_load.py) hit deterministically. It is now
+    # a SELF-JOIN: the node side reuses the exact node condition (aliases
+    # carry their own real-token predicate), the sentence-mate side rides
+    # the document_id index — bounded query plan, no expression tree, and
+    # IDENTICAL semantics (all tokens of every node sentence, deduped).
+    from sqlalchemy.orm import aliased
+
+    n_tok = aliased(Token, name="n_tok")
+    s_tok = aliased(Token, name="s_tok")
+    col_n = {"word": n_tok.text, "lemma": n_tok.lemma}[level]
+    n_real = (n_tok.is_punct == False) & (n_tok.pos != "SPACE")  # noqa: E712
+    if normalize_arabic:
+        n_cond = (func.arnorm(func.lower(col_n)) == ar_norm(node_lower)) & n_real
+    else:
+        n_cond = (
+            (func.lower(col_n) == node_lower) | (func.lower(col_n) == node_folded)
+        ) & n_real
     stmt = (
-        select(Token.document_id, Token.sentence_idx, Token.token_idx, col.label("text"), Token.is_punct, Token.pos)
-        .where(Token.version_id == version_id, sent_filter)
-        .order_by(Token.document_id, Token.sentence_idx, Token.token_idx)
+        select(
+            s_tok.document_id,
+            s_tok.sentence_idx,
+            s_tok.token_idx,
+            s_tok.text.label("text"),
+            s_tok.is_punct,
+            s_tok.pos,
+        )
+        .select_from(n_tok)
+        .join(
+            s_tok,
+            (s_tok.version_id == n_tok.version_id)
+            & (s_tok.document_id == n_tok.document_id)
+            & (s_tok.sentence_idx == n_tok.sentence_idx),
+        )
+        .where(n_tok.version_id == version_id, n_cond)
+        .distinct()
+        .order_by(s_tok.document_id, s_tok.sentence_idx, s_tok.token_idx)
     )
     if document_ids is not None:
-        stmt = stmt.where(Token.document_id.in_(document_ids))
+        stmt = stmt.where(s_tok.document_id.in_(document_ids))
     rows_raw = (await session.execute(stmt)).all()
 
     sentences: dict[tuple[str, int], list[tuple[int, str, str]]] = defaultdict(list)
