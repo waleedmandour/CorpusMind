@@ -42,6 +42,7 @@ import { StudentModeServerCard } from "@/components/StudentModeServerCard";
 export function SettingsView() {
   const qc = useQueryClient();
   const isTauri = isTauriRuntime();
+  const lang = useUI((s) => s.lang);
 
   // Native (Rust-side) provider health — the authoritative source of truth
   // inside the Tauri desktop app. Polled every 5s. Returns null in browser mode.
@@ -56,6 +57,16 @@ export function SettingsView() {
   // a fallback in browser/PWA mode where nativeHealth is null).
   const health = useQuery({ queryKey: ["health"], queryFn: api.health, refetchInterval: 5_000 });
   const providers = useQuery({ queryKey: ["providers"], queryFn: api.providers, refetchInterval: 5_000 });
+  // v1.2.10 (5a): same status query the Student Mode card uses (shared react-query
+  // cache) — surfaces the Ollama LAN-exposure warning next to the provider list.
+  // 403s for non-teacher clients → error state → warning simply never shows.
+  const serverStatus = useQuery({
+    queryKey: ["server-mode-status"],
+    queryFn: () => api.serverModeStatus(),
+    refetchInterval: 5_000,
+    retry: false,
+  });
+  const ollamaExposure = serverStatus.data?.ollama_exposure;
   const version = useQuery({ queryKey: ["version"], queryFn: api.version });
   const encryption = useQuery({ queryKey: ["encryption"], queryFn: api.encryptionStatus });
   const troubleshoot = useQuery({ queryKey: ["troubleshoot-status"], queryFn: api.troubleshootStatus });
@@ -329,6 +340,20 @@ export function SettingsView() {
               description="Opt-in cloud provider (Google Gemini, OpenAI, Anthropic, or any OpenAI-compatible API). Off by default for privacy."
             />
           </div>
+
+          {/* v1.2.10 (5a): the one canonical sentence, shared with BUILD_GUIDE.md
+              and the Student Mode server card — not a paraphrase. */}
+          {ollamaExposure?.exposed && (
+            <div className="sm-warning sm-lan-warning" role="alert" style={{ marginTop: "var(--space-3)" }}>
+              <strong>Ollama LAN exposure</strong>
+              <p>
+                {t(lang, "sm_ollama_lan_warning").replace(
+                  "{addr}",
+                  ollamaExposure.addr ?? "LAN",
+                )}
+              </p>
+            </div>
+          )}
 
           {/* Cloud provider configuration */}
           <CloudProviderConfig />

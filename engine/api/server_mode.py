@@ -39,6 +39,10 @@ from app.server_mode import (
 
 router = APIRouter()
 
+# v1.2.10 (5a): probe port is a module constant so tests can point the
+# LAN-exposure probe at a socket they control instead of a real Ollama.
+_OLLAMA_PORT = 11434
+
 
 def require_teacher(request: Request) -> None:
     """Deny proxied non-teacher callers; direct loopback is the teacher."""
@@ -126,6 +130,65 @@ def _ollama_running_models(settings: Any) -> int | None:
     return None
 
 
+async def _ollama_lan_exposure() -> dict[str, Any]:
+    """v1.2.10 (5a): is Ollama on this machine reachable beyond loopback?
+
+    Student Mode runs on the teacher's machine, where a LAN-facing Ollama
+    means every joined student device (and anything else on the network)
+    can reach the model server unprompted. BUILD_GUIDE.md used to tell
+    deployers to open 11434 "if remote" — the exact opposite of safe — so
+    the detection lives here, and BUILD_GUIDE / the server card / Settings
+    all share one canonical warning sentence instead of paraphrases.
+
+    Two independent signals, both about THIS machine:
+      1. OLLAMA_HOST set to something other than loopback — that is the
+         bind Ollama itself was started with.
+      2. A live TCP probe of this machine's LAN IPs (app.server_mode.lan_ips)
+         on port 11434. A loopback-bound Ollama never answers on the LAN
+         address, so an answer proves a LAN-facing listener regardless of
+         how it was configured (env var, systemd unit, ``docker -p`` ...).
+    The probe runs in a worker thread (0.3 s timeout per candidate, a
+    handful of interfaces at most) so the status poll never stalls the
+    event loop. Returns ``{"exposed": bool, "source": "env"|"probe"|None,
+    "addr": str|None}`` — ``addr`` feeds the UI warning verbatim.
+    """
+    import asyncio as _asyncio
+    import os
+    import socket
+
+    def _env_host_off_loopback() -> str | None:
+        raw = os.environ.get("OLLAMA_HOST", "").strip()
+        if not raw:
+            return None
+        # OLLAMA_HOST forms: "host:port", ":port", "[::1]:port", bare host.
+        host = raw
+        if host.startswith("["):
+            host = host[1 : host.index("]")]
+        elif host.count(":") == 1:
+            host = host.rsplit(":", 1)[0]
+        host = host.strip() or "127.0.0.1"
+        if host == "localhost" or host.startswith("127.") or host in ("::1", "::"):
+            return None
+        return host
+
+    def _probe_lan() -> str | None:
+        for ip in lan_ips():
+            try:
+                with socket.create_connection((ip, _OLLAMA_PORT), timeout=0.3):
+                    return ip
+            except OSError:
+                continue
+        return None
+
+    env_host = _env_host_off_loopback()
+    if env_host:
+        return {"exposed": True, "source": "env", "addr": env_host}
+    hit = await _asyncio.to_thread(_probe_lan)
+    if hit:
+        return {"exposed": True, "source": "probe", "addr": hit}
+    return {"exposed": False, "source": None, "addr": None}
+
+
 @router.get("/server-mode/status")
 async def server_mode_status(request: Request) -> dict:
     """Live classroom status (teacher-only)."""
@@ -135,7 +198,11 @@ async def server_mode_status(request: Request) -> dict:
     settings = get_settings()
     state: sm.ServerModeState = request.app.state.server_mode
     seats = await state.effective_seats(settings) if state.config.enabled else None
-    return _status_payload(settings, state, seats)
+    payload = _status_payload(settings, state, seats)
+    # v1.2.10 (5a): loopback-vs-LAN Ollama exposure, probed on every status
+    # poll so the teacher sees the warning the moment the bind changes.
+    payload["ollama_exposure"] = await _ollama_lan_exposure()
+    return payload
 
 
 @router.post("/server-mode/enable")

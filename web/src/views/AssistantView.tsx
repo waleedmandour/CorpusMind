@@ -502,6 +502,14 @@ export function AssistantView() {
           {chat.isPending && <div className="msg msg-assistant pending">Thinking…</div>}
         </div>
 
+        {/* v1.2.10 (classroom consent): students must know the teacher sees
+            their chat — the audit log stores full question + answer text. */}
+        {studentClient && (
+          <div className="student-consent-notice" role="note">
+            {t(lang, "sm_consent_notice")}
+          </div>
+        )}
+
         <div className="composer">
           <textarea
             value={input}
