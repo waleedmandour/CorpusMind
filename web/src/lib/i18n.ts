@@ -172,6 +172,9 @@ export const translations = {
     discourse_coocc_title: "Cue co-occurrence (same sentence)",
     discourse_coocc_hint:
       "Counts sentences where cues from both categories appear — co-occurrence is not causation.",
+    // v1.2.10 release fix: replaces the degenerate zero-hit radar shape.
+    discourse_radar_no_hits:
+      "No cue hits in this corpus yet — the profile shape appears once the selected lens matches some text.",
     discourse_coocc_pair: "Categories",
     discourse_coocc_sentences: "Sentences",
     lang_coverage: "Language coverage",
@@ -998,6 +1001,10 @@ export const translations = {
     // v1.2.10 (5a): ONE canonical Ollama LAN-exposure sentence — BUILD_GUIDE.md
     // §Production Build Checklist quotes this verbatim. {addr} = LAN address.
     sm_ollama_lan_warning: "Ollama is reachable on your local network ({addr}). Any device on it can use your models — keep Ollama on 127.0.0.1 (the default), or use an authenticated tunnel (SSH or Tailscale) if the engine truly needs a remote Ollama host.",
+    // v1.2.10 release fix: the warning says WHAT to change. CorpusMind never
+    // binds Ollama to the network — the bind is Ollama's own configuration.
+    sm_ollama_lan_hint: "CorpusMind never changes your Ollama binding. To fix: quit Ollama, set OLLAMA_HOST=127.0.0.1:11434 (or turn off \"Expose Ollama to the network\" in Ollama's settings), then start Ollama again.",
+    sm_dismiss: "Dismiss",
     // v1.2.10 (soak follow-up): shown after ~3 s of pending heavy analysis.
     analysis_class_busy: "Your class is busy — please wait. When the whole classroom queries at once, requests queue and results can take up to a minute.",
     sm_audit_empty: "No classroom activity recorded yet.",
@@ -1174,6 +1181,8 @@ export const translations = {
     discourse_coocc_title: "تزامن الإشارات (في الجملة نفسها)",
     discourse_coocc_hint:
       "يُحصى عدد الجمل التي تظهر فيها إشارات من الفئتين معًا — التزامن لا يعني السببية.",
+    discourse_radar_no_hits:
+      "لا توجد إشارات مطابقة في هذه المدوّنة بعد — يظهر شكل المخطط عند العثور على تطابقات مع العدسة المختارة.",
     discourse_coocc_pair: "الفئتان",
     discourse_coocc_sentences: "الجمل",
     lang_coverage: "تغطية اللغة",
@@ -1995,6 +2004,8 @@ export const translations = {
     sm_consent_notice: "أسئلتك وإجابات المساعد مرئية للمعلّم لأغراض متابعة الصف.",
     // v1.2.10 (5a): نفس الجملة المرجعية الواردة في BUILD_GUIDE.md حرفياً. {addr} = عنوان الشبكة.
     sm_ollama_lan_warning: "Ollama يمكن الوصول إليه من شبكتك المحلية ({addr}). أي جهاز على الشبكة يمكنه استخدام نماذجك — أبقِ Ollama على 127.0.0.1 (الافتراضي)، أو استخدم نفقًا مُصادقًا مثل SSH أو Tailscale إذا احتاج المحرك فعلًا إلى مضيف Ollama بعيد.",
+    sm_ollama_lan_hint: "لا يُغيّر CorpusMind إعداد ربط Ollama أبدًا. للإصلاح: أغلق Ollama، ثم اضبط OLLAMA_HOST=127.0.0.1:11434 (أو أوقف خيار \"Expose Ollama to the network\" في إعدادات Ollama)، ثم أعد تشغيله.",
+    sm_dismiss: "إخفاء",
     // v1.2.10 (soak follow-up): تظهر بعد ~3 ثوانٍ من الانتظار في التحليلات الثقيلة.
     analysis_class_busy: "صفّك مشغول — يُرجى الانتظار. عندما يستعلم الصف كله في وقت واحد، تُصطف الطلبات وقد يستغرق الناتج حتى دقيقة.",
     sm_audit_empty: "لا يوجد نشاط صفّي مسجل بعد.",

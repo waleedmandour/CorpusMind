@@ -156,6 +156,9 @@ export function StudentModeServerCard() {
   const [httpPort, setHttpPort] = useState<number | null>(null);
   const [seatDraft, setSeatDraft] = useState<string>("");
   const [auditOpen, setAuditOpen] = useState(false);
+  // Session-only dismissal of the Ollama LAN warning — a deliberate "I know,
+  // my Ollama is network-bound" from the teacher, not a persisted setting.
+  const [lanWarningDismissed, setLanWarningDismissed] = useState(false);
 
   useEffect(() => {
     setSeatDraft(s?.max_students != null ? String(s.max_students) : "");
@@ -213,13 +216,27 @@ export function StudentModeServerCard() {
       <div className="settings-card-body">
         {/* v1.2.10 (5a): Ollama bound beyond loopback is a classroom-wide
             risk — every joined device can reach the model server. Uses the
-            one canonical sentence shared with BUILD_GUIDE and Settings. */}
-        {s?.ollama_exposure?.exposed && (
+            one canonical sentence shared with BUILD_GUIDE and Settings.
+            v1.2.10 release fix: the warning is dismissible for the session
+            and now says WHAT to change — CorpusMind never binds Ollama to
+            the network; the bind is Ollama's own setting. */}
+        {s?.ollama_exposure?.exposed && !lanWarningDismissed && (
           <div className="sm-warning sm-lan-warning" role="alert">
-            {t(lang, "sm_ollama_lan_warning").replace(
-              "{addr}",
-              s.ollama_exposure.addr ?? "LAN",
-            )}
+            <button
+              type="button"
+              className="sm-warning-dismiss"
+              aria-label={t(lang, "sm_dismiss")}
+              onClick={() => setLanWarningDismissed(true)}
+            >
+              ×
+            </button>
+            <p>
+              {t(lang, "sm_ollama_lan_warning").replace(
+                "{addr}",
+                s.ollama_exposure.addr ?? "LAN",
+              )}
+            </p>
+            <p className="sm-warning-hint">{t(lang, "sm_ollama_lan_hint")}</p>
           </div>
         )}
         {/* Prerequisite problems surface here, not as a generic failure */}
