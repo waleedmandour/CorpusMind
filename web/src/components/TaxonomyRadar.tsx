@@ -17,6 +17,9 @@
  * Pure inline SVG, no chart dependency — consistent with the repo's
  * offline-first PWA stance and the PersuasionRadar conventions.
  */
+import { useRef } from "react";
+
+import { ChartExportButton } from "@/components/ChartExportButtons";
 import type { DiscourseCategory } from "@/lib/api";
 
 export const RADAR_MIN_AXES = 3;
@@ -25,14 +28,22 @@ export const RADAR_MAX_AXES = 12;
 export function TaxonomyRadar({
   categories,
   noHitsLabel,
+  exportName = "corpusmind-discourse-radar",
 }: {
   categories: Record<string, DiscourseCategory>;
   /** Shown instead of a shapeless point-polygon when no category has hits. */
   noHitsLabel?: string;
+  /** Download name for the Export PNG button (no extension). */
+  exportName?: string;
 }) {
-  const SIZE = 320;
+  // v1.2.10 field fixes: the radar used to render at a 320-unit viewBox
+  // capped at 320px — visibly smaller than the full-width bar chart above
+  // it. 420 units with a 520px cap, centered, captions below (CSS) — the
+  // chart is now the visual peer of the bar chart, not its thumbnail.
+  const SIZE = 420;
   const C = SIZE / 2;
-  const R = 108;
+  const R = 150;
+  const svgRef = useRef<SVGSVGElement | null>(null);
   const RINGS = [25, 50, 75, 100];
   const ACCENT = "var(--tool2-accent)";
 
@@ -73,7 +84,11 @@ export function TaxonomyRadar({
 
   return (
     <div className="taxonomy-radar-wrap">
+      <div className="radar-toolbar">
+        <ChartExportButton targetRef={svgRef} filename={exportName} />
+      </div>
       <svg
+        ref={svgRef}
         viewBox={`0 0 ${SIZE} ${SIZE}`}
         width="100%"
         role="img"
@@ -84,7 +99,7 @@ export function TaxonomyRadar({
         ))}
         {axes.map((a, i) => {
           const outer = pt(a.angle, R);
-          const labelPos = pt(a.angle, R + 14);
+          const labelPos = pt(a.angle, R + 18);
           const title = `${a.label}: ${a.freq.toLocaleString()} (of max ${max.toLocaleString()})`;
           // Compound keys ("commitment consistency", "interactive
           // endophoric markers") read better stacked on two lines than

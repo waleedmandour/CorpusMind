@@ -37,12 +37,12 @@ import { useUI } from "@/store/ui";
 import { useApp } from "@/store/app";
 import { t } from "@/lib/i18n";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { OllamaLanWarning } from "@/components/OllamaLanWarning";
 import { StudentModeServerCard } from "@/components/StudentModeServerCard";
 
 export function SettingsView() {
   const qc = useQueryClient();
   const isTauri = isTauriRuntime();
-  const lang = useUI((s) => s.lang);
 
   // Native (Rust-side) provider health — the authoritative source of truth
   // inside the Tauri desktop app. Polled every 5s. Returns null in browser mode.
@@ -329,7 +329,7 @@ export function SettingsView() {
               healthy={lmstudioOk}
               baseUrl="http://127.0.0.1:1234/v1"
               defaultModel={providers.data?.providers.find((p) => p.name === "lmstudio")?.default_model ?? "local-model"}
-              description="Local LLM runtime with OpenAI-compatible API. Install from lmstudio.ai."
+              description="Local LLM runtime with OpenAI-compatible API. Install from lmstudio.ai, then start Developer → Start Local Server."
             />
             <ProviderCard
               name="Cloud"
@@ -341,19 +341,14 @@ export function SettingsView() {
             />
           </div>
 
-          {/* v1.2.10 (5a): the one canonical sentence, shared with BUILD_GUIDE.md
-              and the Student Mode server card — not a paraphrase. */}
-          {ollamaExposure?.exposed && (
-            <div className="sm-warning sm-lan-warning" role="alert" style={{ marginTop: "var(--space-3)" }}>
-              <strong>Ollama LAN exposure</strong>
-              <p>
-                {t(lang, "sm_ollama_lan_warning").replace(
-                  "{addr}",
-                  ollamaExposure.addr ?? "LAN",
-                )}
-              </p>
-            </div>
-          )}
+          {/* v1.2.10 field fixes: one canonical warning shared with the
+              Student Mode card — same component, same persisted dismissal.
+              The old inline copy here had no dismiss button at all. */}
+          <OllamaLanWarning
+            exposed={!!ollamaExposure?.exposed}
+            addr={ollamaExposure?.addr ?? null}
+            style={{ marginTop: "var(--space-3)" }}
+          />
 
           {/* Cloud provider configuration */}
           <CloudProviderConfig />
@@ -385,12 +380,15 @@ export function SettingsView() {
           {/* LM Studio recheck button */}
           {!lmstudioOk && (
             <div className="settings-status-row" style={{ marginTop: "var(--space-3)", flexDirection: "column", alignItems: "stretch" }}>
-              <strong style={{ color: "var(--danger)" }}>LM Studio is not detected</strong>
+              <strong style={{ color: "var(--danger)" }}>LM Studio is not detected (support is built in — nothing was removed)</strong>
               <p className="settings-text-muted">
-                LM Studio is a GUI app - the CorpusMind app cannot auto-start it.
-                Open LM Studio, load a model, then click
-                <strong> Developer {"\u2192"} Start Local Server</strong>.
-                Once the server is running on port 1234, click "Recheck" below.
+                LM Studio remains a first-class local provider alongside Ollama.
+                CorpusMind cannot launch it for you (unlike Ollama): open LM
+                Studio, load a model, then start
+                <strong> Developer → Start Local Server</strong> (default port
+                1234) and click "Recheck LM Studio" below. Once the server is
+                running, LM Studio appears in the assistant's provider picker
+                automatically.
               </p>
               <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
                 <button

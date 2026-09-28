@@ -19,6 +19,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import QRCode from "qrcode";
 
 import { api, type ServerModeAuditEntry } from "@/lib/api";
+import { OllamaLanWarning } from "@/components/OllamaLanWarning";
 import { useUI } from "@/store/ui";
 import { t } from "@/lib/i18n";
 
@@ -156,9 +157,17 @@ export function StudentModeServerCard() {
   const [httpPort, setHttpPort] = useState<number | null>(null);
   const [seatDraft, setSeatDraft] = useState<string>("");
   const [auditOpen, setAuditOpen] = useState(false);
-  // Session-only dismissal of the Ollama LAN warning — a deliberate "I know,
-  // my Ollama is network-bound" from the teacher, not a persisted setting.
-  const [lanWarningDismissed, setLanWarningDismissed] = useState(false);
+
+  // v1.2.10 field fixes: the ON/OFF control the field report asked for —
+  // a switch at the TOP of the card, next to the title. Turning it ON
+  // starts the classroom with the currently chosen mode/ports; OFF stops
+  // Caddy and persists enabled=false. The prerequisite guard only blocks
+  // STARTING (turning OFF must always be possible).
+  const toggleClassroom = (checked: boolean) => {
+    if (checked) enable.mutate({ mode, https_port: httpsPort, http_port: httpPort });
+    else disable.mutate();
+  };
+  const cannotStart = !!s && (!s.caddy_binary_found || !s.web_dist_bundled);
 
   useEffect(() => {
     setSeatDraft(s?.max_students != null ? String(s.max_students) : "");
@@ -212,33 +221,32 @@ export function StudentModeServerCard() {
           <h2>{t(lang, "sm_card_title")}</h2>
           <p className="settings-card-desc">{t(lang, "sm_card_desc")}</p>
         </div>
+        <label className="sm-switch-row">
+          <input
+            type="checkbox"
+            role="switch"
+            className="sm-switch-input"
+            checked={enabled}
+            disabled={enable.isPending || disable.isPending || (!enabled && cannotStart)}
+            onChange={(e) => toggleClassroom(e.target.checked)}
+            aria-label={t(lang, "sm_toggle_aria")}
+          />
+          <span className="sm-switch" aria-hidden>
+            <span className="sm-switch-knob" />
+          </span>
+          <span className={enabled ? "sm-switch-state on" : "sm-switch-state"}>
+            {enabled ? t(lang, "sm_toggle_on") : t(lang, "sm_toggle_off")}
+          </span>
+        </label>
       </div>
       <div className="settings-card-body">
-        {/* v1.2.10 (5a): Ollama bound beyond loopback is a classroom-wide
-            risk — every joined device can reach the model server. Uses the
-            one canonical sentence shared with BUILD_GUIDE and Settings.
-            v1.2.10 release fix: the warning is dismissible for the session
-            and now says WHAT to change — CorpusMind never binds Ollama to
-            the network; the bind is Ollama's own setting. */}
-        {s?.ollama_exposure?.exposed && !lanWarningDismissed && (
-          <div className="sm-warning sm-lan-warning" role="alert">
-            <button
-              type="button"
-              className="sm-warning-dismiss"
-              aria-label={t(lang, "sm_dismiss")}
-              onClick={() => setLanWarningDismissed(true)}
-            >
-              ×
-            </button>
-            <p>
-              {t(lang, "sm_ollama_lan_warning").replace(
-                "{addr}",
-                s.ollama_exposure.addr ?? "LAN",
-              )}
-            </p>
-            <p className="sm-warning-hint">{t(lang, "sm_ollama_lan_hint")}</p>
-          </div>
-        )}
+        {/* v1.2.10 field fixes: one shared, dismissible, persisted warning
+            (also rendered in the Model Providers card — same component, same
+            dismissal, so it can no longer reappear from the other copy). */}
+        <OllamaLanWarning
+          exposed={!!s?.ollama_exposure?.exposed}
+          addr={s?.ollama_exposure?.addr ?? null}
+        />
         {/* Prerequisite problems surface here, not as a generic failure */}
         {s && (!s.caddy_binary_found || !s.web_dist_bundled) && (
           <div className="sm-warning" role="status">
@@ -311,27 +319,9 @@ export function StudentModeServerCard() {
           </div>
         </details>
 
-        {/* Enable / disable */}
+        {/* v1.2.10 field fixes: Start/Stop moved into the header switch.
+            Rotate stays here — it only makes sense while running. */}
         <div className="sm-actions">
-          {!enabled ? (
-            <button
-              className="btn-small sm-primary"
-              disabled={enable.isPending || (!!s && (!s.caddy_binary_found || !s.web_dist_bundled))}
-              onClick={() =>
-                enable.mutate({
-                  mode,
-                  https_port: httpsPort,
-                  http_port: httpPort,
-                })
-              }
-            >
-              {enable.isPending ? t(lang, "sm_starting") : t(lang, "sm_enable")}
-            </button>
-          ) : (
-            <button className="btn-small sm-danger" disabled={disable.isPending} onClick={() => disable.mutate()}>
-              {t(lang, "sm_disable")}
-            </button>
-          )}
           {enabled && (
             <button
               className="btn-small"

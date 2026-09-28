@@ -27,6 +27,9 @@
  * Pure inline SVG, no chart dependency — consistent with the repo's
  * offline-first PWA stance and the PersuasionRadar approach.
  */
+import { useRef } from "react";
+
+import { ChartExportButton } from "@/components/ChartExportButtons";
 import type { DiscourseCategory } from "@/lib/api";
 import { useUI } from "@/store/ui";
 import { t, type Lang } from "@/lib/i18n";
@@ -107,11 +110,15 @@ function SingleCorpusChart({ rows, lang }: { rows: DiscourseChartRow[]; lang: La
   const W = 640;
   const H = valued.length * ROW_H + 26;
   const barMax = W - LABEL_W - VALUE_W;
+  // v1.2.10 field fixes: Export PNG — the button lives in the caption row
+  // and rasterizes THIS figure's SVG with its computed theme colors.
+  const figRef = useRef<HTMLElement | null>(null);
 
   return (
-    <figure className="discourse-chart-wrap">
+    <figure className="discourse-chart-wrap" ref={figRef}>
       <figcaption className="discourse-chart-title">
-        {t(lang, valued[0].isRate ? "discourse_chart_title_pm" : "discourse_chart_title_freq")}
+        <span>{t(lang, valued[0].isRate ? "discourse_chart_title_pm" : "discourse_chart_title_freq")}</span>
+        <ChartExportButton targetRef={figRef} filename="corpusmind-discourse-bars" />
       </figcaption>
       <svg
         viewBox={`0 0 ${W} ${H}`}
@@ -183,11 +190,13 @@ function GroupedCompareChart({ rows, lang }: { rows: DiscourseChartRow[]; lang: 
   const H = valued.length * ROW_H + 26;
   const barMax = W - LABEL_W - VALUE_W;
   const BAR_H = 6;
+  const figRef = useRef<HTMLElement | null>(null);
 
   return (
-    <figure className="discourse-chart-wrap">
+    <figure className="discourse-chart-wrap" ref={figRef}>
       <figcaption className="discourse-chart-title">
-        {t(lang, "discourse_chart_title_grouped")}
+        <span>{t(lang, "discourse_chart_title_grouped")}</span>
+        <ChartExportButton targetRef={figRef} filename="corpusmind-discourse-compare" />
       </figcaption>
       <svg
         viewBox={`0 0 ${W} ${H}`}
@@ -271,11 +280,13 @@ function DivergingChart({ rows, lang }: { rows: DiscourseChartRow[]; lang: Lang 
   const H = withLr.length * ROW_H + 26;
   const half = W / 2 - 60;
   const midX = W / 2;
+  const figRef = useRef<HTMLElement | null>(null);
 
   return (
-    <figure className="discourse-chart-wrap">
+    <figure className="discourse-chart-wrap" ref={figRef}>
       <figcaption className="discourse-chart-title">
-        {t(lang, "discourse_chart_title_lr")}
+        <span>{t(lang, "discourse_chart_title_lr")}</span>
+        <ChartExportButton targetRef={figRef} filename="corpusmind-discourse-divergence" />
       </figcaption>
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label={t(lang, "discourse_chart_title_lr")}>
         <line x1={midX} y1={4} x2={midX} y2={H - 8} stroke="var(--border-strong)" strokeWidth="1" />

@@ -11,6 +11,9 @@
  * offline-first PWA stance. Axis order is fixed (logos → ethos → pathos,
  * alphabetical within family) so the polygon shape is deterministic.
  */
+import { useRef } from "react";
+
+import { ChartExportButton } from "@/components/ChartExportButtons";
 import type { DiscourseCategory } from "@/lib/api";
 
 export const PI_FAMILY_AXES: Record<string, string[]> = {
@@ -32,10 +35,21 @@ const FAMILY_COLOR: Record<string, string> = {
   pathos: "var(--tool4-accent)",
 };
 
-export function PersuasionRadar({ categories }: { categories: Record<string, DiscourseCategory> }) {
-  const SIZE = 320;
+export function PersuasionRadar({
+  categories,
+  exportName = "corpusmind-pi-radar",
+}: {
+  categories: Record<string, DiscourseCategory>;
+  /** Download name for the Export PNG button (no extension). */
+  exportName?: string;
+}) {
+  // v1.2.10 field fixes: enlarged to match the TaxonomyRadar (420 units,
+  // 520px cap) and the family legend moves BELOW the chart (centered row)
+  // — it used to sit to the right, reading as captions of a small chart.
+  const SIZE = 420;
   const C = SIZE / 2;
-  const R = 108;
+  const R = 150;
+  const svgRef = useRef<SVGSVGElement | null>(null);
   const RINGS = [25, 50, 75, 100];
 
   const axes: Array<{ family: string; dim: string; value: number; angle: number }> = [];
@@ -66,13 +80,16 @@ export function PersuasionRadar({ categories }: { categories: Record<string, Dis
 
   return (
     <div className="pi-radar-wrap">
-      <svg viewBox={`0 0 ${SIZE} ${SIZE}`} width="100%" role="img" aria-label="Persuasion Index radar">
+      <div className="radar-toolbar">
+        <ChartExportButton targetRef={svgRef} filename={exportName} />
+      </div>
+      <svg ref={svgRef} viewBox={`0 0 ${SIZE} ${SIZE}`} width="100%" role="img" aria-label="Persuasion Index radar">
         {RINGS.map((r) => (
           <circle key={r} cx={C} cy={C} r={(R * r) / 100} fill="none" stroke="var(--border)" strokeWidth="0.7" />
         ))}
         {axes.map((a, i) => {
           const outer = pt(a.angle, R);
-          const labelPos = pt(a.angle, R + 14);
+          const labelPos = pt(a.angle, R + 18);
           return (
             <g key={`axis-${i}`}>
               <line x1={C} y1={C} x2={outer.x} y2={outer.y} stroke="var(--border)" strokeWidth="0.7" />
