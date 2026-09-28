@@ -2003,9 +2003,10 @@ code, pre { font-family: var(--font-mono); }
 
 /* v1.2.7 (§4): persuasion index radar + disclaimer.
    v1.2.10 field fixes: the radar is a full visual peer of the bar chart —
-   enlarged (520px cap), CENTERED, and the family legend sits BELOW the
-   chart as a centered row (it used to flow to the right of a 320px
-   chart, which read as captions of a thumbnail). */
+   enlarged (780px cap, a further +50% over the first 520px pass),
+   CENTERED, and the family legend sits BELOW the chart as a centered row
+   (it used to flow to the right of a 320px chart, which read as captions
+   of a thumbnail). */
 .pi-radar-wrap {
   display: flex;
   flex-direction: column;
@@ -2016,7 +2017,7 @@ code, pre { font-family: var(--font-mono); }
   border-radius: var(--radius-md);
   margin-block: var(--space-2);
 }
-.pi-radar-wrap svg { flex: 0 0 auto; inline-size: 100%; max-inline-size: 520px; }
+.pi-radar-wrap svg { flex: 0 0 auto; inline-size: 100%; max-inline-size: 780px; }
 .pi-axis-label { font-size: 10px; fill: var(--text-muted); font-family: var(--font-sans); }
 .pi-radar-legend { display: flex; flex-direction: row; flex-wrap: wrap; justify-content: center; gap: var(--space-2) var(--space-4); font-size: 13px; }
 .pi-legend-item { display: inline-flex; align-items: center; gap: var(--space-2); }
@@ -2024,8 +2025,9 @@ code, pre { font-family: var(--font-mono); }
 .pi-disclaimer { border-inline-start: 3px solid var(--warning); }
 
 /* v1.2.10: generic taxonomy radar + cue co-occurrence + language badge.
-   v1.2.10 field fixes: same treatment as the PI radar — enlarged,
-   centered, captions/hint BELOW the chart instead of beside it. */
+   v1.2.10 field fixes: same treatment as the PI radar — enlarged
+   (780px cap, +50% over the first 520px pass), centered, captions/hint
+   BELOW the chart instead of beside it. */
 .taxonomy-radar-wrap {
   display: flex;
   flex-direction: column;
@@ -2037,14 +2039,14 @@ code, pre { font-family: var(--font-mono); }
   border-radius: 8px;
   margin: var(--space-3) 0;
 }
-.taxonomy-radar-wrap svg { flex: 0 0 auto; inline-size: 100%; max-inline-size: 520px; }
+.taxonomy-radar-wrap svg { flex: 0 0 auto; inline-size: 100%; max-inline-size: 780px; }
 .taxonomy-radar-hint { font-size: 12.5px; color: var(--text-muted); text-align: center; max-inline-size: 68ch; }
 /* Shared toolbar row for chart headers (Export PNG button, right-aligned). */
 .radar-toolbar {
   display: flex;
   justify-content: flex-end;
   inline-size: 100%;
-  max-inline-size: 520px;
+  max-inline-size: 780px;
 }
 /* One-click chart export buttons (PNG/CSV) — quiet ghost style that
    matches the settings/card buttons. */
@@ -7584,7 +7586,7 @@ html[dir="rtl"] .toggle-switch input:checked + .toggle-slider::before {
 }
 .sm-warning .sm-warning-dismiss:hover { background: color-mix(in srgb, currentColor 12%, transparent); }
 .sm-warning .sm-warning-hint { color: var(--text-muted); font-size: 12.5px; margin-top: 4px; }
-/* v1.2.11: "Check again" on the LAN warning — small, quiet, left-aligned. */
+/* v1.2.10: "Check again" on the LAN warning — small, quiet, left-aligned. */
 .sm-warning .sm-warning-recheck {
   margin-top: var(--space-2);
   align-self: flex-start;
@@ -7598,7 +7600,7 @@ html[dir="rtl"] .toggle-switch input:checked + .toggle-slider::before {
 }
 .sm-warning .sm-warning-recheck:hover { background: color-mix(in srgb, currentColor 10%, transparent); }
 .sm-warning .sm-warning-recheck:disabled { opacity: 0.6; cursor: default; }
-/* v1.2.11: phased-start failure banner in the Student Mode card. */
+/* v1.2.10: phased-start failure banner in the Student Mode card. */
 .sm-start-error {
   border: 1px solid var(--danger);
   background: color-mix(in srgb, var(--danger) 8%, transparent);
@@ -7616,7 +7618,7 @@ html[dir="rtl"] .toggle-switch input:checked + .toggle-slider::before {
   overflow-wrap: anywhere;
   color: var(--text-muted);
 }
-/* v1.2.11: classroom chip in the bottom task bar (App footer). */
+/* v1.2.10: classroom chip in the bottom task bar (App footer). */
 .classroom-chip {
   display: inline-flex;
   align-items: center;
