@@ -10,7 +10,7 @@
  * keyed by the exposed ADDRESS, so a genuinely new exposure (different
  * interface / network) re-arms the warning while a known one stays quiet.
  *
- * v1.2.11 field fixes: a "Check again" button. The status poll caches the
+ * v1.2.10 field fixes: a "Check again" button. The status poll caches the
  * exposure probe for 60 s, so a teacher who just fixed their Ollama
  * binding used to keep seeing a stale warning for up to a minute with no
  * way to act on it. The button hits /server-mode/recheck-ollama (drops

@@ -81,7 +81,7 @@ def _status_payload(
     cfg = state.config
     caddy_bin = find_caddy_binary(settings)
     running = bool(state.caddy_proc and state.caddy_proc.poll() is None)
-    # v1.2.11: start phase for the UI. "failed" stays sticky after a revert
+    # v1.2.10: start phase for the UI. "failed" stays sticky after a revert
     # (so the teacher actually sees WHY nothing happened) until the next
     # enable or disable; a Caddy that died after a clean start also reads
     # as failed so the chip never shows green over a dead server.
@@ -239,7 +239,7 @@ async def server_mode_status(request: Request) -> dict:
 async def server_mode_enable(request: Request, body: EnableRequest) -> dict[str, Any]:
     """Enable the classroom server (writes config, spawns Caddy in background).
 
-    v1.2.11: phased, non-blocking start. The old handler ran the Caddy spawn
+    v1.2.10: phased, non-blocking start. The old handler ran the Caddy spawn
     + readiness wait (up to ~20 s of blocking HTTP probes) INLINE in this
     async handler — that froze the whole engine event loop, which the field
     report describes as "application hesitation". Now the handler validates,
@@ -366,7 +366,7 @@ async def server_mode_disable(request: Request) -> dict:
     state: sm.ServerModeState = request.app.state.server_mode
     state.config.enabled = False
     settings.student_token = ""
-    # v1.2.11: invalidate any in-flight start — the worker checks the
+    # v1.2.10: invalidate any in-flight start — the worker checks the
     # generation after spawn and takes a half-started Caddy back down.
     state.start_generation += 1
     state.start_phase = "off"
@@ -384,7 +384,7 @@ async def server_mode_disable(request: Request) -> dict:
 
 @router.post("/server-mode/recheck-ollama")
 async def server_mode_recheck_ollama(request: Request) -> dict[str, Any]:
-    """Fresh Ollama LAN-exposure probe, bypassing the 60 s cache (v1.2.11).
+    """Fresh Ollama LAN-exposure probe, bypassing the 60 s cache (v1.2.10).
 
     The warning banner's "Check again" button calls this: after the teacher
     fixes their Ollama binding (127.0.0.1), one click re-probes immediately

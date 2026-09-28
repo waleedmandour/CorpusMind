@@ -23,7 +23,7 @@ use std::time::{Duration, Instant};
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
 
-/// Windows: spawn children WITHOUT allocating a console window (v1.2.11).
+/// Windows: spawn children WITHOUT allocating a console window (v1.2.10).
 /// `ollama serve` and `where.exe` are console-subsystem programs; spawned
 /// from a GUI process each of them opens a black terminal window that then
 /// "crashes" (closes) when the child exits — the recurring black-window
@@ -113,7 +113,7 @@ impl OllamaManager {
             //    var seen by the Tauri process differs from the user's shell.
             let mut where_cmd = std::process::Command::new("where");
             where_cmd.arg("ollama");
-            // v1.2.11: windowless — where.exe is console-subsystem.
+            // v1.2.10: windowless — where.exe is console-subsystem.
             #[cfg(target_os = "windows")]
             where_cmd.creation_flags(CREATE_NO_WINDOW);
             if let Ok(output) = where_cmd.output() {
@@ -209,13 +209,13 @@ impl OllamaManager {
         let mut cmd = Command::new(&ollama_exe);
         cmd.arg("serve");
 
-        // v1.2.11: windowless spawn — `ollama serve` is a console-subsystem
+        // v1.2.10: windowless spawn — `ollama serve` is a console-subsystem
         // program; without CREATE_NO_WINDOW a black terminal window appears
         // next to the app on Windows and stays for the whole session (and
         // its closing, when the child exits, reads as a "crash").
         #[cfg(target_os = "windows")]
         cmd.creation_flags(CREATE_NO_WINDOW);
-        // v1.2.11: the CorpusMind-managed instance always binds loopback.
+        // v1.2.10: the CorpusMind-managed instance always binds loopback.
         // A system-wide OLLAMA_HOST=0.0.0.0 would otherwise make CorpusMind
         // itself recreate — at every app start — the exact LAN exposure the
         // Ollama LAN warning tells the teacher to avoid, no matter what the

@@ -785,12 +785,12 @@ deliberately excluded from the registry and pinned out by test.
   lens** in the registry (Hyland 2005, Halliday & Hasan 1976, Martin &
   White 2005, Cialdini 2007); the Cialdini lens ships the hedge in its
   UI-visible citation, and generalizing the notice to the older cue lenses'
-  citations is queued for v1.2.11.
+  citations is queued for the next release.
 - **Cue-list precision is unvalidated.** The cue sets are house
   "starter subsets" — the most frequent surface markers, chosen by
   inspection, not a closed inventory validated against annotated data.
   **κ-validation against a hand-annotated gold sample is the agreed
-  follow-up** (queued after v1.2.11); until it lands, counts are
+  follow-up** (queued for a follow-up release); until it lands, counts are
   exploratory and must not be reported as validated instrument scores.
 - **Known precision risks (gold-sample watchlist).** The authority cues
   "official", "certified" and "leading" are high-frequency in unrelated

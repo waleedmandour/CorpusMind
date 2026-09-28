@@ -115,7 +115,7 @@ export function StudentModeServerCard() {
   const status = useQuery({
     queryKey: ["server-mode-status"],
     queryFn: () => api.serverModeStatus(),
-    // v1.2.11: phased start — poll fast while Caddy is coming up so the
+    // v1.2.10: phased start — poll fast while Caddy is coming up so the
     // switch flips to ON the moment it is live, then settle at 5 s.
     refetchInterval: (q) => {
       const d = q.state.data;
@@ -265,7 +265,7 @@ export function StudentModeServerCard() {
             {!s.web_dist_bundled && <p>{t(lang, "sm_err_no_webdist")}</p>}
           </div>
         )}
-        {/* v1.2.11: phased-start failure — prominent, with Caddy's own
+        {/* v1.2.10: phased-start failure — prominent, with Caddy's own
             error text. The engine keeps "failed" sticky until the next
             enable/disable, so the teacher always sees WHY it did not come
             up (previously this surfaced as a frozen app + a console flash

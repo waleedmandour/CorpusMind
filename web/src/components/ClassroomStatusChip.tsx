@@ -1,6 +1,6 @@
 /**
  * ClassroomStatusChip — live Student Mode progress in the bottom task bar
- * (v1.2.11 field fix).
+ * (v1.2.10 field fix).
  *
  * Field report: turning the classroom ON used to freeze the app for up to
  * ~20 s while the engine waited (synchronously) for Caddy, with the only

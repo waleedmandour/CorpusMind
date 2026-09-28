@@ -74,7 +74,7 @@ _DEV_CADDY_DIR = Path(__file__).resolve().parent.parent / "caddy-bin" / (
     "caddy.exe" if sys.platform.startswith("win") else "caddy"
 )
 
-# v1.2.11: every Windows child process below must be WINDOWLESS. The engine
+# v1.2.10: every Windows child process below must be WINDOWLESS. The engine
 # runs inside the Tauri desktop shell; Caddy, taskkill and nvidia-smi are
 # console-subsystem programs, so without CREATE_NO_WINDOW each spawn flashes
 # a black terminal window on the teacher's desktop (and every exit looks
@@ -719,7 +719,7 @@ def spawn_caddy(settings: Any, state: ServerModeState) -> dict[str, Any]:
             old = int(pidfile.read_text().strip() or 0)
             if old > 0 and old != os.getpid():
                 if sys.platform.startswith("win"):
-                    # v1.2.11: windowless — taskkill is console-subsystem.
+                    # v1.2.10: windowless — taskkill is console-subsystem.
                     subprocess.run(["taskkill", "/PID", str(old), "/T", "/F"],
                                    capture_output=True, timeout=10,
                                    creationflags=int(getattr(subprocess, "CREATE_NO_WINDOW", 0)))
@@ -738,7 +738,7 @@ def spawn_caddy(settings: Any, state: ServerModeState) -> dict[str, Any]:
 
     kwargs: dict[str, Any] = {"env": env, "cwd": str(sm_dir)}
     if sys.platform.startswith("win"):
-        # v1.2.11: CREATE_NO_WINDOW added — CREATE_NEW_PROCESS_GROUP alone
+        # v1.2.10: CREATE_NO_WINDOW added — CREATE_NEW_PROCESS_GROUP alone
         # still allocates (and shows) a console for the Caddy child.
         kwargs["creationflags"] = _WIN_PROC_FLAGS
     else:
@@ -808,7 +808,7 @@ _CADDY_VERSION_CACHE: dict[str, str | None] = {}
 def caddy_version(caddy_bin: Path | None) -> str | None:
     """`caddy version`, cached per binary path.
 
-    v1.2.11 two-part fix for the "black terminal keeps flashing" report:
+    v1.2.10 two-part fix for the "black terminal keeps flashing" report:
       1. windowless — `caddy version` is console-subsystem, and the status
          endpoint calls this on EVERY poll, so each 5 s poll used to spawn
          a visible console on Windows;
@@ -852,7 +852,7 @@ class ServerModeState:
     # fresh TCP probe per poll (0.3 s timeout × N interfaces) both stalls
     # the poll and makes the warning flicker when a connect is borderline.
     exposure_cache: tuple[float, dict[str, Any]] | None = None
-    # v1.2.11: phased classroom start. start_phase walks off → starting →
+    # v1.2.10: phased classroom start. start_phase walks off → starting →
     # live (or failed) so the UI can show progress instead of freezing;
     # start_generation invalidates an in-flight start when the teacher
     # flips the switch OFF while Caddy is still coming up.

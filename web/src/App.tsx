@@ -231,7 +231,7 @@ export default function App() {
         <span className="status-sep">|</span>
         <span>{studentClient ? getStudentServer() || t(lang, "student_status_mode") : "Local Desktop App"}</span>
         <div className="statusbar-spacer" />
-        {/* v1.2.11: live classroom phase in the task bar (starting/live/failed). */}
+        {/* v1.2.10: live classroom phase in the task bar (starting/live/failed). */}
         <ClassroomStatusChip />
         <TroubleshootingBar />
       </footer>

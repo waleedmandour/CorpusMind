@@ -1,4 +1,4 @@
-"""v1.2.11 — windowless Windows spawns + phased (non-blocking) classroom start.
+"""v1.2.10 — windowless Windows spawns + phased (non-blocking) classroom start.
 
 Field reports, round 3:
   (a) black console windows flashing on Windows — every console-subsystem
