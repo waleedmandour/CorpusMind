@@ -74,6 +74,37 @@ _DEV_CADDY_DIR = Path(__file__).resolve().parent.parent / "caddy-bin" / (
     "caddy.exe" if sys.platform.startswith("win") else "caddy"
 )
 
+# v1.2.11: every Windows child process below must be WINDOWLESS. The engine
+# runs inside the Tauri desktop shell; Caddy, taskkill and nvidia-smi are
+# console-subsystem programs, so without CREATE_NO_WINDOW each spawn flashes
+# a black terminal window on the teacher's desktop (and every exit looks
+# like a "crash"). The engine itself is already console=False in the
+# PyInstaller spec — these flags close the remaining windows.
+# POSIX Popen raises on non-zero creationflags, so the value stays 0 there
+# and callers omit the kwarg entirely. The attribute lookups sit inside the
+# conditional branch on purpose: subprocess.CREATE_NO_WINDOW does not exist
+# on POSIX, and the conditional expression never evaluates it there.
+_WIN_NO_WINDOW: int = (
+    subprocess.CREATE_NO_WINDOW if sys.platform.startswith("win") else 0
+)
+_WIN_PROC_FLAGS: int = (
+    (subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.CREATE_NO_WINDOW)
+    if sys.platform.startswith("win")
+    else 0
+)
+
+
+def windows_process_flags(platform: str) -> int:
+    """Pure helper for tests: the creationflags dict value for a platform.
+
+    Exists so the windowless-spawn contract has a regression test that runs
+    on the Linux CI (where the real constants are absent); the monkeypatched
+    subprocess attributes make the win32 branch computable anywhere.
+    """
+    if platform.startswith("win"):
+        return subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.CREATE_NO_WINDOW  # type: ignore[attr-defined]
+    return 0
+
 
 # --------------------------------------------------------------------------- #
 # Config persistence
@@ -682,8 +713,10 @@ def spawn_caddy(settings: Any, state: ServerModeState) -> dict[str, Any]:
             old = int(pidfile.read_text().strip() or 0)
             if old > 0 and old != os.getpid():
                 if sys.platform.startswith("win"):
+                    # v1.2.11: windowless — taskkill is console-subsystem.
                     subprocess.run(["taskkill", "/PID", str(old), "/T", "/F"],
-                                   capture_output=True, timeout=10)
+                                   capture_output=True, timeout=10,
+                                   creationflags=subprocess.CREATE_NO_WINDOW)  # type: ignore[attr-defined]
                 else:
                     os.kill(old, 15)
         except (ValueError, ProcessLookupError, PermissionError, subprocess.TimeoutExpired, OSError):
@@ -699,7 +732,9 @@ def spawn_caddy(settings: Any, state: ServerModeState) -> dict[str, Any]:
 
     kwargs: dict[str, Any] = {"env": env, "cwd": str(sm_dir)}
     if sys.platform.startswith("win"):
-        kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP  # type: ignore[attr-defined]
+        # v1.2.11: CREATE_NO_WINDOW added — CREATE_NEW_PROCESS_GROUP alone
+        # still allocates (and shows) a console for the Caddy child.
+        kwargs["creationflags"] = _WIN_PROC_FLAGS  # type: ignore[attr-defined]
     else:
         kwargs["preexec_fn"] = _posix_close_on_parent_death  # type: ignore[assignment]
 
@@ -761,15 +796,36 @@ def spawn_caddy(settings: Any, state: ServerModeState) -> dict[str, Any]:
     return {"reused": False, "pid": proc.pid, "ca_staged": ca_staged}
 
 
+_CADDY_VERSION_CACHE: dict[str, str | None] = {}
+
+
 def caddy_version(caddy_bin: Path | None) -> str | None:
+    """`caddy version`, cached per binary path.
+
+    v1.2.11 two-part fix for the "black terminal keeps flashing" report:
+      1. windowless — `caddy version` is console-subsystem, and the status
+         endpoint calls this on EVERY poll, so each 5 s poll used to spawn
+         a visible console on Windows;
+      2. cached — the shipped binary cannot change mid-session, so after
+         the first success the poll spawns nothing at all. Failures are
+         not cached: a transient lock (antivirus scan) must not pin a
+         wrong answer for the whole session.
+    """
     if caddy_bin is None or not caddy_bin.is_file():
         return None
+    key = str(caddy_bin)
+    if key in _CADDY_VERSION_CACHE:
+        return _CADDY_VERSION_CACHE[key]
+    run_kwargs: dict[str, Any] = {"capture_output": True, "text": True, "timeout": 10}
+    if _WIN_NO_WINDOW:
+        run_kwargs["creationflags"] = _WIN_NO_WINDOW
     try:
-        out = subprocess.run([str(caddy_bin), "version"], capture_output=True,
-                             text=True, timeout=10)
-        return (out.stdout or out.stderr).strip().splitlines()[0] if (out.stdout or out.stderr) else None
+        out = subprocess.run([key, "version"], **run_kwargs)
+        ver = (out.stdout or out.stderr).strip().splitlines()[0] if (out.stdout or out.stderr) else None
     except Exception:
         return None
+    _CADDY_VERSION_CACHE[key] = ver
+    return ver
 
 
 # --------------------------------------------------------------------------- #
@@ -790,6 +846,12 @@ class ServerModeState:
     # fresh TCP probe per poll (0.3 s timeout × N interfaces) both stalls
     # the poll and makes the warning flicker when a connect is borderline.
     exposure_cache: tuple[float, dict[str, Any]] | None = None
+    # v1.2.11: phased classroom start. start_phase walks off → starting →
+    # live (or failed) so the UI can show progress instead of freezing;
+    # start_generation invalidates an in-flight start when the teacher
+    # flips the switch OFF while Caddy is still coming up.
+    start_phase: str = "off"
+    start_generation: int = 0
     # student IP → last-seen monotonic timestamp (lightweight counter, no
     # session store — the plan explicitly asks for the cheap version).
     student_seen: dict[str, float] = field(default_factory=dict)
