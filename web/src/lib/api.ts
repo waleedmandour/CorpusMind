@@ -1945,6 +1945,13 @@ export const api = {
     ),
   serverModeAudit: (limit = 200) =>
     jsonFetch<ServerModeAudit>(`/api/v1/server-mode/audit?limit=${limit}`),
+  // v1.2.11: fresh Ollama LAN-exposure probe (drops the 60 s cache) for the
+  // warning banner's "Check again" button.
+  serverModeRecheckOllama: () =>
+    jsonFetch<{ exposed: boolean; source: "env" | "probe" | null; addr: string | null }>(
+      `/api/v1/server-mode/recheck-ollama`,
+      { method: "POST" },
+    ),
 
   discourse: (cid: string, taxonomy = "hyland2005", compareCorpusId?: string | null) =>
     jsonFetch<DiscourseResult>(`/api/v1/corpora/${cid}/discourse`, {
@@ -2921,6 +2928,10 @@ export interface PersuasionHealth {
 
 export interface ServerModeStatus {
   enabled: boolean;
+  // v1.2.11: phased classroom start — off | starting | live | failed.
+  // "failed" stays sticky (with caddy_error) until the next enable/disable
+  // so the UI can always show WHY a start did not come up.
+  phase: "off" | "starting" | "live" | "failed";
   mode: "secure" | "simple";
   https_port: number;
   http_port: number;

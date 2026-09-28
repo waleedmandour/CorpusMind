@@ -67,6 +67,8 @@ export const translations = {
     home_running: "Running",
     home_offline: "Offline",
     home_ollama: "Ollama",
+    // v1.2.11: LM Studio status chip on the home page (brand name, both langs).
+    home_lmstudio: "LM Studio",
     home_connected: "Connected",
     home_not_running: "Not detected",
     home_active_corpus: "Corpus loaded",
@@ -1011,6 +1013,15 @@ export const translations = {
     // binds Ollama to the network — the bind is Ollama's own configuration.
     sm_ollama_lan_hint: "CorpusMind never changes your Ollama binding. To fix: quit Ollama, set OLLAMA_HOST=127.0.0.1:11434 (or turn off \"Expose Ollama to the network\" in Ollama's settings), then start Ollama again.",
     sm_dismiss: "Dismiss",
+    // v1.2.11: phased classroom start — progress instead of a frozen app.
+    // (sm_starting itself predates this change and is reused as-is.)
+    sm_start_failed: "Classroom server failed to start",
+    sm_taskbar_starting: "Starting classroom server…",
+    sm_taskbar_live: "Classroom live",
+    sm_taskbar_failed: "Classroom failed — details",
+    // v1.2.11: fresh exposure probe on the LAN warning banner.
+    sm_recheck: "Check again",
+    sm_rechecking: "Checking…",
     // v1.2.10 (soak follow-up): shown after ~3 s of pending heavy analysis.
     analysis_class_busy: "Your class is busy — please wait. When the whole classroom queries at once, requests queue and results can take up to a minute.",
     sm_audit_empty: "No classroom activity recorded yet.",
@@ -1082,6 +1093,8 @@ export const translations = {
     home_running: "يعمل",
     home_offline: "متوقف",
     home_ollama: "Ollama",
+    // v1.2.11: LM Studio status chip on the home page (brand name, both langs).
+    home_lmstudio: "LM Studio",
     home_connected: "متصل",
     home_not_running: "غير مكتشف",
     home_active_corpus: "الذخيرة اللغوية محمّلة",
@@ -2018,6 +2031,14 @@ export const translations = {
     sm_ollama_lan_warning: "Ollama يمكن الوصول إليه من شبكتك المحلية ({addr}). أي جهاز على الشبكة يمكنه استخدام نماذجك — أبقِ Ollama على 127.0.0.1 (الافتراضي)، أو استخدم نفقًا مُصادقًا مثل SSH أو Tailscale إذا احتاج المحرك فعلًا إلى مضيف Ollama بعيد.",
     sm_ollama_lan_hint: "لا يُغيّر CorpusMind إعداد ربط Ollama أبدًا. للإصلاح: أغلق Ollama، ثم اضبط OLLAMA_HOST=127.0.0.1:11434 (أو أوقف خيار \"Expose Ollama to the network\" في إعدادات Ollama)، ثم أعد تشغيله.",
     sm_dismiss: "إخفاء",
+    // v1.2.11: بدء تدريجي — تقدّم مرئي بدل تجميد التطبيق. (يُعاد استخدام sm_starting الموجود مسبقاً)
+    sm_start_failed: "فشل بدء خادم الفصل الدراسي",
+    sm_taskbar_starting: "جارٍ بدء خادم الفصل الدراسي…",
+    sm_taskbar_live: "الفصل الدراسي يعمل",
+    sm_taskbar_failed: "فشل الفصل الدراسي — التفاصيل",
+    // v1.2.11: فحص جديد لتحذير شبكة Ollama.
+    sm_recheck: "تحقق مجددًا",
+    sm_rechecking: "جارٍ التحقق…",
     // v1.2.10 (soak follow-up): تظهر بعد ~3 ثوانٍ من الانتظار في التحليلات الثقيلة.
     analysis_class_busy: "صفّك مشغول — يُرجى الانتظار. عندما يستعلم الصف كله في وقت واحد، تُصطف الطلبات وقد يستغرق الناتج حتى دقيقة.",
     sm_audit_empty: "لا يوجد نشاط صفّي مسجل بعد.",

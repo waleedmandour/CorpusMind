@@ -115,7 +115,14 @@ export function StudentModeServerCard() {
   const status = useQuery({
     queryKey: ["server-mode-status"],
     queryFn: () => api.serverModeStatus(),
-    refetchInterval: (q) => (q.state.data?.enabled ? 5000 : false),
+    // v1.2.11: phased start — poll fast while Caddy is coming up so the
+    // switch flips to ON the moment it is live, then settle at 5 s.
+    refetchInterval: (q) => {
+      const d = q.state.data;
+      if (d?.phase === "starting") return 1500;
+      if (d?.enabled) return 5000;
+      return false;
+    },
   });
 
   const models = useQuery({
@@ -235,7 +242,11 @@ export function StudentModeServerCard() {
             <span className="sm-switch-knob" />
           </span>
           <span className={enabled ? "sm-switch-state on" : "sm-switch-state"}>
-            {enabled ? t(lang, "sm_toggle_on") : t(lang, "sm_toggle_off")}
+            {s?.phase === "starting"
+              ? t(lang, "sm_starting")
+              : enabled
+                ? t(lang, "sm_toggle_on")
+                : t(lang, "sm_toggle_off")}
           </span>
         </label>
       </div>
@@ -254,9 +265,28 @@ export function StudentModeServerCard() {
             {!s.web_dist_bundled && <p>{t(lang, "sm_err_no_webdist")}</p>}
           </div>
         )}
-        {s?.caddy_error && (
+        {/* v1.2.11: phased-start failure — prominent, with Caddy's own
+            error text. The engine keeps "failed" sticky until the next
+            enable/disable, so the teacher always sees WHY it did not come
+            up (previously this surfaced as a frozen app + a console flash
+            and looked like "nothing happened"). */}
+        {s?.phase === "failed" && s.caddy_error && (
+          <div className="sm-start-error" role="alert">
+            <strong>{t(lang, "sm_start_failed")}</strong>
+            <code>{s.caddy_error}</code>
+          </div>
+        )}
+        {s?.caddy_error && s?.phase !== "failed" && (
           <div className="sm-warning" role="status">
             <p>{s.caddy_error}</p>
+          </div>
+        )}
+        {enable.error && !s?.caddy_error && (
+          <div className="sm-start-error" role="alert">
+            <strong>{t(lang, "sm_start_failed")}</strong>
+            <code>
+              {enable.error instanceof Error ? enable.error.message : String(enable.error)}
+            </code>
           </div>
         )}
 
