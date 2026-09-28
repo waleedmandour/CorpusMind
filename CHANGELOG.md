@@ -74,6 +74,43 @@ once 1.0 ships. Until then, expect breaking changes between 0.x releases.
   Both radars are enlarged (520 px cap) and centered with captions below
   instead of beside the chart.
 
+### Fixed (field reports from the Windows install, round 3)
+- **No more black terminal windows.** Every console-subsystem child the app
+  spawns on Windows now carries `CREATE_NO_WINDOW`: the `ollama serve`
+  instance the desktop shell auto-starts, the `where ollama` lookup, Caddy
+  itself, the `taskkill` orphan sweep, the seat-cap `nvidia-smi` probe, and
+  `caddy version`. The last one was the recurring flash — the status
+  endpoint ran it on **every 5-second poll, uncached**; the version is now
+  cached per binary path, so steady-state polling spawns nothing at all.
+- **The CorpusMind-managed Ollama binds loopback.** The shell auto-starts
+  `ollama serve` when Ollama is not running, but it inherited the user's
+  environment — a system-wide `OLLAMA_HOST=0.0.0.0` made CorpusMind itself
+  recreate the exact LAN exposure the Ollama warning tells the teacher to
+  avoid, at every app start, no matter what was configured inside Ollama's
+  own settings. The managed instance now always gets
+  `OLLAMA_HOST=127.0.0.1:11434`; a teacher who deliberately wants a
+  LAN-facing Ollama runs their own instance and the engine keeps honoring
+  `OLLAMA_HOST` for API calls.
+- **Starting the classroom no longer freezes the app.** The enable handler
+  used to run the Caddy spawn + readiness wait (up to ~20 s of blocking
+  HTTP probes) inline in the async handler, stalling the whole engine
+  event loop. The start is now phased (`off → starting → live / failed`)
+  in a worker thread, with a generation guard so flipping the switch OFF
+  mid-start cleanly discards it.
+- **Classroom progress shows in the task bar.** The bottom bar gains a
+  live chip — pulsing "Starting classroom server…", green "Classroom
+  live · N students", red "Classroom failed — details" (click opens
+  Settings; the card shows Caddy's own error text verbatim). The card
+  switch reads "Starting…" while Caddy comes up and polls faster during
+  that window.
+- **"Check again" on the Ollama LAN warning.** The 60 s probe cache made a
+  freshly-fixed Ollama binding look still-exposed for up to a minute; the
+  banner (both copies share it) can now re-probe immediately via
+  `POST /server-mode/recheck-ollama`.
+- **LM Studio on the home page.** The status bar now shows an LM Studio
+  chip next to Ollama's (detected / not detected), from the same
+  `all_providers_health` source the Settings card uses.
+
 ### Changed
 - `mypy==2.3.1` pinned in `[dev]` — CI fresh-resolves dev dependencies,
   and the strict-error baseline is only meaningful under the mypy version

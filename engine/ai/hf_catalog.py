@@ -143,6 +143,12 @@ def _read_ram_windows() -> tuple[int, int] | None:  # pragma: no cover
 
 def _read_vram_nvidia() -> tuple[int, int, str] | None:
     """Best-effort VRAM probe via nvidia-smi (absent → no GPU info)."""
+    run_kwargs: dict[str, Any] = {"capture_output": True, "text": True, "timeout": 5}
+    if sys.platform.startswith("win"):
+        # v1.2.10: windowless — nvidia-smi is console-subsystem, and this
+        # probe runs (cached) whenever the seat cap is computed, which used
+        # to flash a black terminal on Windows while the classroom ran.
+        run_kwargs["creationflags"] = int(getattr(subprocess, "CREATE_NO_WINDOW", 0))
     try:
         out = subprocess.run(
             [
@@ -150,7 +156,7 @@ def _read_vram_nvidia() -> tuple[int, int, str] | None:
                 "--query-gpu=memory.total,memory.free,name",
                 "--format=csv,noheader,nounits",
             ],
-            capture_output=True, text=True, timeout=5,
+            **run_kwargs,
         )
         if out.returncode != 0 or not out.stdout.strip():
             return None

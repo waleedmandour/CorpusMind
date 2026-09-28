@@ -17,6 +17,7 @@ import { FloatingAssistant } from "@/components/FloatingAssistant";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { OnboardingModal } from "@/components/OnboardingModal";
 import { TroubleshootingBar } from "@/components/TroubleshootingBar";
+import { ClassroomStatusChip } from "@/components/ClassroomStatusChip";
 import { HomeView } from "@/views/HomeView";
 import { AboutView } from "@/views/AboutView";
 import { AssistantView } from "@/views/AssistantView";
@@ -230,6 +231,8 @@ export default function App() {
         <span className="status-sep">|</span>
         <span>{studentClient ? getStudentServer() || t(lang, "student_status_mode") : "Local Desktop App"}</span>
         <div className="statusbar-spacer" />
+        {/* v1.2.10: live classroom phase in the task bar (starting/live/failed). */}
+        <ClassroomStatusChip />
         <TroubleshootingBar />
       </footer>
 

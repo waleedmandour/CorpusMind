@@ -47,6 +47,12 @@ export function HomeView() {
   const ollamaOk = isTauri
     ? (nativeHealth.data?.ollama.healthy ?? false)
     : (providers.data?.providers.find((p) => p.name === "ollama")?.healthy ?? false);
+  // v1.2.10: LM Studio sits next to Ollama on the home page — same
+  // detection source (Rust all_providers_health in the desktop app, the
+  // engine's /providers list in browser mode), same chip treatment.
+  const lmstudioOk = isTauri
+    ? (nativeHealth.data?.lmstudio.healthy ?? false)
+    : (providers.data?.providers.find((p) => p.name === "lmstudio")?.healthy ?? false);
 
   // v1.2.1: the Lens-specific quick-action list is gone (Lens lives in its
   // own repository) — this is always the main-app card list.
@@ -103,6 +109,11 @@ export function HomeView() {
         <div className={`status-chip ${ollamaOk ? "ok" : "bad"}`}>
           <span className="status-dot" />
           {t(lang, "home_ollama")}: {ollamaOk ? t(lang, "home_connected") : t(lang, "home_not_running")}
+        </div>
+        {/* v1.2.10: LM Studio detected / not detected — right next to Ollama. */}
+        <div className={`status-chip ${lmstudioOk ? "ok" : "bad"}`}>
+          <span className="status-dot" />
+          {t(lang, "home_lmstudio")}: {lmstudioOk ? t(lang, "home_connected") : t(lang, "home_not_running")}
         </div>
         {activeCorpusId && (
           <div className="status-chip ok">

@@ -38,8 +38,9 @@ export function TaxonomyRadar({
 }) {
   // v1.2.10 field fixes: the radar used to render at a 320-unit viewBox
   // capped at 320px — visibly smaller than the full-width bar chart above
-  // it. 420 units with a 520px cap, centered, captions below (CSS) — the
-  // chart is now the visual peer of the bar chart, not its thumbnail.
+  // it. 420 units with a 780px cap (a further +50% over the first 520px
+  // pass), centered, captions below (CSS) — the chart is now the visual
+  // peer of the bar chart, not its thumbnail.
   const SIZE = 420;
   const C = SIZE / 2;
   const R = 150;

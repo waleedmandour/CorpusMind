@@ -44,8 +44,9 @@ export function PersuasionRadar({
   exportName?: string;
 }) {
   // v1.2.10 field fixes: enlarged to match the TaxonomyRadar (420 units,
-  // 520px cap) and the family legend moves BELOW the chart (centered row)
-  // — it used to sit to the right, reading as captions of a small chart.
+  // 780px cap — a further +50% over the first 520px pass) and the family
+  // legend moves BELOW the chart (centered row) — it used to sit to the
+  // right, reading as captions of a small chart.
   const SIZE = 420;
   const C = SIZE / 2;
   const R = 150;

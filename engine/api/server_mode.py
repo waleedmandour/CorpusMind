@@ -81,8 +81,18 @@ def _status_payload(
     cfg = state.config
     caddy_bin = find_caddy_binary(settings)
     running = bool(state.caddy_proc and state.caddy_proc.poll() is None)
+    # v1.2.10: start phase for the UI. "failed" stays sticky after a revert
+    # (so the teacher actually sees WHY nothing happened) until the next
+    # enable or disable; a Caddy that died after a clean start also reads
+    # as failed so the chip never shows green over a dead server.
+    phase = state.start_phase
+    if cfg.enabled and phase == "live" and not running:
+        phase = "failed"
+    elif not cfg.enabled and phase not in ("failed", "starting"):
+        phase = "off"
     payload: dict[str, Any] = {
         "enabled": cfg.enabled,
+        "phase": phase,
         "mode": cfg.mode,
         "https_port": cfg.https_port,
         "http_port": cfg.http_port,
@@ -226,14 +236,33 @@ async def server_mode_status(request: Request) -> dict:
 
 
 @router.post("/server-mode/enable")
-async def server_mode_enable(request: Request, body: EnableRequest) -> dict:
-    """Enable the classroom server (writes config, spawns Caddy)."""
+async def server_mode_enable(request: Request, body: EnableRequest) -> dict[str, Any]:
+    """Enable the classroom server (writes config, spawns Caddy in background).
+
+    v1.2.10: phased, non-blocking start. The old handler ran the Caddy spawn
+    + readiness wait (up to ~20 s of blocking HTTP probes) INLINE in this
+    async handler — that froze the whole engine event loop, which the field
+    report describes as "application hesitation". Now the handler validates,
+    persists the intent and returns immediately with ``phase="starting"``;
+    a worker thread does the spawn and flips the phase to ``live`` or
+    ``failed`` (with Caddy's own error text). The status endpoint carries
+    the phase, so the card switch and the task-bar chip show honest
+    progress instead of a frozen app.
+    """
     require_teacher(request)
+    import threading
+
     from app.settings import get_settings
 
     settings = get_settings()
     state: sm.ServerModeState = request.app.state.server_mode
     cfg: ServerModeConfig = state.config
+
+    # A start is already in flight: report it instead of double-spawning.
+    if state.start_phase == "starting":
+        seats = await state.effective_seats(settings) if cfg.enabled else None
+        return _status_payload(settings, state, seats)
+
     cfg.enabled = True
     cfg.mode = body.mode
     if body.https_port:
@@ -259,29 +288,70 @@ async def server_mode_enable(request: Request, body: EnableRequest) -> dict:
     # Fresh anonymous numbering + counters for every classroom session.
     state.reset_classroom_session()
     audit = state.ensure_audit(settings)
-    audit.write(
-        "classroom_started",
-        mode=cfg.mode,
-        https_port=cfg.https_port,
-        http_port=cfg.http_port,
-        student_model=cfg.student_model,
-        num_parallel=cfg.num_parallel,
-        max_students=cfg.max_students,
-        audit_enabled=cfg.audit_enabled,
-    )
 
-    # Fail BEFORE persisting enabled=True if the classroom can't come up.
-    try:
-        spawn_caddy(settings, state)
-        state.caddy_error = ""
-    except Exception as exc:
+    # Fail BEFORE any background work if prerequisites are missing. These
+    # are cheap synchronous checks, so the historical contract (immediate
+    # 500, enabled stays False) is preserved exactly; only the potentially
+    # slow spawn moved into the worker.
+    if find_caddy_binary(settings) is None:
         cfg.enabled = False
         settings.student_token = ""
-        state.caddy_error = str(exc)
-        audit.write("classroom_start_failed", error=str(exc))
-        raise HTTPException(500, f"Could not start the classroom server: {exc}") from exc
+        raise HTTPException(
+            500,
+            "Could not start the classroom server: The Caddy sidecar binary "
+            "was not found next to the engine. Reinstall CorpusMind (or run "
+            "scripts/fetch_caddy.py in a dev checkout) and try again.",
+        )
+    if find_web_dist(settings) is None:
+        cfg.enabled = False
+        settings.student_token = ""
+        raise HTTPException(
+            500,
+            "Could not start the classroom server: The bundled web app "
+            "(web-dist) was not found in this engine build — Student Mode "
+            "needs it to serve student browsers.",
+        )
 
+    state.start_phase = "starting"
+    state.caddy_error = ""
+    state.start_generation += 1
+    generation = state.start_generation
     save_config(settings, cfg)
+
+    def _start_worker() -> None:
+        try:
+            spawn_caddy(settings, state)
+            if state.start_generation != generation:
+                # The teacher flipped OFF while Caddy was coming up —
+                # discard this stale start and take the server down.
+                stop_caddy(state)
+                return
+            state.caddy_error = ""
+            state.start_phase = "live"
+            audit.write(
+                "classroom_started",
+                mode=cfg.mode,
+                https_port=cfg.https_port,
+                http_port=cfg.http_port,
+                student_model=cfg.student_model,
+                num_parallel=cfg.num_parallel,
+                max_students=cfg.max_students,
+                audit_enabled=cfg.audit_enabled,
+            )
+        except Exception as exc:  # surfaced verbatim to the teacher
+            if state.start_generation != generation:
+                return
+            cfg.enabled = False
+            settings.student_token = ""
+            state.caddy_error = str(exc)
+            state.start_phase = "failed"
+            try:
+                audit.write("classroom_start_failed", error=str(exc))
+                save_config(settings, cfg)
+            except Exception:
+                pass
+
+    threading.Thread(target=_start_worker, name="classroom-start", daemon=True).start()
     seats = await state.effective_seats(settings)
     return _status_payload(settings, state, seats)
 
@@ -296,6 +366,10 @@ async def server_mode_disable(request: Request) -> dict:
     state: sm.ServerModeState = request.app.state.server_mode
     state.config.enabled = False
     settings.student_token = ""
+    # v1.2.10: invalidate any in-flight start — the worker checks the
+    # generation after spawn and takes a half-started Caddy back down.
+    state.start_generation += 1
+    state.start_phase = "off"
     if state.audit is not None:
         state.audit.write(
             "classroom_stopped",
@@ -306,6 +380,20 @@ async def server_mode_disable(request: Request) -> dict:
     save_config(settings, state.config)
     seats = await state.effective_seats(settings)
     return _status_payload(settings, state, seats)
+
+
+@router.post("/server-mode/recheck-ollama")
+async def server_mode_recheck_ollama(request: Request) -> dict[str, Any]:
+    """Fresh Ollama LAN-exposure probe, bypassing the 60 s cache (v1.2.10).
+
+    The warning banner's "Check again" button calls this: after the teacher
+    fixes their Ollama binding (127.0.0.1), one click re-probes immediately
+    instead of waiting out the status-poll cache.
+    """
+    require_teacher(request)
+    state: sm.ServerModeState = request.app.state.server_mode
+    state.exposure_cache = None
+    return await _ollama_lan_exposure(state)
 
 
 @router.post("/server-mode/config")
