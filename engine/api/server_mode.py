@@ -130,7 +130,10 @@ def _ollama_running_models(settings: Any) -> int | None:
     return None
 
 
-async def _ollama_lan_exposure() -> dict[str, Any]:
+EXPOSURE_CACHE_TTL = 60.0  # seconds — see ServerModeState.exposure_cache
+
+
+async def _ollama_lan_exposure(state: Any = None) -> dict[str, Any]:
     """v1.2.10 (5a): is Ollama on this machine reachable beyond loopback?
 
     Student Mode runs on the teacher's machine, where a LAN-facing Ollama
@@ -149,12 +152,16 @@ async def _ollama_lan_exposure() -> dict[str, Any]:
          how it was configured (env var, systemd unit, ``docker -p`` ...).
     The probe runs in a worker thread (0.3 s timeout per candidate, a
     handful of interfaces at most) so the status poll never stalls the
-    event loop. Returns ``{"exposed": bool, "source": "env"|"probe"|None,
+    event loop, and the result is cached for EXPOSURE_CACHE_TTL seconds
+    on the server-mode state — the 5 s status poll stays instant and the
+    warning stops flickering while remaining prompt about real changes.
+    Returns ``{"exposed": bool, "source": "env"|"probe"|None,
     "addr": str|None}`` — ``addr`` feeds the UI warning verbatim.
     """
     import asyncio as _asyncio
     import os
     import socket
+    import time as _time
 
     def _env_host_off_loopback() -> str | None:
         raw = os.environ.get("OLLAMA_HOST", "").strip()
@@ -180,13 +187,26 @@ async def _ollama_lan_exposure() -> dict[str, Any]:
                 continue
         return None
 
+    if state is not None:
+        cached = getattr(state, "exposure_cache", None)
+        if cached is not None:
+            ts, payload = cached
+            if _time.monotonic() - ts < EXPOSURE_CACHE_TTL:
+                return payload
+
     env_host = _env_host_off_loopback()
     if env_host:
-        return {"exposed": True, "source": "env", "addr": env_host}
-    hit = await _asyncio.to_thread(_probe_lan)
-    if hit:
-        return {"exposed": True, "source": "probe", "addr": hit}
-    return {"exposed": False, "source": None, "addr": None}
+        result = {"exposed": True, "source": "env", "addr": env_host}
+    else:
+        hit = await _asyncio.to_thread(_probe_lan)
+        result = (
+            {"exposed": True, "source": "probe", "addr": hit}
+            if hit
+            else {"exposed": False, "source": None, "addr": None}
+        )
+    if state is not None:
+        state.exposure_cache = (_time.monotonic(), result)
+    return result
 
 
 @router.get("/server-mode/status")
@@ -199,9 +219,9 @@ async def server_mode_status(request: Request) -> dict:
     state: sm.ServerModeState = request.app.state.server_mode
     seats = await state.effective_seats(settings) if state.config.enabled else None
     payload = _status_payload(settings, state, seats)
-    # v1.2.10 (5a): loopback-vs-LAN Ollama exposure, probed on every status
-    # poll so the teacher sees the warning the moment the bind changes.
-    payload["ollama_exposure"] = await _ollama_lan_exposure()
+    # v1.2.10 (5a): loopback-vs-LAN Ollama exposure — cached 60 s so the
+    # 5 s status poll never re-probes and the warning stays stable.
+    payload["ollama_exposure"] = await _ollama_lan_exposure(state)
     return payload
 
 

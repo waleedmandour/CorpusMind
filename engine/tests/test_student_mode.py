@@ -14,6 +14,8 @@ Covers:
 from __future__ import annotations
 
 import os
+from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -126,11 +128,11 @@ def test_ensure_tokens_generates_and_rotates():
     assert cfg.student_token not in ("", s1)
 
 
-def _settings_stub(tmp_path, port=8765):
+def _settings_stub(tmp_path: Path, port: int = 8765) -> Any:
     return type("S", (), {"data_dir": tmp_path, "port": port})
 
 
-def test_generate_caddyfile_secure_mode(tmp_path):
+def test_generate_caddyfile_secure_mode(tmp_path: Path) -> None:
     from app.server_mode import ServerModeConfig, generate_caddyfile
 
     cfg = ServerModeConfig(mode="secure", https_port=8443, http_port=8088)
@@ -149,18 +151,20 @@ def test_generate_caddyfile_secure_mode(tmp_path):
     # v1.2.9: the engine issues the certificate itself (Caddy's `tls internal`
     # tries to sudo-install its root into the OS trust store, which is not
     # guaranteed on teacher machines) — the Caddyfile points at the files.
-    assert f"tls {cert} {key}" in text
+    # v1.2.10 release fix: paths are backtick-quoted so Windows home
+    # directories with spaces (C:\Users\Waleed Mandour\...) tokenize safely.
+    assert f"tls `{cert}` `{key}`" in text
     assert "tls internal" not in text
     assert 'header_up X-CorpusMind-Classroom "1"' in text
     assert "reverse_proxy 127.0.0.1:8765" in text
-    assert f"root * {web}" in text
+    assert f"root * `{web}`" in text
     assert "try_files {path} /index.html" in text
     # The cert-trust helper port serves the CA share over plain HTTP.
     assert f"http://:{cfg.http_port}" in text
-    assert f"root * {ca}" in text
+    assert f"root * `{ca}`" in text
 
 
-def test_generate_caddyfile_simple_mode(tmp_path):
+def test_generate_caddyfile_simple_mode(tmp_path: Path) -> None:
     from app.server_mode import ServerModeConfig, generate_caddyfile
 
     cfg = ServerModeConfig(mode="simple", http_port=8088)
@@ -170,6 +174,63 @@ def test_generate_caddyfile_simple_mode(tmp_path):
     assert "tls" not in text
     assert f"http://:{cfg.http_port}" in text
     assert 'header_up X-CorpusMind-Classroom "1"' in text
+
+
+def test_generate_caddyfile_windows_path_with_spaces(tmp_path: Path) -> None:
+    """v1.2.10 release blocker regression: the teacher's Windows home
+    directory is ``C:\\Users\\Waleed Mandour\\...`` — an unquoted path with
+    a space lexes as two tokens, so Caddy exits code 1 immediately and
+    Student Mode could never start. Every filesystem path must render as a
+    backtick-quoted token (raw string in Caddyfile terms: no backslash
+    escape processing, spaces preserved), with forward slashes (Go accepts
+    them on Windows)."""
+    from app.server_mode import ServerModeConfig, generate_caddyfile
+
+    cfg = ServerModeConfig(mode="simple", http_port=8088)
+    win_like = tmp_path / "Waleed Mandour" / "web-dist"
+    win_like.mkdir(parents=True)
+    ca = tmp_path / "CA share dir"
+    ca.mkdir()
+    text = generate_caddyfile(_settings_stub(tmp_path), cfg, win_like, ca)
+
+    # The spaced paths must appear backtick-quoted, never bare.
+    assert f"root * `{win_like}`" in text
+    # simple mode serves no CA helper port (that block is secure-only).
+    assert "root * " not in text.replace(f"root * `{win_like}`", "")
+    # No line may carry a path argument with a space outside backticks.
+    for line in text.splitlines():
+        for directive in ("root *", "output file", "tls "):
+            if directive in line:
+                rest = line.split(directive, 1)[1]
+                assert "`" in rest or " " not in rest.replace("\t", ""), (
+                    f"unquoted spaced path in Caddyfile line: {line!r}"
+                )
+
+
+def test_generate_caddyfile_quotes_log_output(tmp_path: Path) -> None:
+    """The global log output path lives in the server-mode dir under the
+    (spaced) home directory — it must be backtick-quoted too."""
+    from app.server_mode import ServerModeConfig, generate_caddyfile
+
+    cfg = ServerModeConfig(mode="simple", http_port=8088)
+    text = generate_caddyfile(
+        _settings_stub(tmp_path), cfg, tmp_path / "w", tmp_path / "ca"
+    )
+    log_line = next(line for line in text.splitlines() if "output file" in line)
+    assert "`" in log_line and log_line.rstrip().endswith("`")
+
+
+def test_caddy_log_tail_helper(tmp_path: Path) -> None:
+    """Teacher-facing spawn errors include the log tail; a missing log
+    degrades to an empty string instead of a second exception."""
+    from app.server_mode import _caddy_log_tail
+
+    assert _caddy_log_tail(tmp_path) == ""
+    log = tmp_path / "caddy-stdout.log"
+    log.write_text("x" * 900 + "Error: loading initial config: parse error", encoding="utf-8")
+    tail = _caddy_log_tail(tmp_path, limit=100)
+    assert tail.endswith("parse error")
+    assert len(tail) <= 100
 
 
 def test_classroom_certificates_issued_and_persisted(tmp_path):

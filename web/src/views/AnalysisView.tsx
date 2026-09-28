@@ -1911,7 +1911,13 @@ function DiscoursePanel({ cid }: { cid: string }) {
               to the most frequent category — the hint line says so. */}
           {!isPersuasion && result.data && rows.length >= RADAR_MIN_AXES && rows.length <= RADAR_MAX_AXES && (
             <div className="taxonomy-radar-wrap">
-              <TaxonomyRadar categories={result.data.categories} />
+              {/* key: force a clean re-render when the taxonomy changes so
+                  axis labels can never linger from the previous lens. */}
+              <TaxonomyRadar
+                key={result.data.taxonomy_key}
+                categories={result.data.categories}
+                noHitsLabel={t(lang, "discourse_radar_no_hits")}
+              />
               <div className="taxonomy-radar-hint"><em>{t(lang, "discourse_radar_hint")}</em></div>
             </div>
           )}

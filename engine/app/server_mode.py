@@ -416,6 +416,23 @@ def ensure_classroom_certificates(settings: Any, cfg: ServerModeConfig) -> tuple
     return srv_crt_p, srv_key_p, ca_crt_p
 
 
+def _caddy_path(p: Path) -> str:
+    """Render a filesystem path as a safe Caddyfile token.
+
+    v1.2.10 release blocker: Windows home directories contain spaces
+    (``C:\\Users\\Waleed Mandour\\.corpusmind\\...``), and an unquoted
+    path with a space lexes as TWO tokens — Caddy fails to parse the
+    Caddyfile and exits code 1 at startup (invisible on dev machines
+    whose paths have no spaces). Double-quoted strings do NOT fix it on
+    Windows either: the Caddyfile lexer processes backslash escapes
+    inside double quotes, so ``C:\\Users`` is an unrecognized ``\\U``
+    escape. Backtick strings are raw literals, and Go's filesystem layer
+    accepts forward slashes on Windows — so the safe form is a
+    backtick-quoted, forward-slashed path.
+    """
+    return "`" + Path(p).as_posix() + "`"
+
+
 def generate_caddyfile(
     settings: Any,
     cfg: ServerModeConfig,
@@ -443,7 +460,7 @@ def generate_caddyfile(
         # HTTP->HTTPS redirect — requires privileges we must not assume.
         "\tauto_https disable_redirects",
         "\tlog {",
-        f"\t\toutput file {log_path}",
+        f"\t\toutput file {_caddy_path(log_path)}",
         "\t\tlevel WARN",
         "\t}",
         "}",
@@ -464,11 +481,11 @@ def generate_caddyfile(
             raise RuntimeError("secure mode requires the classroom server certificate")
         lines += [
             f"https://:{cfg.https_port} {{",
-            f"\ttls {server_cert} {server_key}",
+            f"\ttls {_caddy_path(server_cert)} {_caddy_path(server_key)}",
             "\tencode zstd gzip",
             *proxy_block("\t"),
             "\thandle {",
-            f"\t\troot * {web_dist}",
+            f"\t\troot * {_caddy_path(web_dist)}",
             "\t\ttry_files {path} /index.html",
             "\t\tfile_server",
             "\t}",
@@ -477,7 +494,7 @@ def generate_caddyfile(
             "# One-time certificate trust helper (classroom LAN only): serves",
             "# the classroom local root CA so each student device can trust it.",
             f"http://:{cfg.http_port} {{",
-            f"\troot * {ca_share_dir}",
+            f"\troot * {_caddy_path(ca_share_dir)}",
             "\tfile_server",
             "}",
         ]
@@ -487,7 +504,7 @@ def generate_caddyfile(
             "\tencode zstd gzip",
             *proxy_block("\t"),
             "\thandle {",
-            f"\t\troot * {web_dist}",
+            f"\t\troot * {_caddy_path(web_dist)}",
             "\t\ttry_files {path} /index.html",
             "\t\tfile_server",
             "\t}",
@@ -575,6 +592,20 @@ def stop_caddy(state: ServerModeState) -> None:
                 proc.wait(timeout=5)
         except Exception:
             pass
+
+
+def _caddy_log_tail(sm_dir: Path, limit: int = 400) -> str:
+    """Last ``limit`` chars of caddy-stdout.log, for teacher-facing errors.
+
+    The file is opened in append-binary mode by the Popen redirect; reading
+    it through a separate handle is safe (append-only writer). Any read
+    failure degrades to an empty string — the error still names the log.
+    """
+    try:
+        with open(sm_dir / "caddy-stdout.log", encoding="utf-8", errors="replace") as f:
+            return f.read()[-limit:].strip()
+    except OSError:
+        return ""
 
 
 def spawn_caddy(settings: Any, state: ServerModeState) -> dict[str, Any]:
@@ -678,9 +709,13 @@ def spawn_caddy(settings: Any, state: ServerModeState) -> dict[str, Any]:
     while time.time() < deadline:
         if proc.poll() is not None:
             state.caddy_proc = None
+            # Surface WHY Caddy died (config parse errors are the classic
+            # case — the teacher should not have to open the log to learn).
+            tail = _caddy_log_tail(sm_dir)
+            detail = f" Log tail: {tail}" if tail else ""
             raise RuntimeError(
                 f"Caddy exited immediately (code {proc.returncode}). "
-                f"Check {sm_dir / 'caddy-stdout.log'}."
+                f"Check {sm_dir / 'caddy-stdout.log'}.{detail}"
             )
         scheme = "https" if cfg.mode == "secure" else "http"
         port = cfg.https_port if cfg.mode == "secure" else cfg.http_port
@@ -729,6 +764,11 @@ class ServerModeState:
     caddy_log_file: Any = None
     caddy_started_at: float = 0.0
     caddy_error: str = ""
+    # v1.2.10 release fix: the Ollama LAN-exposure probe is cached for 60 s.
+    # The teacher card polls status every 5 s while the classroom runs; a
+    # fresh TCP probe per poll (0.3 s timeout × N interfaces) both stalls
+    # the poll and makes the warning flicker when a connect is borderline.
+    exposure_cache: tuple[float, dict[str, Any]] | None = None
     # student IP → last-seen monotonic timestamp (lightweight counter, no
     # session store — the plan explicitly asks for the cheap version).
     student_seen: dict[str, float] = field(default_factory=dict)

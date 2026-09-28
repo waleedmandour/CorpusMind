@@ -7463,6 +7463,25 @@ html[dir="rtl"] .toggle-switch input:checked + .toggle-slider::before {
   margin-block: var(--space-2);
 }
 .sm-warning p { margin: 2px 0; overflow-wrap: anywhere; }
+/* v1.2.10 release fix: dismissible LAN warning + actionable hint line. */
+.sm-warning {
+  position: relative;
+}
+.sm-warning .sm-warning-dismiss {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.sm-warning .sm-warning-dismiss:hover { background: color-mix(in srgb, currentColor 12%, transparent); }
+.sm-warning .sm-warning-hint { color: var(--text-muted); font-size: 12.5px; margin-top: 4px; }
 .sm-status-line {
   display: flex;
   align-items: center;

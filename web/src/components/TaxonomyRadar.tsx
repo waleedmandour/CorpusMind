@@ -22,7 +22,14 @@ import type { DiscourseCategory } from "@/lib/api";
 export const RADAR_MIN_AXES = 3;
 export const RADAR_MAX_AXES = 12;
 
-export function TaxonomyRadar({ categories }: { categories: Record<string, DiscourseCategory> }) {
+export function TaxonomyRadar({
+  categories,
+  noHitsLabel,
+}: {
+  categories: Record<string, DiscourseCategory>;
+  /** Shown instead of a shapeless point-polygon when no category has hits. */
+  noHitsLabel?: string;
+}) {
   const SIZE = 320;
   const C = SIZE / 2;
   const R = 108;
@@ -40,6 +47,12 @@ export function TaxonomyRadar({ categories }: { categories: Record<string, Disco
       angle: 0,
     }));
   const max = Math.max(...axes.map((a) => a.freq), 1);
+  // v1.2.10 release fix: a corpus with zero cue hits (e.g. the English-only
+  // Cialdini lens on an Arabic corpus) used to render a degenerate radar —
+  // rings + labels with the polygon collapsed to a single center point,
+  // which reads as a chart that is not wired to the data. Render an
+  // explicit no-hits note instead of a fake shape.
+  const empty = axes.every((a) => a.freq === 0);
   const n = axes.length || 1;
   axes.forEach((a, i) => {
     a.angle = -Math.PI / 2 + (2 * Math.PI * i) / n;
@@ -54,6 +67,9 @@ export function TaxonomyRadar({ categories }: { categories: Record<string, Disco
     .map((a) => pt(a.angle, (R * a.freq) / max))
     .map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`)
     .join(" ");
+  const vertices = axes
+    .map((a) => pt(a.angle, (R * a.freq) / max))
+    .map((p, i) => ({ ...p, key: i }));
 
   return (
     <div className="taxonomy-radar-wrap">
@@ -99,7 +115,26 @@ export function TaxonomyRadar({ categories }: { categories: Record<string, Disco
             </g>
           );
         })}
-        <polygon points={polygon} fill={ACCENT} fillOpacity="0.16" stroke={ACCENT} strokeWidth="1.6" />
+        {empty ? (
+          <text
+            x={C}
+            y={C}
+            textAnchor="middle"
+            dominantBaseline="middle"
+            className="pi-axis-label"
+          >
+            {noHitsLabel ?? " "}
+          </text>
+        ) : (
+          <>
+            <polygon points={polygon} fill={ACCENT} fillOpacity="0.16" stroke={ACCENT} strokeWidth="1.6" />
+            {/* Vertex dots: the profile shape stays legible even when one
+                category dominates and the remaining axes hug the center. */}
+            {vertices.map((v) => (
+              <circle key={v.key} cx={v.x} cy={v.y} r="2.4" fill={ACCENT} stroke="none" />
+            ))}
+          </>
+        )}
       </svg>
     </div>
   );
