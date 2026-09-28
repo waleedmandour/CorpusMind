@@ -20,6 +20,7 @@ import os
 import shutil
 import subprocess
 import time
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -29,7 +30,7 @@ import pytest
 # --------------------------------------------------------------------------- #
 
 
-def test_windows_spawns_carry_create_no_window(monkeypatch):
+def test_windows_spawns_carry_create_no_window(monkeypatch: pytest.MonkeyPatch) -> None:
     """win32 → CREATE_NEW_PROCESS_GROUP | CREATE_NO_WINDOW; POSIX → 0.
 
     The real constants only exist on Windows; monkeypatching them lets the
@@ -45,7 +46,7 @@ def test_windows_spawns_carry_create_no_window(monkeypatch):
     assert sm.windows_process_flags("darwin") == 0
 
 
-def test_caddy_version_is_cached_per_binary(tmp_path, monkeypatch):
+def test_caddy_version_is_cached_per_binary(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """The status endpoint calls caddy_version on every poll; a cached
     answer means steady-state polling spawns no console process at all
     (this call site was the recurring per-5 s window flash)."""
@@ -56,11 +57,11 @@ def test_caddy_version_is_cached_per_binary(tmp_path, monkeypatch):
     sm._CADDY_VERSION_CACHE.pop(str(fake_bin), None)
     calls = {"n": 0}
 
-    def fake_run(*args: Any, **kwargs: Any):
+    def fake_run(*args: Any, **kwargs: Any) -> Any:
         calls["n"] += 1
         return type("P", (), {"stdout": "v2.10.0 test-run\n", "stderr": ""})()
 
-    monkeypatch.setattr(sm.subprocess, "run", fake_run)
+    monkeypatch.setattr("subprocess.run", fake_run)
     try:
         assert sm.caddy_version(fake_bin) == "v2.10.0 test-run"
         assert sm.caddy_version(fake_bin) == "v2.10.0 test-run"
@@ -69,7 +70,7 @@ def test_caddy_version_is_cached_per_binary(tmp_path, monkeypatch):
         sm._CADDY_VERSION_CACHE.pop(str(fake_bin), None)
 
 
-def test_caddy_version_failure_is_not_cached(tmp_path, monkeypatch):
+def test_caddy_version_failure_is_not_cached(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """A transient failure (e.g. antivirus holding the binary) must not pin
     a wrong answer for the whole session."""
     from app import server_mode as sm
@@ -79,13 +80,13 @@ def test_caddy_version_failure_is_not_cached(tmp_path, monkeypatch):
     sm._CADDY_VERSION_CACHE.pop(str(fake_bin), None)
     calls = {"n": 0}
 
-    def flaky_run(*args: Any, **kwargs: Any):
+    def flaky_run(*args: Any, **kwargs: Any) -> Any:
         calls["n"] += 1
         if calls["n"] == 1:
             raise subprocess.TimeoutExpired(cmd="caddy", timeout=10)
         return type("P", (), {"stdout": "v2.10.0 ok\n", "stderr": ""})()
 
-    monkeypatch.setattr(sm.subprocess, "run", flaky_run)
+    monkeypatch.setattr("subprocess.run", flaky_run)
     try:
         assert sm.caddy_version(fake_bin) is None
         assert sm.caddy_version(fake_bin) == "v2.10.0 ok"
@@ -99,8 +100,8 @@ def test_caddy_version_failure_is_not_cached(tmp_path, monkeypatch):
 # --------------------------------------------------------------------------- #
 
 
-def _make_client_fixture(env: dict[str, str]):
-    async def client():
+def _make_client_fixture(env: dict[str, str]) -> Any:
+    async def client() -> Any:
         for k, v in env.items():
             os.environ[k] = v
         os.environ["CORPUSMIND_DB_URL"] = "sqlite+aiosqlite:///:memory:"
@@ -114,7 +115,9 @@ def _make_client_fixture(env: dict[str, str]):
         get_settings.cache_clear()
         from storage.session import _engine, dispose_db
 
-        _engine.clear() if hasattr(_engine, "clear") else None
+        clear_engine = getattr(_engine, "clear", None)
+        if clear_engine is not None:
+            clear_engine()
 
         from httpx import ASGITransport, AsyncClient
 
@@ -148,7 +151,7 @@ class FakeProc:
 
 
 @pytest.mark.asyncio
-async def test_enable_returns_starting_then_live(sm_client, monkeypatch):
+async def test_enable_returns_starting_then_live(sm_client: Any, monkeypatch: pytest.MonkeyPatch) -> None:
     """The enable endpoint returns BEFORE the spawn finishes (no event-loop
     freeze) and the status walk reads starting → live."""
     import api.server_mode as router_mod
@@ -185,7 +188,7 @@ async def test_enable_returns_starting_then_live(sm_client, monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_enable_failure_is_sticky_failed_with_caddy_error(sm_client, monkeypatch):
+async def test_enable_failure_is_sticky_failed_with_caddy_error(sm_client: Any, monkeypatch: pytest.MonkeyPatch) -> None:
     """A spawn failure flips the phase to failed (not off), reverts enabled,
     and STAYS failed on subsequent polls so the teacher sees why."""
     import api.server_mode as router_mod
@@ -219,7 +222,7 @@ async def test_enable_failure_is_sticky_failed_with_caddy_error(sm_client, monke
 
 
 @pytest.mark.asyncio
-async def test_disable_during_start_discards_stale_worker(sm_client, monkeypatch):
+async def test_disable_during_start_discards_stale_worker(sm_client: Any, monkeypatch: pytest.MonkeyPatch) -> None:
     """Flipping OFF while Caddy is still coming up must win: the stale
     worker may not flip the phase back to live afterwards."""
     import api.server_mode as router_mod
@@ -246,7 +249,7 @@ async def test_disable_during_start_discards_stale_worker(sm_client, monkeypatch
 
 
 @pytest.mark.asyncio
-async def test_recheck_ollama_bypasses_exposure_cache(sm_client, monkeypatch):
+async def test_recheck_ollama_bypasses_exposure_cache(sm_client: Any, monkeypatch: pytest.MonkeyPatch) -> None:
     """The warning's 'Check again' drops the 60 s cache and re-probes."""
     import api.server_mode as router_mod
 

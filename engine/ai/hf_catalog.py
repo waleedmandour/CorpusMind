@@ -148,7 +148,7 @@ def _read_vram_nvidia() -> tuple[int, int, str] | None:
         # v1.2.11: windowless — nvidia-smi is console-subsystem, and this
         # probe runs (cached) whenever the seat cap is computed, which used
         # to flash a black terminal on Windows while the classroom ran.
-        run_kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW  # type: ignore[attr-defined]
+        run_kwargs["creationflags"] = int(getattr(subprocess, "CREATE_NO_WINDOW", 0))
     try:
         out = subprocess.run(
             [

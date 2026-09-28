@@ -80,15 +80,18 @@ _DEV_CADDY_DIR = Path(__file__).resolve().parent.parent / "caddy-bin" / (
 # a black terminal window on the teacher's desktop (and every exit looks
 # like a "crash"). The engine itself is already console=False in the
 # PyInstaller spec — these flags close the remaining windows.
-# POSIX Popen raises on non-zero creationflags, so the value stays 0 there
-# and callers omit the kwarg entirely. The attribute lookups sit inside the
-# conditional branch on purpose: subprocess.CREATE_NO_WINDOW does not exist
-# on POSIX, and the conditional expression never evaluates it there.
+# getattr() instead of direct attribute access: the constants only exist on
+# Windows, and on POSIX a creationflags value of 0 is a no-op Popen accepts.
 _WIN_NO_WINDOW: int = (
-    subprocess.CREATE_NO_WINDOW if sys.platform.startswith("win") else 0
+    int(getattr(subprocess, "CREATE_NO_WINDOW", 0))
+    if sys.platform.startswith("win")
+    else 0
 )
 _WIN_PROC_FLAGS: int = (
-    (subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.CREATE_NO_WINDOW)
+    (
+        int(getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0))
+        | int(getattr(subprocess, "CREATE_NO_WINDOW", 0))
+    )
     if sys.platform.startswith("win")
     else 0
 )
@@ -102,7 +105,10 @@ def windows_process_flags(platform: str) -> int:
     subprocess attributes make the win32 branch computable anywhere.
     """
     if platform.startswith("win"):
-        return subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.CREATE_NO_WINDOW  # type: ignore[attr-defined]
+        return int(
+            getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+            | getattr(subprocess, "CREATE_NO_WINDOW", 0)
+        )
     return 0
 
 
@@ -716,7 +722,7 @@ def spawn_caddy(settings: Any, state: ServerModeState) -> dict[str, Any]:
                     # v1.2.11: windowless — taskkill is console-subsystem.
                     subprocess.run(["taskkill", "/PID", str(old), "/T", "/F"],
                                    capture_output=True, timeout=10,
-                                   creationflags=subprocess.CREATE_NO_WINDOW)  # type: ignore[attr-defined]
+                                   creationflags=int(getattr(subprocess, "CREATE_NO_WINDOW", 0)))
                 else:
                     os.kill(old, 15)
         except (ValueError, ProcessLookupError, PermissionError, subprocess.TimeoutExpired, OSError):
@@ -734,7 +740,7 @@ def spawn_caddy(settings: Any, state: ServerModeState) -> dict[str, Any]:
     if sys.platform.startswith("win"):
         # v1.2.11: CREATE_NO_WINDOW added — CREATE_NEW_PROCESS_GROUP alone
         # still allocates (and shows) a console for the Caddy child.
-        kwargs["creationflags"] = _WIN_PROC_FLAGS  # type: ignore[attr-defined]
+        kwargs["creationflags"] = _WIN_PROC_FLAGS
     else:
         kwargs["preexec_fn"] = _posix_close_on_parent_death  # type: ignore[assignment]
 

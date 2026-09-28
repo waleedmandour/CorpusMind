@@ -236,7 +236,7 @@ async def server_mode_status(request: Request) -> dict:
 
 
 @router.post("/server-mode/enable")
-async def server_mode_enable(request: Request, body: EnableRequest) -> dict:
+async def server_mode_enable(request: Request, body: EnableRequest) -> dict[str, Any]:
     """Enable the classroom server (writes config, spawns Caddy in background).
 
     v1.2.11: phased, non-blocking start. The old handler ran the Caddy spawn
@@ -383,7 +383,7 @@ async def server_mode_disable(request: Request) -> dict:
 
 
 @router.post("/server-mode/recheck-ollama")
-async def server_mode_recheck_ollama(request: Request) -> dict:
+async def server_mode_recheck_ollama(request: Request) -> dict[str, Any]:
     """Fresh Ollama LAN-exposure probe, bypassing the 60 s cache (v1.2.11).
 
     The warning banner's "Check again" button calls this: after the teacher
