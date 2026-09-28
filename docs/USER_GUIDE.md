@@ -624,6 +624,12 @@ while the classroom runs.
    multi-student generation, restart Ollama with the
    `OLLAMA_NUM_PARALLEL` environment variable set (e.g. 4).
 
+**If the app screen goes blank after you turn Student Mode on**, simply
+right-click anywhere in the app and choose **Refresh**. The desktop's
+embedded web view sometimes needs a single reload once the classroom
+server starts; nothing is lost — your corpora, settings, and the running
+classroom are unaffected.
+
 **Joining a classroom (student side)**
 
 Scan the teacher's QR or open the link. The first screen asks for the
