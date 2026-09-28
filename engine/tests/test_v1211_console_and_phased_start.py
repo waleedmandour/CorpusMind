@@ -164,6 +164,11 @@ async def test_enable_returns_starting_then_live(sm_client: Any, monkeypatch: py
         state.caddy_started_at = time.time()
 
     monkeypatch.setattr(router_mod, "spawn_caddy", fake_spawn)
+    # CI (and plain dev checkouts) may not have the bundled proxy/web-dist
+    # next to the engine; the synchronous prerequisite check must pass so
+    # these tests exercise the PHASE machinery, not the missing-assets 500.
+    monkeypatch.setattr(router_mod, "find_caddy_binary", lambda settings: Path("/tmp/cm-fake-caddy"))
+    monkeypatch.setattr(router_mod, "find_web_dist", lambda settings: Path("/tmp/cm-fake-web"))
 
     t0 = time.monotonic()
     r = await ac.post("/api/v1/server-mode/enable", json={"mode": "simple"})
@@ -199,6 +204,8 @@ async def test_enable_failure_is_sticky_failed_with_caddy_error(sm_client: Any, 
         raise RuntimeError("Caddy exited immediately (code 1). Check caddy-stdout.log.")
 
     monkeypatch.setattr(router_mod, "spawn_caddy", failing_spawn)
+    monkeypatch.setattr(router_mod, "find_caddy_binary", lambda settings: Path("/tmp/cm-fake-caddy"))
+    monkeypatch.setattr(router_mod, "find_web_dist", lambda settings: Path("/tmp/cm-fake-web"))
 
     r = await ac.post("/api/v1/server-mode/enable", json={"mode": "simple"})
     assert r.status_code == 200
@@ -234,6 +241,8 @@ async def test_disable_during_start_discards_stale_worker(sm_client: Any, monkey
         state.caddy_proc = FakeProc()
 
     monkeypatch.setattr(router_mod, "spawn_caddy", slow_spawn)
+    monkeypatch.setattr(router_mod, "find_caddy_binary", lambda settings: Path("/tmp/cm-fake-caddy"))
+    monkeypatch.setattr(router_mod, "find_web_dist", lambda settings: Path("/tmp/cm-fake-web"))
 
     r = await ac.post("/api/v1/server-mode/enable", json={"mode": "simple"})
     assert r.status_code == 200
