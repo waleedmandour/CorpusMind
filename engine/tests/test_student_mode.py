@@ -132,6 +132,47 @@ def _settings_stub(tmp_path: Path, port: int = 8765) -> Any:
     return type("S", (), {"data_dir": tmp_path, "port": port})
 
 
+def test_reset_session_state_forces_classroom_off_on_boot(tmp_path: Path) -> None:
+    """v1.2.10 (field report): the classroom never auto-restores on boot.
+
+    A persisted enabled=true used to respawn Caddy at every engine start,
+    so teachers who started the classroom once saw it come back "on" on
+    every launch. Boot must open the UI clean OFF while keeping the
+    tokens, so existing QR links survive the next explicit start.
+    """
+    from app.server_mode import (
+        ServerModeConfig,
+        ServerModeState,
+        config_path,
+        ensure_tokens,
+        load_config,
+        reset_session_state,
+        save_config,
+    )
+
+    settings = _settings_stub(tmp_path)
+    cfg = ServerModeConfig()
+    ensure_tokens(cfg)
+    teacher_token = cfg.teacher_token
+    student_token = cfg.student_token
+    cfg.enabled = True
+    save_config(settings, cfg)
+
+    state = ServerModeState(config=load_config(settings))
+    assert state.config.enabled is True
+    assert reset_session_state(settings, state) is True
+    assert state.config.enabled is False
+    # Persisted too — the next boot (and the status endpoint) sees OFF.
+    assert load_config(settings).enabled is False
+    # Tokens survive so the QR links keep working after re-enabling.
+    assert state.config.teacher_token == teacher_token
+    assert state.config.student_token == student_token
+    assert config_path(settings).is_file()
+
+    # Already-off configs are a no-op.
+    assert reset_session_state(settings, state) is False
+
+
 def test_generate_caddyfile_secure_mode(tmp_path: Path) -> None:
     from app.server_mode import ServerModeConfig, generate_caddyfile
 

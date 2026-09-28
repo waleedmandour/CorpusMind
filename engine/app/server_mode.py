@@ -148,6 +148,27 @@ def save_config(settings: Any, cfg: ServerModeConfig) -> None:
         pass
 
 
+def reset_session_state(settings: Any, state: ServerModeState) -> bool:
+    """v1.2.10 (field report): the classroom is session-scoped — never
+    restore it on boot.
+
+    A previous session's ``enabled=true`` used to auto-respawn Caddy at
+    every engine start, so teachers who started the classroom once saw it
+    come back "on" on every launch. Boot now resets the flag to False
+    (persisted, best-effort) so the UI opens clean OFF; tokens survive so
+    QR links keep working once the teacher starts the classroom again.
+    Returns True when a persisted enabled=true was reset.
+    """
+    if not state.config.enabled:
+        return False
+    state.config.enabled = False
+    try:
+        save_config(settings, state.config)
+    except Exception:
+        pass  # state is off in memory regardless; persisting is best-effort
+    return True
+
+
 def ensure_tokens(cfg: ServerModeConfig, *, rotate: bool = False) -> None:
     if rotate or not cfg.teacher_token:
         cfg.teacher_token = "cm_teach_" + secrets.token_urlsafe(24)
