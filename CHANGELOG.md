@@ -6,6 +6,62 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
+## [1.2.10] — 2026-09-28 — Cialdini 2007 cue lens, classroom hardening, release-blocker fixes
+
+### Added
+- **Cialdini 2007 cue lens (7th discourse lens)** — six principle
+  categories (reciprocation, commitment & consistency, social proof,
+  liking, authority, scarcity), 13–15 surface cues each, edition-pinned
+  citation (Revised Edition, chapters 2–7). The 2021 "Unity" principle is
+  deliberately excluded and pinned by test: exactly six categories, no
+  Unity category, and no Unity-keyed registry entry.
+- **Generic cue co-occurrence** — for every cue lens, sentences matching
+  cues from two categories (`cooccurrence` on the discourse response plus
+  a UI table with an explicit "co-occurrence is not causation" hint, en/ar).
+- **Language-coverage badges** — per-lens `languages` metadata in the
+  registry, surfaced through `/discourse/taxonomies` (English-only cue
+  lenses vs the bilingual USAS) so the UI badge is traceable, not hardcoded.
+- **Generic profile radar (`TaxonomyRadar`)** — N-axis radar for cue
+  lenses with 3–12 categories (Cialdini 6, Hyland 10, Appraisal 7, SFG 10);
+  the 21-tag USAS stays on the bar chart.
+
+### Fixed (release blockers found in the first Windows install)
+- **Classroom server could not start on Windows.** The generated Caddyfile
+  rendered filesystem paths unquoted; a home directory containing a space
+  (`C:\Users\Firstname Lastname\...`) lexes as two tokens and Caddy exited
+  code 1 immediately. All paths are now backtick-quoted, forward-slashed
+  tokens (raw strings in Caddyfile terms — no backslash-escape processing,
+  spaces preserved), pinned by regression tests, and spawn failures now
+  surface the proxy log tail in the teacher-facing error.
+- **Version surfaces disagreed after the 1.2.10 build** — the desktop
+  Cargo manifest, the root `package.json` and `CITATION.cff` still said
+  1.2.9. All version surfaces now read 1.2.10.
+- **Degenerate radar on zero-hit corpora.** The taxonomy radar rendered
+  rings + labels with the polygon collapsed to a center point when a
+  corpus had no cue hits (e.g. the English-only Cialdini lens over Arabic
+  text) — it now shows an explicit no-hits note (en/ar), and the data
+  polygon gains vertex dots so lopsided profiles stay legible.
+- **Ollama LAN-exposure warning UX.** The probe result is cached for 60 s
+  (the 5 s status poll no longer stalls or flickers), the warning is
+  dismissible for the session, and it now states the concrete fix
+  (`OLLAMA_HOST=127.0.0.1:11434` / Ollama's "Expose Ollama to the network"
+  setting) — the app never changes the Ollama bind itself.
+
+### Changed
+- `mypy==2.3.1` pinned in `[dev]` — CI fresh-resolves dev dependencies,
+  and the strict-error baseline is only meaningful under the mypy version
+  it was generated with (the unpinned floor let CI drift to mypy 2.x).
+- CI: source guards for the two quiet-regression bug classes (positional-
+  index lookups in registry code; raw model-name compares outside the
+  `ai.providers` helpers), a non-blocking mypy strict regression report
+  job, and a Docker `/health/resources` full-registry probe.
+- Performance: per-version parse-stream LRU cache; collocation analysis
+  uses a bounded self-join instead of the depth-1000 expression-tree
+  overflow; soak-tested at 120 requests/wave with 0 failures (discourse
+  p95 5.0s → 2.1s warm, RSS stable ~556 MB).
+- The Docker image bakes reference-data + the spaCy model;
+  `/health/resources` is the single asserted bundled-resource registry.
+
 ## [1.2.9] — 2026-09-27 — Review response: Persuasion Index optional resources, comparison palette, and Student Mode (classroom server)
 
 Three review-driven work items over v1.2.8: the Persuasion Index resource

@@ -226,7 +226,37 @@ cargo tauri dev
 On first launch the desktop app spawns `corpusmind-engine` as a sidecar
 process and (optionally) a bundled Ollama binary.
 
-### 4. Try the grounded-AI round-trip
+### 4. Optional: classroom server (Student Mode)
+
+The desktop app can open a read-only classroom server so students on
+phones/tablets follow along in a normal browser (v1.2.9+):
+
+- Open **Settings → Student Mode — Classroom Server** and pick a mode:
+  **Secure** (HTTPS with the app's own local CA — students do a one-time
+  certificate-trust step) or **Simple** (plain HTTP, trusted networks only).
+- Press **Start classroom**. The same slot becomes the Off button
+  (**Stop classroom**) once the server is up, and the status badge next to
+  it shows whether the bundled Caddy proxy is actually running. Config
+  (ports, classroom model, parallelism, seat cap) is editable in place.
+- Students scan the QR / open the join link. The token scopes them to
+  read-only analysis plus AI chat on this machine's corpora, seat-capped
+  (≤ 20) and anonymously audited (aliases S-1, S-2 … — no names, no IPs).
+
+**The Ollama network warning.** If the card warns that *Ollama is
+reachable on your local network*, that is Ollama's own bind — not anything
+the app changed — and every device on the LAN can query your models
+directly. To fix it, keep Ollama on its default loopback bind: quit
+Ollama, set `OLLAMA_HOST=127.0.0.1:11434` (or turn off *Expose Ollama to
+the network* in Ollama's settings) and start it again. The warning is
+dismissible for the session and re-checks periodically.
+
+**Troubleshooting.** If the classroom server fails to start, the error
+message now includes the proxy's own log tail; the full log lives at
+`<data-dir>/server-mode/caddy-stdout.log` (by default
+`%USERPROFILE%\.corpusmind\server-mode\caddy-stdout.log` on Windows,
+`~/.corpusmind/server-mode/caddy-stdout.log` elsewhere).
+
+### 5. Try the grounded-AI round-trip
 
 ```bash
 curl -X POST http://127.0.0.1:8765/api/v1/ai/chat \
@@ -238,7 +268,7 @@ The response includes `grounded: true` and a `tool_calls` array. The UI renders
 grounded answers with citations; ungrounded answers (no tool was invoked) get a
 visible badge — this is the load-bearing implementation of Principle 2.
 
-### 5. End-to-end Phase 1 workflow (create → upload → analyze → export)
+### 6. End-to-end Phase 1 workflow (create → upload → analyze → export)
 
 ```bash
 # Create a project + corpus
