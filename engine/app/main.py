@@ -63,12 +63,17 @@ async def lifespan(app: FastAPI):
     await init_db()
     log.info("db_ready", url=settings.sqlite_url)
 
-    # v1.2.9 Student Mode: bridge PI resources (above), then restore the
-    # classroom server if it was enabled before the engine restarted —
-    # tokens persist in <data_dir>/server-mode/config.json, so students'
-    # QR links keep working across engine restarts. Caddy respawning is
-    # best-effort: a missing binary keeps the classroom flagged offline in
-    # /server-mode/status rather than failing engine startup.
+    # v1.2.9 Student Mode: bridge PI resources (above), then load the
+    # classroom config. Tokens persist in <data_dir>/server-mode/config.json
+    # so students' QR links keep working across engine restarts.
+    #
+    # v1.2.10 (field report): the classroom is a SESSION-scoped feature and
+    # must be OFF by default at every launch. The previous behaviour
+    # auto-respawned Caddy whenever a previous session had left
+    # config.enabled=true, so teachers who started the classroom once saw
+    # it come back "on" on every app start with no way to expect it. Now:
+    # the persisted flag is reset to False (and saved) so the UI opens
+    # clean OFF; the teacher starts the classroom explicitly per session.
     sm_state = server_mode.ServerModeState(config=server_mode.load_config(settings))
     # v1.2.9: anonymous classroom audit writer — exists whenever the state
     # does; it writes nothing unless the classroom is enabled AND
@@ -76,14 +81,8 @@ async def lifespan(app: FastAPI):
     sm_state.ensure_audit(settings)
     if sm_state.config.student_token:
         settings.student_token = sm_state.config.student_token
-    if sm_state.config.enabled:
-        try:
-            spawn_info = server_mode.spawn_caddy(settings, sm_state)
-            sm_state.caddy_error = ""
-            log.info("server_mode_restored", **spawn_info)
-        except Exception as exc:
-            sm_state.caddy_error = str(exc)
-            log.warning("server_mode_restore_failed", error=str(exc))
+    if server_mode.reset_session_state(settings, sm_state):
+        log.info("server_mode_reset_off")
     app.state.server_mode = sm_state
 
     registry = ProviderRegistry(settings)

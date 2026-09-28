@@ -234,10 +234,11 @@ phones/tablets follow along in a normal browser (v1.2.9+):
 - Open **Settings → Student Mode — Classroom Server** and pick a mode:
   **Secure** (HTTPS with the app's own local CA — students do a one-time
   certificate-trust step) or **Simple** (plain HTTP, trusted networks only).
-- Press **Start classroom**. The same slot becomes the Off button
-  (**Stop classroom**) once the server is up, and the status badge next to
-  it shows whether the bundled Caddy proxy is actually running. Config
-  (ports, classroom model, parallelism, seat cap) is editable in place.
+- Flip the **ON/OFF switch** at the top of the card. The classroom is a
+  per-session feature: it is always OFF when the app launches, and only
+  runs while the switch is ON. The status badge inside the card shows
+  whether the bundled Caddy proxy is actually running. Config (ports,
+  classroom model, parallelism, seat cap) is editable in place.
 - Students scan the QR / open the join link. The token scopes them to
   read-only analysis plus AI chat on this machine's corpora, seat-capped
   (≤ 20) and anonymously audited (aliases S-1, S-2 … — no names, no IPs).
@@ -248,7 +249,8 @@ the app changed — and every device on the LAN can query your models
 directly. To fix it, keep Ollama on its default loopback bind: quit
 Ollama, set `OLLAMA_HOST=127.0.0.1:11434` (or turn off *Expose Ollama to
 the network* in Ollama's settings) and start it again. The warning is
-dismissible for the session and re-checks periodically.
+dismissible (the dismissal persists; it re-arms only if the exposed
+address changes) and re-checks periodically.
 
 **Troubleshooting.** If the classroom server fails to start, the error
 message now includes the proxy's own log tail; the full log lives at

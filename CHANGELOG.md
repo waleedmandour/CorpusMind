@@ -47,6 +47,33 @@ once 1.0 ships. Until then, expect breaking changes between 0.x releases.
   (`OLLAMA_HOST=127.0.0.1:11434` / Ollama's "Expose Ollama to the network"
   setting) — the app never changes the Ollama bind itself.
 
+### Fixed (field reports from the Windows install, round 2)
+- **Classroom is session-scoped — off by default at every launch.** A
+  previously enabled classroom used to auto-respawn Caddy on each engine
+  start, so the feature appeared to turn itself back on. Boot now resets
+  the persisted flag to off (tokens survive, so QR links keep working
+  after the teacher explicitly starts the classroom again).
+- **The classroom ON/OFF control is now a visible switch** at the top of
+  the Student Mode card (ON/OFF label, RTL-aware, keyboard accessible),
+  replacing the Start/Stop buttons buried below the configuration rows.
+- **Ollama LAN-exposure warning deduplicated, dismissal persisted.** The
+  Model Providers copy had no dismiss button at all and the Student Mode
+  dismissal was session-only, so the warning could never be fully
+  cleared. Both now render one shared component; the dismissal persists
+  across restarts and re-arms only when the exposed address changes.
+- **LM Studio remains a first-class provider** — verified end-to-end
+  (provider, registry, health endpoint, Settings card, assistant picker):
+  nothing was removed. The "not detected" state now states precisely how
+  to start LM Studio's local server (Developer → Start Local Server,
+  port 1234) instead of reading as a removed feature.
+- **Discourse graphs: export + layout.** Every graph in the Discourse
+  analysis gains a one-click Export — PNG for the bar charts and both
+  radars (rasterized with computed theme colors so the file matches the
+  on-screen chart, saved via the native save dialog in the desktop app),
+  CSV for the cue co-occurrence table (RFC-4180, UTF-8 BOM for Arabic).
+  Both radars are enlarged (520 px cap) and centered with captions below
+  instead of beside the chart.
+
 ### Changed
 - `mypy==2.3.1` pinned in `[dev]` — CI fresh-resolves dev dependencies,
   and the strict-error baseline is only meaningful under the mypy version

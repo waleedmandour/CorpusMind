@@ -2001,38 +2001,72 @@ code, pre { font-family: var(--font-mono); }
 .deptree-label { font-size: 10.5px; fill: var(--brand-500); font-family: var(--font-mono); }
 .ud-profile-details summary { cursor: pointer; color: var(--brand-500); margin-block: var(--space-2); user-select: none; }
 
-/* v1.2.7 (§4): persuasion index radar + disclaimer */
+/* v1.2.7 (§4): persuasion index radar + disclaimer.
+   v1.2.10 field fixes: the radar is a full visual peer of the bar chart —
+   enlarged (520px cap), CENTERED, and the family legend sits BELOW the
+   chart as a centered row (it used to flow to the right of a 320px
+   chart, which read as captions of a thumbnail). */
 .pi-radar-wrap {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-4);
+  flex-direction: column;
   align-items: center;
+  gap: var(--space-2);
   padding: var(--space-3);
   background: var(--bg-subtle);
   border-radius: var(--radius-md);
   margin-block: var(--space-2);
 }
-.pi-radar-wrap svg { flex: 0 0 auto; }
-.pi-axis-label { font-size: 9px; fill: var(--text-muted); font-family: var(--font-sans); }
-.pi-radar-legend { display: flex; flex-direction: column; gap: var(--space-2); font-size: 13px; }
+.pi-radar-wrap svg { flex: 0 0 auto; inline-size: 100%; max-inline-size: 520px; }
+.pi-axis-label { font-size: 10px; fill: var(--text-muted); font-family: var(--font-sans); }
+.pi-radar-legend { display: flex; flex-direction: row; flex-wrap: wrap; justify-content: center; gap: var(--space-2) var(--space-4); font-size: 13px; }
 .pi-legend-item { display: inline-flex; align-items: center; gap: var(--space-2); }
 .pi-legend-swatch { inline-size: 12px; block-size: 12px; border-radius: 3px; display: inline-block; }
 .pi-disclaimer { border-inline-start: 3px solid var(--warning); }
 
-/* v1.2.10: generic taxonomy radar + cue co-occurrence + language badge */
+/* v1.2.10: generic taxonomy radar + cue co-occurrence + language badge.
+   v1.2.10 field fixes: same treatment as the PI radar — enlarged,
+   centered, captions/hint BELOW the chart instead of beside it. */
 .taxonomy-radar-wrap {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-4);
+  flex-direction: column;
   align-items: center;
+  gap: var(--space-2);
   padding: var(--space-3);
   background: var(--bg-subtle);
   border: 1px solid var(--border);
   border-radius: 8px;
   margin: var(--space-3) 0;
 }
-.taxonomy-radar-wrap svg { flex: 0 0 auto; max-inline-size: 320px; }
-.taxonomy-radar-hint { font-size: 12.5px; color: var(--text-muted); max-inline-size: 34ch; }
+.taxonomy-radar-wrap svg { flex: 0 0 auto; inline-size: 100%; max-inline-size: 520px; }
+.taxonomy-radar-hint { font-size: 12.5px; color: var(--text-muted); text-align: center; max-inline-size: 68ch; }
+/* Shared toolbar row for chart headers (Export PNG button, right-aligned). */
+.radar-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  inline-size: 100%;
+  max-inline-size: 520px;
+}
+/* One-click chart export buttons (PNG/CSV) — quiet ghost style that
+   matches the settings/card buttons. */
+.chart-export-btn {
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 12.5px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.chart-export-btn:hover { border-color: var(--brand-500); color: var(--brand-500); }
+.chart-export-btn:disabled { opacity: 0.55; cursor: wait; }
+/* Co-occurrence header row: title left, Export CSV right. */
+.coocc-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
 .coocc-card {
   padding: var(--space-3);
   background: var(--bg-subtle);
@@ -7283,6 +7317,11 @@ html[dir="rtl"] .toggle-switch input:checked + .toggle-slider::before {
   font-weight: 600;
   color: var(--text-muted, var(--text-subtle));
   margin-block-end: var(--space-2);
+  /* v1.2.10 field fixes: caption text left, Export PNG right. */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
 }
 .discourse-chart-label {
   font-size: 12px;
@@ -7452,6 +7491,69 @@ html[dir="rtl"] .toggle-switch input:checked + .toggle-slider::before {
 .sm-port-row label { display: flex; flex-direction: column; gap: 3px; font-size: 12.5px; }
 .sm-port-row input { width: 110px; }
 .sm-actions { display: flex; gap: var(--space-2); margin-block: var(--space-2); }
+
+/* v1.2.10 field fixes: the classroom ON/OFF switch — a real switch, at
+   the TOP of the Student Mode card header, replacing the buried
+   Start/Stop buttons the field report could not find. */
+.sm-switch-row {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-inline-start: auto;
+  cursor: pointer;
+  user-select: none;
+}
+.sm-switch-input {
+  /* visually hidden — the styled track is the interactive surface;
+     the input keeps keyboard focus + AT semantics (role=switch). */
+  position: absolute;
+  opacity: 0;
+  inline-size: 1px;
+  block-size: 1px;
+}
+.sm-switch {
+  position: relative;
+  inline-size: 40px;
+  block-size: 22px;
+  border-radius: 999px;
+  background: var(--border);
+  transition: background 0.15s ease;
+  flex: 0 0 auto;
+}
+.sm-switch-knob {
+  position: absolute;
+  inset-block-start: 2px;
+  inset-inline-start: 2px;
+  inline-size: 18px;
+  block-size: 18px;
+  border-radius: 50%;
+  background: var(--bg);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.25);
+  transition: inset-inline-start 0.15s ease;
+}
+[dir="rtl"] .sm-switch-knob { inset-inline-start: auto; inset-inline-end: 2px; }
+.sm-switch-input:checked + .sm-switch { background: var(--brand-500); }
+.sm-switch-input:checked + .sm-switch .sm-switch-knob {
+  inset-inline-start: 20px;
+  background: #fff;
+}
+[dir="rtl"] .sm-switch-input:checked + .sm-switch .sm-switch-knob {
+  inset-inline-start: auto;
+  inset-inline-end: 20px;
+}
+.sm-switch-input:focus-visible + .sm-switch {
+  outline: 2px solid var(--brand-500);
+  outline-offset: 2px;
+}
+.sm-switch-input:disabled + .sm-switch { opacity: 0.5; cursor: not-allowed; }
+.sm-switch-state {
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text-muted, var(--text-subtle));
+  min-inline-size: 2.4em;
+}
+.sm-switch-state.on { color: var(--brand-500); }
 .sm-primary { background: var(--brand-500); color: #fff; }
 .sm-danger { border-color: var(--danger); color: var(--danger); }
 .sm-warning {

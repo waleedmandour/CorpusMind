@@ -20,6 +20,7 @@ import { CollocationNetwork } from "@/components/CollocationNetwork";
 import { SlowQueryNote } from "@/components/SlowQueryNote";
 import { PersuasionRadar } from "@/components/PersuasionRadar";
 import { DiscourseBarChart } from "@/components/DiscourseBarChart";
+import { ChartCsvExportButton } from "@/components/ChartExportButtons";
 import { TaxonomyRadar, RADAR_MIN_AXES, RADAR_MAX_AXES } from "@/components/TaxonomyRadar";
 
 // Issue 5: shared export-status hook so every analysis panel gets the same
@@ -1917,6 +1918,7 @@ function DiscoursePanel({ cid }: { cid: string }) {
                 key={result.data.taxonomy_key}
                 categories={result.data.categories}
                 noHitsLabel={t(lang, "discourse_radar_no_hits")}
+                exportName={`corpusmind-discourse-radar-${result.data.taxonomy_key ?? "lens"}`}
               />
               <div className="taxonomy-radar-hint"><em>{t(lang, "discourse_radar_hint")}</em></div>
             </div>
@@ -1926,7 +1928,22 @@ function DiscoursePanel({ cid }: { cid: string }) {
               says so in both UI languages. */}
           {!!result.data?.cooccurrence?.length && (
             <div className="coocc-card">
-              <strong>{t(lang, "discourse_coocc_title")}</strong>
+              <div className="coocc-head">
+                <strong>{t(lang, "discourse_coocc_title")}</strong>
+                {/* v1.2.10 field fixes: Export CSV — same rows as the table
+                    (pair + shared-sentence count), RFC-4180 + UTF-8 BOM. */}
+                <ChartCsvExportButton
+                  headers={[
+                    t(lang, "discourse_coocc_pair"),
+                    t(lang, "discourse_coocc_sentences"),
+                  ]}
+                  rows={result.data.cooccurrence.map((p) => [
+                    `${p.a.replace(/_/g, " ")} x ${p.b.replace(/_/g, " ")}`,
+                    p.sentences,
+                  ])}
+                  filename="corpusmind-discourse-cooccurrence"
+                />
+              </div>
               <p className="coocc-hint">{t(lang, "discourse_coocc_hint")}</p>
               <div className="discourse-table-wrap">
                 <table className="discourse-table">
