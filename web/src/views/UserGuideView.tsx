@@ -232,6 +232,12 @@ camel_data -i morphology-db-msa-r13`}</pre>
           counts. To apply <code>OLLAMA_NUM_PARALLEL</code> (parallel generation slots), restart
           Ollama with that environment variable set.
         </p>
+        <p>
+          <strong>If the app screen goes blank after you turn Student Mode on</strong>, simply
+          right-click anywhere in the app and choose <strong>Refresh</strong>. The desktop&apos;s
+          embedded web view sometimes needs a single reload once the classroom server starts;
+          nothing is lost — your corpora, settings, and the running classroom are unaffected.
+        </p>
         <h4>Joining &amp; leaving</h4>
         <p>
           Students scan the QR (server URL + <code>cm_study_…</code> token are prefilled) and see a
