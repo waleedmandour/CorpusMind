@@ -1,6 +1,6 @@
 # CorpusMind
 
-[![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.21226650-blue)](https://doi.org/10.5281/zenodo.21226650)
+[![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.23052753-blue)](https://doi.org/10.5281/zenodo.23052753)
 [![License: AGPL-3.0-only](https://img.shields.io/badge/License-AGPL--3.0--only-blue.svg)](https://www.gnu.org/licenses/agpl-3.0.html)
 [![GitHub release](https://img.shields.io/badge/release-v1.2.6-blue)](https://github.com/waleedmandour/CorpusMind/releases)
 [![Build Status](https://img.shields.io/badge/CI-passing-brightgreen)](https://github.com/waleedmandour/CorpusMind/actions)
@@ -463,8 +463,8 @@ If you use CorpusMind in your research, please cite it as:
 
 > Mandour, W., & Ibrahim, W. (2026). *CorpusMind: A local-first, AI-native
 > research environment for corpus linguistics and multimodal discourse
-> analysis* (Version 1.2.0) [Computer software]. Zenodo.
-> https://doi.org/10.5281/zenodo.21226650
+> analysis* (Version 1.2.10) [Computer software]. Zenodo.
+> https://doi.org/10.5281/zenodo.23052753
 >
 > Dr. Waleed Mandour, Sultan Qaboos University, ORCID: 0000-0002-9262-5993
 > Prof. Wesam Ibrahim, Princess Nourah Bint Abdulrahman University, ORCID: 0000-0003-0710-6038
@@ -478,12 +478,22 @@ If you use CorpusMind in your research, please cite it as:
                    for corpus linguistics and multimodal discourse analysis}},
   month        = jul,
   year         = 2026,
-  version      = {1.2.0},
+  version      = {1.2.10},
   publisher    = {Zenodo},
-  doi          = {10.5281/zenodo.21226650},
-  url          = {https://doi.org/10.5281/zenodo.21226650}
+  doi          = {10.5281/zenodo.23052753},
+  url          = {https://doi.org/10.5281/zenodo.23052753}
 }
 ```
+
+**Versioned DOIs:** The DOI above (10.5281/zenodo.23052753) is the
+versioned DOI for v1.2.10. The concept DOI (all versions) is
+[10.5281/zenodo.21226650](https://doi.org/10.5281/zenodo.21226650).
+Cite the specific version DOI for reproducibility.
+
+**Downloads:** Binary installers are hosted on
+[GitHub Releases](https://github.com/waleedmandour/CorpusMind/releases)
+for fast, direct downloads. The Zenodo record provides the permanent
+DOI for citation and archival. Both are kept in sync.
 
 ## Acknowledgements
 
@@ -518,7 +528,7 @@ cloud services. The software is released free of charge under the GNU
 Affero General Public License v3.0 (AGPL-3.0-only), and will remain free
 and open-source in perpetuity. The authors bear all development and
 maintenance costs personally. If you find CorpusMind useful in your
-research, please cite it using the DOI above (10.5281/zenodo.21226650)
+research, please cite it using the DOI above (10.5281/zenodo.23052753)
 and consider contributing bug reports, feature requests, or pull requests
 on GitHub.
 
