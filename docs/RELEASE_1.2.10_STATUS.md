@@ -87,3 +87,20 @@ Legend: DONE / PARTIAL / MISSING / BROKEN. "BROKEN" = exists but fails.
 7. A8/A9 tests (student allowlist, fixtures, ingestion, golden Arabic)
 8. B2-B5, B7 (catalogue, gating tests, version-probe messaging, licenses)
 9. C1-C7 (version sync + lockstep test, CHANGELOG, README, METHODOLOGY, guides+PDFs, licenses, packaging gates)
+
+---
+
+## Final gates (executed 2026-10-07, on `release/1.2.11-prep` @ `59cd84a`)
+
+| Gate | Command | Result |
+| --- | --- | --- |
+| ruff | `ruff check .` (engine) | PASS (0 errors) |
+| engine tests | `pytest tests/` | **661 passed, 9 skipped, 0 failed** (baseline at cycle start: 587/9; documented v1.2.6 baseline: 447/9) |
+| web typecheck | `tsc -b` | PASS |
+| web build | `npm run build` | PASS (fonts precached into the PWA bundle) |
+| contrast | `node scripts/check_contrast.mjs` | PASS 86/86 |
+| version lockstep | `pytest tests/test_version_lockstep.py` | PASS (9 checks over every version surface) |
+| wheel build | `python -m build --wheel` | PASS — `corpusmind_engine-1.2.11-py3-none-any.whl`; 15/15 packages present |
+| wheel boot / Docker | NOT RUN in this environment (no Docker daemon available) — the Docker CI job's resource probe was updated in lockstep and runs on push |
+| PyInstaller onedir boot | NOT RUN (Windows/macOS toolchains unavailable here); `ci_smoke_engine.sh/.ps1` now assert the three new reference files, so the release pipeline enforces them at packaging time |
+| installer size growth | +~2.0 MB (fonts) + ~0.1 MB (TSVs) before compression; the packaged app does NOT bundle stanza/torch, so no model-weight growth |
