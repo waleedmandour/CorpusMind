@@ -1,6 +1,11 @@
 /* =========================================================================
    CorpusMind design tokens.
-   Two themes (light / dark) are defined as CSS custom properties on /* --------------------------------------------------------------------------- */
+   Two themes (light / dark) are defined as CSS custom properties on :root.
+   The [data-theme] attribute on <html> flips them. RTL is handled by the
+   browser via the `dir` attribute — most layout uses logical properties
+   (inline-start/inline-end) so it mirrors automatically.
+   ========================================================================== */
+
 /* v1.2.11: locally bundled fonts (offline-first; no CDN). All under the
    SIL Open Font License 1.1 - see public/fonts/*-OFL.txt and
    THIRD_PARTY_LICENSES.md. */
@@ -32,12 +37,6 @@
   font-display: swap;
   unicode-range: U+0600-06FF, U+0750-077F, U+FB50-FDFF, U+FE70-FEFF;
 }
-
-:root.
-   The [data-theme] attribute on <html> flips them. RTL is handled by the
-   browser via the `dir` attribute — most layout uses logical properties
-   (inline-start/inline-end) so it mirrors automatically.
-   ========================================================================= */
 
 :root {
   /* Brand */

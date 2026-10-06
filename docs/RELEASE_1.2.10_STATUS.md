@@ -1,6 +1,9 @@
-# Release 1.2.11 Status Audit (Phase 0)
+# Release 1.2.11 Status (Phase 0 audit + final report)
 
 > Audit date: 2026-10-07. Branch: `release/1.2.11-prep` (from main @ `6471317`).
+> **Final state: requirements below were then implemented and verified in
+> this cycle; the table reflects the END state. Verification commands are
+> listed in the "Final gates" section at the bottom.**
 >
 > **Version target decision: 1.2.11.** The `v1.2.10` git tag already exists
 > (created 2026-09-28, with GitHub release + installers built from that tree).

@@ -816,3 +816,71 @@ deliberately excluded from the registry and pinned out by test.
 - Cialdini, R.B. (2007). *Influence: The Psychology of Persuasion* (Revised
   Edition). New York: HarperBusiness. Chapters 2–7. The 2021 "Unity"
   principle (7th edition, Cialdini 2021) is not covered.
+
+---
+
+## Normalization and language coverage (v1.2.11)
+
+### Per-language normalizers
+
+Matching/aggregation normalization is now dispatched per corpus language.
+Each normalizer has a SQL scalar implementation (registered in
+`storage/session.py`) and a Python mirror (`nlp/normalizers.py`); parity
+over shared fixtures is pinned by `tests/test_language_parity.py`. The
+Arabic normalizer is byte-for-byte unchanged since v1.2.0.
+
+| Language | SQL scalar | Rules | Digits |
+| --- | --- | --- | --- |
+| Arabic (ar) | `arnorm` | harakat + tatweel stripped; أ إ آ → ا; ة → ه; ى → ي; lowercase (no-op on Arabic) | Arabic-Indic ٠-٩ preserved |
+| Farsi (fa) | `fanorm` | NFC; ي → ی; ك → ک; NO teh-marbuta/alef-maksura/alef rules; ZWNJ per mode | Latin + ٠-٩ + ۰-۹ preserved |
+| Urdu (ur) | `urnorm` | as fa, plus bare Arabic he ه → gol he ہ; do-chashmi he ھ and bari ye ے stay distinct | as fa |
+| Hindi (hi) | `hinorm` | NFC; nukta removed (क़ → क); chandrabindu → anusvara (हैँ → हैं); NO case operations | Latin + Devanagari ०-९ preserved |
+| English (en) | — (lowercase) | case folding + NFD diacritic strip in the Python folder | Latin preserved |
+
+**ZWNJ (U+200C).** Meaningful inside Persian/Urdu words (می‌روم). It is
+preserved at ingestion (parsing never strips it), preserved by the default
+`keep` mode, and the request-level `zwnj` parameter offers the documented
+matching conventions: `space` (ZWNJ → space, splitting the compound) and
+`strip` (ZWNJ removed, merging with joined spellings). The choice is
+reported in the query metadata and the Methods text. A per-corpus cleaning
+option (`strip_zwnj`) applies the same convention to stored text.
+
+**Digits** are never folded across scripts: ۱۲۳ (Extended Arabic-Indic),
+१२३ (Devanagari) and 123 (Latin) are distinct tokens. The optional
+`remove_numbers` cleaning step treats all four ranges as numbers.
+
+**Activation.** The legacy `normalize_arabic` request flag keeps its exact
+v1.2.0 behavior (Arabic folding, whatever the corpus language) so every
+existing Arabic workflow is unchanged. The v1.2.11 `normalize: true` flag
+dispatches to the corpus language's own normalizer. Both are recorded in
+the result metadata and the reproducibility recipe.
+
+### Language detection guard
+
+`nlp/script_detect.py` is an honest, documented heuristic used only when
+no corpus language is supplied (learner CAF auto-detection). It maps
+Arabic-script text to ar/ur/fa by distinctive letters (Urdu-specific ٹ ڈ ڑ
+ں ھ ے; Persian پ چ ژ گ and ZWNJ; Persian-codepoint kaf/yeh) BEFORE falling
+back to ar, and any Devanagari text to hi. It exists so Persian and Urdu
+are never silently routed into Arabic resources. Near-miss inputs are
+pinned by `tests/test_script_detect.py`. The corpus language field the UI
+always sets remains the authoritative signal.
+
+### Per-language coverage limits (honest)
+
+- **ur/hi/fa**: statistics (frequency/STTR, collocation, keyness,
+  dispersion, n-grams) run wherever tokenization runs. POS, lemmatization
+  and dependency parse require the optional Stanza backend
+  (`pip install -e ".[urdu-hindi-farsi]"`; models download on first use,
+  tested with stanza 1.15.0). Sentiment, discourse cue lenses (beyond the
+  bilingual USAS), vocabulary bands, and learner error rules are
+  en/ar-only and return explicit 503/409 statuses instead of wrong
+  results. Flesch stays English-only; LIX/RIX are reported for all
+  languages. **Urdu word segmentation** is imperfect (spaces are
+  unreliable in running Urdu); the tokenizer handles common cases and
+  sentence-level statistics inherit that uncertainty — this is a data
+  property, not a bug, and results should be read accordingly.
+- **fa/ur keyness baselines** are derived from wordfreq 3.1.1 (CC BY-SA
+  4.0 data), not from designed reference corpora — cite them as baseline
+  frequency lists, not gold references.
+- The full machine-readable capability matrix is `GET /api/v1/languages`.

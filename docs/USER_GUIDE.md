@@ -1,6 +1,6 @@
 # CorpusMind User Guide
 
-> Version 1.2.6 | AGPL-3.0-only
+> Version 1.2.11 | AGPL-3.0-only
 >
 > Authors: Dr. Waleed Mandour (Sultan Qaboos University, ORCID: 0000-0002-9262-5993)
 > and Prof. Wesam Ibrahim (Princess Nourah Bint Abdulrahman University, ORCID: 0000-0003-0710-6038)
@@ -13,7 +13,7 @@ If you use CorpusMind in your research, please cite it as:
 
 > Mandour, W., & Ibrahim, W. (2026). *CorpusMind: A local-first, AI-native
 > research environment for corpus linguistics and multimodal discourse
-> analysis* (Version 1.2.6) [Computer software]. Zenodo.
+> analysis* (Version 1.2.11) [Computer software]. Zenodo.
 > https://doi.org/10.5281/zenodo.21226650
 
 ---
@@ -320,6 +320,56 @@ Purpose-built for learner-corpus studies (Granger 1998; Housen & Kuiken
 
 Arabic normalization is also available inside corpus cleaning, and Arabic
 is supported end-to-end in Vector KWIC via the multilingual bge-m3 model.
+
+---
+
+## 8b. Urdu, Hindi, and Farsi Corpora (v1.2.11)
+
+Urdu (ur), Hindi (hi) and Farsi/Persian (fa) are supported as corpus
+languages alongside English and Arabic. Each language has its own
+normalizer, and the engine never applies Arabic rules to Persian or Urdu:
+
+- **What works out of the box**: upload (TXT/DOCX/PDF/HTML), tokenization,
+  sentence splitting (Hindi danda । and ॥; Urdu full stop ۔), concordance
+  (incl. wildcards and regex), frequency + STTR, collocations, keyness,
+  dispersion, n-grams, Vector KWIC (bge-m3), Learner CAF diversity and
+  complexity indices, and per-language stopword lists (editable in Settings
+  → Word lists; built-in lists ship for all five languages).
+- **Normalization** (the "Normalize spelling variants" option in the API,
+  `normalize: true`): Persian and Urdu unify Arabic-keyboard lookalikes
+  (ي→ی, ك→ک; Urdu also ه→ہ); Hindi folds nukta (क़→क) and chandrabindu.
+  ZWNJ (U+200C) inside Persian/Urdu words is preserved by default; the
+  request-level `zwnj` mode offers keep/space/strip for matching.
+- **POS, lemmatization, dependency parse**: available when the optional
+  Stanza backend is installed on the machine running the engine
+  (`pip install -e ".[urdu-hindi-farsi]"`, models download on first use).
+  The packaged desktop app ships the tokenizer-only fallback; the pipeline
+  recipe on your corpus always names the backend that produced the tags.
+- **Honest limits**: sentiment, discourse lenses (beyond the bilingual
+  USAS), vocabulary bands (K1/AWL), and learner error rules are
+  English/Arabic resources and return an explicit "not available for this
+  language" message instead of wrong results. Readability reports the
+  language-neutral LIX/RIX scores (Flesch stays English-only).
+- **Reference data**: top-1000 frequency baselines for all three languages
+  ship bundled (derived from wordfreq 3.1.1, CC BY-SA 4.0 data) for keyness.
+
+---
+
+## 8c. Recommended Models for the AI Assistant (v1.2.11)
+
+Settings → Model Providers lists curated local models. Gemma 4 (Google,
+Apache-2.0) is recommended for grounded answers in the new languages:
+
+- `gemma4:e4b` (about 6-7 GB with the recommended QAT or Q4_K_M
+  quantization) is the best balance for laptops; it supports tool calling,
+  so the assistant's grounded answers work.
+- `gemma4:e2b` (about 4-5 GB) runs on smaller machines.
+- `gemma4:12b` (about 7-8 GB quantized) for workstation quality.
+- All sizes handle text and images; E2B/E4B have 128K context, 12B has
+  256K. Pull the model inside the app (Settings → Model Providers) — it is
+  never bundled with CorpusMind. If Ollama reports the model needs a newer
+  version, update Ollama from ollama.com first; the app tells you when that
+  is the case instead of showing a generic "model missing" error.
 
 ---
 

@@ -6,6 +6,153 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
+## [1.2.11] — 2026-10-07 — Urdu, Hindi, and Farsi corpus support; Gemma 4 catalogue; language capability registry
+
+### Added
+- **Urdu (ur), Hindi (hi), and Farsi/Persian (fa) as corpus languages** in
+  the engine and the web UI's corpus creation, upload, hub search, and
+  reference-corpus pickers. Each language gets its own normalizer and the
+  engine never applies Arabic rules to them (no teh-marbuta folding, no
+  alef unification on fa/ur).
+- **Language capability registry** — `GET /api/v1/languages`, the single
+  source of truth for per-language script, direction, normalizer,
+  pipeline pieces, stopword list, reference corpora, and a per-tool
+  support matrix (`supported` / `partial` / `unavailable` with a
+  reason). The UI consumes it; the packaged-app smoke gates assert it.
+- **Language-appropriate normalization** for matching and aggregation:
+  new SQL scalars `fanorm`/`urnorm`/`hinorm` with tested Python mirrors
+  (parity pinned over shared fixtures). Persian/Urdu unify Arabic-keyboard
+  lookalikes (ي→ی, ك→ک; Urdu also ه→ہ) while Hindi folds nukta (क़→क)
+  and chandrabindu→anusvara with no case operations. The legacy
+  `normalize_arabic` flag keeps its exact v1.2.0 behavior so Arabic
+  outputs are regression-guarded (golden tests).
+- **ZWNJ policy (U+200C)**: preserved at ingestion and by default in
+  matching; documented `keep`/`space`/`strip` modes on the analysis
+  requests plus an opt-in `strip_zwnj` cleaning convention for stored
+  text. Digits: Latin, Arabic-Indic, Extended Arabic-Indic and Devanagari
+  numerals are preserved; `remove_numbers` now recognizes all four.
+- **Sentence terminators for the blank-language pipelines**: Hindi danda
+  । and double danda ॥, Urdu full stop ۔, Arabic interrogative ؟ —
+  a whole Urdu/Hindi document no longer collapses into one sentence.
+- **Script/language detection guard** (`nlp/script_detect.py`): Arabic-
+  script text is no longer auto-routed into Arabic resources when it is
+  Persian or Urdu (learner CAF auto-detection); near-miss inputs pinned
+  by tests. Devanagari is never conflated with Arabic script.
+- **Bundled reference data for the new languages**: top-1000 keyness
+  baselines derived from wordfreq 3.1.1 (CC BY-SA 4.0 data),
+  SHA-256-pinned in the reference-corpus registry and asserted by the
+  release smoke gates. Built-in stopword lists for ur/hi/fa are now
+  exposed and editable via the existing word-list manager.
+- **Corpus Hub language support**: Wikipedia live search, HuggingFace
+  datasets-server (Wikipedia/OSCAR/CC-100) and OPUS slices for
+  ur/hi/fa; catalogue metadata updated; Devanagari survives in
+  downloaded filenames.
+- **Gemma 4 (quantized) catalogue entries** in Settings → Model
+  Providers: `gemma4:e2b`, `gemma4:e4b` (recommended), `gemma4:12b`
+  with verified tags, sizes, context windows, and recommended
+  quantizations. Facts verified against ollama.com/library/gemma4 and
+  the official model card (Apache-2.0) on 2026-10-07; no invented tags.
+- **"Ollama too old" honesty**: pull failures whose error text indicates
+  the model architecture needs a newer Ollama are classified
+  (`ollama_too_old`) and surfaced with an update hint and the installed
+  version instead of a misleading "model missing" 409/502; new
+  `GET /api/v1/ollama/version` probe. A minimum Ollama version is
+  deliberately NOT hardcoded — none is published authoritatively.
+- **Locally bundled fonts** (SIL OFL 1.1, offline-first): Noto Sans
+  Devanagari, Noto Nastaliq Urdu, Noto Sans Arabic. KWIC/Vector-KWIC
+  cells render with the corpus language's script (bidi isolation,
+  `dir=auto`, per-script faces) and the collocation network PNG/SVG
+  exports gained script-capable label stacks.
+- **CSV exports from the engine now carry a UTF-8 BOM** (matching the
+  client-side exports), so Urdu/Persian/Hindi text survives Excel's
+  double-click open; round-trip pinned by a test.
+- **Honest gating instead of silent fallbacks**: sentiment on ur/hi/fa
+  returns 503 with an install hint (it previously scored Urdu against
+  the ENGLISH lexicon); discourse cue lenses return 409 for non-en
+  corpora; vocabulary bands return 503 for non-en; learner error rules
+  return an empty pool with an explanation for ur/hi/fa; query
+  suggestions stop serving Arabic labels for non-Arabic languages.
+  Vector KWIC pre-embedding normalization follows the corpus language
+  and uses separate cache keys for normalized runs.
+- **User guide (EN + AR) sections** for the new languages and Gemma 4;
+  both PDFs regenerated as v1.2.11 and the installer-bundled copy
+  refreshed. The guide generator scripts now read the version from the
+  engine itself, making a version-mismatch guide structurally
+  impossible; the version-lockstep test enforces all version surfaces
+  (now including shared/package.json, Cargo.toml, both npm locks,
+  CITATION.cff, the frontend fallback version, the docker tag, and the
+  guide scripts).
+- **Student Mode**: `GET /api/v1/languages` is on the student route
+  allowlist (read-only metadata the classroom UI needs); the student
+  role still cannot reach any management route (pinned by tests). The
+  classroom model setting is unchanged (llama3.2:3b default; Gemma 4 is
+  selectable — capacity estimates use its real on-disk footprint).
+
+### Changed
+- `normalize`/`zwnj` request parameters on concordance, frequency,
+  collocation, and keyness (the engine-side per-language path); results
+  record the normalizer used. README: stale phase list removed, live CI
+  badge, language support matrix, corrected glitches ("all 7 12
+  measures" → "all 7 collocation measures"; "(4.8 reproducibility)" →
+  "(reproducibility, Principle 8)"; "(4 Principle 3)" → "(Principle 3)"),
+  real test counts. METHODOLOGY.md gained the normalization tables, the
+  detection-guard contract, and per-language coverage limits.
+  THIRD_PARTY_LICENSES.md: Stanza, Gemma 4, wordfreq data, bundled fonts.
+
+### Fixed
+- The partial v1.2.11 work on main left the repo red: 14 ruff errors
+  (unused imports + duplicate stopword set items) and a TypeScript
+  error (`string` not assignable to `"en" | "ar"` in the hub-search
+  language picker). Both fixed; CI gates green again.
+- Stanza pipeline crashed with `UnsupportedProcessorError` for languages
+  without an MWT processor (ur/fa/hi); the processor list now degrades.
+- Whitespace-only tokens (raw newlines) from blank-language tokenizers
+  leaked into frequency lists; they are no longer stored.
+- Persian/Urdu ZWNJ was stripped unconditionally at parse time, silently
+  merging distinct spellings before the user ever saw a tool.
+- Urdu/Hindi/Farsi silently received ENGLISH sentiment lexicons, ENGLISH
+  error rules, and Arabic query-suggestion labels; all replaced with
+  explicit unavailability (see Added).
+
+### Tests
+- **Engine: 645 passed, 9 skipped, 0 failed** (baseline before this
+  cycle: 587 passed / 9 skipped; documented v1.2.6 baseline: 447 / 9).
+  New: SQL/Python normalizer parity (incl. ZWNJ modes), script-detection
+  near-misses, per-language end-to-end fixtures (ingestion
+  TXT/DOCX/PDF/HTML, danda/۔ splits, normalized frequency/concordance,
+  collocation sanity, export BOM round-trip), languages-registry shape,
+  student-allowlist boundary, Gemma 4 catalogue/capability/version
+  classification, extended version lockstep.
+- **Stanza backend verified live** (1.15.0, ur/fa/hi) through the engine
+  wrapper; spaCy blank fallback verified in the packaged-app condition.
+- **Web**: tsc + build green; `check_contrast.mjs` 86/86. **Ruff**: clean.
+- **Wheel build**: verified. PyInstaller onedir + Docker boot: NOT RUN in
+  the release-prep environment (no Docker daemon / no macOS-Windows
+  toolchains); the smoke-gate assertions were updated in lockstep so the
+  release pipeline enforces the new resources.
+
+### Known limitations (per language, honest)
+- **ur/hi/fa POS/lemma/parse** require the optional Stanza install on the
+  machine running the engine; the packaged desktop app ships the
+  tokenizer-only fallback and says so in the pipeline recipe.
+- **Sentiment, discourse cue lenses (hyland/appraisal/sfg/cialdini),
+  vocabulary bands, and learner error rules** remain en/ar-only; the
+  bilingual USAS lens needs no extra install for ar/en and 503s for
+  ur/hi/fa (no lexicon).
+- **Flesch readability** stays English-only; LIX/RIX are reported for
+  every language.
+- **Urdu word segmentation** inherits the script's unreliable spacing;
+  sentence-level statistics carry that uncertainty.
+- **Gemma 4 tokens/s and TTFT are UNMEASURED** in this release (no Ollama
+  daemon in the release-prep environment); the grounded-answer quality
+  smoke test in the five languages through the real tool-calling flow was
+  likewise not executed here. The catalogue entry makes no performance
+  claim.
+- **UI translation into hi/ur/fa** remains out of scope (the interface
+  stays EN/AR); corpus content in hi/ur/fa renders correctly.
+
+---
+
 ## [1.2.10] — 2026-09-28 — Cialdini 2007 cue lens, classroom hardening, release-blocker fixes
 
 ### Added

@@ -212,6 +212,25 @@ the Llama 3.2 Community License, which has use-case restrictions for
 >700M monthly active users. Researchers using CorpusMind for normal
 academic work are well within the license's terms.
 
+| Model | License | Notes |
+| --- | --- | --- |
+| **Gemma 4** (Google DeepMind, 2026) — `gemma4:e2b` / `:e4b` / `:12b` / `:26b` / `:31b` via Ollama | **Apache-2.0** (verified on the official model card, ai.google.dev/gemma/docs/core/model_card_4, retrieved 2026-10-07) | User-pulled via Ollama, never bundled. Catalogue entry added in v1.2.11 as a recommended grounded-assistant model for the new corpus languages (the model card documents "over 140 languages" pre-trained; the per-language coverage of ur/hi/fa is not enumerated in official docs, so no stronger claim is made). Its Apache-2.0 terms differ from CorpusMind's AGPL-3.0 — pulling and running it under your own Ollama instance is a separate act from redistributing CorpusMind. |
+
+---
+
+## v1.2.11 additions (language support)
+
+| Component | License | How it ships / notes |
+| --- | --- | --- |
+| [Stanza](https://github.com/stanfordnlp/stanza) (tested with 1.15.0) | Apache-2.0 | OPTIONAL Python dependency (`[urdu-hindi-farsi]` extra) for ur/hi/fa POS/lemma/dependency parse. NOT bundled in the packaged app (its torch dependency is excluded by the PyInstaller spec); dev/desktop users install it separately and the models download on first use to `~/.cache/stanza`. The engine degrades to spaCy blank tokenization + bundled stopwords when absent, and the capability registry says so. |
+| Stanza UD models for ur/hi/fa | data licensed per Stanza repo (models trained on UD treebanks, CC BY-SA 4.0 unless stated otherwise on the model card) | Download-on-demand by Stanza itself; never bundled. |
+| [wordfreq](https://github.com/rspeer/wordfreq) 3.1.1 (Python package) | Apache-2.0 | Already a transitive dependency (persuasion-index); used in v1.2.11 to derive the ur/hi/fa keyness baselines. |
+| wordfreq bundled frequency DATA (source of `urdu-freq-top1000.tsv`, `hindi-freq-top1000.tsv`, `farsi-freq-top1000.tsv`) | **CC BY-SA 4.0** (per the wordfreq 3.1.1 distribution statement: "it includes data files that may be redistributed under a Creative Commons Attribution-ShareAlike 4.0 license"; sources: Wikipedia, Leeds Internet Corpus, OPUS OpenSubtitles 2018, ParaCrawl, Google Books Ngrams) | The derived top-1000 TSVs ARE bundled under `reference-data/reference-corpora/{ur,hi,fa}/`, SHA-256-pinned in the reference-corpus registry, with attribution in each file header. Share-alike: treat the derived lists as CC BY-SA 4.0. |
+| Noto Sans Devanagari (v2.007, hinted) | SIL Open Font License 1.1 | Bundled as web fonts (`web/public/fonts/`, license file alongside). |
+| Noto Nastaliq Urdu (variable) | SIL Open Font License 1.1 | Bundled as a web font; the Nastaliq-capable Urdu face. |
+| Noto Sans Arabic (variable) | SIL Open Font License 1.1 | Bundled as a web font; local Arabic/Persian fallback (offline-first). |
+| [Amiri](https://github.com/aliftype/amiri) 1.000 | SIL Open Font License 1.1 | NOT bundled in the app; used only by `scripts/generate_arabic_guide_pdf.py` to render the Arabic User Guide PDF. |
+
 ---
 
 ## Reference corpora and wordlists (NOT bundled in Phase 0)

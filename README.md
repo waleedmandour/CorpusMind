@@ -2,8 +2,8 @@
 
 [![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.23052753-blue)](https://doi.org/10.5281/zenodo.23052753)
 [![License: AGPL-3.0-only](https://img.shields.io/badge/License-AGPL--3.0--only-blue.svg)](https://www.gnu.org/licenses/agpl-3.0.html)
-[![GitHub release](https://img.shields.io/badge/release-v1.2.6-blue)](https://github.com/waleedmandour/CorpusMind/releases)
-[![Build Status](https://img.shields.io/badge/CI-passing-brightgreen)](https://github.com/waleedmandour/CorpusMind/actions)
+[![GitHub release](https://img.shields.io/badge/release-v1.2.11-blue)](https://github.com/waleedmandour/CorpusMind/releases)
+[![CI](https://github.com/waleedmandour/CorpusMind/actions/workflows/ci.yml/badge.svg)](https://github.com/waleedmandour/CorpusMind/actions/workflows/ci.yml)
 
 > A local-first, AI-native research environment for corpus linguistics and multimodal discourse analysis.
 
@@ -34,7 +34,22 @@ run entirely on the researcher's own machine.
 
 ## Status
 
-**Current release: v1.2.6** — both suites are fully functional.
+**Current release: v1.2.11** — the text suite is fully functional.
+
+**Language support (v1.2.11):**
+
+| Language | Script | Coverage |
+| --- | --- | --- |
+| English (en) | Latin | Full pipeline (spaCy en_core_web_sm): POS, lemma, dependency, all tools |
+| Arabic (ar) | Arabic | Full pipeline (CAMeL Tools): morphology, roots, dialect ID; no UD parse; vocab bands en-only |
+| Urdu (ur) | Perso-Arabic | Tokenization + statistics (frequency/collocation/keyness/dispersion/n-grams), Vector KWIC, bundled stopwords + keyness baseline; POS/lemma/parse via optional Stanza; RTL layout |
+| Hindi (hi) | Devanagari | Same as Urdu (LTR); danda sentence splitting; nukta normalization |
+| Farsi/Persian (fa) | Perso-Arabic | Same as Urdu; ZWNJ-preserving normalization with documented keep/space/strip modes |
+
+Tools a language does not support (sentiment, discourse cue lenses, vocab
+bands, learner error rules outside en/ar) return an explicit
+"not available for this language" status — never silent English or
+Arabic fallbacks. The machine-readable registry is `GET /api/v1/languages`.
 
 **Suite A (Text):** complete — cleaning (16 options), corpus hub, concordance,
 **Vector KWIC** (semantic re-ranking, bge-m3), frequency, collocations, keyness,
@@ -54,7 +69,7 @@ maintained as **CorpusMind Lens** at
 this repository ships only the CorpusMind text-analysis app.
 
 **Both apps:** installable PWA + a Tauri 2 desktop shell (CorpusMind here,
-CorpusMind Lens in its own repo), 400+ backend tests, ruff-clean,
+CorpusMind Lens in its own repo), 645 backend tests, ruff-clean,
 self-hosted Docker image. The two apps connect via the versioned
 Companion-Mode API when both are installed.
 
@@ -68,73 +83,8 @@ analysis engine as a local sidecar, so the desktop apps run fully offline.
 <details>
 <summary><strong>Phase history (Phase 0 → 6)</strong></summary>
 
-This narrative has moved out of the README top so it can no longer go stale
-above the fold (Issue 22). The authoritative history lives in
-[CHANGELOG.md](CHANGELOG.md).
-
-### Phase 0 — Foundations ✅
-- ✅ Monorepo scaffold
-- ✅ `corpusmind-engine` skeleton with health-check API
-- ✅ `corpusmind-web` skeleton as an installable PWA
-- ✅ `corpusmind-desktop` Tauri 2 shell that can spawn the engine as a sidecar
-- ✅ `ModelProvider` abstraction wired to Ollama, LM Studio, and an opt-in Cloud provider
-- ✅ Working "hello world" grounded-AI chat round-trip (with citation-or-flag contract)
-- ✅ Statistical measures from 12 (collocation, keyness, dispersion, STTR) with unit tests
-- ✅ Ribbon-style shell UI and theme system (dark/light, RTL-ready)
-
-### Phase 1 — Suite A MVP ✅
-- ✅ Storage layer — SQLAlchemy 2.0 async models (projects, corpora, documents, tokens, annotation versions, persisted conversations)
-- ✅ Ingestion — TXT / DOCX / PDF / HTML / XML / CSV / MD parsing with charset detection + spaCy NLP
-- ✅ Corpus management — full CRUD + drag-and-drop upload + visible pipeline recipe (4.8 reproducibility)
-- ✅ Concordancer — KWIC search with stable line IDs (cited by the AI Assistant), lemma/word/POS levels, wildcards
-- ✅ Frequency analysis — word / lemma / POS with STTR as the comparably valid default
-- ✅ Collocation analysis — all 7 12 measures (MI, T-score, LL, Dice, LogDice, χ², ΔP) with configurable window
-- ✅ Keyness analysis — significance (LL, χ²) AND effect size (Log Ratio, %DIFF, Simple Maths, Odds Ratio) always together (4 Principle 3)
-- ✅ Dispersion — Juilland's D and Gries' DP across documents
-- ✅ Grounded-AI tool surface — `search_concordance`, `get_frequency`, `compute_collocations`, `compute_keyness`, `get_dispersion`; conversations persist in SQLite
-- ✅ Export — Excel + CSV + TSV + TXT + JSON (concordance/frequency/collocation/keyness) + collocation network diagrams (SVG + PNG) + auto-drafted Methods PDF
-- ✅ Web UI — corpus manager, concordancer, analysis tabs, Assistant with clickable evidence citations
-
-### Phase 2 — Suite A completion ✅
-- ✅ 8.8 N-grams + lexical bundles (frequency-and-range criterion, Biber et al.)
-- ✅ 8.10 Vocabulary profiling (K1/K2-K9/AWL/Off-list bands; rare words; academic words)
-- ✅ 8.11 POS analysis (distribution + POS n-grams 1–5)
-- ✅ 8.12 Grammar analysis (dependency-driven: passive, modal, negation, relative clause, complex NP, tense)
-- ✅ 8.13 Dependency analysis (governor-dependent pairs for any UD relation)
-- ✅ 8.15 Discourse analysis (Hyland's interactive + interactional metadiscourse taxonomy)
-- ✅ 8.17 Metaphor candidates (MIPVU-inspired, LLM-triaged, human-verified gate)
-- ✅ 8.18 Sentiment analysis (lexicon-based, per-sentence timeline)
-- ✅ 8 new grounded-AI tools (14 total): `get_ngrams`, `get_pos_analysis`, `grammar_query`, `dependency_query`, `discourse_analysis`, `vocab_profile`, `sentiment`, `metaphor_candidates`
-- ✅ 46 tests passing (23 stats + 9 Phase 1 API + 14 Phase 2 API)
-- ✅ Code review completed: 149 ruff lint errors → 0; spec compliance audit documented
-
-### Phase 3 — Arabic depth pass ✅
-- ✅ 8.21 CAMeL Tools integration (calima-msa-r13 morphology DB; Egyptian/Gulf/Levantine DBs available)
-- ✅ 8.21 Root extraction (الجذر) — e.g. `المكتبة → ك.ت.ب`
-- ✅ 8.21 Pattern (وزن) identification — e.g. `يُ1ْ2ِ3`, `المَ1ْ2َ3َة`
-- ✅ 8.21 Lemma normalization + diacritics handling (user-controlled)
-- ✅ 8.21 Buckwalter transliteration — `الطلاب → AlTlAb`
-- ✅ 8.21 Clitic segmentation
-- ✅ 8.21 Dialect identification (MSA/Egyptian/Gulf/Levantine; heuristic starter)
-- ✅ 8.21 Register detection (Classical / MSA / Dialectal)
-- ✅ 8.21 Normalization (alef variants, teh marbuta, alef maksura)
-- ✅ 8.21 Backend abstraction (CAMeL default; Farasa + SinaTools stubbed — swappable per 3.3)
-- ✅ 5 new grounded-AI tools (19 total): `arabic_morphology`, `arabic_dialect_id`, `arabic_roots`, `arabic_register`, `arabic_transliterate`
-- ✅ Web UI: 8-tool Arabic workbench with RTL input + sample texts + dialect picker
-- ✅ 56 tests passing (23 stats + 9 Phase 1 + 14 Phase 2 + 10 Phase 3 Arabic)
-
-### Phase 6 — Polish, tooling, and research workflow ✅
-- ✅ **Smart Troubleshooting** — backend error detection during app use, shown in the taskbar; optional Gemini-powered interpretation + suggested fix; one-click "Report to developer" email flow
-- ✅ **In-app User Guide** — 18-section professional guide in the sidebar (Getting Started, Concordance, Frequency/STTR, Collocation, Keyness, Arabic Tools, Vision Suite, AI Assistant, Privacy, Troubleshooting, Reproducibility, Shortcuts, Citation)
-- ✅ **Corpus Cleaning** — per-corpus on-demand re-cleaning with 16 options (whitespace, URLs, emails, lowercase, punctuation, numbers, emoji, stopwords, min token length, Arabic normalization/diacritics/tatweel)
-- ✅ **Corpus Hub** — search + download open-access corpora in Arabic and English from three hubs: HuggingFace datasets-server (Wikipedia, OSCAR, CC-100), Wikipedia live (ar + en), OPUS (parallel ar↔en translation pairs)
-- ✅ **Multi-format export** — all analysis results exportable in 5 formats (Excel, CSV, TSV, TXT, JSON) via a unified format-parameterized API
-- ✅ **Diagram export** — collocation network diagrams exportable as SVG (vector) and PNG (raster 1600×1200)
-- ✅ **Windows build script** — `scripts/build-corpusmind-windows.ps1` produces both NSIS `.exe` and MSI `.msi`, uninstalls previous versions, installs for the current user
-- ✅ **CI fixes** — Desktop (Rust) job now passes (externalBin clearing pattern + E0597 lifetime fix); engine tests improved from 71→88 passing by downloading the spaCy model in CI
-
-### Phase 4 — Suite B MVP (Vision) ✅
-- ✅ Image ingestion, OCR, Visual Grammar (Kress & van Leeuwen), multimodal image–text alignment; + 8.22 bilingual tools + full CAMeL DialectIdentifier model
+The build-out narrative lives in [CHANGELOG.md](CHANGELOG.md); the README
+no longer duplicates it (it went stale twice).
 
 </details>
 
@@ -195,7 +145,7 @@ Health check:
 
 ```bash
 curl http://127.0.0.1:8765/api/v1/health
-# {"status":"ok","engine":"corpusmind-engine","version":"1.2.6"}
+# {"status":"ok","engine":"corpusmind-engine","version":"1.2.11"}
 ```
 
 ### 2. Run the web frontend (PWA)
@@ -324,8 +274,11 @@ corpusmind/
 ├── engine/            # corpusmind-engine — Python (FastAPI) service
 │   ├── ingestion/     # upload, cleaning, encoding/language detection
 │   ├── nlp/           # tokenization, POS, lemmatization, dependency parsing
-│   │   ├── general/   # spaCy / Stanza / Trankit pipelines
-│   │   └── arabic/    # CAMeL Tools, Farasa, SinaTools, CamelParser2.0 wrapper
+│   │   ├── general/   # spaCy / Stanza pipelines (ur/hi/fa via Stanza when installed)
+│   │   ├── arabic/    # CAMeL Tools, Farasa, SinaTools, CamelParser2.0 wrapper
+│   │   ├── languages.py  # per-language capability registry (GET /api/v1/languages)
+│   │   ├── normalizers.py  # ar/fa/ur/hi normalization (SQL scalars mirror these)
+│   │   └── script_detect.py  # heuristic language detection guard
 │   ├── stats/         # frequency, collocation, keyness, dispersion, n-grams  ← 12 formulas
 │   ├── discourse/     # metadiscourse, stance/appraisal, metaphor (MIP/MIPVU), sentiment
 │   ├── vision/        # OCR, object/scene detection, composition/color analysis
@@ -463,7 +416,7 @@ If you use CorpusMind in your research, please cite it as:
 
 > Mandour, W., & Ibrahim, W. (2026). *CorpusMind: A local-first, AI-native
 > research environment for corpus linguistics and multimodal discourse
-> analysis* (Version 1.2.10) [Computer software]. Zenodo.
+> analysis* (Version 1.2.11) [Computer software]. Zenodo.
 > https://doi.org/10.5281/zenodo.23052753
 >
 > Dr. Waleed Mandour, Sultan Qaboos University, ORCID: 0000-0002-9262-5993
@@ -478,7 +431,7 @@ If you use CorpusMind in your research, please cite it as:
                    for corpus linguistics and multimodal discourse analysis}},
   month        = jul,
   year         = 2026,
-  version      = {1.2.10},
+  version      = {1.2.11},
   publisher    = {Zenodo},
   doi          = {10.5281/zenodo.23052753},
   url          = {https://doi.org/10.5281/zenodo.23052753}
@@ -486,7 +439,8 @@ If you use CorpusMind in your research, please cite it as:
 ```
 
 **Versioned DOIs:** The DOI above (10.5281/zenodo.23052753) is the
-versioned DOI for v1.2.10. The concept DOI (all versions) is
+versioned DOI for the current release (update per Zenodo record at release
+time). The concept DOI (all versions) is
 [10.5281/zenodo.21226650](https://doi.org/10.5281/zenodo.21226650).
 Cite the specific version DOI for reproducibility.
 
@@ -581,7 +535,7 @@ on GitHub.
 - Guide refreshed to the v1.2.x feature set (Vector KWIC, Learner Research, multi-taxonomy Discourse, floating assistant) and tightened throughout; regenerated as `CorpusMind_User_Guide_v1.2.6.pdf` (EN) and `CorpusMind_User_Guide_Arabic_v1.2.6.pdf` (AR); the installer-bundled PDF is refreshed too.
 
 ### Tests
-- **Engine: 447 passed, 9 skipped** (9 pre-existing environmental spaCy-model skips), 0 failed — includes 7 new multi-taxonomy discourse tests.
+- **Engine: 645 passed, 9 skipped, 0 failed — includes the v1.2.11 language suite (normalizer parity, script detection, per-language fixtures, registry + student-route tests).
 - **Ruff**: All checks passed.
 - **Web typecheck (tsc) + build**: passed; floating-assistant fix verified end-to-end against the dev engine with a scripted browser session.
 
