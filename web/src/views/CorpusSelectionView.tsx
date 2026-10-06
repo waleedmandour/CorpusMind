@@ -541,7 +541,7 @@ function ReferenceDownload() {
   const setActive = useApp((s) => s.setReferenceCorpus);
   const qc = useQueryClient();
   const [query, setQuery] = useState("");
-  const [language, setLanguage] = useState<"en" | "ar">("en");
+  const [language, setLanguage] = useState<string>("en");
   const [searchParams, setSearchParams] = useState<{ q: string; lang: string } | null>(null);
   const [downloadStatus, setDownloadStatus] = useState<{ kind: "info" | "success" | "error"; msg: string } | null>(null);
   const [downloadingResult, setDownloadingResult] = useState<HubSearchResult | null>(null);

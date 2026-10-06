@@ -144,8 +144,6 @@ _ARABIC_TATWEEL = "\u0640"  # ـ kashida
 # v1.2.11: use get_stopwords() so Urdu/Hindi/Farsi corpora get their own
 # lists instead of falling through to the English default.
 from nlp.stopwords import get_stopwords as _get_stopwords  # noqa: E402
-from nlp.stopwords import ARABIC_STOPWORDS as _ARABIC_STOPWORDS  # noqa: E402
-from nlp.stopwords import ENGLISH_STOPWORDS as _ENGLISH_STOPWORDS  # noqa: E402
 
 # --------------------------------------------------------------------------- #
 # Cleaning functions
