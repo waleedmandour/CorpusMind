@@ -55,6 +55,12 @@ class ConcordanceRequest(BaseModel):
     sample_seed: int | None = None  # Issue 17: reproducible sampling
     sort: list[SortSpec] | None = None  # v1.0.1: KWIC sort (L1/R1/L2/R2…)
     normalize_arabic: bool = False  # v1.2.0 item 6: unify أإآ→ا, ة→ه, ى→ي + strip harakat
+    # v1.2.11: language-appropriate normalization. When set, the corpus
+    # language decides the normalizer (ar → arnorm, ur/fa → urnorm/fanorm,
+    # hi → hinorm, en → lowercase); the legacy normalize_arabic flag keeps
+    # its exact old behavior. zwnj applies to fa/ur matching only.
+    normalize: bool | None = None
+    zwnj: Literal["keep", "space", "strip"] = "keep"
 
 
 @router.post("/corpora/{cid}/concordance")
@@ -75,6 +81,8 @@ async def concordance(cid: str, body: ConcordanceRequest, session: AsyncSession 
         random_sample=body.random_sample, sample_seed=body.sample_seed,
         sort=[s.model_dump() for s in body.sort] if body.sort else None,
         normalize_arabic=body.normalize_arabic,
+        normalize=body.normalize,
+        zwnj=body.zwnj,
     )
     return {
         "lines": [asdict(l) for l in result.lines],
@@ -258,6 +266,8 @@ class FrequencyRequest(BaseModel):
     subcorpus_id: str | None = None  # Issue 2: optional subcorpus restriction
     stopword_list_id: str | None = None  # v1.0.1: optional stopword filter
     normalize_arabic: bool = False  # v1.2.0 item 6
+    normalize: bool | None = None   # v1.2.11: language-appropriate normalization
+    zwnj: Literal["keep", "space", "strip"] = "keep"  # v1.2.11: fa/ur ZWNJ mode
 
 
 @router.post("/corpora/{cid}/frequency")
@@ -276,6 +286,8 @@ async def frequency(cid: str, body: FrequencyRequest, session: AsyncSession = De
         document_ids=document_ids,
         stopword_set=stopword_set,
         normalize_arabic=body.normalize_arabic,
+        normalize=body.normalize,
+        zwnj=body.zwnj,
     )
     return asdict(r)
 
@@ -299,6 +311,8 @@ class CollocationRequest(BaseModel):
     pos_exclude: list[str] | None = None   # v1.0.1: collocate UPOS blacklist (prefix match)
     stopword_list_id: str | None = None    # v1.0.1: optional stopword filter
     normalize_arabic: bool = False         # v1.2.0 item 6
+    normalize: bool | None = None          # v1.2.11: language-appropriate normalization
+    zwnj: Literal["keep", "space", "strip"] = "keep"  # v1.2.11: fa/ur ZWNJ mode
 
 
 @router.post("/corpora/{cid}/collocations")
@@ -323,6 +337,8 @@ async def collocations(cid: str, body: CollocationRequest, session: AsyncSession
             pos_include=body.pos_include, pos_exclude=body.pos_exclude,
             stopword_set=stopword_set,
             normalize_arabic=body.normalize_arabic,
+            normalize=body.normalize,
+            zwnj=body.zwnj,
         )
         return asdict(r)
 
@@ -340,6 +356,8 @@ class KeynessRequest(BaseModel):
     subcorpus_id: str | None = None  # Issue 2: optional subcorpus restriction on the TARGET corpus
     stopword_list_id: str | None = None  # v1.0.1: optional stopword filter
     normalize_arabic: bool = False  # v1.2.0 item 6
+    normalize: bool | None = None   # v1.2.11: language-appropriate normalization
+    zwnj: Literal["keep", "space", "strip"] = "keep"  # v1.2.11: fa/ur ZWNJ mode
 
 
 @router.post("/corpora/{cid}/keyness")
@@ -362,6 +380,8 @@ async def keyness(cid: str, body: KeynessRequest, session: AsyncSession = Depend
                 target_document_ids=target_document_ids,
                 stopword_set=await resolve_stopword_set(session, body.stopword_list_id),
                 normalize_arabic=body.normalize_arabic,
+                normalize=body.normalize,
+                zwnj=body.zwnj,
             )
         except ValueError as e:
             raise HTTPException(status_code=422, detail=str(e)) from e

@@ -391,7 +391,7 @@ def list_prefabricated(*, language: str = "en") -> list[dict[str, Any]]:
         out.append({
             "id": q.id,
             "category": q.category,
-            "label": q.label_en if language == "en" else q.label_ar,
+            "label": q.label_en if language != "ar" else q.label_ar,  # v1.2.11: non-ar languages get English labels (no silent Arabic fallback)
             "query": q.query_en if language == "en" else q.query_ar,
             "requires_corpus": q.requires_corpus,
             "requires_reference": q.requires_reference,
@@ -490,7 +490,7 @@ def list_vision_prefabricated(*, language: str = "en") -> list[dict[str, Any]]:
         out.append({
             "id": q.id,
             "category": q.category,
-            "label": q.label_en if language == "en" else q.label_ar,
+            "label": q.label_en if language != "ar" else q.label_ar,  # v1.2.11: non-ar languages get English labels (no silent Arabic fallback)
             "query": q.query_en if language == "en" else q.query_ar,
             "requires_corpus": q.requires_corpus,
             "requires_reference": q.requires_reference,

@@ -109,7 +109,12 @@ def resolve_embed_model(requested: str | None) -> str:
 
 
 def _normalize_for_embedding(text: str) -> str:
-    """Optional Arabic normalization before embedding (item 4 + item 6)."""
+    """Arabic normalization before embedding (item 4 + item 6).
+
+    v1.2.11: this is now the ARABIC variant only. Use
+    :func:`_normalize_for_corpus` so fa/ur/hi corpora get their own
+    normalizer instead of Arabic letter folding.
+    """
     import re
     import unicodedata
 
@@ -119,6 +124,29 @@ def _normalize_for_embedding(text: str) -> str:
     s = s.replace("\u0629", "\u0647")                 # ة → ه
     s = s.replace("\u0649", "\u064A")                 # ى → ي
     return s
+
+
+def _normalize_for_corpus(text: str, language: str) -> str:
+    """Language-appropriate pre-embedding normalization (v1.2.11).
+
+    The normalize toggle on the Vector KWIC request previously applied
+    ARABIC folding to whatever corpus was active — silently wrong for
+    Persian/Urdu (the Arabic teh-marbuta/alef rules do not exist there)
+    and useless for Hindi. Each language now folds under its own rules;
+    unknown languages only casefold (bge-m3 handles the rest).
+    """
+    lang = (language or "en").lower()
+    if lang == "ar":
+        return _normalize_for_embedding(text)
+    from nlp.normalizers import en_norm, fa_norm, hi_norm, ur_norm
+
+    if lang == "ur":
+        return ur_norm(text)
+    if lang == "fa":
+        return fa_norm(text)
+    if lang == "hi":
+        return hi_norm(text)
+    return en_norm(text)
 
 
 def cosine(a: list[float], b: list[float]) -> float:
@@ -380,8 +408,18 @@ async def vector_kwic(
     """
     embed_model = resolve_embed_model(model)
 
+    # v1.2.11: resolve the corpus language once so the pre-embedding
+    # normalization matches the corpus, not the Arabic defaults.
+    from storage.models import Corpus as CorpusModel
+
+    corpus_row = await session.get(CorpusModel, corpus_id)
+    corpus_lang = (corpus_row.language if corpus_row else "en").lower()
+
+    def _pre_norm(t: str) -> str:
+        return _normalize_for_corpus(t, corpus_lang) if normalize_arabic else t
+
     t_start = time.perf_counter()
-    query_text = _normalize_for_embedding(query) if normalize_arabic else query
+    query_text = _pre_norm(query)
 
     # ------------------------------------------------------------------ #
     # Mode A: keyword candidates → embed contexts → re-rank
@@ -394,7 +432,10 @@ async def vector_kwic(
             document_ids=document_ids,
         )
         candidates = conc.lines
-        keys = [_line_key(l.line_id, window, "kwic") for l in candidates]
+        keys = [
+            _line_key(l.line_id, window, "kwic") + ("|norm" if normalize_arabic else "")
+            for l in candidates
+        ]
         t_candidates = time.perf_counter()
         cached = await _load_cached_vectors(session, corpus_id, embed_model, keys)
 
@@ -405,7 +446,7 @@ async def vector_kwic(
                 continue
             ctx = f"{line.left} {line.node} {line.right}".strip()
             if normalize_arabic:
-                ctx = _normalize_for_embedding(ctx)
+                ctx = _pre_norm(ctx)
             to_embed.append(ctx)
             to_embed_keys.append(key)
 
@@ -463,7 +504,9 @@ async def vector_kwic(
             model=embed_model,
             query={"query": query, "node": node.strip(), "level": level,
                    "window": window, "top_k": top_k, "min_similarity": min_similarity,
-                   "normalize_arabic": normalize_arabic},
+                   "normalize_arabic": normalize_arabic,
+                   "language": corpus_lang,
+                   "normalizer": "arabic" if (normalize_arabic and corpus_lang == "ar") else (corpus_lang if normalize_arabic else None)},
             timing=timing,
         )
 
@@ -529,7 +572,10 @@ async def vector_kwic(
         entry["tokens"].append(text)
     scanned = len(sentences)
 
-    keys = [_line_key(f"{d}:{s}", 0, "sent") for d, s in sentences]
+    keys = [
+        _line_key(f"{d}:{s}", 0, "sent") + ("|norm" if normalize_arabic else "")
+        for d, s in sentences
+    ]
     t_candidates = time.perf_counter()
     cached = await _load_cached_vectors(session, corpus_id, embed_model, keys)
 
@@ -540,7 +586,7 @@ async def vector_kwic(
             continue
         text = " ".join(entry["tokens"])
         if normalize_arabic:
-            text = _normalize_for_embedding(text)
+            text = _pre_norm(text)
         to_embed.append(text)
         to_embed_keys.append(key)
 
@@ -597,6 +643,8 @@ async def vector_kwic(
         mode="semantic",
         model=embed_model,
         query={"query": query, "top_k": top_k, "min_similarity": min_similarity,
-               "normalize_arabic": normalize_arabic, "scan_cap": SENTENCE_SCAN_CAP},
+               "normalize_arabic": normalize_arabic, "scan_cap": SENTENCE_SCAN_CAP,
+               "language": corpus_lang,
+               "normalizer": "arabic" if (normalize_arabic and corpus_lang == "ar") else (corpus_lang if normalize_arabic else None)},
         timing=timing,
     )

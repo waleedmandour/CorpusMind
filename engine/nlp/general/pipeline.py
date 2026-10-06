@@ -147,9 +147,9 @@ class SpaCyPipeline:
                      "The full model was not bundled correctly in PyInstaller.",
             )
             nlp = spacy.blank(self._language)
-            # Add a sentencizer so we at least get sentence boundaries
-            if "sentencizer" not in nlp.pipe_names:
-                nlp.add_pipe("sentencizer")
+            # Add a sentencizer (with the language's own terminators, e.g.
+            # danda for Hindi / ۔ for Urdu) so we at least get sentences.
+            _add_lang_sentencizer(nlp, self._language)
 
         self._nlp = nlp
 
@@ -161,7 +161,7 @@ class SpaCyPipeline:
             for p in ("senter", "sentencizer", "parser")
         )
         if not has_sent_pipe:
-            self._nlp.add_pipe("sentencizer")
+            _add_lang_sentencizer(self._nlp, self._language)
         spacy_version = spacy.__version__
         model_meta = self._nlp.meta
         self._info = PipelineInfo(
@@ -225,6 +225,29 @@ class SpaCyPipeline:
 # official model. Users can still force spacy via get_pipeline(backend="spacy",
 # language="ur") — it will degrade to spacy.blank("ur") (tokenizer-only).
 STANZA_PREFERRED_LANGUAGES: frozenset[str] = frozenset({"ur", "hi", "fa"})
+
+# v1.2.11: language-specific sentence terminators for the spaCy blank
+# fallback pipelines. spaCy's default sentencizer knows .!? but NOT the
+# Hindi danda । / double danda ॥ or the Urdu full stop ۔ — without this,
+# a whole Urdu/Hindi document collapses into one "sentence" and every
+# sentence-level statistic (MATTR windows, sentiment timeline, dispersion
+# by sentence) silently degrades. Latin and Arabic interrogatives are
+# included so mixed-script input still splits. (Stanza, when installed,
+# provides the boundaries instead — its tokenizers know these marks.)
+BLANK_SENTENCIZER_PUNCT: dict[str, list[str]] = {
+    "hi": ["।", "॥", ".", "!", "?", "？"],
+    "ur": ["۔", ".", "!", "?", "؟", "？"],
+    "fa": [".", "!", "?", "؟", "？", "؛"],
+}
+
+
+def _add_lang_sentencizer(nlp, language: str) -> None:
+    """Add a sentencizer to a blank pipeline with per-language terminators."""
+    punct = BLANK_SENTENCIZER_PUNCT.get(language)
+    if punct:
+        nlp.add_pipe("sentencizer", config={"punct_chars": punct})
+    else:
+        nlp.add_pipe("sentencizer")
 
 # Default Stanza package size per language. "default" ≈ 30–50 MB, gives full
 # tokenize/mwt/pos/lemma/deps/ner. Users who want the larger "combined" or

@@ -42,8 +42,6 @@ log = get_logger(__name__)
 _CLAUSE_RELS = {"acl", "advcl", "ccomp", "xcomp", "csubj", "csubj:pass",
                 "acl:relcl", "relcl", "conj"}
 
-_ARABIC_CHAR = re.compile(r"[\u0600-\u06FF]")
-
 _ROOT_PART = re.compile(r"(?:^|\|)root=([^|]+)")
 
 _SENT_LEN_BUCKETS = (("1-5", 1, 5), ("6-10", 6, 10), ("11-15", 11, 15),
@@ -53,6 +51,11 @@ _ACCURACY_DISCLAIMER = (
     "Accuracy indices are HEURISTIC PROXIES computed from seed rule-based "
     "error candidates (learner.errors) - NOT validated error counts. "
     "Human/LLM verification is required before reporting them."
+)
+_NO_RULES_NOTE = (
+    "No seed error rules exist for this language - accuracy indices are "
+    "returned as None because no rules ran, NOT because the writing is "
+    "error-free. Complexity and diversity indices remain fully valid."
 )
 _COMPLEXITY_DISCLAIMER = (
     "Complexity indices are automated approximations (Lu 2010/2012 lineage, "
@@ -144,7 +147,13 @@ def compute_caf(sentences: list[list[dict]], *, language: str | None = None) -> 
     lowered = [t.lower() for t in texts]
 
     if language is None:
-        language = "ar" if any(_ARABIC_CHAR.search(t) for t in texts if t) else "en"
+        # v1.2.11: heuristic script/language detection instead of the old
+        # binary "any Arabic-script char -> Arabic rules", which silently
+        # routed Persian and Urdu text into the Arabic rule set. See
+        # nlp/script_detect.py for the ordered rules and their limits.
+        from nlp.script_detect import detect_language
+
+        language = detect_language(" ".join(t for t in texts if t))
 
     notes: list[str] = [_ACCURACY_DISCLAIMER, _COMPLEXITY_DISCLAIMER]
 
@@ -202,23 +211,33 @@ def compute_caf(sentences: list[list[dict]], *, language: str | None = None) -> 
     # --- accuracy proxy (heuristic!) ----------------------------------------
     # The error-free boolean is delegated to learner.errors.flag_sentence_tokens
     # (the documented primitive); the density counts below reuse the same rule
-    # set to attribute firings per token.
+    # set to attribute firings per token. v1.2.11: languages with no bundled
+    # rules (ur/hi/fa) get None + an explicit note instead of a fake 100%
+    # error-free ratio.
+    from learner.errors import _rules_for
+
+    rules_available = bool(_rules_for(language))
     error_free = 0
     total_flagged = 0
     spelling_flagged = 0
-    for sent in sentences:
-        if not flag_sentence_tokens(sent, language):
-            error_free += 1
-        firings = _sentence_firings(sent, language)
-        total_flagged += len({tok_idx for tok_idx, _rid, _r in firings})
-        spelling_flagged += sum(1 for _i, rid, _r in firings if rid == "en_spelling")
-    error_free_sentence_ratio = round(error_free / n_sents, 4) if n_sents else None
+    if rules_available:
+        for sent in sentences:
+            if not flag_sentence_tokens(sent, language):
+                error_free += 1
+            firings = _sentence_firings(sent, language)
+            total_flagged += len({tok_idx for tok_idx, _rid, _r in firings})
+            spelling_flagged += sum(1 for _i, rid, _r in firings if rid == "en_spelling")
+    error_free_sentence_ratio = (
+        round(error_free / n_sents, 4) if (n_sents and rules_available) else None
+    )
     error_candidates_per_100 = (
-        round(total_flagged / n_tokens * 100.0, 4) if n_tokens else None
+        round(total_flagged / n_tokens * 100.0, 4) if (n_tokens and rules_available) else None
     )
     spelling_candidate_rate = (
-        round(spelling_flagged / n_tokens, 4) if n_tokens else None
+        round(spelling_flagged / n_tokens, 4) if (n_tokens and rules_available) else None
     )
+    if not rules_available:
+        notes.append(_NO_RULES_NOTE)
 
     log.info(
         "learner_caf_computed", tokens=n_tokens, sentences=n_sents,

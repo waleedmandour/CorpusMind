@@ -131,6 +131,12 @@ _TAGSET_INDEX = {s.id: s for s in TAGSETS}
 _GRAMMATICAL_BY_LANG: dict[str, list[str]] = {
     "en": ["upos", "ptb", "claws7"],
     "ar": ["upos", "calima"],
+    # v1.2.11: ur/hi/fa have no language-specific tagset in the engine; the
+    # UPOS tagset is valid once the optional Stanza backend is installed and
+    # the pipeline recipe says which backend produced the tags.
+    "ur": ["upos"],
+    "hi": ["upos"],
+    "fa": ["upos"],
     # Universal default for other languages
     "fr": ["upos"],
     "de": ["upos"],

@@ -450,6 +450,17 @@ async def discourse(
                 "(Apache-2.0, Wang & Gong 2026) to enable the Persuasion "
                 "Index lens.",
             ) from e
+        if msg.startswith("taxonomy_language_mismatch:"):
+            # v1.2.11: the taxonomy's cues do not exist for this corpus
+            # language — a 409 (state conflict), not a silent all-zero run.
+            _t, tax, lang = msg.split(":", 2)
+            raise HTTPException(
+                409,
+                f"The '{tax}' discourse lens ships cues for English only, so "
+                f"it cannot analyze a '{lang}' corpus. The USAS lens is the "
+                f"bilingual (en/ar) alternative; see GET "
+                f"/api/v1/languages for per-language tool coverage.",
+            ) from e
         raise HTTPException(400, msg) from e
     return asdict(r)
 
@@ -472,9 +483,21 @@ async def vocab_profile(
 ) -> dict:
     if not await session.get(Corpus, cid):
         raise HTTPException(404, "Corpus not found")
-    r = await compute_vocab_profile(
-        session, cid, rare_threshold=body.rare_threshold, limit=body.limit
-    )
+    try:
+        r = await compute_vocab_profile(
+            session, cid, rare_threshold=body.rare_threshold, limit=body.limit
+        )
+    except ValueError as e:
+        msg = str(e)
+        if msg.startswith("vocab_bands_missing:"):
+            lang = msg.split(":", 1)[1]
+            raise HTTPException(
+                503,
+                f"Vocabulary profiling bands (K1/AWL) are defined by English "
+                f"wordlists and are not available for '{lang}' corpora. The "
+                f"frequency list itself still works for every language.",
+            ) from e
+        raise HTTPException(400, msg) from e
     return asdict(r)
 
 
@@ -487,7 +510,20 @@ async def vocab_profile(
 async def sentiment(cid: str, session: AsyncSession = Depends(get_session)) -> dict:
     if not await session.get(Corpus, cid):
         raise HTTPException(404, "Corpus not found")
-    r = await compute_sentiment(session, cid)
+    try:
+        r = await compute_sentiment(session, cid)
+    except ValueError as e:
+        msg = str(e)
+        if msg.startswith("sentiment_lexicon_missing:"):
+            lang = msg.split(":", 1)[1]
+            raise HTTPException(
+                503,
+                f"No sentiment valence lexicon exists for '{lang}' in this "
+                f"engine, so running it would silently produce wrong scores. "
+                f"Bundled lexicons: en, ar. See GET /api/v1/languages for "
+                f"per-language coverage.",
+            ) from e
+        raise HTTPException(400, msg) from e
     return asdict(r)
 
 

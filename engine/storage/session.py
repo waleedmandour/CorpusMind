@@ -62,6 +62,34 @@ def _get_engine():
 
             dbapi_connection.create_function("arnorm", 1, _arnorm)
 
+            # v1.2.11: language-appropriate normalizers for Persian, Urdu and
+            # Hindi. Python mirrors live in nlp/normalizers.py and parity is
+            # pinned by tests (tests/test_language_parity.py) over the same
+            # fixtures. Arabic's arnorm is deliberately NOT applied to these
+            # languages: they share the script, not the orthographic rules.
+            from nlp import normalizers as _norms
+
+            def _fanorm(value, mode="keep"):
+                if value is None:
+                    return None
+                return _norms.fa_norm(str(value), mode if mode else "keep")
+
+            def _urnorm(value, mode="keep"):
+                if value is None:
+                    return None
+                return _norms.ur_norm(str(value), mode if mode else "keep")
+
+            def _hinorm(value):
+                if value is None:
+                    return None
+                return _norms.hi_norm(str(value))
+
+            dbapi_connection.create_function("fanorm", 1, _fanorm)
+            dbapi_connection.create_function("fanorm", 2, _fanorm)
+            dbapi_connection.create_function("urnorm", 1, _urnorm)
+            dbapi_connection.create_function("urnorm", 2, _urnorm)
+            dbapi_connection.create_function("hinorm", 1, _hinorm)
+
         _sessionmaker = async_sessionmaker(_engine, expire_on_commit=False, class_=AsyncSession)
     return _engine
 

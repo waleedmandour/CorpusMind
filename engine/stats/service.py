@@ -31,9 +31,102 @@ from stats.measures import (
     mutual_information,
     t_score,
 )
-from storage.models import AnnotationVersion, Document, Token
+from storage.models import AnnotationVersion, Corpus, Document, Token
 
 log = get_logger(__name__)
+
+
+class _Norm:
+    """Resolved normalization policy for one analysis call (v1.2.11).
+
+    Two activation paths, deliberately distinguishable:
+
+    * legacy — ``normalize_arabic=True`` (v1.2.0 flag): applies the Arabic
+      ``arnorm`` behavior EXACTLY as before, whatever the corpus language,
+      so every existing Arabic call site and golden output is unchanged.
+    * v1.2.11 — ``normalize=True``: dispatches on the corpus language to
+      the language-appropriate normalizer (arnorm for ar, fanorm/urnorm for
+      fa/ur, hinorm for hi, lowercase for en). Persian/Urdu honor the
+      documented ZWNJ mode (keep|space|strip); Arabic and Hindi ignore it.
+    """
+
+    __slots__ = ("enabled", "lang", "legacy", "zwnj")
+
+    def __init__(self, enabled: bool, lang: str, zwnj: str = "keep", legacy: bool = False) -> None:
+        self.enabled = enabled
+        self.lang = lang
+        self.zwnj = zwnj
+        self.legacy = legacy
+
+    # -- Python-side normalization (query parts, stopword sets, streaming) -- #
+    def norm_py(self, text: str) -> str:
+        from nlp.normalizers import en_norm, fa_norm, hi_norm, ur_norm
+
+        if self.lang == "ar":
+            return ar_norm(text)
+        if self.lang == "ur":
+            return ur_norm(text, self.zwnj)
+        if self.lang == "fa":
+            return fa_norm(text, self.zwnj)
+        if self.lang == "hi":
+            return hi_norm(text)
+        return en_norm(text)
+
+    # -- SQL-side normalization expression --------------------------------- #
+    def sql_expr(self, col, wrap_lower: bool = False):
+        """SQL expression that normalizes ``col`` under this policy.
+
+        ``wrap_lower`` reproduces the redundant-but-established
+        ``arnorm(lower(col))`` shape of the frequency/keyness sites for
+        Arabic; new languages skip it (no case in Arabic script / Devanagari;
+        Latin tokens in fa/ur keep their case, which the UI reports).
+        """
+        if self.lang == "ar":
+            return func.arnorm(func.lower(col)) if wrap_lower else func.arnorm(col)
+        if self.lang == "ur":
+            return func.urnorm(col, self.zwnj) if self.zwnj != "keep" else func.urnorm(col)
+        if self.lang == "fa":
+            return func.fanorm(col, self.zwnj) if self.zwnj != "keep" else func.fanorm(col)
+        if self.lang == "hi":
+            return func.hinorm(col)
+        return func.lower(col)
+
+
+async def _resolve_norm(
+    session: AsyncSession,
+    corpus_id: str,
+    *,
+    normalize: bool | None,
+    normalize_arabic: bool,
+    zwnj: str = "keep",
+) -> _Norm:
+    """Resolve the normalization policy for a corpus-aware analysis call."""
+    if normalize is None:
+        # Legacy path: only the v1.2.0 flag was provided — preserve its exact
+        # pre-v1.2.11 behavior (Arabic folding regardless of language).
+        return _Norm(bool(normalize_arabic), "ar", legacy=True)
+    lang = "en"
+    corpus_row = await session.get(Corpus, corpus_id)
+    if corpus_row is not None and corpus_row.language:
+        lang = corpus_row.language.lower()
+    return _Norm(bool(normalize), lang, zwnj=zwnj, legacy=False)
+
+
+def _norm_description(norm: _Norm) -> str:
+    """Human-readable normalization note for query metadata / Methods text."""
+    if not norm.enabled:
+        return ""
+    if norm.lang == "ar":
+        return "Arabic normalization (أإآ→ا, ة→ه, ى→ي, harakat stripped)"
+    if norm.lang == "ur":
+        mode = {"keep": "ZWNJ preserved", "space": "ZWNJ as space", "strip": "ZWNJ stripped"}[norm.zwnj]
+        return f"Urdu normalization (ي→ی, ك→ک, ه→ہ; {mode})"
+    if norm.lang == "fa":
+        mode = {"keep": "ZWNJ preserved", "space": "ZWNJ as space", "strip": "ZWNJ stripped"}[norm.zwnj]
+        return f"Persian normalization (ي→ی, ك→ک; {mode})"
+    if norm.lang == "hi":
+        return "Hindi normalization (nukta folded, chandrabindu→anusvara)"
+    return "Lowercase folding"
 
 
 # --------------------------------------------------------------------------- #
@@ -198,6 +291,8 @@ async def search_concordance(
     regex: bool = False,
     sort: list[dict] | None = None,
     normalize_arabic: bool = False,
+    normalize: bool | None = None,
+    zwnj: str = "keep",
 ) -> ConcordanceResult:
     """KWIC search.
 
@@ -229,10 +324,15 @@ async def search_concordance(
 
     # v1.2.0: Arabic normalization — match against the normalized column and
     # normalize the query parts the same way (word/lemma exact/wildcard only).
-    norm_sql = bool(normalize_arabic) and level in ("word", "lemma") and not regex
+    # v1.2.11: ``normalize=True`` dispatches to the corpus language's own
+    # normalizer; the legacy ``normalize_arabic`` flag keeps its exact old
+    # behavior (see _Norm).
+    norm = await _resolve_norm(session, corpus_id, normalize=normalize,
+                               normalize_arabic=normalize_arabic, zwnj=zwnj)
+    norm_sql = norm.enabled and level in ("word", "lemma") and not regex
     if norm_sql:
-        parts = [ar_norm(p) for p in parts]
-    match_col = func.arnorm(col) if norm_sql else col
+        parts = [norm.norm_py(p) for p in parts]
+    match_col = norm.sql_expr(col) if norm_sql else col
 
     # ---- node condition -------------------------------------------------- #
     if level in ("root", "pattern"):
@@ -413,8 +513,14 @@ async def search_concordance(
         "q": query, "level": level, "window": window,
         "case_sensitive": case_sensitive, "regex": regex,
     }
-    if normalize_arabic:
-        query_meta["normalize_arabic"] = True
+    if norm.enabled:
+        if norm.legacy:
+            query_meta["normalize_arabic"] = True
+        else:
+            query_meta["normalize"] = True
+            query_meta["normalization"] = _norm_description(norm)
+            if norm.lang in ("ur", "fa"):
+                query_meta["zwnj"] = norm.zwnj
         if regex:
             query_meta["normalization_skipped"] = (
                 "Regex matching runs on raw text - the Arabic normalization "
@@ -459,6 +565,8 @@ async def compute_frequency(
     document_ids: list[str] | None = None,
     stopword_set: set[str] | None = None,
     normalize_arabic: bool = False,
+    normalize: bool | None = None,
+    zwnj: str = "keep",
 ) -> FrequencyResult:
     """Word/lemma/POS/root/pattern frequency list.
 
@@ -470,6 +578,9 @@ async def compute_frequency(
     """
     if unit not in ("word", "lemma", "pos", "root", "pattern"):
         unit = "word"
+    # v1.2.11: language-aware normalization dispatch (legacy flag preserved).
+    norm = await _resolve_norm(session, corpus_id, normalize=normalize,
+                               normalize_arabic=normalize_arabic, zwnj=zwnj)
     # Issue 2: ``document_ids`` optionally restricts all counts to a subcorpus.
     version_id = await _latest_version_id(session, corpus_id)
     if not version_id:
@@ -496,10 +607,11 @@ async def compute_frequency(
     if not morph_unit:
         # Aggregate counts + document range in one grouped query
         # v1.2.0: with normalize_arabic, GROUP BY the SQL-normalized key so
-        # spelling variants (أ/ا, ة/ه, ى/ي) collapse into one row.
+        # spelling variants (أ/ا, ة/ه, ى/ي) collapse into one row. v1.2.11:
+        # ``normalize=True`` groups under the corpus language's own scalar.
         agg_col = (
-            func.arnorm(func.lower(col))
-            if (normalize_arabic and unit in ("word", "lemma"))
+            norm.sql_expr(col, wrap_lower=True)
+            if (norm.enabled and unit in ("word", "lemma"))
             else col
         )
         stmt = _base_where(
@@ -514,11 +626,11 @@ async def compute_frequency(
             .limit(limit)
         )
         rows_raw = (await session.execute(stmt)).all()
-        if normalize_arabic and stopword_set and unit in ("word", "lemma"):
+        if norm.enabled and stopword_set and unit in ("word", "lemma"):
             # Post-filter with a normalized stopword set (the SQL stop_cond
             # only matches raw surface forms).
-            norm_stop = {ar_norm(s) for s in stopword_set}
-            rows_raw = [r for r in rows_raw if ar_norm(str(r[0])) not in norm_stop]
+            norm_stop = {norm.norm_py(s) for s in stopword_set}
+            rows_raw = [r for r in rows_raw if norm.norm_py(str(r[0])) not in norm_stop]
         total_tokens = await _corpus_size(session, version_id, document_ids)
         if stop_cond is not None:
             cnt_stmt = _base_where(
@@ -574,10 +686,10 @@ async def compute_frequency(
         chunk: list[str] = []
         all_tokens: list[str] = []
         chunk_size = 1000
-        norm_stop = {ar_norm(s) for s in stopword_set} if (stopword_set and normalize_arabic) else None
+        norm_stop = {norm.norm_py(s) for s in stopword_set} if (stopword_set and norm.enabled) else None
         result = await session.stream(tok_stmt)
         async for row in result.scalars():
-            t = ar_norm(row.text) if normalize_arabic else row.text.lower()
+            t = norm.norm_py(row.text) if norm.enabled else row.text.lower()
             if stopword_set and (t in stopword_set or (norm_stop and t in norm_stop)):
                 continue
             chunk.append(t)
@@ -677,6 +789,8 @@ async def compute_collocations(
     pos_exclude: list[str] | None = None,
     stopword_set: set[str] | None = None,
     normalize_arabic: bool = False,
+    normalize: bool | None = None,
+    zwnj: str = "keep",
 ) -> CollocationResult:
     """Compute collocation measures for `node` against all co-occurring tokens.
 
@@ -715,15 +829,22 @@ async def compute_collocations(
 
     # v1.2.0 (item 6): normalize_arabic swaps the folding function for the
     # Arabic-aware one — node, collocates and marginals fold identically.
-    fold = _ar_fold if normalize_arabic else _fold
-    stop_norm = {ar_norm(s) for s in stopword_set} if (stopword_set and normalize_arabic) else None
+    # v1.2.11: normalize=True folds under the corpus language's own rules.
+    norm = await _resolve_norm(session, corpus_id, normalize=normalize,
+                               normalize_arabic=normalize_arabic, zwnj=zwnj)
+    if norm.enabled and norm.lang != "ar":
+        def fold(t: str) -> str:
+            return norm.norm_py(_fold(t))
+    else:
+        fold = _ar_fold if norm.enabled else _fold
+    stop_norm = {norm.norm_py(s) for s in stopword_set} if (stopword_set and norm.enabled) else None
 
     node_lower = node.lower()
     node_folded = fold(node)
 
     # --- 1. node sentences (window scan scope) ---------------------------- #
-    if normalize_arabic:
-        node_cond = (func.arnorm(func.lower(col)) == ar_norm(node_lower)) & _is_real_token()
+    if norm.enabled:
+        node_cond = (norm.sql_expr(col, wrap_lower=True) == norm.norm_py(node_lower)) & _is_real_token()
     else:
         node_cond = (
             ((func.lower(col) == node_lower) | (func.lower(col) == node_folded))
@@ -777,8 +898,8 @@ async def compute_collocations(
     s_tok = aliased(Token, name="s_tok")
     col_n = {"word": n_tok.text, "lemma": n_tok.lemma}[level]
     n_real = (n_tok.is_punct == False) & (n_tok.pos != "SPACE")  # noqa: E712
-    if normalize_arabic:
-        n_cond = (func.arnorm(func.lower(col_n)) == ar_norm(node_lower)) & n_real
+    if norm.enabled:
+        n_cond = (norm.sql_expr(col_n, wrap_lower=True) == norm.norm_py(node_lower)) & n_real
     else:
         n_cond = (
             (func.lower(col_n) == node_lower) | (func.lower(col_n) == node_folded)
@@ -946,6 +1067,8 @@ async def compute_keyness(
     target_document_ids: list[str] | None = None,
     stopword_set: set[str] | None = None,
     normalize_arabic: bool = False,
+    normalize: bool | None = None,
+    zwnj: str = "keep",
 ) -> KeynessResult:
     # Issue 2: ``target_document_ids`` optionally restricts the TARGET corpus
     # side of the comparison to a subcorpus (the reference side is unaffected).
@@ -962,6 +1085,11 @@ async def compute_keyness(
     """
     if measures is None:
         measures = ["log_likelihood", "chi_square", "log_ratio", "pct_diff", "simple_maths", "odds_ratio"]
+
+    # v1.2.11: normalization policy resolved on the TARGET corpus language
+    # (applied to both sides so the comparison stays internally consistent).
+    norm = await _resolve_norm(session, target_corpus_id, normalize=normalize,
+                               normalize_arabic=normalize_arabic, zwnj=zwnj)
 
     target_vid = await _latest_version_id(session, target_corpus_id)
     ref_vid = await _latest_version_id(session, reference_corpus_id)
@@ -998,9 +1126,10 @@ async def compute_keyness(
     async def _freqs(vid: str, document_ids: list[str] | None = None) -> Counter:
         # v1.2.0 (item 6): normalize_arabic aggregates under the SQL arnorm
         # key so أ/ا, ة/ه, ى/ي variants count as one type in BOTH corpora.
+        # v1.2.11: normalize=True uses the target language's own scalar.
         text_norm = (
-            func.arnorm(func.lower(Token.text))
-            if normalize_arabic
+            norm.sql_expr(Token.text, wrap_lower=True)
+            if norm.enabled
             else func.lower(Token.text)
         )
         stmt = (
@@ -1014,7 +1143,7 @@ async def compute_keyness(
         counter = Counter({text: count for text, count in (await session.execute(stmt)).all()})
         if stopword_set:
             for sw in stopword_set:
-                counter.pop(ar_norm(sw) if normalize_arabic else sw.lower(), None)
+                counter.pop(norm.norm_py(sw) if norm.enabled else sw.lower(), None)
         return counter
 
     target_freqs = await _freqs(target_vid, target_document_ids)
@@ -1052,7 +1181,7 @@ async def compute_keyness(
         N2=N2,
         warnings=(
             ([f"{len(stopword_set)} stopwords excluded from both corpora."] if stopword_set else [])
-            + (["Arabic normalization (أإآ→ا, ة→ه, ى→ي, harakat stripped) applied to both corpora."] if normalize_arabic else [])
+            + ([f"{_norm_description(norm)} applied to both corpora."] if norm.enabled else [])
         ),
     )
 

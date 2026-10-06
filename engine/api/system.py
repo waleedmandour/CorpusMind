@@ -284,6 +284,23 @@ async def version() -> dict:
     return {"version": __version__, "name": "corpusmind-engine"}
 
 
+@router.get("/languages")
+async def languages() -> dict:
+    """Language capability registry (v1.2.11).
+
+    The single source of truth for what each corpus language supports:
+    script, direction, normalizer, pipeline pieces, stopword list size,
+    reference corpora, per-tool coverage (supported / partial /
+    unavailable with a reason), and an honest coverage label. The web UI
+    consumes this for corpus creation, tagset display, and the
+    per-language tool messages; nothing in this registry is guessed —
+    tools a language does not support say so.
+    """
+    from nlp.languages import serialize
+
+    return serialize()
+
+
 @router.get("/providers")
 async def list_providers(request: Request) -> dict:
     """List configured providers and their current health status."""

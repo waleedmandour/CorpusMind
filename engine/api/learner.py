@@ -96,7 +96,16 @@ async def learner_errors(cid: str, body: LearnerErrorsRequest, session: AsyncSes
     if not corpus:
         raise HTTPException(404, "Corpus not found")
     language = body.language or corpus.language or "en"
-    effective = "ar" if language.startswith("ar") else "en"
+    # v1.2.11: keep ur/hi/fa as themselves — the rule resolver returns an
+    # empty pool for them and the result explains why, instead of silently
+    # running English rules over Persian/Urdu/Hindi text.
+    lang_lower = (language or "en").lower()
+    if lang_lower.startswith("ar"):
+        effective = "ar"
+    elif lang_lower.startswith("en"):
+        effective = "en"
+    else:
+        effective = lang_lower
     try:
         result = await detect_error_candidates(
             session, cid, language=effective, rule_ids=body.rule_ids, limit=body.limit

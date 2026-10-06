@@ -1315,12 +1315,24 @@ async def compute_discourse_analysis(
             session, corpus_id, limit_examples=limit_examples,
             compare_corpus_id=compare_corpus_id,
         )
+    # v1.2.11: cue-lens language gating. Every non-USAS taxonomy declares the
+    # languages its cues exist for; running English cues over Urdu text
+    # silently produced all-zero profiles. Missing/unsupported language ->
+    # explicit 409 (the API layer maps taxonomy_language_mismatch).
+    from storage.models import Corpus as CorpusModel
+
+    corpus_row = await session.get(CorpusModel, corpus_id)
+    corpus_lang = (corpus_row.language if corpus_row else "en").lower()
     if key == SFG_TAXONOMY_KEY:
+        if corpus_lang != "en":
+            raise ValueError(f"taxonomy_language_mismatch:{key}:{corpus_lang}")
         return await compute_sfg_discourse_analysis(
             session, corpus_id, limit_examples=limit_examples,
             compare_corpus_id=compare_corpus_id,
         )
     if key == PERSUASION_TAXONOMY_KEY:
+        if corpus_lang != "en":
+            raise ValueError(f"taxonomy_language_mismatch:{key}:{corpus_lang}")
         if compare_corpus_id:
             raise ValueError(
                 "compare_corpus_id is not supported for the persuasion lens "
@@ -1335,6 +1347,8 @@ async def compute_discourse_analysis(
             f"Unknown discourse taxonomy: {taxonomy}. Supported: "
             f"{[*DISCOURSE_TAXONOMIES.keys(), USAS_TAXONOMY_KEY, SFG_TAXONOMY_KEY, PERSUASION_TAXONOMY_KEY]}"
         )
+    if corpus_lang not in spec.get("languages", ["en"]):
+        raise ValueError(f"taxonomy_language_mismatch:{key}:{corpus_lang}")
 
     version_id = await _latest_version_id(session, corpus_id)
     if not version_id:
@@ -2689,6 +2703,16 @@ async def compute_vocab_profile(
     Uses the bundled open English top-200 wordlist as K1 approximation.
     Phase 3 will swap in a proper open frequency corpus.
     """
+    # v1.2.11: the bands are defined by ENGLISH wordlists (K1 top-200, AWL).
+    # For any other language every word would land in "Off-list", which is
+    # not a result — it is the absence of one. Explicit 503 instead.
+    from storage.models import Corpus as CorpusModel
+
+    corpus_row = await session.get(CorpusModel, corpus_id)
+    corpus_lang = (corpus_row.language if corpus_row else "en").lower()
+    if corpus_lang != "en":
+        raise ValueError(f"vocab_bands_missing:{corpus_lang}")
+
     version_id = await _latest_version_id(session, corpus_id)
     if not version_id:
         return VocabProfileResult(

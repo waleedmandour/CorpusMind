@@ -244,16 +244,29 @@ ALL_RULES: dict[str, dict] = {**EN_RULES, **AR_RULES}
 
 
 def _rules_for(language: str, rule_ids: list[str] | None = None) -> dict[str, dict]:
-    """Resolve the rule set for a language ('ar*' → Arabic, else English),
-    optionally restricted to ``rule_ids`` (unknown ids raise ValueError)."""
-    lang = "ar" if language.startswith("ar") else "en"
-    pool = {rid: rule for rid, rule in ALL_RULES.items() if rule["language"] == lang}
+    """Resolve the rule set for a language, honestly.
+
+    'ar*' -> Arabic rules, 'en*' -> English rules. Any other language
+    (ur, hi, fa, ...) has NO bundled rules: this returns an empty pool so
+    callers report "rules not available for this language" instead of
+    silently applying English rules to Urdu or Persian text (v1.2.11).
+    """
+    lang = (language or "en").lower()
+    base = "ar" if lang.startswith("ar") else ("en" if lang.startswith("en") else None)
+    if base is None:
+        if rule_ids:
+            raise ValueError(
+                f"No seed rules exist for language '{language}'; rule_ids "
+                f"cannot be applied. Supported rule languages: en, ar."
+            )
+        return {}
+    pool = {rid: rule for rid, rule in ALL_RULES.items() if rule["language"] == base}
     if rule_ids is None:
         return pool
     unknown = [rid for rid in rule_ids if rid not in pool]
     if unknown:
         raise ValueError(
-            f"Unknown rule id(s) for language '{lang}': {unknown}. "
+            f"Unknown rule id(s) for language '{base}': {unknown}. "
             f"Valid ids: {sorted(pool)}"
         )
     return {rid: pool[rid] for rid in rule_ids}
@@ -314,11 +327,17 @@ async def detect_error_candidates(
     limit truncates the list, a note says so.
     """
     rules = _rules_for(language, rule_ids)
-    lang = "ar" if language.startswith("ar") else "en"
+    lang = (language or "en").lower()
     notes: list[str] = [
         "Candidates are heuristic, not validated errors - triage with the AI "
         "Assistant and confirm by hand before reporting them as error counts."
     ]
+    if not rules and not lang.startswith(("en", "ar")):
+        notes.append(
+            f"No seed rules exist for language '{language}' - the candidates "
+            f"list is empty because no rules ran, NOT because the text is "
+            f"error-free."
+        )
 
     version_id = await _latest_version_id(session, corpus_id)
     if not version_id:

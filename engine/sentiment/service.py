@@ -290,6 +290,14 @@ async def compute_sentiment(
     corpus_row = await session.get(CorpusModel, corpus_id)
     lang = (language or (corpus_row.language if corpus_row else None) or "en").lower()
 
+    # v1.2.11: honest gating. Bundled valence lexicons exist for en and ar
+    # only. Urdu/Hindi/Farsi previously fell through to the ENGLISH starter
+    # lexicon, which silently scored Urdu text against English words and
+    # returned meaningless zeros. Missing resources must return an explicit
+    # status with a hint (503 pattern), never a silent fallback.
+    if lang not in ("en", "ar"):
+        raise ValueError(f"sentiment_lexicon_missing:{lang}")
+
     starter = STARTER_VALENCE_AR if lang == "ar" else STARTER_VALENCE_EN
     emolex = load_emolex(lang)
 
