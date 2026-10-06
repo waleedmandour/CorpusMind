@@ -141,6 +141,9 @@ _ARABIC_TATWEEL = "\u0640"  # ـ kashida
 
 # Stopword lists — moved to nlp/stopwords.py in v1.0.1 (single source of
 # truth shared with the Arabic tagger, which flags is_stop at ingestion).
+# v1.2.11: use get_stopwords() so Urdu/Hindi/Farsi corpora get their own
+# lists instead of falling through to the English default.
+from nlp.stopwords import get_stopwords as _get_stopwords  # noqa: E402
 from nlp.stopwords import ARABIC_STOPWORDS as _ARABIC_STOPWORDS  # noqa: E402
 from nlp.stopwords import ENGLISH_STOPWORDS as _ENGLISH_STOPWORDS  # noqa: E402
 
@@ -165,11 +168,19 @@ def _normalize_arabic(text: str) -> str:
 
 
 def _remove_stopwords(text: str, language: str) -> str:
-    """Remove stopwords while preserving token boundaries."""
-    if language == "ar":
-        stop = _ARABIC_STOPWORDS
-    else:
-        stop = _ENGLISH_STOPWORDS
+    """Remove stopwords while preserving token boundaries.
+
+    Uses the registry in nlp.stopwords so every language with a bundled list
+    (en, ar, ur, hi, fa) gets the right set. Languages without a list
+    (fr, de, es, zh, ...) return the text unchanged — the cleaning UI makes
+    stopword removal opt-in, so silently no-op-ing is safer than mis-filtering
+    with an English list on non-English text.
+    """
+    stop = _get_stopwords(language)
+    if not stop:
+        # No bundled list for this language — leave text untouched rather
+        # than applying the wrong (English) stopword set.
+        return text
     # Simple whitespace tokenization for stopword removal — the NLP pipeline
     # will re-tokenize properly afterward.
     tokens = text.split()

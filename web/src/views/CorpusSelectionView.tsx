@@ -160,6 +160,9 @@ export function ProjectSelector() {
             <option value="de">German</option>
             <option value="es">Spanish</option>
             <option value="zh">Chinese</option>
+            <option value="ur">Urdu</option>
+            <option value="hi">Hindi</option>
+            <option value="fa">Farsi (Persian)</option>
           </select>
           <button
             className="btn-primary"
@@ -627,9 +630,12 @@ function ReferenceDownload() {
           placeholder="Search corpora (e.g. 'english news', 'arabic corpus'...)"
           className="reference-search-input"
         />
-        <select value={language} onChange={(e) => setLanguage(e.target.value as "en" | "ar")}>
+        <select value={language} onChange={(e) => setLanguage(e.target.value)}>
           <option value="en">English</option>
           <option value="ar">Arabic</option>
+          <option value="ur">Urdu</option>
+          <option value="hi">Hindi</option>
+          <option value="fa">Farsi (Persian)</option>
         </select>
         <button className="btn-primary" onClick={doSearch} disabled={!query.trim()}>
           Search
@@ -1189,6 +1195,9 @@ function DocumentUploader({ cid }: { cid: string }) {
             <option value="de">German</option>
             <option value="es">Spanish</option>
             <option value="zh">Chinese</option>
+            <option value="ur">Urdu</option>
+            <option value="hi">Hindi</option>
+            <option value="fa">Farsi (Persian)</option>
           </select>
         </div>
       </div>
@@ -1873,6 +1882,9 @@ function ReferenceUpload() {
             <select value={newCorpusLang} onChange={(e) => setNewCorpusLang(e.target.value)}>
               <option value="en">English</option>
               <option value="ar">Arabic</option>
+              <option value="ur">Urdu</option>
+              <option value="hi">Hindi</option>
+              <option value="fa">Farsi (Persian)</option>
             </select>
             <div className="dropzone" onClick={() => newCorpusName.trim() && fileInputRef.current?.click()} role="button" tabIndex={0}
               onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); if (newCorpusName.trim()) fileInputRef.current?.click(); } }}
@@ -1970,6 +1982,9 @@ function NewCorpusDialog({ onCreate }: { onCreate: (name: string, language: stri
                 <option value="de">German</option>
                 <option value="es">Spanish</option>
                 <option value="zh">Chinese</option>
+                <option value="ur">Urdu</option>
+                <option value="hi">Hindi</option>
+                <option value="fa">Farsi (Persian)</option>
               </select>
             </label>
             <label>

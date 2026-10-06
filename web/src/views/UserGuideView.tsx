@@ -109,6 +109,82 @@ camel_data -i morphology-db-msa-r13`}</pre>
           to download the full results as a spreadsheet for offline analysis or inclusion in a
           manuscript supplement.
         </p>
+
+        <h4>Search patterns: wildcards and regex</h4>
+        <p>
+          The search box supports two query modes. <strong>Wildcard mode</strong> (default) translates
+          <code>*</code> into "zero or more characters" and <code>?</code> into "exactly one character"
+          (SQL <code>LIKE</code> semantics). <strong>Regex mode</strong> (toggle it on) accepts full
+          Python <code>re</code> syntax for power-user queries. Both modes work at the <em>word</em>{" "}
+          and <em>lemma</em> levels; at the <em>POS</em> level you match POS tags directly. Arabic
+          searches also gain <em>root</em> and <em>pattern</em> levels (e.g. search root{" "}
+          <code>ك.ت.ب</code> to find <em>كتاب</em>, <em>مكتبة</em>, <em>يكتُب</em> in one query).
+        </p>
+
+        <h5>English wildcard examples</h5>
+        <table className="ug-table">
+          <thead><tr><th>Query</th><th>Level</th><th>What it matches</th></tr></thead>
+          <tbody>
+            <tr><td><code>book*</code></td><td>word</td><td>book, books, booking, bookstore, …</td></tr>
+            <tr><td><code>*ing</code></td><td>word</td><td>running, writing, anything ending in -ing</td></tr>
+            <tr><td><code>?at</code></td><td>word</td><td>cat, bat, hat, sat (3-letter words ending in "at")</td></tr>
+            <tr><td><code>un*able</code></td><td>word</td><td>unavailable, unbearable, uncomfortable, …</td></tr>
+            <tr><td><code>be*</code></td><td>lemma</td><td>be, been, being, become, … (lemma starts with "be")</td></tr>
+            <tr><td><code>VB*</code></td><td>POS</td><td>All verb tags (VBD, VBG, VBN, VBP, VBZ) — any verb form</td></tr>
+          </tbody>
+        </table>
+
+        <h5>English regex examples</h5>
+        <table className="ug-table">
+          <thead><tr><th>Pattern</th><th>Level</th><th>What it matches</th></tr></thead>
+          <tbody>
+            <tr><td><code>^un.*able$</code></td><td>word</td><td>Words starting with "un" and ending with "able"</td></tr>
+            <tr><td><code>(book|books|booking)</code></td><td>word</td><td>Any of these three exact forms (alternation)</td></tr>
+            <tr><td><code>^\w{4}$</code></td><td>word</td><td>Exactly 4-letter words (any letters)</td></tr>
+            <tr><td><code>(?i)^the\b</code></td><td>word</td><td>Words starting with "the", case-insensitive (The, the, THE, …)</td></tr>
+            <tr><td><code>\b\w+ly$</code></td><td>word</td><td>Adverbs ending in -ly (quickly, happily, …)</td></tr>
+            <tr><td><code>^(is|was|were|be|been|being)$</code></td><td>lemma</td><td>Any form of the verb "be" (copula search)</td></tr>
+          </tbody>
+        </table>
+
+        <h5>Arabic wildcard examples</h5>
+        <p className="hint">
+          Tip: for Arabic, toggle <strong>Normalize Arabic</strong> on (Concordance settings) so that
+          alef variants (<code>أ إ آ</code> → <code>ا</code>), teh marbuta (<code>ة</code> →{" "}
+          <code>ه</code>), and alef maksura (<code>ى</code> → <code>ي</code>) are unified before
+          matching — otherwise <code>المدرسة</code> and <code>المدرِسة</code> count as different types.
+        </p>
+        <table className="ug-table">
+          <thead><tr><th>Query</th><th>Level</th><th>What it matches</th></tr></thead>
+          <tbody>
+            <tr><td><code>كتاب*</code></td><td>word</td><td>كتاب، كتابٌ، كتابٌ، مكتبة (anything starting with كتاب)</td></tr>
+            <tr><td><code>ال*</code></td><td>word</td><td>Every word beginning with the definite article ال</td></tr>
+            <tr><td><code>م?ت?ة</code></td><td>word</td><td>مفتحة، مدرسة (م + any char + ت + any char + ة)</td></tr>
+            <tr><td><code>ك.ت.ب</code></td><td>root</td><td>كل الكلمات من جذر ك.ت.ب: كتاب، كاتب، مكتبة، يكتب</td></tr>
+            <tr><td><code>مُ?َ?ا?ِ?ُ?</code></td><td>pattern</td><td>Words matching a specific morphological pattern (وزن)</td></tr>
+          </tbody>
+        </table>
+
+        <h5>Arabic regex examples</h5>
+        <table className="ug-table">
+          <thead><tr><th>Pattern</th><th>Level</th><th>What it matches</th></tr></thead>
+          <tbody>
+            <tr><td><code>^ال</code></td><td>word</td><td>كل الكلمات التي تبدأ بأداة التعريف "ال"</td></tr>
+            <tr><td><code>(كتاب|كاتب|مكتبة|يكتُب)</code></td><td>word</td><td>أي من هذه الكلمات الأربع (بدائل)</td></tr>
+            <tr><td><code>ة$</code></td><td>word</td><td>الكلمات المنتهية بتاء مربوطة (مدرسة، طالبة، …)</td></tr>
+            <tr><td><code>^م.{2}ع$</code></td><td>word</td><td>كلمات من 4 حروف تبدأ بميم وتنتهي بعين (مكتب، معبد، …)</td></tr>
+            <tr><td><code>(?i)^في\b</code></td><td>word</td><td>كلمات تبدأ بـ "في" (في، فيه، فيها، …) — (?i) لا يؤثر في العربية لكنه ممارسة جيدة</td></tr>
+            <tr><td><code>^(كان|يكون|تكون|كُن)$</code></td><td>lemma</td><td>كل أشكال فعل "كان" (أفعال مساعدة)</td></tr>
+          </tbody>
+        </table>
+
+        <p className="hint">
+          <strong>Regex syntax reference:</strong> <code>^</code> = start of token,
+          <code>$</code> = end of token, <code>.</code> = any char, <code>\w</code> = word char,
+          <code>\d</code> = digit, <code>\b</code> = word boundary, <code>[abc]</code> = char class,
+          <code>(a|b)</code> = alternation, <code>{"{n,m}"}</code> = repeat, <code>(?i)</code> =
+          case-insensitive flag. Full Python <code>re</code> syntax is supported.
+        </p>
       </>
     ),
   },

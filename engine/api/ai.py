@@ -290,7 +290,10 @@ class DynamicSuggestionsRequest(BaseModel):
     provider: str = Field("ollama")
     model: str | None = Field(None)
     corpus_id: str | None = Field(None)
-    language: str = Field("en", pattern="^(en|ar)$")
+    # v1.2.11: widened to accept ur/hi/fa. Prefabricated suggestions fall back
+    # to Arabic labels for these languages (honest degradation); dynamic LLM
+    # suggestions are generated in the requested language.
+    language: str = Field("en", pattern="^(en|ar|ur|hi|fa)$")
     recent_analysis: dict | None = Field(
         None,
         description="Optional: the user's most recent analysis result, for context-aware suggestions",
@@ -299,7 +302,7 @@ class DynamicSuggestionsRequest(BaseModel):
 
 @router.get("/query-suggestions")
 async def get_query_suggestions(
-    language: str = Query("en", pattern="^(en|ar)$"),
+    language: str = Query("en", pattern="^(en|ar|ur|hi|fa)$"),
     corpus_id: str | None = Query(None),
     shell: str = Query("main", pattern="^(main|lens)$"),
 ) -> dict:

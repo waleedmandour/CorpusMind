@@ -153,7 +153,12 @@ async def learner_cia(cid: str, body: LearnerCIARequest, session: AsyncSession =
 
 class LearnerCAFTextRequest(BaseModel):
     text: str = Field(..., min_length=1, max_length=20000)
-    language: Literal["en", "ar"] = "en"
+    # v1.2.11: widened to accept ur/hi/fa. CAF indices (TTR, MATTR, MTLD,
+    # HD-D, Guiraud, mean sentence length) are language-neutral math and
+    # compute correctly for any script. Error-candidate rules are en/ar-only;
+    # for ur/hi/fa they fall back to English rules (honest degradation — the
+    # notes field explains which rule set was applied).
+    language: Literal["en", "ar", "ur", "hi", "fa"] = "en"
     corpus_id: str | None = None
 
 
@@ -178,13 +183,19 @@ async def learner_caf_text(body: LearnerCAFTextRequest, session: AsyncSession = 
         pipeline = get_pipeline("spacy", body.language)
         parsed = pipeline.parse_document(body.text)
     except Exception as e:
-        hint = (
-            "Install the spaCy model: pip install en_core_web_sm or "
-            "python -m spacy download en_core_web_sm."
-            if body.language == "en"
-            else "Arabic requires CAMeL Tools: pip install camel-tools && "
-            "camel_data -i morphology-db-msa-r13."
-        )
+        if body.language == "en":
+            hint = "Install the spaCy model: pip install en_core_web_sm or python -m spacy download en_core_web_sm."
+        elif body.language == "ar":
+            hint = "Arabic requires CAMeL Tools: pip install camel-tools && camel_data -i morphology-db-msa-r13."
+        elif body.language in ("ur", "hi", "fa"):
+            hint = (
+                f"Install Stanza for full {body.language} NLP: pip install stanza "
+                f"(requires torch) then python -c \"import stanza; stanza.download('{body.language}')\". "
+                f"Without Stanza, the engine falls back to spacy.blank('{body.language}') "
+                f"(tokenizer only — no POS/lemma/dependency parse)."
+            )
+        else:
+            hint = f"Install the spaCy model for {body.language}."
         log.warning("learner_caf_text_pipeline_unavailable", language=body.language, error=str(e))
         raise HTTPException(
             status_code=503,

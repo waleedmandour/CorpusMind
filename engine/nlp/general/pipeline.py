@@ -2,14 +2,15 @@
 General-language NLP pipeline (§8.1).
 
 Wraps spaCy (the default) so the rest of the engine doesn't care which
-backend produced the annotations. Phase 3 will add a Stanza backend and an
-Arabic-specific backend (CAMeL Tools / SinaTools); they'll all conform to
-the same `Pipeline` interface and emit the same CoNLL-U-compatible token
-rows that storage/models.Token expects.
+backend produced the annotations. v1.2.11 adds an optional Stanza backend
+for languages without an official spaCy model (Urdu, Hindi, Farsi); all
+backends conform to the same `Pipeline` interface and emit the same
+CoNLL-U-compatible token rows that storage/models.Token expects.
 """
 from __future__ import annotations
 
 import functools
+import os
 from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import Protocol
@@ -215,6 +216,140 @@ class SpaCyPipeline:
 
 
 # --------------------------------------------------------------------------- #
+# Stanza implementation (optional — for Urdu/Hindi/Farsi and other languages
+# without an official spaCy model)
+# --------------------------------------------------------------------------- #
+
+
+# Map of languages where Stanza is the preferred backend because spaCy has no
+# official model. Users can still force spacy via get_pipeline(backend="spacy",
+# language="ur") — it will degrade to spacy.blank("ur") (tokenizer-only).
+STANZA_PREFERRED_LANGUAGES: frozenset[str] = frozenset({"ur", "hi", "fa"})
+
+# Default Stanza package size per language. "default" ≈ 30–50 MB, gives full
+# tokenize/mwt/pos/lemma/deps/ner. Users who want the larger "combined" or
+# "dist" models can set CORPUSMIND_STANZA_PACKAGE=<name> in the environment.
+_STANZA_DEFAULT_PACKAGE = os.environ.get("CORPUSMIND_STANZA_PACKAGE", "default")
+
+
+class StanzaPipeline:
+    """Wraps a Stanza ``Pipeline`` object.
+
+    Stanza (Stanford NLP) provides official models for 60+ languages including
+    Urdu, Hindi, and Farsi — none of which have an official spaCy model. This
+    backend gives those languages full POS, lemma, dependency parse, and NER
+    that ``spacy.blank()`` cannot provide.
+
+    Stanza is an **optional** dependency: ``import stanza`` is deferred to the
+    first ``_load()`` call so the engine starts fast even when stanza isn't
+    installed. If the user creates an ur/hi/fa corpus without stanza installed,
+    ``get_pipeline()`` falls back to ``SpaCyPipeline`` (which itself degrades to
+    ``spacy.blank()``) and logs a hint to install stanza.
+
+    Model download: the first time a StanzaPipeline is created for a language,
+    Stanza auto-downloads the model package (~30–50 MB) to
+    ``~/stanza_resources/``. Subsequent loads are instant. Users can pre-
+    download with ``python -c "import stanza; stanza.download('ur')"``.
+    """
+
+    def __init__(self, language: str, package: str | None = None) -> None:
+        self._language = language
+        self._package = package or _STANZA_DEFAULT_PACKAGE
+        self._nlp = None
+        self._info: PipelineInfo | None = None
+
+    def _load(self) -> None:
+        if self._nlp is not None:
+            return
+        try:
+            import stanza
+        except ImportError as exc:
+            raise ValueError(
+                f"Stanza backend requested for language '{self._language}' but "
+                f"the stanza package is not installed. Install with: "
+                f"pip install stanza  (note: stanza requires torch ~800 MB). "
+                f"Alternatively, the engine will fall back to spacy.blank("
+                f"'{self._language}') which gives tokenization only — no "
+                f"POS/lemma/dependency parse."
+            ) from exc
+
+        log.info("stanza_loading", language=self._language, package=self._package)
+        # Stanza auto-downloads the model on first use. We pass processors
+        # explicitly to avoid loading NER when we don't need it (NER models
+        # are large and the token storage model doesn't use entity info).
+        self._nlp = stanza.Pipeline(
+            lang=self._language,
+            package=self._package,
+            processors="tokenize,mwt,pos,lemma,depparse",
+            verbose=False,
+        )
+        stanza_version = stanza.__version__
+        # Stanza doesn't expose model version in a stable attribute; use the
+        # package name + language as the model identifier.
+        model_name = f"{self._language}_{self._package}"
+        self._info = PipelineInfo(
+            backend="stanza",
+            model_name=model_name,
+            model_version=stanza_version,
+            spacy_version="",
+            language=self._language,
+        )
+        log.info(
+            "stanza_loaded",
+            language=self._language,
+            package=self._package,
+            version=stanza_version,
+        )
+
+    def info(self) -> PipelineInfo:
+        self._load()
+        assert self._info is not None
+        return self._info
+
+    def parse(self, text: str) -> Iterator[ParsedSentence]:
+        self._load()
+        assert self._nlp is not None
+        doc = self._nlp(text)
+        for sent in doc.sentences:
+            tokens: list[ParsedToken] = []
+            # Stanza tokens are 1-indexed; dep_head points to the head's id
+            # (0 = root). We need to convert to the 1-indexed token position
+            # within the sentence to match the ParsedToken contract.
+            for tok in sent.tokens:
+                # Stanza groups multi-word tokens; for each sub-word we get
+                # a separate Word object. We emit one ParsedToken per Word
+                # to keep the storage model simple.
+                for word in tok.words:
+                    head_id = word.head or 0  # 0 = root
+                    # Stanza's upos/xpos/feats map directly to UD fields.
+                    pos = word.upos or "X"
+                    pos_fine = word.xpos or ""
+                    morph = word.feats or ""
+                    dep_rel = word.deprel or "dep"
+                    lemma = word.lemma or word.text
+                    is_punct = pos == "PUNCT"
+                    # Stanza doesn't expose is_stop directly; we leave it
+                    # False and let the stopword check happen at the
+                    # storage/cleaning layer (which uses nlp.stopwords).
+                    is_stop = False
+                    tokens.append(ParsedToken(
+                        text=word.text,
+                        lemma=lemma,
+                        pos=pos,
+                        pos_fine=pos_fine,
+                        morph=morph,
+                        dep_head=head_id,
+                        dep_rel=dep_rel,
+                        is_punct=is_punct,
+                        is_stop=is_stop,
+                    ))
+            yield ParsedSentence(tokens=tokens)
+
+    def parse_document(self, text: str) -> ParsedDocument:
+        return ParsedDocument(sentences=list(self.parse(text)))
+
+
+# --------------------------------------------------------------------------- #
 # Registry: maps (backend, language) → a constructed pipeline
 # --------------------------------------------------------------------------- #
 
@@ -223,13 +358,29 @@ class SpaCyPipeline:
 def get_pipeline(backend: str = "spacy", language: str = "en", model_name: str | None = None) -> Pipeline:
     """Return a cached pipeline instance.
 
-    For Arabic (language == 'ar'), this delegates to the CAMeL Tools
-    pipeline (nlp/arabic/pipeline.py) which provides proper Arabic
-    morphology, POS, lemma, and root extraction.
+    Backend selection logic (v1.2.11):
 
-    For other languages, it uses spaCy with the correct model naming
-    convention: most languages use `_core_news_sm` (not `_core_web_sm`).
-    Only English and Chinese use `_core_web_sm`.
+    1. **Arabic** (``language == 'ar'``) → delegates to the CAMeL Tools
+       pipeline (nlp/arabic/pipeline.py) which provides proper Arabic
+       morphology, POS, lemma, and root extraction.
+
+    2. **Urdu / Hindi / Farsi** (``language in {'ur','hi','fa'}``) → tries
+       the **Stanza** backend first, which has official models with full
+       POS/lemma/dependency parse for all three. If stanza isn't installed
+       (it requires torch ~800 MB), falls back to ``SpaCyPipeline`` which
+       itself degrades to ``spacy.blank(lang)`` — tokenizer + sentencizer
+       only. The stopword lists (en/ar/ur/hi/fa) keep stopword-dependent
+       analyses working even in blank mode.
+
+    3. **English / Chinese / French / German / Spanish / others** → uses
+       spaCy with the correct model naming convention: English and Chinese
+       use ``_core_web_sm``; everything else uses ``_core_news_sm``. If the
+       model isn't installed, ``SpaCyPipeline._load()`` falls back to
+       ``spacy.blank(lang)``.
+
+    To **force** a specific backend (e.g. test spaCy blank for Urdu), pass
+    ``backend="spacy"`` explicitly. To force Stanza for a language not in
+    ``STANZA_PREFERRED_LANGUAGES``, pass ``backend="stanza"``.
 
     Raises ValueError with an actionable message if the language has
     no available spaCy model.
@@ -245,9 +396,34 @@ def get_pipeline(backend: str = "spacy", language: str = "en", model_name: str |
                 "pip install camel-tools && camel_data -i morphology-db-msa-r13"
             ) from exc
 
+    # Urdu/Hindi/Farsi: prefer Stanza (has official models), fall back to spaCy
+    # blank (tokenizer-only) if stanza isn't installed.
+    if language in STANZA_PREFERRED_LANGUAGES and backend in ("spacy", "stanza"):
+        try:
+            import stanza  # noqa: F401
+        except ImportError:
+            # Stanza not installed — log and fall through to spaCy blank.
+            log.warning(
+                "stanza_unavailable_falling_back_to_spacy_blank",
+                language=language,
+                hint="pip install stanza  (requires torch ~800 MB) "
+                     "for full POS/lemma/dependency parse",
+            )
+        else:
+            return StanzaPipeline(language=language)
+
+    if backend == "stanza":
+        # User explicitly asked for stanza for a language not in the preferred
+        # set (e.g. stanza for English). Don't fall back — raise so the caller
+        # knows stanza was requested but unavailable.
+        return StanzaPipeline(language=language)
+
     if backend == "spacy":
         if model_name is None:
-            # English and Chinese use _core_web_sm; everything else uses _core_news_sm
+            # English and Chinese use _core_web_sm; everything else uses _core_news_sm.
+            # Urdu (ur), Hindi (hi), and Farsi (fa) have no official spaCy model —
+            # the {lang}_core_news_sm name won't resolve and SpaCyPipeline._load()
+            # will fall back to spacy.blank(lang) (tokenizer + sentencizer only).
             if language == "en":
                 model_name = "en_core_web_sm"
             elif language == "zh":

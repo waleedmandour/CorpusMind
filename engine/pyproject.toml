@@ -99,6 +99,14 @@ arabic = [
     # Declared here so `pip install -e ".[arabic]"` is a one-shot.
     "camel-tools>=1.5.5",
 ]
+# v1.2.11: Stanza backend for Urdu/Hindi/Farsi (and any other language without
+# an official spaCy model). Stanza requires torch (~800 MB), so it's an opt-in
+# extra. Install with: pip install -e ".[urdu-hindi-farsi]"
+# Then pre-download the models:
+#   python -c "import stanza; stanza.download('ur'); stanza.download('hi'); stanza.download('fa')"
+urdu-hindi-farsi = [
+    "stanza>=1.8.0",
+]
 # v1.2.7 (§4): Persuasion Index lens (Wang & Gong 2026, Apache-2.0).
 # v1.2.8 (review #6): promoted to MAIN dependencies above — the packaged
 # engine must ship the lens, so the extra is now only a compatibility

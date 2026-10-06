@@ -505,7 +505,7 @@ def _extract_opus_zip(zip_bytes: bytes) -> bytes:
 @router.get("/hub/search", response_model=SearchResponse)
 async def hub_search(
     q: str = Query(..., min_length=1, description="Search query (keyword or topic)"),
-    language: str = Query("en", pattern="^(ar|en|ar-en)$", description="Target language"),
+    language: str = Query("en", pattern="^(ar|en|ar-en|ur|hi|fa)$", description="Target language"),
     hub: str = Query("all", pattern="^(all|huggingface|wikipedia|opus)$", description="Which hub to search"),
     limit: int = Query(20, ge=1, le=100),
 ) -> SearchResponse:
