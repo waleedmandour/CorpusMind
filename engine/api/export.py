@@ -387,7 +387,9 @@ def _build_collocation_network_svg(node: str, rows: list[dict], max_nodes: int =
     import math
     parts: list[str] = [
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" '
-        f'viewBox="0 0 {width} {height}" font-family="Inter, Segoe UI, sans-serif">',
+        # v1.2.11: Arabic-script + Devanagari faces in the fallback chain so
+        # ur/hi/fa labels export without tofu boxes.
+        f'viewBox="0 0 {width} {height}" font-family="Inter, Segoe UI, Noto Sans Arabic, Noto Sans Devanagari, sans-serif">',
         '<rect width="100%" height="100%" fill="white"/>',
         # Title
         f'<text x="{width//2}" y="30" text-anchor="middle" font-size="16" font-weight="bold" fill="#1c1f1d">'

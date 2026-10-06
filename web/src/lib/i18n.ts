@@ -758,7 +758,7 @@ export const translations = {
     // --- v1.2.0: main-app onboarding (was hardcoded English) ----------------
     onb_main_w_title: "Welcome to CorpusMind",
     onb_main_w_sub: "A local-first corpus workbench: concordancing, statistics, discourse analysis, and a grounded AI assistant - your texts never leave your machine.",
-    onb_main_w_intro: "Build a corpus, run the full battery of corpus-linguistic tools, and work bilingually (English and Arabic are first-class).",
+    onb_main_w_intro: "Build a corpus and run the full battery of corpus-linguistic tools. English and Arabic are first-class; Urdu, Hindi and Farsi now work for tokenization, statistics, and keyness (see the guide for per-language coverage).",
     onb_main_f1_t: "Corpus Analysis",
     onb_main_f1_d: "Concordance, Vector KWIC, frequency, collocation, keyness, n-grams, dispersion, and more.",
     onb_main_f2_t: "Companion Apps",
@@ -1766,7 +1766,7 @@ export const translations = {
     // --- v1.2.0: صفحات تهيئة التطبيق الرئيسي (كانت إنجليزية ثابتة) ---
     onb_main_w_title: "مرحباً بك في CorpusMind",
     onb_main_w_sub: "منصّة تحليل دخائر محلية أولاً: التокоبيات والإحصاء وتحليل الخطاب ومساعد ذكي مبرهن - نصوصك لا تغادر جهازك أبداً.",
-    onb_main_w_intro: "ابنِ دخيرة، وشغّل كامل منظومة أدوات اللغويات المساندة، واعمل بلغتين (الإنجليزية والعربية لغة أصيلة هنا).",
+    onb_main_w_intro: "ابنِ دخيرة، وشغّل كامل منظومة أدوات اللغويات المساندة. الإنجليزية والعربية لغتان أصيلتان، والآن تدعم الأردية والهندية والفارسية التوكبيات والإحصاء والشائزة (انظر الدليل لتغطية كل لغة).",
     onb_main_f1_t: "تحليل الدخائر",
     onb_main_f1_d: "التوكوب وقائمة كلمات، والاقتران، والمفردات الشاخصة، والمقاطع العِبارية، والتشتت، وغيرها.",
     onb_main_f2_t: "التطبيقات الرفيقة",

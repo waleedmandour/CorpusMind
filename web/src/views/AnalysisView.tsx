@@ -957,6 +957,9 @@ const TAGSET_LABELS: Record<string, string> = {
 };
 const TAGSETS_EN = ["upos", "ptb", "claws7", "usas"];
 const TAGSETS_AR = ["upos", "calima", "usas"];
+// v1.2.11: ur/hi/fa - UPOS only (no PTB/CLAWS tagger exists for them, and
+// the USAS lexicons are en/ar only).
+const TAGSETS_NEW_LANGS = ["upos"];
 
 function POSPanel({ cid }: { cid: string }) {
   const [n, setN] = useState(1);
@@ -989,7 +992,11 @@ function POSPanel({ cid }: { cid: string }) {
         : api.posAnalysis(cid, n, 2, 100, effectiveTagset),
   });
   const exportStatus = useExportStatus();
-  const tagsetOptions = language === "ar" ? TAGSETS_AR : TAGSETS_EN;
+  const tagsetOptions = language === "ar"
+    ? TAGSETS_AR
+    : ["ur", "hi", "fa"].includes(language)
+      ? TAGSETS_NEW_LANGS
+      : TAGSETS_EN;
 
   return (
     <div className="panel-content">
@@ -2601,6 +2608,14 @@ interface VectorKwicSetup {
 }
 
 function VectorKwicPanel({ cid }: { cid: string }) {
+  // v1.2.11: corpus language for script-correct KWIC cells (dir=auto + lang).
+  const corpusMetaQ = useQuery({
+    queryKey: ["corpus", cid],
+    queryFn: () => api.getCorpus(cid),
+  });
+  const corpusLang = (corpusMetaQ.data?.language ?? "en").toLowerCase();
+  const corpusScriptTag =
+    corpusLang === "ur" ? "urdu" : corpusLang === "fa" ? "arabic" : corpusLang === "hi" ? "devanagari" : undefined;
   const lang = useUI((s) => s.lang);
   const [query, setQuery] = useState("");
   const [node, setNode] = useState("");
@@ -2945,7 +2960,7 @@ function VectorKwicPanel({ cid }: { cid: string }) {
           {data.lines.length === 0 ? (
             <div className="empty-state">{t(lang, "vk_no_lines")}</div>
           ) : (
-            <table className="kwic-table">
+            <table className="kwic-table" data-corpus-script={corpusScriptTag}>
               <thead>
                 <tr>
                   <th>Line ID</th>
@@ -2961,9 +2976,9 @@ function VectorKwicPanel({ cid }: { cid: string }) {
                   <tr key={l.line_id}>
                     <td className="line-id" title={l.line_id}>{l.line_id.slice(-12)}</td>
                     <td className="doc" title={l.document_filename}>{l.document_filename}</td>
-                    <td className="left">{l.left}</td>
-                    <td className="node">{l.node}</td>
-                    <td className="right">{l.right}</td>
+                    <td className="left" dir="auto" lang={corpusLang}>{l.left}</td>
+                    <td className="node" dir="auto" lang={corpusLang}>{l.node}</td>
+                    <td className="right" dir="auto" lang={corpusLang}>{l.right}</td>
                     <td className="similarity" title="Raw cosine similarity">{l.similarity.toFixed(3)}</td>
                   </tr>
                 ))}

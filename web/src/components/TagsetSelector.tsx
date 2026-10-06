@@ -22,6 +22,10 @@ const TAGSET_LABELS: Record<string, string> = {
 
 const GRAMMATICAL_EN = ["upos", "ptb", "claws7"];
 const GRAMMATICAL_AR = ["upos", "calima"];
+// v1.2.11: Urdu/Hindi/Farsi have no language-specific tagset in the engine;
+// UPOS is the only valid choice (server validates - a PTB tagger does not
+// exist for these languages).
+const GRAMMATICAL_NEW_LANGS = ["upos"];
 const SEMANTIC = ["usas"];
 
 const TAGSET_HINTS: Record<string, string> = {
@@ -49,7 +53,7 @@ export function TagsetSelector({ cid }: { cid: string }) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["corpus", cid] }),
   });
 
-  const grammatical = language === "ar" ? GRAMMATICAL_AR : GRAMMATICAL_EN;
+  const grammatical = language === "ar" ? GRAMMATICAL_AR : ["ur", "hi", "fa"].includes(language) ? GRAMMATICAL_NEW_LANGS : GRAMMATICAL_EN;
   const chosenHint = TAGSET_HINTS[current];
 
   return (

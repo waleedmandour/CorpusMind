@@ -53,6 +53,17 @@ export function ConcordancerView() {
   // Issue 5: visible export status so the user knows what happened
   const [exportStatus, setExportStatus] = useState<{ kind: "success" | "error" | "info"; msg: string } | null>(null);
 
+  // v1.2.11: corpus language drives script-correct rendering (dir=auto +
+  // lang on KWIC cells) without touching the UI language.
+  const corpusMeta = useQuery({
+    queryKey: ["corpus", cid],
+    queryFn: () => api.getCorpus(cid!),
+    enabled: !!cid,
+  });
+  const corpusLang = (corpusMeta.data?.language ?? "en").toLowerCase();
+  const corpusScriptTag =
+    corpusLang === "ur" ? "urdu" : corpusLang === "fa" ? "arabic" : corpusLang === "hi" ? "devanagari" : undefined;
+
   const result = useQuery({
     queryKey: ["concordance", cid, submitted, offset],
     queryFn: () => api.concordance(cid!, submitted!.q, submitted!.l as any, submitted!.w, PAGE_SIZE, offset, submitted!.cs, submitted!.rs ? 100 : null, submitted!.seed, submitted!.rx, submitted!.sort, submitted!.nm),
@@ -180,7 +191,7 @@ export function ConcordancerView() {
             <div className="empty-state">No matches.</div>
           ) : (
             <>
-              <table className="kwic-table">
+              <table className="kwic-table" data-corpus-script={corpusScriptTag}>
                 <thead>
                   <tr>
                     <th>Line ID</th>
@@ -197,11 +208,11 @@ export function ConcordancerView() {
                     <tr key={l.line_id}>
                       <td className="line-id" title={l.line_id}>{l.line_id.slice(-12)}</td>
                       <td className="doc" title={l.document_filename}>{l.document_filename}</td>
-                      <td className="left">{l.left}</td>
-                      <td className="node">{l.node}</td>
-                      <td className="right">{l.right}</td>
+                      <td className="left" dir="auto" lang={corpusLang}>{l.left}</td>
+                      <td className="node" dir="auto" lang={corpusLang}>{l.node}</td>
+                      <td className="right" dir="auto" lang={corpusLang}>{l.right}</td>
                       <td><span className={clsx("pos-tag", POS_COLORS[l.pos] ?? "pos-other")}>{l.pos}</span></td>
-                      <td className="lemma">{l.lemma}</td>
+                      <td className="lemma" dir="auto" lang={corpusLang}>{l.lemma}</td>
                     </tr>
                   ))}
                 </tbody>

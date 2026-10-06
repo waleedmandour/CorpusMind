@@ -909,7 +909,9 @@ function NetworkCanvas2D({
         ctx.stroke();
       }
       const label = (a.label ?? node) as string;
-      ctx.font = `${a.isCenter ? "600 13px" : "500 12px"} system-ui, -apple-system, 'Segoe UI', sans-serif`;
+      // v1.2.11: bundled Arabic-script / Devanagari faces in the fallback
+      // stack so Urdu/Hindi/Farsi node labels render in the PNG export too.
+      ctx.font = `${a.isCenter ? "600 13px" : "500 12px"} system-ui, -apple-system, 'Segoe UI', 'Noto Sans Arabic', 'Noto Sans Devanagari', sans-serif`;
       ctx.lineWidth = 3;
       ctx.strokeStyle = "rgba(255, 255, 255, 0.85)";
       ctx.strokeText(label, x + r + 5, y);

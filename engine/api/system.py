@@ -251,6 +251,50 @@ RECOMMENDED_OLLAMA_MODELS: list[dict] = [
         "recommended": False,
         "task": "text",
     },
+    # --- Google Gemma 4 (v1.2.11) ---
+    # Tags, sizes, context windows, and capabilities verified on
+    # ollama.com/library/gemma4 (+ /tags) on 2026-10-07; multilingual
+    # claim ("140+ languages pre-trained, 35+ out-of-the-box") and the
+    # Apache-2.0 license verified on ai.google.dev/gemma/docs/core/
+    # model_card_4 the same day. Gemma 4 advertises the "tools"
+    # capability in /api/tags, so the assistant's tool gate accepts it.
+    # Quantization tags exist per size (-it-qat, -it-q4_K_M, -it-q8_0,
+    # -it-bf16); the recommended quantization is noted in each
+    # description. The model is pulled by the user through Ollama —
+    # never bundled.
+    {
+        "name": "gemma4:e2b",
+        "size": "4.3-10 GB",
+        "size_bytes": 4600000000,
+        "params": "E2B (2.3B effective)",
+        "ram": "8 GB",
+        "description": "Google Gemma 4 E2B - edge model, 128K context, text+image input, tool calling. Recommended quantization: gemma4:e2b-it-qat (4.3 GB). Multilingual (140+ languages pre-trained).",
+        "languages": ["en", "ar", "ur", "hi", "fa", "fr", "de", "es", "zh"],
+        "recommended": False,
+        "task": "text",
+    },
+    {
+        "name": "gemma4:e4b",
+        "size": "6.1-16 GB",
+        "size_bytes": 6600000000,
+        "params": "E4B (4.5B effective)",
+        "ram": "8 GB",
+        "description": "Google Gemma 4 E4B - best balance for laptops, 128K context, text+image, native tool calling (assistant grounding works). Recommended quantization: gemma4:e4b-it-qat (6.1 GB) or gemma4:e4b-it-q4_K_M (6.6 GB). Multilingual.",
+        "languages": ["en", "ar", "ur", "hi", "fa", "fr", "de", "es", "zh"],
+        "recommended": True,
+        "task": "text",
+    },
+    {
+        "name": "gemma4:12b",
+        "size": "7.2-13 GB",
+        "size_bytes": 8000000000,
+        "params": "12B",
+        "ram": "12 GB",
+        "description": "Google Gemma 4 12B - workstation quality, 256K context, audio+text+image. Recommended quantization: gemma4:12b-it-qat (7.2 GB) or gemma4:12b-it-q4_K_M (8.0 GB). Multilingual.",
+        "languages": ["en", "ar", "ur", "hi", "fa", "fr", "de", "es", "zh"],
+        "recommended": False,
+        "task": "text",
+    },
     # --- Embedding models (v1.2.0 — power Vector KWIC / semantic search) ---
     {
         "name": "bge-m3",
@@ -439,6 +483,62 @@ class OllamaPullRequest(BaseModel):
     model: str = Field(..., description="Model name, e.g. 'llama3.2:3b'")
 
 
+# v1.2.11: classify Ollama pull/run failures so a model whose architecture
+# needs a newer Ollama is reported as an UPDATE problem, never as the 409
+# "model missing" / 502 pattern that sends users hunting for a model they
+# cannot possibly install. Ollama does not publish a per-model minimum
+# version we could hardcode (verified 2026-10-07: no such field on the
+# ollama.com library page), so the classification is error-text based.
+_OLLAMA_TOO_OLD_MARKERS = (
+    "newer version of ollama",
+    "requires a newer",
+    "unsupported model",
+    "unknown architecture",
+    "unsupported architecture",
+    "incompatible",
+)
+
+
+def _classify_ollama_error(message: str) -> str:
+    """Classify an Ollama error message for the UI.
+
+    Returns "ollama_too_old" | "model_missing" | "other".
+    """
+    m = (message or "").lower()
+    if any(marker in m for marker in _OLLAMA_TOO_OLD_MARKERS):
+        return "ollama_too_old"
+    if "manifest" in m and ("not found" in m or "does not exist" in m):
+        return "model_missing"
+    if "not found" in m or "no such model" in m:
+        return "model_missing"
+    return "other"
+
+
+def _humanize_ollama_error(message: str, ollama_version: str | None = None) -> str:
+    """Prepend an actionable hint when the failure looks version-related."""
+    if _classify_ollama_error(message) != "ollama_too_old":
+        return message
+    ver = f" (installed: {ollama_version})" if ollama_version else ""
+    return (
+        f"The installed Ollama{ver} is too old for this model. "
+        f"Update Ollama from https://ollama.com and try again. "
+        f"(Ollama said: {message})"
+    )
+
+
+async def _ollama_version(base_url: str) -> str | None:
+    """Probe Ollama's /api/version; None when unreachable or too old to have it."""
+    try:
+        async with httpx.AsyncClient(timeout=5.0, trust_env=False, proxy=None) as client:
+            r = await client.get(f"{base_url}/api/version")
+            if r.status_code == 200:
+                data = r.json()
+                return str(data.get("version")) if data.get("version") else None
+    except Exception:
+        pass
+    return None
+
+
 def _pull_error_from_body(body: str) -> str:
     """Extract a human-readable error from an Ollama error response body.
 
@@ -498,7 +598,11 @@ async def ollama_pull(req: OllamaPullRequest) -> dict:
                     if r.status_code != 200:
                         body = (await r.aread()).decode("utf-8", errors="replace")
                         raise RuntimeError(
-                            _pull_error_from_body(body) or f"Ollama returned HTTP {r.status_code}"
+                            _humanize_ollama_error(
+                                _pull_error_from_body(body)
+                                or f"Ollama returned HTTP {r.status_code}",
+                                await _ollama_version(base_url),
+                            )
                         )
                     async for line in r.aiter_lines():
                         if not line:
@@ -511,7 +615,12 @@ async def ollama_pull(req: OllamaPullRequest) -> dict:
                         # swallowing them — a failed pull must NOT end as
                         # "success" (this masked every download failure).
                         if data.get("error"):
-                            raise RuntimeError(str(data["error"]))
+                            raise RuntimeError(
+                                _humanize_ollama_error(
+                                    str(data["error"]),
+                                    await _ollama_version(base_url),
+                                )
+                            )
                         # Preserve the last known progress when a line lacks
                         # totals (e.g. the final {"status":"success"} line
                         # would otherwise reset the bar to 0%).
@@ -565,12 +674,34 @@ _pull_status: dict[str, dict] = {}
 _pull_tasks: dict[str, asyncio.Task] = {}
 
 
+@router.get("/ollama/version")
+async def ollama_version_probe() -> dict:
+    """Installed Ollama version (v1.2.11).
+
+    Lets the UI (and support flows) show WHAT is installed when a model
+    fails: a version-less response means Ollama is not reachable. This is
+    a probe, never a gate — models are pulled through the user's Ollama.
+    """
+    base_url = get_settings().ollama_base_url.rstrip("/")
+    version = await _ollama_version(base_url)
+    return {"installed": version is not None, "version": version, "base_url": base_url}
+
+
 @router.get("/ollama/pull/status")
 async def ollama_pull_status(model: str) -> dict:
-    """Get the pull progress for a model."""
+    """Get the pull progress for a model.
+
+    v1.2.11: the error field carries the humanized message (an
+    "Ollama too old" failure says so explicitly) and a machine-readable
+    ``classification`` (ollama_too_old | model_missing | other) so the UI
+    can distinguish an update problem from a missing-model 409-style case.
+    """
     if model not in _pull_status:
         return {"model": model, "status": "not_started", "completed": 0, "total": 0, "error": None}
-    return {"model": model, **_pull_status[model]}
+    payload = {"model": model, **_pull_status[model]}
+    if payload.get("error"):
+        payload["classification"] = _classify_ollama_error(str(payload["error"]))
+    return payload
 
 
 # --------------------------------------------------------------------------- #

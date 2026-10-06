@@ -1,6 +1,39 @@
 /* =========================================================================
    CorpusMind design tokens.
-   Two themes (light / dark) are defined as CSS custom properties on :root.
+   Two themes (light / dark) are defined as CSS custom properties on /* --------------------------------------------------------------------------- */
+/* v1.2.11: locally bundled fonts (offline-first; no CDN). All under the
+   SIL Open Font License 1.1 - see public/fonts/*-OFL.txt and
+   THIRD_PARTY_LICENSES.md. */
+@font-face {
+  font-family: "Noto Sans Devanagari";
+  src: url("/fonts/NotoSansDevanagari-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-display: swap;
+  unicode-range: U+0900-097F, U+0964, U+0965;
+}
+@font-face {
+  font-family: "Noto Sans Devanagari";
+  src: url("/fonts/NotoSansDevanagari-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-display: swap;
+  unicode-range: U+0900-097F, U+0964, U+0965;
+}
+@font-face {
+  font-family: "Noto Nastaliq Urdu";
+  src: url("/fonts/NotoNastaliqUrdu-var.ttf") format("truetype");
+  font-weight: 400 700;
+  font-display: swap;
+  unicode-range: U+0600-06FF, U+0750-077F, U+FB50-FDFF, U+FE70-FEFF;
+}
+@font-face {
+  font-family: "Noto Sans Arabic";
+  src: url("/fonts/NotoSansArabic-var.ttf") format("truetype");
+  font-weight: 100 900;
+  font-display: swap;
+  unicode-range: U+0600-06FF, U+0750-077F, U+FB50-FDFF, U+FE70-FEFF;
+}
+
+:root.
    The [data-theme] attribute on <html> flips them. RTL is handled by the
    browser via the `dir` attribute — most layout uses logical properties
    (inline-start/inline-end) so it mirrors automatically.
@@ -25,8 +58,14 @@
   /* Typography */
   --font-sans: "Inter", "Segoe UI", "Helvetica Neue", system-ui, -apple-system, sans-serif;
   --font-serif: "Source Serif Pro", "Georgia", serif;
-  --font-mono: "JetBrains Mono", "Fira Code", "Consolas", monospace;
-  --font-arabic: "Noto Naskh Arabic", "Amiri", "Scheherazade New", serif;
+  /* v1.2.11: the mono stack gains the bundled script faces so KWIC cells and
+     tables render Urdu/Persian/Hindi offline (they previously fell back to
+     whatever the OS happened to have). */
+  --font-mono: "JetBrains Mono", "Fira Code", "Consolas", "Noto Sans Devanagari", "Noto Sans Arabic", monospace;
+  --font-arabic: "Noto Naskh Arabic", "Noto Sans Arabic", "Amiri", "Scheherazade New", serif;
+  /* v1.2.11: bundled faces for the new corpus languages (OFL, offline-first) */
+  --font-urdu: "Noto Nastaliq Urdu", "Noto Sans Arabic", "Noto Naskh Arabic", serif;
+  --font-devanagari: "Noto Sans Devanagari", "Noto Sans", system-ui, sans-serif;
 
   /* Spacing scale (4pt grid) */
   --space-1: 4px;
@@ -3748,14 +3787,32 @@ html[dir="rtl"] {
   margin-inline: auto;
 }
 
-/* Arabic font when RTL */
+/* Arabic font when RTL (v1.2.11: faces are bundled locally now) */
 html[dir="rtl"] body {
-  font-family: "Noto Naskh Arabic", "Amiri", "Scheherazade New", var(--font-sans);
+  font-family: var(--font-arabic);
 }
 html[dir="rtl"] .sidebar-item-label,
 html[dir="rtl"] .sidebar-group-label,
 html[dir="rtl"] .app-name {
-  font-family: "Noto Naskh Arabic", "Amiri", var(--font-sans);
+  font-family: var(--font-arabic);
+}
+/* v1.2.11: corpus-script aware text cells - Urdu gets the Nastaliq face,
+   Devanagari gets Noto Sans Devanagari (bidi isolation keeps mixed
+   KWIC rows from garbling; the attribute-level dir is set in TSX). */
+[data-corpus-script="arabic"] .kwic-table td,
+[data-corpus-script="arabic"] .cell-text {
+  font-family: var(--font-arabic);
+}
+[data-corpus-script="urdu"] .kwic-table td,
+[data-corpus-script="urdu"] .cell-text {
+  font-family: var(--font-urdu);
+}
+[data-corpus-script="devanagari"] .kwic-table td,
+[data-corpus-script="devanagari"] .cell-text {
+  font-family: var(--font-devanagari);
+}
+.kwic-table td {
+  unicode-bidi: plaintext;
 }
 
 /* =========================================================================
