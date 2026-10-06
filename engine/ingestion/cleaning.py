@@ -74,6 +74,15 @@ class CleaningOptions:
     strip_arabic_diacritics: bool = False  # harakat
     remove_arabic_tatweel: bool = False  # kashida ـ
 
+    # --- v1.2.11: ZWNJ (U+200C) convention for stored text ---
+    # Off by default: ZWNJ is meaningful inside Persian/Urdu words
+    # (می‌روم) and is preserved at ingestion. Turning this on removes it
+    # from the STORED text (so کتاب‌ها becomes کتابها) — a documented
+    # corpus-level convention for researchers who prefer joined-spelling
+    # aggregation. Matching-level modes live in nlp/normalizers.py and the
+    # normalize/zwnj request parameters, independent of this flag.
+    strip_zwnj: bool = False
+
     # --- Reproducibility ---
     create_new_version: bool = True  # §4.8 — preserve old annotations
 
@@ -94,6 +103,7 @@ class CleaningOptions:
             "normalize_arabic": self.normalize_arabic,
             "strip_arabic_diacritics": self.strip_arabic_diacritics,
             "remove_arabic_tatweel": self.remove_arabic_tatweel,
+            "strip_zwnj": self.strip_zwnj,
             "create_new_version": self.create_new_version,
         }
 
@@ -243,8 +253,18 @@ def clean_text(text: str, opts: CleaningOptions, language: str = "en") -> str:
             text = text.replace(_ARABIC_TATWEEL, "")
 
     # --- 3. Removal: punctuation, numbers, symbols ---
+    if opts.strip_zwnj:
+        # v1.2.11: documented ZWNJ convention (see CleaningOptions docstring)
+        text = text.replace("\u200c", "")
     if opts.remove_numbers:
-        text = _NUMBER_RE.sub(" ", text)
+        # v1.2.11: \d alone is ASCII-only; the documented digit policy says
+        # Arabic-Indic (٠-٩), Extended Arabic-Indic (۰-۹) and Devanagari
+        # (०-९) numerals count as numbers too.
+        text = re.sub(
+            r"[\d\u0660-\u0669\u06F0-\u06F9\u0966-\u096F]+([.,][\d\u0660-\u0669\u06F0-\u06F9\u0966-\u096F]+)?",
+            " ",
+            text,
+        )
     if opts.remove_extra_symbols:
         text = _EXTRA_SYMBOL_RE.sub(" ", text)
     if opts.remove_punctuation:

@@ -64,6 +64,12 @@ def detect_language(text: str) -> str:
         return "ur"
     if any(ch in _PERSIAN_LETTERS for ch in text) or _ZWNJ in text:
         return "fa"
+    # Persian keyboard codepoints: kaf U+06A9 and yeh U+06CC are NEVER used
+    # by Arabic (Arabic writes ك U+0643 and ي U+064A). Persian/Urdu text
+    # typed on a Persian-style keyboard carries them even when no other
+    # distinctive letter appears — the mixed English/Persian near-miss.
+    if "\u06A9" in text or "\u06CC" in text:
+        return "fa"
     if any(ch in _ARABIC_SPECIFIC for ch in text):
         return "ar"
     return "ar"

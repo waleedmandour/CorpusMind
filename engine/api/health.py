@@ -64,6 +64,7 @@ async def resources_health() -> dict:
         "spacy_model": {},
         "wordfreq": {},
         "sentiment": {},
+        "languages": {},
         "reference_data_dir": None,
         "persuasion_index": {"installed": False, "version": None},
     }
@@ -108,6 +109,17 @@ async def resources_health() -> dict:
             ),
             "dialectal_tweets_top1000": exists(
                 "reference-corpora", "ar", "dialectal-arabic-tweets-top1000.tsv"
+            ),
+            # v1.2.11: Urdu / Hindi / Farsi keyness baselines (wordfreq
+            # 3.1.1-derived, CC BY-SA 4.0 data) — contractual in the bundle.
+            "urdu_freq_top1000": exists(
+                "reference-corpora", "ur", "urdu-freq-top1000.tsv"
+            ),
+            "hindi_freq_top1000": exists(
+                "reference-corpora", "hi", "hindi-freq-top1000.tsv"
+            ),
+            "farsi_freq_top1000": exists(
+                "reference-corpora", "fa", "farsi-freq-top1000.tsv"
             ),
         }
         # v1.2.10: framework YAML catalogue (12 bundled definitions).
@@ -160,6 +172,27 @@ async def resources_health() -> dict:
         out["sentiment"]["nrc_configured"] = bool(_lexicon_dirs())
     except Exception:
         pass
+
+    # v1.2.11: per-language capability summary (bundled stopword lists per
+    # language and whether the optional Stanza backend is importable).
+    languages_report: dict = {"stopwords": {}, "stanza": {}}
+    try:
+        from nlp.stopwords import get_stopwords
+
+        for lang in ("en", "ar", "ur", "hi", "fa"):
+            languages_report["stopwords"][lang] = len(get_stopwords(lang)) > 0
+    except Exception:
+        pass
+    try:
+        import importlib.util as _ilu
+
+        languages_report["stanza"] = {
+            "installed": _ilu.find_spec("stanza") is not None,
+            "note": "optional backend for ur/hi/fa POS/lemma/parse",
+        }
+    except Exception:
+        pass
+    out["languages"] = languages_report
 
     try:
         import importlib.metadata

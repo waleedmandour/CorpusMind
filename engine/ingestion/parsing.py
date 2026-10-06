@@ -60,7 +60,15 @@ def _clean_text(text: str) -> str:
     # Normalize Unicode line endings + collapse runs of whitespace
     text = text.replace("\r\n", "\n").replace("\r", "\n")
     # Strip zero-width chars that can silently disagree between tools (§8.1)
-    text = text.replace("\u200b", "").replace("\u200c", "").replace("\u200d", "")
+    # v1.2.11: U+200C (ZWNJ) is deliberately PRESERVED — it is meaningful
+    # inside Persian and Urdu words (می‌روم) and stripping it silently
+    # merges distinct spellings at ingestion time, before the user ever
+    # sees a tool. Matching-level ZWNJ handling is the documented
+    # keep/space/strip modes in nlp/normalizers.py; the per-corpus cleaning
+    # option strip_zwnj (off by default) removes it from stored text when
+    # the researcher chooses that convention. U+200B (ZWSP) and U+200D
+    # (ZWJ) carry no meaning in the supported scripts and are still removed.
+    text = text.replace("\u200b", "").replace("\u200d", "")
     text = text.replace("\ufeff", "")  # BOM
     # Collapse 3+ newlines to 2
     while "\n\n\n" in text:

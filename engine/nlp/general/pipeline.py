@@ -300,12 +300,32 @@ class StanzaPipeline:
         # Stanza auto-downloads the model on first use. We pass processors
         # explicitly to avoid loading NER when we don't need it (NER models
         # are large and the token storage model doesn't use entity info).
-        self._nlp = stanza.Pipeline(
-            lang=self._language,
-            package=self._package,
-            processors="tokenize,mwt,pos,lemma,depparse",
-            verbose=False,
+        # v1.2.11: MWT is NOT available for every language (e.g. Urdu and
+        # Persian treebanks ship without one) — a hardcoded processor list
+        # crashed with UnsupportedProcessorError before a single document
+        # was parsed. Try the full list, then degrade gracefully.
+        processor_sets = (
+            "tokenize,mwt,pos,lemma,depparse",
+            "tokenize,pos,lemma,depparse",
         )
+        last_exc: Exception | None = None
+        for processors in processor_sets:
+            try:
+                self._nlp = stanza.Pipeline(
+                    lang=self._language,
+                    package=self._package,
+                    processors=processors,
+                    verbose=False,
+                )
+                break
+            except Exception as exc:  # stanza raises several exception types
+                last_exc = exc
+                self._nlp = None
+        if self._nlp is None:
+            raise ValueError(
+                f"Stanza pipeline could not be created for language "
+                f"'{self._language}': {last_exc}"
+            ) from last_exc
         stanza_version = stanza.__version__
         # Stanza doesn't expose model version in a stable attribute; use the
         # package name + language as the model identifier.
@@ -401,9 +421,11 @@ def get_pipeline(backend: str = "spacy", language: str = "en", model_name: str |
        model isn't installed, ``SpaCyPipeline._load()`` falls back to
        ``spacy.blank(lang)``.
 
-    To **force** a specific backend (e.g. test spaCy blank for Urdu), pass
-    ``backend="spacy"`` explicitly. To force Stanza for a language not in
-    ``STANZA_PREFERRED_LANGUAGES``, pass ``backend="stanza"``.
+    To **force** the spaCy backend regardless of stanza availability,
+    construct ``SpaCyPipeline`` directly (the dispatcher prefers stanza for
+    ur/hi/fa whenever it is importable — that preference is the product
+    behavior; the blank fallback it avoids is exercised by
+    tests/test_language_fixtures.py::TestSentenceSplitting).
 
     Raises ValueError with an actionable message if the language has
     no available spaCy model.

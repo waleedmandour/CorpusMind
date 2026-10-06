@@ -127,13 +127,20 @@ def _xlsx_bytes(sheet_name: str, headers: list[str], rows: list[list]) -> bytes:
 
 
 def _csv_bytes(headers: list[str], rows: list[list], delimiter: str = ",") -> bytes:
-    """CSV or TSV as bytes."""
+    """CSV or TSV as bytes.
+
+    v1.2.11: UTF-8 BOM prepended so Excel/Sheets detect the encoding on
+    double-click. Without it, Arabic/Urdu/Persian/Hindi columns in exported
+    rows render as mojibake in Excel's default codepage. The client-side
+    exports already did this (chartExport.ts prepends \uFEFF); the engine
+    side now matches. Round-trip pinned by a test.
+    """
     buf = io.StringIO()
     writer = csv.writer(buf, delimiter=delimiter, quoting=csv.QUOTE_MINIMAL)
     writer.writerow(headers)
     for r in rows:
         writer.writerow(r)
-    return buf.getvalue().encode("utf-8")
+    return b"\xef\xbb\xbf" + buf.getvalue().encode("utf-8")
 
 
 def _txt_bytes(headers: list[str], rows: list[list]) -> bytes:

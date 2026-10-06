@@ -303,7 +303,8 @@ jobs:
           if d.get('wordlists', {}).get('awl') is not True:
               problems.append('AWL wordlist missing in Docker image')
           rc = d.get('reference_corpora', {})
-          for k in ('be06_top1000', 'camel_arabic_top1000', 'quranic_arabic_freq'):
+          for k in ('be06_top1000', 'camel_arabic_top1000', 'quranic_arabic_freq',
+                    'urdu_freq_top1000', 'hindi_freq_top1000', 'farsi_freq_top1000'):
               if rc.get(k) is not True:
                   problems.append(f'reference corpus missing in Docker image: {k}')
           if d.get('frameworks', {}).get('count', 0) < 12:

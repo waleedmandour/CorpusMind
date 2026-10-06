@@ -127,7 +127,7 @@ try {
         if ($res.usas.ar -ne $true) { $Failures += "USAS ar lexicon did not resolve at boot" }
         if ($res.wordlists.awl -ne $true) { $Failures += "AWL wordlist did not resolve at boot" }
         if ($res.wordlists.k1_top200 -ne $true) { $Failures += "K1 top200 wordlist did not resolve at boot" }
-        foreach ($k in @('be06_top1000','leipzig_news_top100','ellipse_learner_top1000','pd_persuasive_top1000','camel_arabic_top1000','quranic_arabic_freq','dialectal_tweets_top1000')) {
+        foreach ($k in @('be06_top1000','leipzig_news_top100','ellipse_learner_top1000','pd_persuasive_top1000','camel_arabic_top1000','quranic_arabic_freq','dialectal_tweets_top1000','urdu_freq_top1000','hindi_freq_top1000','farsi_freq_top1000')) {
             if ($res.reference_corpora.$k -ne $true) { $Failures += "reference corpus missing at boot: $k" }
         }
         if (-not $res.frameworks -or $res.frameworks.count -lt 12) {

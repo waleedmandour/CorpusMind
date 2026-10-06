@@ -226,6 +226,9 @@ _STUDENT_ROUTES: list[tuple[set[str], re.Pattern[str]]] = [
     ({"GET"}, re.compile(r"^/api/v1/health(/ready|/resources)?$")),
     ({"GET"}, re.compile(r"^/api/v1/version$")),
     ({"GET"}, re.compile(r"^/api/v1/frameworks$")),
+    # v1.2.11: language capability registry — read-only metadata the
+    # classroom UI needs to render per-language tool availability.
+    ({"GET"}, re.compile(r"^/api/v1/languages$")),
     # Project / corpus / document listing (read-only).
     ({"GET"}, re.compile(r"^/api/v1/projects$")),
     ({"GET"}, re.compile(r"^/api/v1/projects/[^/]+$")),

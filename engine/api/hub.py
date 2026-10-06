@@ -94,6 +94,9 @@ HF_CATALOGUE: list[dict] = [
         "id": "wikimedia/wikipedia",
         "config_ar": "20231101.ar",
         "config_en": "20231101.en",
+        "config_ur": "20231101.ur",
+        "config_hi": "20231101.hi",
+        "config_fa": "20231101.fa",
         "title": "Wikipedia (full dumps)",
         "description": "The complete Wikipedia corpus for 300+ languages, maintained by Wikimedia. Each article is a document. Excellent for general-reference frequency baselines.",
         "license": "CC-BY-SA 3.0",
@@ -103,6 +106,9 @@ HF_CATALOGUE: list[dict] = [
         "id": "oscar-corpus/OSCAR-2301",
         "config_ar": "ar",
         "config_en": "en",
+        "config_ur": "ur",
+        "config_hi": "hi",
+        "config_fa": "fa",
         "title": "OSCAR-2301 (Common Crawl, filtered)",
         "description": "Cleaned web-crawl text in 150+ languages. Much larger and more contemporary than Wikipedia, but noisier. Good for big-data frequency studies.",
         "license": "CC0 (data); see HF card for details",
@@ -112,6 +118,9 @@ HF_CATALOGUE: list[dict] = [
         "id": "cc100",
         "config_ar": "ar",
         "config_en": "en",
+        "config_ur": "ur",
+        "config_hi": "hi",
+        "config_fa": "fa",
         "title": "CC-100 (Common Crawl, 100 languages)",
         "description": "100-language Common Crawl corpus prepared for language modeling. Per-language .txt.xz files.",
         "license": "Unrestricted (preparation); see CC-100 site",
@@ -178,7 +187,10 @@ HF_CATALOGUE: list[dict] = [
 async def _hf_search(query: str, language: str, limit: int) -> list[dict]:
     """Search the curated HF catalogue + full-text search inside Wikipedia."""
     results: list[dict] = []
-    lang_code = "ar" if language == "ar" else "en"
+    # v1.2.11: the search route's pattern whitelist (ar|en|ur|hi|fa) is the
+    # validator; the code is used as-is so Urdu/Hindi/Farsi queries hit their
+    # own Wikipedia configs instead of silently searching English.
+    lang_code = language if language in ("ar", "en", "ur", "hi", "fa") else "en"
 
     # 1. Filter the curated catalogue by keyword
     for entry in HF_CATALOGUE:
@@ -293,7 +305,9 @@ async def _hf_download(dataset: str, config: str, split: str = "train", max_rows
 
 async def _wikipedia_search(query: str, language: str, limit: int) -> list[dict]:
     """Search Wikipedia via the Action API."""
-    lang_code = "ar" if language == "ar" else "en"
+    # v1.2.11: ur/hi/fa Wikipedias are first-class here (the live gate in
+    # hub_search was lifted accordingly).
+    lang_code = language if language in ("ar", "en", "ur", "hi", "fa") else "en"
     results: list[dict] = []
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
@@ -393,12 +407,17 @@ def _strip_wikitext(wikitext: str) -> str:
 
 OPUS_API = "https://opus.nlpl.eu/opusapi"
 
-# Cached catalogue of OPUS corpora for ar + en (populated on first search)
-_opus_cache: dict[str, list[dict]] = {"ar": [], "en": [], "ar-en": [], "last_fetched": 0.0}
+# Cached catalogue of OPUS corpora per language slice (populated on first
+# search). v1.2.11: ur/hi/fa join ar/en; "ar-en" is kept for the legacy
+# parallel search key. Each slice lists corpora whose SOURCE is that code
+# (OPUS lists bilingual corpora under both sides, so en↔ur pairs appear
+# in the "ur" slice too).
+_OPUS_SOURCE_LANGS = ("ar", "en", "ur", "hi", "fa")
+_opus_cache: dict[str, object] = {"ar": [], "en": [], "ar-en": [], "ur": [], "hi": [], "fa": [], "last_fetched": 0.0}
 
 
 async def _opus_fetch_catalogue() -> None:
-    """Fetch the OPUS catalogue for Arabic + English (one-time, cached)."""
+    """Fetch the OPUS catalogue for the supported languages (one-time, cached)."""
     import time
     now = time.time()
     # Cache for 24 hours
@@ -407,15 +426,11 @@ async def _opus_fetch_catalogue() -> None:
 
     try:
         async with httpx.AsyncClient(timeout=60.0) as client:
-            # Fetch Arabic corpora
-            r = await client.get(OPUS_API, params={"source": "ar", "preprocessing": "moses"})
-            if r.status_code == 200:
-                _opus_cache["ar"] = r.json().get("corpora", [])
-            # Fetch English corpora
-            r = await client.get(OPUS_API, params={"source": "en", "preprocessing": "moses"})
-            if r.status_code == 200:
-                _opus_cache["en"] = r.json().get("corpora", [])
-            # Fetch ar-en parallel corpora
+            for code in _OPUS_SOURCE_LANGS:
+                r = await client.get(OPUS_API, params={"source": code, "preprocessing": "moses"})
+                if r.status_code == 200:
+                    _opus_cache[code] = r.json().get("corpora", [])
+            # Fetch ar-en parallel corpora (legacy key kept for back-compat)
             r = await client.get(OPUS_API, params={"source": "ar", "target": "en", "preprocessing": "moses"})
             if r.status_code == 200:
                 _opus_cache["ar-en"] = r.json().get("corpora", [])
@@ -423,7 +438,10 @@ async def _opus_fetch_catalogue() -> None:
             log.info("opus_catalogue_fetched",
                      ar_count=len(_opus_cache["ar"]),
                      en_count=len(_opus_cache["en"]),
-                     ar_en_count=len(_opus_cache["ar-en"]))
+                     ar_en_count=len(_opus_cache["ar-en"]),
+                     ur_count=len(_opus_cache["ur"]),
+                     hi_count=len(_opus_cache["hi"]),
+                     fa_count=len(_opus_cache["fa"]))
     except httpx.HTTPError as e:
         log.warning("opus_catalogue_fetch_failed", error=str(e))
 
@@ -432,14 +450,12 @@ async def _opus_search(query: str, language: str, limit: int) -> list[dict]:
     """Keyword-filter the cached OPUS catalogue."""
     await _opus_fetch_catalogue()
 
-    # Pick the right cache slice
-    if language == "ar":
-        corpora = _opus_cache.get("ar", [])
-    elif language == "en":
-        corpora = _opus_cache.get("en", [])
-    else:
-        # parallel
+    # Pick the right cache slice (v1.2.11: ur/hi/fa have their own slices;
+    # the legacy "ar-en" parallel key stays for the ar-en search mode)
+    if language == "ar-en":
         corpora = _opus_cache.get("ar-en", [])
+    else:
+        corpora = _opus_cache.get(language, []) if language in _OPUS_SOURCE_LANGS else _opus_cache.get("en", [])
 
     results: list[dict] = []
     q = query.lower()
@@ -519,7 +535,8 @@ async def hub_search(
 
     if hub in ("all", "huggingface"):
         all_results.extend(await _hf_search(q, language, limit))
-    if hub in ("all", "wikipedia") and language in ("ar", "en"):
+    # v1.2.11: ur/hi/fa Wikipedias are served too (size metadata identical)
+    if hub in ("all", "wikipedia") and language in ("ar", "en", "ur", "hi", "fa"):
         all_results.extend(await _wikipedia_search(q, language, limit))
     if hub in ("all", "opus"):
         all_results.extend(await _opus_search(q, language, limit))
@@ -552,23 +569,23 @@ async def hub_catalogue() -> dict:
             {
                 "id": "huggingface",
                 "name": "HuggingFace Datasets",
-                "description": "Hundreds of public datasets including Wikipedia (ar/en), OSCAR, CC-100. Full-text search inside Wikipedia.",
+                "description": "Hundreds of public datasets including Wikipedia (ar/en/ur/hi/fa), OSCAR, CC-100. Full-text search inside Wikipedia.",
                 "requires_key": False,
-                "languages": ["ar", "en"],
+                "languages": ["ar", "en", "ur", "hi", "fa"],
             },
             {
                 "id": "wikipedia",
                 "name": "Wikipedia (live)",
-                "description": "Live article fetch from Arabic + English Wikipedia. CC-BY-SA 3.0.",
+                "description": "Live article fetch from Wikipedia (ar, en, ur, hi, fa). CC-BY-SA 3.0.",
                 "requires_key": False,
-                "languages": ["ar", "en"],
+                "languages": ["ar", "en", "ur", "hi", "fa"],
             },
             {
                 "id": "opus",
                 "name": "OPUS Parallel Corpora",
-                "description": "1,200+ parallel corpora (translation pairs) including ar↔en. Per-corpus licensing.",
+                "description": "1,200+ parallel corpora (translation pairs) including ar↔en and en↔ur/hi/fa. Per-corpus licensing.",
                 "requires_key": False,
-                "languages": ["ar", "en", "ar-en"],
+                "languages": ["ar", "en", "ur", "hi", "fa", "ar-en"],
             },
         ],
         "featured": [
@@ -595,6 +612,30 @@ async def hub_catalogue() -> dict:
                 "language": "ar-en",
                 "size": "~2.4 GB",
                 "license": "Per-corpus (see OPUS)",
+            },
+            {
+                "hub": "huggingface",
+                "id": "wikimedia/wikipedia:20231101.ur",
+                "title": "Urdu Wikipedia (full dump)",
+                "language": "ur",
+                "size": "~0.1 GB",
+                "license": "CC-BY-SA 3.0",
+            },
+            {
+                "hub": "huggingface",
+                "id": "wikimedia/wikipedia:20231101.hi",
+                "title": "Hindi Wikipedia (full dump)",
+                "language": "hi",
+                "size": "~0.3 GB",
+                "license": "CC-BY-SA 3.0",
+            },
+            {
+                "hub": "huggingface",
+                "id": "wikimedia/wikipedia:20231101.fa",
+                "title": "Farsi Wikipedia (full dump)",
+                "language": "fa",
+                "size": "~0.9 GB",
+                "license": "CC-BY-SA 3.0",
             },
         ],
     }
@@ -623,7 +664,8 @@ async def hub_download(
         extra_data = {}
 
     # Build a safe filename
-    safe_title = re.sub(r"[^\w\u0600-\u06FF\- ]", "_", title or corpus_id)[:80] or "corpus"
+    # v1.2.11: Devanagari range kept so Hindi corpus filenames stay readable
+    safe_title = re.sub(r"[^\w\u0600-\u06FF\u0900-\u097F\- ]", "_", title or corpus_id)[:80] or "corpus"
     safe_title = safe_title.strip().replace(" ", "_")
 
     if hub == "huggingface":

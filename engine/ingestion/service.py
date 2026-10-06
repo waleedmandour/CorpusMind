@@ -125,10 +125,15 @@ async def ingest_document(
     # Bulk-insert tokens. SQLAlchemy 2.0 async uses session.add_all for bulk.
     # For very large corpora we'd switch to session.run_sync(session.bulk_insert_mappings),
     # but for Phase 1's MVP scale (single documents of <1 MB each) this is fine.
+    # v1.2.11: blank-language tokenizers (ur/hi/fa fallback) can emit raw
+    # newline/whitespace tokens that pos-filters cannot see (no tagger);
+    # whitespace-only tokens are never stored.
     started = time.perf_counter()
     token_rows: list[Token] = []
     for sent_idx, sent in enumerate(parsed.sentences):
         for tok_idx, tok in enumerate(sent.tokens):
+            if not tok.text or not tok.text.strip():
+                continue
             token_rows.append(Token(
                 version_id=av.id,
                 document_id=doc.id,

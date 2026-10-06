@@ -25,7 +25,10 @@ from dataclasses import dataclass, field
 from typing import Literal
 
 ReferenceFormat = Literal["tsv_freq", "csv_freq", "json_freq", "full_corpus"]
-ReferenceLanguage = Literal["en", "ar"]
+# v1.2.11: ur/hi/fa join the registry (frequency-list references only;
+# full-corpus references for these languages are fetch-on-demand by the
+# user, never bundled).
+ReferenceLanguage = Literal["en", "ar", "ur", "hi", "fa"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -472,5 +475,100 @@ BUNDLED_REFERENCES: list[ReferenceCorpusSpec] = [
         genre="learner",
         min_corpus_tokens=500,
         tags=("english", "learner", "essays", "l2"),
+    ),
+    # ------------------------------------------------------------------ #
+    # v1.2.11: Urdu / Hindi / Farsi reference frequency lists.
+    # Derived from wordfreq 3.1.1 (Apache-2.0 package; its bundled
+    # frequency data is redistributable under CC BY-SA 4.0 per the
+    # wordfreq 3.1.1 documentation, retrieved 2026-10-07). Lists are
+    # deterministic for the pinned wordfreq version: regenerate with the
+    # same version and the SHA-256 must match. wordfreq's underlying
+    # sources (Wikipedia, Leeds Internet Corpus, OPUS OpenSubtitles,
+    # ParaCrawl) are CC-licensed; attribution is recorded in the file
+    # header and THIRD_PARTY_LICENSES.md. These are KEYNESS baselines,
+    # not gold-standard reference corpora - the coverage label says so.
+    # ------------------------------------------------------------------ #
+    ReferenceCorpusSpec(
+        name="urdu-freq-top1000",
+        display_name="Urdu word frequency (top 1000)",
+        language="ur",
+        description=(
+            "Top-1000 Urdu word-frequency list derived from wordfreq 3.1.1 "
+            "(blended Wikipedia / subtitles / news sources). An openly "
+            "licensed keyness baseline for small-to-medium Urdu corpora - "
+            "NOT a designed reference corpus; report it as such in Methods."
+        ),
+        source_url=(
+            "https://raw.githubusercontent.com/waleedmandour/CorpusMind/main/"
+            "reference-data/reference-corpora/ur/urdu-freq-top1000.tsv"
+        ),
+        sha256="ffa0a92e7ff70d33ccac58fba01bacbbc2d321b3e96cd1f914fc01d639dc089c",
+        format="tsv_freq",
+        size_hint="~22 KB",
+        license="CC-BY-SA-4.0 (data via wordfreq)",
+        citation=(
+            "Speer, R., Chin, J., & Lin, A. (2018-2024). wordfreq "
+            "(version 3.1.1) [frequency data]. "
+            "https://github.com/rspeer/wordfreq - data CC BY-SA 4.0."
+        ),
+        genre="mixed",
+        min_corpus_tokens=1_000,
+        tags=("urdu", "frequency", "keyness-baseline"),
+    ),
+    ReferenceCorpusSpec(
+        name="hindi-freq-top1000",
+        display_name="Hindi word frequency (top 1000)",
+        language="hi",
+        description=(
+            "Top-1000 Hindi (Devanagari) word-frequency list derived from "
+            "wordfreq 3.1.1 (blended Wikipedia / subtitles / news "
+            "sources). An openly licensed keyness baseline for "
+            "small-to-medium Hindi corpora - NOT a designed reference "
+            "corpus; report it as such in Methods."
+        ),
+        source_url=(
+            "https://raw.githubusercontent.com/waleedmandour/CorpusMind/main/"
+            "reference-data/reference-corpora/hi/hindi-freq-top1000.tsv"
+        ),
+        sha256="5d9710dc7b4dcffd4063ea5bb5ab8929cb16de7c99d612f5117cec46c13a3eb9",
+        format="tsv_freq",
+        size_hint="~24 KB",
+        license="CC-BY-SA-4.0 (data via wordfreq)",
+        citation=(
+            "Speer, R., Chin, J., & Lin, A. (2018-2024). wordfreq "
+            "(version 3.1.1) [frequency data]. "
+            "https://github.com/rspeer/wordfreq - data CC BY-SA 4.0."
+        ),
+        genre="mixed",
+        min_corpus_tokens=1_000,
+        tags=("hindi", "frequency", "keyness-baseline"),
+    ),
+    ReferenceCorpusSpec(
+        name="farsi-freq-top1000",
+        display_name="Farsi (Persian) word frequency (top 1000)",
+        language="fa",
+        description=(
+            "Top-1000 Persian word-frequency list derived from wordfreq "
+            "3.1.1 (blended Wikipedia / subtitles / news sources). An "
+            "openly licensed keyness baseline for small-to-medium Persian "
+            "corpora - NOT a designed reference corpus; report it as such "
+            "in Methods."
+        ),
+        source_url=(
+            "https://raw.githubusercontent.com/waleedmandour/CorpusMind/main/"
+            "reference-data/reference-corpora/fa/farsi-freq-top1000.tsv"
+        ),
+        sha256="263c05978a80268fe556fc9381e06a62e08428e49dadb268d3f5fba8cc90e67a",
+        format="tsv_freq",
+        size_hint="~22 KB",
+        license="CC-BY-SA-4.0 (data via wordfreq)",
+        citation=(
+            "Speer, R., Chin, J., & Lin, A. (2018-2024). wordfreq "
+            "(version 3.1.1) [frequency data]. "
+            "https://github.com/rspeer/wordfreq - data CC BY-SA 4.0."
+        ),
+        genre="mixed",
+        min_corpus_tokens=1_000,
+        tags=("farsi", "persian", "frequency", "keyness-baseline"),
     ),
 ]

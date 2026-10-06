@@ -125,7 +125,8 @@ need('wordlists.k1_top200', d.get('wordlists', {}).get('k1_top200') is True, 'K1
 rc = d.get('reference_corpora', {})
 for k in ('be06_top1000', 'leipzig_news_top100', 'ellipse_learner_top1000',
           'pd_persuasive_top1000', 'camel_arabic_top1000',
-          'quranic_arabic_freq', 'dialectal_tweets_top1000'):
+          'quranic_arabic_freq', 'dialectal_tweets_top1000',
+          'urdu_freq_top1000', 'hindi_freq_top1000', 'farsi_freq_top1000'):
     need(f'reference_corpora.{k}', rc.get(k) is True, f'reference corpus missing: {k}')
 
 fw = d.get('frameworks', {}).get('count', 0)

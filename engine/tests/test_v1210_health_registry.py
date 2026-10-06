@@ -22,6 +22,10 @@ EXPECTED_REFERENCE_CORPORA = {
     "camel_arabic_top1000",
     "quranic_arabic_freq",
     "dialectal_tweets_top1000",
+    # v1.2.11: Urdu / Hindi / Farsi keyness baselines
+    "urdu_freq_top1000",
+    "hindi_freq_top1000",
+    "farsi_freq_top1000",
 }
 
 
@@ -61,6 +65,13 @@ async def test_resources_registry_full_payload(client: AsyncClient) -> None:
     assert isinstance(d["spacy_model"], dict) and "en_core_web_sm" in d["spacy_model"]
     assert isinstance(d["wordfreq"], dict) and "installed" in d["wordfreq"]
     assert isinstance(d["sentiment"], dict) and "nrc_configured" in d["sentiment"]
+
+    # v1.2.11: per-language capability summary (bundled stopword lists).
+    assert d["languages"]["stopwords"] == {
+        "en": True, "ar": True, "ur": True, "hi": True, "fa": True,
+    }
+    assert isinstance(d["languages"]["stanza"], dict)
+    assert isinstance(d["languages"]["stanza"]["installed"], bool)
 
 
 @pytest.mark.asyncio
