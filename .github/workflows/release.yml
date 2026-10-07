@@ -112,6 +112,21 @@ jobs:
           pip install -e .
           pip install pillow
 
+      - name: Provision CAMeL Tools data (Arabic Tools bundle)
+        working-directory: engine
+        run: |
+          # v1.2.11 (Arabic Tools hang fix): the desktop bundle ships the
+          # CAMeL Tools morphology stack offline. camel-tools requires torch
+          # per its metadata, but the bundle EXCLUDES torch (the morphology
+          # + dialect-ID paths are non-neural), so the CPU wheel is installed
+          # first to keep build time sane. The data pack (~161MB raw) is
+          # collected by the spec from ~/.camel_tools into camel-tools-data/.
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -e ".[arabic]"
+          camel_data -i morphology-db-msa-r13
+          camel_data -i dialectid-model6
+          python -c "from camel_tools.morphology.database import MorphologyDB; MorphologyDB.builtin_db('calima-msa-r13'); print('camel-tools data OK')"
+
       - name: Download spaCy model (en_core_web_sm)
         working-directory: engine
         run: |
@@ -362,6 +377,21 @@ jobs:
           pip install -e .
           pip install pillow
 
+      - name: Provision CAMeL Tools data (Arabic Tools bundle)
+        working-directory: engine
+        run: |
+          # v1.2.11 (Arabic Tools hang fix): the desktop bundle ships the
+          # CAMeL Tools morphology stack offline. camel-tools requires torch
+          # per its metadata, but the bundle EXCLUDES torch (the morphology
+          # + dialect-ID paths are non-neural), so the CPU wheel is installed
+          # first to keep build time sane. The data pack (~161MB raw) is
+          # collected by the spec from ~/.camel_tools into camel-tools-data/.
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -e ".[arabic]"
+          camel_data -i morphology-db-msa-r13
+          camel_data -i dialectid-model6
+          python -c "from camel_tools.morphology.database import MorphologyDB; MorphologyDB.builtin_db('calima-msa-r13'); print('camel-tools data OK')"
+
       - name: Download spaCy model (en_core_web_sm)
         working-directory: engine
         run: |
@@ -535,6 +565,21 @@ jobs:
           pip install -e .
           pip install pillow
 
+      - name: Provision CAMeL Tools data (Arabic Tools bundle)
+        working-directory: engine
+        run: |
+          # v1.2.11 (Arabic Tools hang fix): the desktop bundle ships the
+          # CAMeL Tools morphology stack offline. camel-tools requires torch
+          # per its metadata, but the bundle EXCLUDES torch (the morphology
+          # + dialect-ID paths are non-neural), so the CPU wheel is installed
+          # first to keep build time sane. The data pack (~161MB raw) is
+          # collected by the spec from ~/.camel_tools into camel-tools-data/.
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -e ".[arabic]"
+          camel_data -i morphology-db-msa-r13
+          camel_data -i dialectid-model6
+          python -c "from camel_tools.morphology.database import MorphologyDB; MorphologyDB.builtin_db('calima-msa-r13'); print('camel-tools data OK')"
+
       - name: Download spaCy model (en_core_web_sm)
         working-directory: engine
         run: |
@@ -692,6 +737,21 @@ jobs:
           pip install pyinstaller python-multipart cryptography
           pip install -e .
           pip install pillow
+
+      - name: Provision CAMeL Tools data (Arabic Tools bundle)
+        working-directory: engine
+        run: |
+          # v1.2.11 (Arabic Tools hang fix): the desktop bundle ships the
+          # CAMeL Tools morphology stack offline. camel-tools requires torch
+          # per its metadata, but the bundle EXCLUDES torch (the morphology
+          # + dialect-ID paths are non-neural), so the CPU wheel is installed
+          # first to keep build time sane. The data pack (~161MB raw) is
+          # collected by the spec from ~/.camel_tools into camel-tools-data/.
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -e ".[arabic]"
+          camel_data -i morphology-db-msa-r13
+          camel_data -i dialectid-model6
+          python -c "from camel_tools.morphology.database import MorphologyDB; MorphologyDB.builtin_db('calima-msa-r13'); print('camel-tools data OK')"
 
       - name: Download spaCy model (en_core_web_sm)
         working-directory: engine

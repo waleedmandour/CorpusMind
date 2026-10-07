@@ -71,6 +71,25 @@ if (Test-Path $wfDir) {
     $Failures += "missing wordfreq data directory"
 }
 
+# v1.2.11 (Arabic Tools hang fix): the CAMeL Tools data pack ships in the
+# bundle (collected from ~/.camel_tools on the build machine) so the Arabic
+# Tools panel works offline and never triggers camel_tools' download-at-
+# first-use path (the root cause of the "Analysis spins forever" hang).
+$camelCatalogue = Join-Path $InternalDir "camel-tools-data\catalogue.json"
+if (Test-Path $camelCatalogue) {
+    Write-Host "[smoke] OK   camel-tools-data\catalogue.json (Arabic morphology stack)"
+} else {
+    Write-Host "[smoke] MISS camel-tools-data\catalogue.json" -ForegroundColor Red
+    $Failures += "missing camel-tools-data catalogue (Arabic Tools cannot work in the bundle)"
+}
+$camelDb = Join-Path $InternalDir "camel-tools-data\data\morphology_db\calima-msa-r13"
+if (Test-Path $camelDb) {
+    Write-Host "[smoke] OK   camel-tools-data morphology DB (calima-msa-r13)"
+} else {
+    Write-Host "[smoke] MISS camel-tools-data\data\morphology_db\calima-msa-r13" -ForegroundColor Red
+    $Failures += "missing bundled CAMeL morphology DB"
+}
+
 # v1.2.9 Student Mode classroom stack (hard content gate): the PWA build
 # Caddy serves + the Caddy sidecar binary itself.
 $webDist = Join-Path $InternalDir "web-dist\index.html"

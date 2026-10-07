@@ -169,6 +169,42 @@ except Exception:
     pass
 
 # --------------------------------------------------------------------------- #
+# v1.2.11 (Arabic Tools hang fix): bundle the CAMeL Tools stack so the
+# desktop app's Arabic Tools actually work offline.
+#
+# Two parts:
+#   1. camel_tools CODE + PACKAGE data (char tables for Buckwalter /
+#      dediacritization). collect_data_files is required: camel_tools ships
+#      non-Python data inside the package that static analysis misses.
+#   2. the MANAGED data pack (calima-msa-r13 morphology DB ~39MB raw +
+#      dialectid model6 ~122MB raw) provisioned on the build machine via
+#      `camel_data -i` into ~/.camel_tools, collected verbatim as
+#      camel-tools-data/. At runtime nlp.arabic.pipeline pins
+#      CAMELTOOLS_DATA to this directory (app/resource_paths.py) BEFORE
+#      importing camel_tools, so the frozen app resolves its own copy and
+#      never touches the network. If the build venv has no provisioned pack
+#      the bundle still builds, the release smoke gate FAILS on
+#      /health/resources (languages.camel_tools.*), and Arabic analysis
+#      returns an actionable 503 instead of hanging.
+#
+# NOTE: torch (a hard camel-tools dependency) stays EXCLUDED below — the
+# morphology analyzer and DIDModel6 paths are non-neural (verified: no
+# torch/transformers import in the loaded module set). Installing camel-tools
+# in the build venv requires torch to be present to satisfy pip; install the
+# CPU wheel first in the release workflow.
+# --------------------------------------------------------------------------- #
+try:
+    _hidden_imports += collect_submodules("camel_tools")
+    _datas += collect_data_files("camel_tools")
+except Exception:
+    # camel-tools not installed in this build venv — non-fatal here (dev
+    # builds); the release smoke gate refuses to publish such a bundle.
+    pass
+_ct_home = Path.home() / ".camel_tools"
+if (_ct_home / "catalogue.json").is_file():
+    _datas.append((str(_ct_home), "camel-tools-data"))
+
+# --------------------------------------------------------------------------- #
 # v1.2.9 Student Mode (classroom server) bundle additions.
 #
 # 1. web-dist: the built PWA (repo web/dist) is collected into the bundle so

@@ -138,6 +138,12 @@ need('spacy_model.en_core_web_sm', d.get('spacy_model', {}).get('en_core_web_sm'
 
 need('wordfreq.installed', d.get('wordfreq', {}).get('installed') is True, 'wordfreq missing')
 
+cam = d.get('languages', {}).get('camel_tools', {})
+need('languages.camel_tools.morphology_db_msa', cam.get('morphology_db_msa') is True,
+     'CAMeL calima-msa-r13 not collected in bundle')
+need('languages.camel_tools.dialectid_model6', cam.get('dialectid_model6') is True,
+     'CAMeL dialectid model6 not collected in bundle')
+
 pi = d.get('persuasion_index') or {}
 need('persuasion_index.installed', pi.get('installed') is True, 'persuasion-index not importable in bundle')
 if not pi.get('version'):
