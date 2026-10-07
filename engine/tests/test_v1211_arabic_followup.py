@@ -390,6 +390,10 @@ def test_installer_rejects_corrupt_sha256(tmp_camel_target, monkeypatch):
         inst.start(include_dialect_id=True)
         s = _wait_for_state(inst, {"error"})
         assert "SHA256" in (s.get("error") or "")
+        # Pin-risk contract: the message must name the re-upload scenario so a
+        # silent upstream asset swap is diagnosable from the UI alone.
+        assert "re-uploaded" in (s.get("error") or "")
+        assert "Nothing was installed" in (s.get("error") or "")
         assert not (tmp_camel_target / "data" / "fake" / "morphology-db-msa-r13").exists()
         assert not (tmp_camel_target / ".staging").exists()
     finally:
@@ -411,7 +415,8 @@ def test_installer_rejects_size_mismatch(tmp_camel_target, monkeypatch):
         inst.start()
         s = _wait_for_state(inst, {"error"})
         assert "server reports" in (s.get("error") or "")
-        assert "Refusing to install" in (s.get("error") or "")
+        assert "Nothing was installed" in (s.get("error") or "")
+        assert "re-uploaded" in (s.get("error") or "")
         assert not (tmp_camel_target / "data" / "fake").exists()
     finally:
         server.stop()

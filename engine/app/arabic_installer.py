@@ -409,7 +409,12 @@ class ArabicDataInstaller:
                 if declared and declared != pkg["size"]:
                     raise ArabicInstallerError(
                         f"{pkg['name']}: server reports {declared} bytes but the "
-                        f"pinned catalogue says {pkg['size']}. Refusing to install."
+                        f"pinned size is {pkg['size']}. Nothing was installed. "
+                        "The upstream file may have changed: CAMeL Lab has "
+                        "re-uploaded release assets before without changing the "
+                        "URL. Check your connection and retry; if it fails again, "
+                        "report it so the pinned digest can be updated in a new "
+                        "engine release."
                     )
                 with tmp_zip.open("wb") as fp:
                     hasher = _Sha256Stream(fp)
@@ -431,8 +436,12 @@ class ArabicDataInstaller:
             if digest != pkg["sha256"]:
                 raise ArabicInstallerError(
                     f"{pkg['name']}: SHA256 mismatch (got {digest[:12]}..., "
-                    f"expected {pkg['sha256'][:12]}...). The download is "
-                    "corrupt or tampered with; nothing was installed."
+                    f"expected {pkg['sha256'][:12]}...). Nothing was installed. "
+                    "The download is corrupt, or the upstream file changed: "
+                    "CAMeL Lab has re-uploaded release assets before without "
+                    "changing the URL, which breaks the pinned checksum. Check "
+                    "your connection and retry; if it fails again, report it so "
+                    "the pinned digest can be updated in a new engine release."
                 )
             log.info("arabic_installer_sha256_ok", package=pkg["name"], sha256=digest)
             # Extract to staging, then move into place

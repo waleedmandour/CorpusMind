@@ -100,6 +100,11 @@ once 1.0 ships. Until then, expect breaking changes between 0.x releases.
   not forever), cooperative cancellation between chunks, live progress
   (bytes, stage, ETA), and EN+AR UI strings. Reachable from **Settings >
   Arabic data pack** and from a button inside the Arabic Tools 503 card.
+  The size and SHA256 failure messages state the upstream re-upload case
+  explicitly (CAMeL Lab has re-uploaded release assets before without
+  changing the URL, which breaks a pinned checksum): the message says
+  nothing was installed, names the mismatch, and tells the user to retry
+  and report it if it fails again. Regression-tested.
   Verified live against the frozen desktop bundle: a bare machine goes
   503 -> in-app install (161 MB) -> restart -> real morphology analysis and
   DIDModel6 dialect identification.
