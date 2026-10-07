@@ -1498,6 +1498,14 @@ async function getTauriFetch(): Promise<(input: string, init?: RequestInit) => P
 }
 
 /**
+ * v1.2.11 (Arabic Tools hang fix): client-side deadline for the Arabic Tools
+ * calls. Deliberately LONGER than the engine's per-route 30s deadline
+ * (CORPUSMIND_ARABIC_TIMEOUT_S) so the server's specific 504 hint normally
+ * arrives first; this backstop only fires when the engine itself is stuck.
+ */
+const ARABIC_TIMEOUT_MS = 45_000;
+
+/**
  * Unified fetch that picks the Tauri plugin inside the desktop webview and
  * the native fetch everywhere else. The Tauri plugin requires an absolute
  * URL, so we always pass the full `${ENGINE_BASE}${path}` (in Tauri mode
@@ -1563,13 +1571,36 @@ export async function waitForEngine(maxAttempts = 30): Promise<boolean> {
   return false;
 }
 
-async function jsonFetch<T>(path: string, init?: RequestInit): Promise<T> {
+/**
+ * Client-side deadline for one JSON request (v1.2.11 Arabic Tools hang fix).
+ *
+ * The engine has its own per-route deadline (HTTP 504), but that cannot
+ * cover every real-world stall (a frozen sidecar, a lost socket that never
+ * errors). This backstop guarantees the UI spinner ALWAYS resolves. The
+ * message carries the "HTTP " prefix on purpose: jsonFetch's retry
+ * classification treats any error message WITHOUT it as a connection error
+ * and would otherwise silently re-issue the whole request.
+ */
+function withDeadline<T>(p: Promise<T>, timeoutMs?: number): Promise<T> {
+  if (!timeoutMs || timeoutMs <= 0) return p;
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(`HTTP 504: no response from the engine within ${Math.round(timeoutMs / 1000)}s (client deadline)`));
+    }, timeoutMs);
+    p.then(
+      (v) => { clearTimeout(timer); resolve(v); },
+      (e) => { clearTimeout(timer); reject(e); },
+    );
+  });
+}
+
+async function jsonFetch<T>(path: string, init?: RequestInit, timeoutMs?: number): Promise<T> {
   // Task 1: Retry on connection errors (engine still starting up).
   // Only retry on /health and /version endpoints — other endpoints
   // should fail fast so the user sees errors, not silent retries.
   const isStartupEndpoint = path.includes("/health") || path.includes("/version");
   try {
-    return await jsonFetchAttempt<T>(path, init, isStartupEndpoint ? 5 : 0);
+    return await jsonFetchAttempt<T>(path, init, isStartupEndpoint ? 5 : 0, timeoutMs);
   } catch (e: any) {
     const isConnError = !!e?.message && !e.message.includes("HTTP ");
     if (!isConnError) throw e;
@@ -1598,17 +1629,18 @@ async function jsonFetchAttempt<T>(
   path: string,
   init: RequestInit | undefined,
   maxRetries: number,
+  timeoutMs?: number,
 ): Promise<T> {
   let lastError: Error | null = null;
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      const r = await smartFetch(path, {
+      const r = await withDeadline(smartFetch(path, {
         ...init,
         headers: {
           "Content-Type": "application/json",
           ...(init?.headers ?? {}),
         },
-      });
+      }), timeoutMs);
       if (!r.ok) {
         const body = await r.text();
         throw new Error(`HTTP ${r.status}: ${body}`);
@@ -1980,56 +2012,68 @@ export const api = {
     }),
 
   // --- Phase 3 Arabic (8.21) ---
-  arabicAnalyze: (text: string, dialect = "msa", tagset: "calima" | "upos" = "calima") =>
+  // v1.2.11 (Arabic Tools hang fix): every Arabic Tools call carries a
+  // client deadline (45s > the engine's 30s per-route deadline, so the
+  // server's more specific 504 hint normally wins) and accepts an
+  // AbortSignal so the panel's Cancel button can interrupt the fetch.
+  arabicAnalyze: (text: string, dialect = "msa", tagset: "calima" | "upos" = "calima", signal?: AbortSignal) =>
     jsonFetch<ArabicAnalysisResult>(`/api/v1/arabic/analyze`, {
       method: "POST",
       body: JSON.stringify({ text, dialect, tagset }),
-    }),
+      signal,
+    }, ARABIC_TIMEOUT_MS),
 
-  arabicRoots: (text: string) =>
+  arabicRoots: (text: string, signal?: AbortSignal) =>
     jsonFetch<{ roots: ArabicRootRow[] }>(`/api/v1/arabic/roots`, {
       method: "POST",
       body: JSON.stringify({ text }),
-    }),
+      signal,
+    }, ARABIC_TIMEOUT_MS),
 
-  arabicClitics: (text: string) =>
+  arabicClitics: (text: string, signal?: AbortSignal) =>
     jsonFetch<{ segments: Array<{ surface: string; stem: string; pos: string }> }>(`/api/v1/arabic/clitics`, {
       method: "POST",
       body: JSON.stringify({ text }),
-    }),
+      signal,
+    }, ARABIC_TIMEOUT_MS),
 
-  arabicBuckwalter: (text: string) =>
+  arabicBuckwalter: (text: string, signal?: AbortSignal) =>
     jsonFetch<{ buckwalter: string; original: string }>(`/api/v1/arabic/buckwalter`, {
       method: "POST",
       body: JSON.stringify({ text }),
-    }),
+      signal,
+    }, ARABIC_TIMEOUT_MS),
 
-  arabicDediacritize: (text: string) =>
+  arabicDediacritize: (text: string, signal?: AbortSignal) =>
     jsonFetch<{ dediacritized: string; original: string }>(`/api/v1/arabic/dediacritize`, {
       method: "POST",
       body: JSON.stringify({ text }),
-    }),
+      signal,
+    }, ARABIC_TIMEOUT_MS),
 
-  arabicNormalize: (text: string) =>
+  arabicNormalize: (text: string, signal?: AbortSignal) =>
     jsonFetch<{ normalized: string; original: string }>(`/api/v1/arabic/normalize`, {
       method: "POST",
       body: JSON.stringify({ text }),
-    }),
+      signal,
+    }, ARABIC_TIMEOUT_MS),
 
-  arabicDialect: (text: string) =>
+  arabicDialect: (text: string, signal?: AbortSignal) =>
     jsonFetch<{ dialect_distribution: Record<string, number> }>(`/api/v1/arabic/dialect`, {
       method: "POST",
       body: JSON.stringify({ text }),
-    }),
+      signal,
+    }, ARABIC_TIMEOUT_MS),
 
-  arabicRegister: (text: string) =>
+  arabicRegister: (text: string, signal?: AbortSignal) =>
     jsonFetch<{ register_distribution: Record<string, number> }>(`/api/v1/arabic/register`, {
       method: "POST",
       body: JSON.stringify({ text }),
-    }),
+      signal,
+    }, ARABIC_TIMEOUT_MS),
 
-  arabicBackends: () =>
-    jsonFetch<{ backends: ArabicBackendInfo[] }>(`/api/v1/arabic/backends`),
+  arabicBackends: (signal?: AbortSignal) =>
+    jsonFetch<{ backends: ArabicBackendInfo[] }>(`/api/v1/arabic/backends`, { signal }, ARABIC_TIMEOUT_MS),
 
   // --- Phase 3 polish — bilingual (8.22) ---
   bilingualAlign: (ar_corpus_id: string, en_corpus_id: string) =>

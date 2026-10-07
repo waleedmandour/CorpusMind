@@ -13,11 +13,13 @@
  *
  * The view auto-detects Arabic input and flips to RTL layout.
  */
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
 
 import { api } from "@/lib/api";
+import { t } from "@/lib/i18n";
+import { useUI } from "@/store/ui";
 
 type Tool = "morphology" | "roots" | "clitics" | "buckwalter" | "dediac" | "normalize" | "dialect" | "register" | "translate";
 
@@ -70,6 +72,32 @@ function posClass(tag: string): string {
   return clsx("pos-tag", POS_CLASS_BY_TAG[tag] ?? "pos-other");
 }
 
+/**
+ * v1.2.11 (Arabic Tools hang fix): error display for the Arabic Tools panel.
+ * Surfaces the engine's `detail` (503 missing-data hint, 504 timeout hint)
+ * instead of a raw `HTTP 503: {"detail": ...}` dump, so the spinner's error
+ * state always lands on something actionable.
+ */
+function ArabicError({ error }: { error: unknown }) {
+  const message = error instanceof Error ? error.message : String(error);
+  let detail = message;
+  const httpIdx = message.indexOf(": ");
+  if (message.startsWith("HTTP ") && httpIdx > 0) {
+    const body = message.slice(httpIdx + 2);
+    try {
+      const parsed = JSON.parse(body) as { detail?: string };
+      if (parsed.detail) detail = parsed.detail;
+    } catch {
+      // body was not JSON; keep the raw text
+    }
+  }
+  return (
+    <div className="error" role="alert">
+      Error: {detail}
+    </div>
+  );
+}
+
 export function ArabicView() {
   const [text, setText] = useState(SAMPLE_TEXTS[0]);
   const [tool, setTool] = useState<Tool>("morphology");
@@ -78,38 +106,65 @@ export function ArabicView() {
   // native CAMeL/Calima tags or Universal Dependencies.
   const [tagset, setTagset] = useState<"calima" | "upos">("calima");
   const [submitted, setSubmitted] = useState<{ text: string; tool: Tool; dialect: string; tagset: string } | null>(null);
+  const lang = useUI((s) => s.lang);
+  const queryClient = useQueryClient();
 
-  const backends = useQuery({ queryKey: ["arabic-backends"], queryFn: api.arabicBackends });
+  const backends = useQuery({ queryKey: ["arabic-backends"], queryFn: ({ signal }) => api.arabicBackends(signal) });
 
   const result = useQuery({
     queryKey: ["arabic", submitted],
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       if (!submitted) return null;
       const t = submitted.text;
       switch (submitted.tool) {
         case "morphology":
-          return { kind: "morphology" as const, data: await api.arabicAnalyze(t, submitted.dialect, (submitted.tagset as "calima" | "upos")) };
+          return { kind: "morphology" as const, data: await api.arabicAnalyze(t, submitted.dialect, (submitted.tagset as "calima" | "upos"), signal) };
         case "roots":
-          return { kind: "roots" as const, data: await api.arabicRoots(t) };
+          return { kind: "roots" as const, data: await api.arabicRoots(t, signal) };
         case "clitics":
-          return { kind: "clitics" as const, data: await api.arabicClitics(t) };
+          return { kind: "clitics" as const, data: await api.arabicClitics(t, signal) };
         case "buckwalter":
-          return { kind: "buckwalter" as const, data: await api.arabicBuckwalter(t) };
+          return { kind: "buckwalter" as const, data: await api.arabicBuckwalter(t, signal) };
         case "dediac":
-          return { kind: "dediac" as const, data: await api.arabicDediacritize(t) };
+          return { kind: "dediac" as const, data: await api.arabicDediacritize(t, signal) };
         case "normalize":
-          return { kind: "normalize" as const, data: await api.arabicNormalize(t) };
+          return { kind: "normalize" as const, data: await api.arabicNormalize(t, signal) };
         case "dialect":
-          return { kind: "dialect" as const, data: await api.arabicDialect(t) };
+          return { kind: "dialect" as const, data: await api.arabicDialect(t, signal) };
         case "register":
-          return { kind: "register" as const, data: await api.arabicRegister(t) };
+          return { kind: "register" as const, data: await api.arabicRegister(t, signal) };
         case "translate":
           // For translate, we treat the input as a single word
           return { kind: "translate" as const, data: await api.translate(t.trim(), "ar-en") };
       }
     },
     enabled: !!submitted,
+    // v1.2.11 (Arabic Tools hang fix): a re-submission must never serve a
+    // cached failure or a stale pending state; and the default retry
+    // behaviour would re-run the whole CAMeL analysis behind the user's
+    // back. One request, one outcome, spinner always resolves.
+    retry: false,
+    gcTime: 0,
   });
+
+  // v1.2.11 (Arabic Tools hang fix): elapsed-seconds ticker while a request
+  // is in flight, so "Analyzing…" never looks like a silent freeze again.
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => {
+    if (!result.isPending || !submitted) {
+      setElapsed(0);
+      return;
+    }
+    const startedAt = Date.now();
+    const id = window.setInterval(() => {
+      setElapsed(Math.floor((Date.now() - startedAt) / 1000));
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [result.isPending, submitted]);
+
+  const onCancel = () => {
+    void queryClient.cancelQueries({ queryKey: ["arabic", submitted] });
+  };
 
   const onRun = () => {
     if (!text.trim()) return;
@@ -194,14 +249,22 @@ export function ArabicView() {
           ))}
         </div>
         <button onClick={onRun} disabled={!text.trim() || result.isPending} className="run-btn">
-          {result.isPending ? "Analyzing…" : "Run analysis"}
+          {result.isPending ? t(lang, "ar_analyzing_elapsed").replace("{n}", String(elapsed)) : "Run analysis"}
         </button>
+        {result.isPending && (
+          <button onClick={onCancel} className="run-btn run-btn-cancel" type="button">
+            {t(lang, "ar_cancel")}
+          </button>
+        )}
+        {result.isPending && elapsed >= 10 && (
+          <div className="error" role="status">{t(lang, "ar_still_working_hint")}</div>
+        )}
       </div>
 
       {/* Result */}
       {result.data && <ArabicResult result={result.data} />}
 
-      {result.isError && <div className="error">Error: {String(result.error)}</div>}
+      {result.isError && <ArabicError error={result.error} />}
     </div>
   );
 }

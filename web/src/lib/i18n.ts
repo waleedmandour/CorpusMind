@@ -51,6 +51,11 @@ export const translations = {
     nav_sentiment: "Sentiment",
     nav_metaphor: "Metaphor",
     nav_arabic_tools: "Arabic Tools",
+
+    // Arabic Tools panel (v1.2.11 hang fix: elapsed indicator + cancel)
+    ar_analyzing_elapsed: "Analyzing… {n}s",
+    ar_cancel: "Cancel",
+    ar_still_working_hint: "The first analysis after installing CAMeL data loads a large morphology database, so it can take a while. You can cancel and try a shorter text.",
     // v1.2.0: parent-app vision tab removed (Lens companion owns the vision workbench).
     // nav_vision_suite removed; vision_* content keys stay (Lens-mode workbench uses them).
     nav_assistant: "AI Assistant",
@@ -1078,6 +1083,11 @@ export const translations = {
     nav_sentiment: "التحليل العاطفي",
     nav_metaphor: "الاستعارة",
     nav_arabic_tools: "أدوات العربية",
+
+    // Arabic Tools panel (v1.2.11 hang fix: elapsed indicator + cancel)
+    ar_analyzing_elapsed: "جارٍ التحليل… {n} ث",
+    ar_cancel: "إلغاء",
+    ar_still_working_hint: "يتحمّل التحليل الأول بعد تثبيت بيانات CAMeL قاعدة صرفية كبيرة، لذا قد يستغرق بعض الوقت. يمكنك الإلغاء والمحاولة بنص أقصر.",
     // v1.2.0: nav_vision_suite removed (parent-app vision tab is gone); vision_* content keys stay.
     nav_assistant: "المساعد الذكي",
     nav_settings: "الإعدادات",

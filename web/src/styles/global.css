@@ -2284,6 +2284,16 @@ code, pre { font-family: var(--font-mono); }
 }
 .run-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
+/* v1.2.11 (Arabic Tools hang fix): neutral Cancel action next to the run
+   button while an analysis is in flight. */
+.run-btn-cancel {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  margin-inline-start: var(--space-2);
+}
+.run-btn-cancel:hover { border-color: var(--border-strong); }
+
 .result-block {
   background: var(--bg-elevated);
   border: 1px solid var(--border);
