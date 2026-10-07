@@ -161,6 +161,25 @@ def camel_tools_bundle_available() -> bool:
     return camel_tools_data_dir() is not None
 
 
+def refresh_camel_tools_data_dir() -> None:
+    """Drop the cached CAMeL data-dir resolution (v1.2.11-rc1 bug fix).
+
+    ``camel_tools_data_dir`` is ``lru_cache``d, which also caches the
+    ``None`` returned before the data pack existed. On a clean first-run
+    machine the first Arabic request (or ``/health/resources`` poll) poisons
+    that cache with ``None``; the in-app installer then installs the pack
+    successfully, but every later request in the SAME process kept seeing
+    the stale "not provisioned" answer and 503'd forever - the user-visible
+    "even after downloading the Arabic data pack the sample text cannot be
+    analyzed" report, fixable only by restarting the app.
+
+    Anything that changes the on-disk provisioning state MUST call this:
+    the installer after it writes the catalogue marker / lands each package
+    / cleans up a cancelled or failed job.
+    """
+    camel_tools_data_dir.cache_clear()
+
+
 def exists(*parts: str) -> bool:
     """True when the referenced resource exists (never raises)."""
     try:

@@ -1069,6 +1069,16 @@ export interface ArabicDataInstallStatus {
     data_dir: string | null;
     morphology_db_msa: boolean;
     dialectid_model6: boolean;
+    // Per-dialect morphology DB availability, keyed by the UI's dialect
+    // codes. Drives the Arabic Tools dialect dropdown (v1.2.11-rc1 fix:
+    // a DB that is not on disk is disabled instead of offering a request
+    // that can only ever end in 503).
+    morphology_dbs?: {
+      msa: boolean;
+      egy: boolean;
+      glf: boolean;
+      lev: boolean;
+    };
   };
 }
 

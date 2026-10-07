@@ -58,7 +58,7 @@ from typing import Any
 import httpx
 
 from app.logging import get_logger
-from app.resource_paths import reference_data_dir
+from app.resource_paths import reference_data_dir, refresh_camel_tools_data_dir
 
 log = get_logger(__name__)
 
@@ -355,10 +355,16 @@ class ArabicDataInstaller:
             )
             # Write catalogue.json FIRST: it is the marker the engine's
             # resolver keys on, and it is what makes the install visible to
-            # /health/resources once the first package lands.
+            # /health/resources once the first package lands. The resolver
+            # is lru_cached - on a clean first-run machine it already cached
+            # None (the pre-install request or a health poll), so without
+            # the refresh below the pack would stay invisible to every
+            # request in this process and analysis would 503 forever
+            # (v1.2.11-rc1: "cannot analyze after installing the pack").
             cat = _load_catalogue_snapshot()
             self._check_cancel()
             (target / "catalogue.json").write_text(json.dumps(cat), encoding="utf-8")
+            refresh_camel_tools_data_dir()
 
             with httpx.Client(follow_redirects=True, timeout=timeout) as client:
                 for idx, pkg in enumerate(pending):
@@ -373,6 +379,10 @@ class ArabicDataInstaller:
                     done_bytes = self._download_and_install(client, target, pkg, done_bytes)
                     installed.append(pkg["name"])
                     _write_versions(target, pkg["name"], pkg["version"])
+                    # A package just landed on disk: drop the cached
+                    # resolution so pre-flight and /health/resources see it
+                    # WITHOUT an app restart.
+                    refresh_camel_tools_data_dir()
                     self._update(
                         packages_done=idx + 1,
                         bytes_done=done_bytes,
@@ -384,10 +394,13 @@ class ArabicDataInstaller:
             log.info("arabic_installer_done", target=str(target), installed=installed)
         except _JobCancelledError:
             self._cleanup_partial(target, pending)
+            # Cleanup may have REMOVED partial state; re-resolve from disk.
+            refresh_camel_tools_data_dir()
             self._update(state="cancelled", stage="idle", finished_at=time.time())
             log.info("arabic_installer_cancelled", installed=installed)
         except Exception as e:
             self._cleanup_partial(target, pending)
+            refresh_camel_tools_data_dir()
             self._last_error = f"{type(e).__name__}: {e}" if not isinstance(e, ArabicInstallerError) else str(e)
             self._update(state="error", stage="idle", finished_at=time.time(), error=self._last_error)
             log.warning("arabic_installer_failed", error=self._last_error)

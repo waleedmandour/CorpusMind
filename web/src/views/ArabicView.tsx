@@ -117,6 +117,13 @@ export function ArabicError({ error }: { error: unknown }) {
   );
 }
 
+const DIALECT_DBS: { id: "msa" | "egy" | "glf" | "lev"; label: string }[] = [
+  { id: "msa", label: "MSA (calima-msa-r13)" },
+  { id: "egy", label: "Egyptian (calima-egy-r13)" },
+  { id: "glf", label: "Gulf (calima-glf-01)" },
+  { id: "lev", label: "Levantine (calima-lev-01)" },
+];
+
 export function ArabicView() {
   const [text, setText] = useState(SAMPLE_TEXTS[0]);
   const [tool, setTool] = useState<Tool>("morphology");
@@ -129,6 +136,17 @@ export function ArabicView() {
   const queryClient = useQueryClient();
 
   const backends = useQuery({ queryKey: ["arabic-backends"], queryFn: ({ signal }) => api.arabicBackends(signal) });
+
+  // v1.2.11-rc1 fix: which dialect DBs are actually on disk. Shared cache
+  // with the installer card (same queryKey), so it also refreshes right
+  // after an in-app install finishes. Drives the Dialect DB dropdown: a DB
+  // the installer never provisions is disabled with a plain-language suffix
+  // instead of offering a request that can only ever end in 503.
+  const installStatus = useQuery({
+    queryKey: ["arabic-data-install"],
+    queryFn: ({ signal }) => api.arabicDataInstallStatus(signal),
+  });
+  const morphDbs = installStatus.data?.camel_tools?.morphology_dbs;
 
   const result = useQuery({
     queryKey: ["arabic", submitted],
@@ -190,6 +208,15 @@ export function ArabicView() {
     setSubmitted({ text: text.trim(), tool, dialect, tagset });
   };
 
+  // v1.2.11-rc1 fix: if the selected dialect DB turns out to be missing
+  // (e.g. the dropdown state predates the status load, or the pack was
+  // removed), fall back to MSA instead of sending a guaranteed-503 request.
+  useEffect(() => {
+    if (morphDbs && dialect !== "msa" && morphDbs[dialect] === false) {
+      setDialect("msa");
+    }
+  }, [morphDbs, dialect]);
+
   return (
     <div className="arabic-view">
       <div className="grounding-notice">
@@ -231,10 +258,15 @@ export function ArabicView() {
             <label className="dialect-picker">
               Dialect DB:
               <select value={dialect} onChange={(e) => setDialect(e.target.value as typeof dialect)}>
-                <option value="msa">MSA (calima-msa-r13)</option>
-                <option value="egy">Egyptian (calima-egy-r13)</option>
-                <option value="glf">Gulf (calima-glf-01)</option>
-                <option value="lev">Levantine (calima-lev-01)</option>
+                {DIALECT_DBS.map((d) => {
+                  const missing = morphDbs ? morphDbs[d.id] === false : false;
+                  return (
+                    <option key={d.id} value={d.id} disabled={missing}>
+                      {d.label}
+                      {missing ? ` ${t(lang, "ar_dialect_db_missing")}` : ""}
+                    </option>
+                  );
+                })}
               </select>
             </label>
             <label className="dialect-picker">

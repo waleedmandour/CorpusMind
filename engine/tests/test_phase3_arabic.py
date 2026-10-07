@@ -449,10 +449,23 @@ async def test_camel_skip_guard_integrity():
     """
     import importlib.util
 
-    from app.resource_paths import camel_tools_data_dir
-
     if importlib.util.find_spec("camel_tools") is None:
         pytest.skip("camel_tools not installed on this machine at all")
+    # Gate on the DATASET first (pure filesystem, no camel import): importing
+    # camel_tools.data runs `Catalogue.load_catalogue()` at module level,
+    # which DOWNLOADS catalogue.json into ~/.camel_tools when it is missing -
+    # so importing camel_tools on a clean machine both touches the network
+    # and leaves a catalogue marker with no data behind. The API check below
+    # only matters where the suite would otherwise run, i.e. where the data
+    # pack is actually provisioned; there the import is safe (catalogue
+    # exists, no download).
+    from nlp.arabic.pipeline import camel_data_status
+
+    if camel_data_status()["morphology_dbs"]["msa"] is False:
+        pytest.skip(
+            "camel_tools installed but no provisioned data pack "
+            "(run: camel_data -i morphology-db-msa-r13)"
+        )
     # The API camel_tools actually exposes (would have caught built_db):
     from camel_tools.morphology.database import MorphologyDB
 
@@ -460,11 +473,6 @@ async def test_camel_skip_guard_integrity():
         "camel_tools API changed: MorphologyDB.builtin_db is gone - "
         "update _camel_is_usable() in this file"
     )
-    if camel_tools_data_dir() is None:
-        pytest.skip(
-            "camel_tools installed but no provisioned data pack "
-            "(run: camel_data -i morphology-db-msa-r13)"
-        )
     assert _CAMEL_AVAILABLE, (
         "camel_tools IS installed AND its data IS provisioned, but "
         "_camel_is_usable() returned False - the guard is broken again "

@@ -135,3 +135,29 @@ carry no license statement; bundling reverses the previously documented "NOT bun
 choice. THIRD_PARTY_LICENSES.md records both facts and the flag. Fallback if the
 maintainer declines: drop the `camel-tools-data` block from the spec (the 503 +
 hint path stays correct either way).
+
+## Session 3 (2026-10-08, `release/1.2.11-prep`): rc1 field report — "cannot analyze after installing the Arabic data pack"
+
+User report on the rc1 build (clean machine, data pack installed from inside the app):
+the Arabic Tools sample text still cannot be analyzed. Two independent defects,
+root-caused in code BEFORE any change and reproduced against the rc1 tree
+(`b14357e`) with a standalone repro + new regression tests:
+
+| # | Defect (verified) | Fix (verified) |
+| --- | --- | --- |
+| 1 | Stale resolver cache: `camel_tools_data_dir()` (`app/resource_paths.py`) is `@lru_cache(1)`. On a clean machine the FIRST Arabic request or `/health/resources` poll runs before any pack exists → the resolver returns `None` and the cache stores that `None` forever. The in-app installer then installs the pack fine (its own `_resolve_target_dir()` never used the cached resolver), but every later analysis in the SAME process still 503s "not installed" until the whole app is restarted. Reproduced deterministically: poison → fabricate pack → `_require_camel_data` still raises → `cache_clear()` → passes. | `refresh_camel_tools_data_dir()` added; the installer job calls it when the on-disk state changes (after the catalogue marker is written, after EACH package lands, after cancelled/failed cleanup). Analysis works immediately after "done", no restart. Regression test runs the REAL installer job against a local fake-zip server in the poisoned-cache sequence. |
+| 2 | Dialect DB trap: the panel's dropdown offered `egy`/`glf`/`lev` DBs that no installer path provisions (installer = `morphology-db-msa-r13` + `dialectid-model6` only). Selecting Egyptian (as in the user's screenshot) can only ever 503 "incomplete: missing calima-egy-r13" with a hint that pointed back at the in-app installer — whose answer ("already installed", 409) could never fix it. | (a) `camel_data_status()` now reports `morphology_dbs: {msa, egy, glf, lev}` on the install-status payload the UI already polls; (b) the ArabicView dropdown disables DBs that are not on disk, labelled "data pack not installed" (EN+AR i18n), and falls back to MSA if the selection becomes unavailable; (c) the 503 message for a missing dialect DB names the exact terminal package (`camel_data -i morphology-db-egy-r13`, `-glf-01`, `-lev-01`); (d) the installer card refreshes the backends badge when an install reaches "done". The installer card no longer dead-ends: the UI never offers a request that cannot succeed. |
+
+Gates this session (Linux sandbox, Python 3.12.14, camel_tools installed but the
+~170 MB data pack NOT downloadable here - GitHub release CDN blackholes past ~3 MB;
+CI provisions it in every job): new regression suite
+`tests/test_v1211_arabic_cache_refresh.py` 6/6 PASS (incl. the full user sequence:
+poison → REAL installer job over local fake zips → pre-flight passes in-process);
+full engine suite chunked: **699 passed / 12 skipped** (the 11 real-DB Arabic tests
+skip here exactly as designed; 1 environment-only failure: Arabic ingestion needs
+the provisioned pack, same failure on the pre-fix tree on this machine);
+`ruff check .` clean; mypy per-package report **PASS (1829 = 1829, +0 everywhere)**
+after typing the new test file; web `tsc --noEmit` PASS; `npm run build` PASS.
+Real-morphology end-to-end (DB load + root extraction through the fixed path) is
+verified by CI's provisioned-pack jobs on push (test-gate + four OS smoke gates).
+CHANGELOG.md gained both fixes under [1.2.11] Fixed.

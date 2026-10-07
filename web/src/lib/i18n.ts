@@ -76,6 +76,9 @@ export const translations = {
     ar_data_pkg_msa: "MSA morphology DB (calima-msa-r13, GPL-2.0-only)",
     ar_data_pkg_did: "Dialect-ID model (dialectid-model6, MIT)",
     ar_data_busy_conflict: "An Arabic analysis is already running. Please wait a few seconds and try again.",
+    // v1.2.11-rc1 fix: dialect DBs the installer does not provision are
+    // marked (and disabled) in the Dialect DB dropdown instead of 503ing.
+    ar_dialect_db_missing: "(data pack not installed)",
     // v1.2.0: parent-app vision tab removed (Lens companion owns the vision workbench).
     // nav_vision_suite removed; vision_* content keys stay (Lens-mode workbench uses them).
     nav_assistant: "AI Assistant",
@@ -1128,6 +1131,8 @@ export const translations = {
     ar_data_pkg_msa: "قاعدة الصرف الفصحى (calima-msa-r13، GPL-2.0-only)",
     ar_data_pkg_did: "نموذج تحديد اللهجة (dialectid-model6، MIT)",
     ar_data_busy_conflict: "هناك تحليل عربي قيد التشغيل بالفعل. يُرجى الانتظار بضع ثوانٍ والمحاولة مجدداً.",
+    // v1.2.11-rc1 fix: قواعد اللهجات التي لا يوفرها المثبّت تُعلَّم وتُعطَّل في القائمة
+    ar_dialect_db_missing: "(حزمة البيانات غير مثبتة)",
     // v1.2.0: nav_vision_suite removed (parent-app vision tab is gone); vision_* content keys stay.
     nav_assistant: "المساعد الذكي",
     nav_settings: "الإعدادات",

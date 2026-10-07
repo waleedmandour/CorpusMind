@@ -12,6 +12,7 @@
  * strings come from i18n. The card never blocks anything: the engine runs
  * the download in its own worker thread and the UI just mirrors its status.
  */
+import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api, type ArabicDataInstallStatus } from "@/lib/api";
@@ -67,6 +68,19 @@ export function ArabicDataPackCard({ compact = false }: { compact?: boolean }) {
     mutationFn: () => api.arabicDataInstallCancel(),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["arabic-data-install"] }),
   });
+
+  // v1.2.11-rc1 fix: when an install finishes, refresh the Arabic backends
+  // badge too. Before this, the badge kept its pre-install state ("stubbed")
+  // until a full page remount, and the user had no signal that analysis was
+  // usable again (engine-side, the resolver cache is dropped by the
+  // installer, so analysis genuinely works right after "done").
+  const installState = status.data?.state;
+  useEffect(() => {
+    if (installState === "done") {
+      void qc.invalidateQueries({ queryKey: ["arabic-backends"] });
+      void qc.invalidateQueries({ queryKey: ["arabic-data-install"] });
+    }
+  }, [installState, qc]);
 
   const s = status.data;
   const camel = s?.camel_tools;

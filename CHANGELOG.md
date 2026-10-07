@@ -166,6 +166,30 @@ once 1.0 ships. Until then, expect breaking changes between 0.x releases.
   THIRD_PARTY_LICENSES.md: Stanza, Gemma 4, wordfreq data, bundled fonts.
 
 ### Fixed
+- **"Even after downloading the Arabic Data Pack, the sample text cannot
+  be analyzed"** (v1.2.11-rc1 field report on a clean first-run machine,
+  with the data pack installed from inside the app): a stale-cache bug.
+  `camel_tools_data_dir()` is `@lru_cache`d, and on a clean machine the
+  first Arabic request (or a `/health/resources` poll) runs before any
+  pack exists, so the resolver cached `None` forever; the in-app installer
+  then installed the pack successfully, but every later analysis in the
+  same process still answered 503 "not installed" until the whole app was
+  restarted. The installer now drops that cached resolution the moment the
+  on-disk state changes (catalogue marker written, each package landed,
+  cancelled/failed cleanup), so analysis works immediately after the
+  install finishes, no restart needed. Regression-tested end to end in one
+  process: resolve (poison) → real installer job → pre-flight passes.
+- The Arabic Tools **Dialect DB dropdown offered Egyptian/Gulf/Levantine
+  morphology DBs that nothing ever installs** (same rc1 field report; the
+  screenshot had Egyptian selected while the in-app installer provisions
+  MSA + dialect-ID only): selecting one could only ever end in 503, and
+  the hint it showed pointed back at the in-app installer, whose answer
+  ("already installed") could never fix it. The dropdown now disables the
+  DBs that are not on disk (labelled "data pack not installed", EN+AR)
+  from the live per-dialect status the engine already reports
+  (`morphology_dbs` in the install-status payload), and the 503 message
+  for a missing dialect DB now names the exact terminal command
+  (`camel_data -i morphology-db-egy-r13`, `-glf-01`, `-lev-01`).
 - **Arabic Tools "Analysis" spins forever** (field bug, reproduced on
   v1.2.9 as well, so not a v1.2.11 regression): a three-layer defect.
   (1) camel_tools, on a machine without its provisioned data, attempts a

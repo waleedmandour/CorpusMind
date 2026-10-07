@@ -59,15 +59,17 @@ class ArabicDataMissingError(RuntimeError):
 
 # v1.2.11 follow-up: one shared, actionable hint for every missing-data
 # error. Leads with the IN-APP installer (zero terminal knowledge needed),
-# keeps the explicit camel_data command for headless/SSH machines, and ends
-# with the contract line the 503 regression test asserts on.
+# states plainly which packs the installer provisions (the MSA morphology
+# DB + the dialect-ID model - not the Egyptian/Gulf/Levantine dialect DBs),
+# and ends with the contract lines the 503 regression test asserts on
+# ("camel_data -i" and "never downloads data at request time").
 INSTALL_HINT = (
     "Install the Arabic data pack from inside the app: Settings > Arabic "
     "data pack > Install (it downloads the pinned pack from CAMeL Lab's "
-    "official releases and verifies its size and SHA256 before installing). "
-    "On a terminal: camel_data -i morphology-db-msa-r13 (and: camel_data -i "
-    "dialectid-model6 for dialect detection). The engine never downloads "
-    "data at request time."
+    "official releases and verifies its size and SHA256 before installing; "
+    "it provisions the MSA morphology DB and the dialect-ID model). Other "
+    "dialect DBs need a terminal: camel_data -i morphology-db-egy-r13 (or "
+    "-glf-01 / -lev-01). The engine never downloads data at request time."
 )
 
 
@@ -110,6 +112,12 @@ def camel_data_status() -> dict:
     Used by ``GET /api/v1/health/resources`` (v1.2.11): every check here is
     a filesystem existence test, so the health endpoint can never trigger
     the download-at-first-use hang this release fixes.
+
+    v1.2.11-rc1 bug fix: also reports ``morphology_dbs`` keyed by the UI's
+    dialect codes (msa/egy/glf/lev) so the Arabic Tools dialect dropdown can
+    disable the DBs that are genuinely not on disk instead of offering a
+    request that can only ever end in 503 (the in-app installer provisions
+    MSA + dialect-ID only).
     """
     from app.resource_paths import camel_tools_data_dir
 
@@ -119,14 +127,19 @@ def camel_data_status() -> dict:
         "data_dir": None,
         "morphology_db_msa": False,
         "dialectid_model6": False,
+        "morphology_dbs": {"msa": False, "egy": False, "glf": False, "lev": False},
     }
     if data_dir is None:
         return out
     out["installed"] = True
     out["data_dir"] = str(data_dir)
-    msa_pkg, msa_dir = _camel_dataset_dir("calima-msa-r13")
+    for code, dataset in (("msa", "calima-msa-r13"), ("egy", "calima-egy-r13"),
+                          ("glf", "calima-glf-01"), ("lev", "calima-lev-01")):
+        pkg, sub = _camel_dataset_dir(dataset)
+        present = (data_dir / "data" / pkg / sub).is_dir()
+        out["morphology_dbs"][code] = present
+    out["morphology_db_msa"] = out["morphology_dbs"]["msa"]
     did_pkg, did_dir = _camel_dataset_dir("dialectid-model6")
-    out["morphology_db_msa"] = (data_dir / "data" / msa_pkg / msa_dir).is_dir()
     out["dialectid_model6"] = (data_dir / "data" / did_pkg / did_dir).is_dir()
     return out
 
@@ -154,10 +167,17 @@ def _require_camel_data(db_names: tuple[str, ...]) -> Path:
         ).is_dir()
     ]
     if missing:
+        # v1.2.11-rc1 bug fix: name the EXACT terminal package per missing
+        # dataset. The old message told every missing-data case to run the
+        # in-app installer, which provisions the MSA pack only - so a user
+        # who selected the Egyptian DB got a 503 whose "fix" could never
+        # fix it (install -> "already installed" 409 -> same 503).
+        per_dataset = ", ".join(
+            f"{name} (terminal: camel_data -i {_camel_package_hint(name)})"
+            for name in missing
+        )
         raise ArabicDataMissingError(
-            "Arabic morphology data is incomplete: missing "
-            + ", ".join(missing)
-            + ". "
+            "Arabic morphology data is incomplete: missing " + per_dataset + ". "
             + INSTALL_HINT
         )
     # Validation passed: pin the env so the import below binds CT_DATA_DIR
