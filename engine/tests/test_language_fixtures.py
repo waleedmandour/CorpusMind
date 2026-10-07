@@ -261,7 +261,21 @@ class TestNormalizedAnalysis:
     @pytest.mark.asyncio
     async def test_legacy_normalize_arabic_flag_keeps_old_behavior(self, client) -> None:
         """Arabic regression guard at the API level: the v1.2.0 flag still
-        returns the same keys it always did."""
+        returns the same keys it always did.
+
+        Skipped with reason on machines with no provisioned Arabic data
+        pack: v1.2.11's honest gate makes Arabic ingestion require
+        calima-msa-r13, so the corpus upload would 400 before the legacy
+        flag is ever exercised. CI (ci.yml + the release test-gate)
+        provisions the pack, so this runs for real there."""
+        from app.resource_paths import camel_tools_data_dir
+
+        if camel_tools_data_dir() is None:
+            pytest.skip(
+                "no provisioned Arabic data pack (v1.2.11 honest gate: "
+                "Arabic ingestion requires calima-msa-r13; run "
+                "camel_data -i morphology-db-msa-r13)"
+            )
         cid = await _make_corpus(client, "ar")
         text = "أحمد ذهب الى المدرسة. أحمد يدرس."
         await _upload(client, cid, "ar.txt", text.encode("utf-8"), "text/plain")

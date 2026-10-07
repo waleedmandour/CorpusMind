@@ -40,7 +40,7 @@ jobs:
   test-gate:
     name: Test gate (engine + web)
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -50,8 +50,27 @@ jobs:
         working-directory: engine
         run: |
           python -m pip install --upgrade pip
+          # CPU torch FIRST (same order as the release build jobs): camel-tools
+          # requires torch to satisfy pip, and the default index would pull the
+          # multi-GB CUDA build into this job for no benefit.
+          pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
           pip install --no-cache-dir -e ".[dev]"
+          pip install --no-cache-dir camel-tools docopt pyrsistent muddler emoji
           python -m spacy download en_core_web_sm
+      - name: Cache CAMeL Tools data
+        # Same cache key as ci.yml's engine job: first gate run downloads,
+        # every later run reuses ~/.camel_tools (~170 MB).
+        uses: actions/cache@v4
+        with:
+          path: ~/.camel_tools
+          key: ${{ runner.os }}-camel-tools-data-${{ hashFiles('engine/pyproject.toml') }}
+      - name: Download CAMeL Tools morphology databases
+        # The v1.2.11 honest gate makes Arabic ingestion REQUIRE the pack, so
+        # without this the Arabic tests 400 in the gate while passing in
+        # ci.yml. Idempotent: camel_data skips components already installed.
+        run: |
+          camel_data -i morphology-db-msa-r13
+          camel_data -i dialectid-model6
       - name: Ruff
         working-directory: engine
         run: ruff check .
