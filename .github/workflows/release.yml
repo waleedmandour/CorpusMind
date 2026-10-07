@@ -967,7 +967,10 @@ jobs:
           # v1.2.6 PDF because nothing asserted the guide matches the tag.
           # Refuse to publish when the newest committed guide is older
           # than the release tag (strip the leading v from both).
+          # v1.2.11-rc1: rc tags ship the FINAL-version guide, so strip a
+          # trailing -rcN suffix before comparing (v1.2.11-rc1 -> 1.2.11).
           TAG_NUM="${{ github.ref_name }}"
+          TAG_NUM="${TAG_NUM%%-rc*}"
           PDF_NUM=$(basename "$PDF" | sed -E 's/.*_v([0-9.]+)\.pdf/\1/')
           if [ "$PDF_NUM" != "${TAG_NUM#v}" ]; then
             echo "ERROR: newest guide PDF is v$PDF_NUM but release tag is ${TAG_NUM}"
