@@ -90,11 +90,19 @@ Open http://localhost:5173. The engine listens on `127.0.0.1:8765`
 
 ### Optional: Arabic Support
 
+The desktop installer bundles the Arabic morphology data, so Arabic Tools
+work out of the box there. For source/dev runs, install the CAMeL Tools
+stack once:
+
 ```
 pip install camel-tools pyrsistent muddler cachetools emoji future regex
 camel_data -i morphology-db-msa-r13
 camel_data -i dialectid-model6
 ```
+
+If this data is missing, the Arabic Tools panel shows a clear error with
+these commands instead of silently hanging; the engine never downloads
+data at request time.
 
 ---
 

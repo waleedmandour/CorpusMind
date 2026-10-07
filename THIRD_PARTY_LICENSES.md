@@ -65,21 +65,15 @@ Phase 0 release.
 
 | Package | License | Purpose |
 | --- | --- | --- |
-| [CAMeL Tools](https://camel-tools.readthedocs.io/) | MIT (package) + GPL v2 (calima-msa-r13 morphology DB) + CC BY 4.0 (Gulf/Levantine DBs) | Arabic morphology, NER, sentiment, dialect ID. **Note:** the morphology databases have their own licenses — calima-msa-r13 is GPL v2, calima-glf-01 and calima-lev-01 are CC BY 4.0. These are downloaded on demand via `camel_data -i morphology-db-msa-r13` and are NOT bundled in the CorpusMind distribution; users install them locally. |
+| [CAMeL Tools](https://camel-tools.readthedocs.io/) | MIT (package code, verified from the 1.6.0 source headers) + GPL v2 (calima-msa-r13 morphology DB, per the LICENSE file shipped inside the DB) + CC BY 4.0 (Gulf/Levantine DBs) | Arabic morphology, NER, sentiment, dialect ID. **Note:** the morphology databases have their own licenses — calima-msa-r13 is GPL v2 (derived from AraMorph 1.2.1, LDC), calima-glf-01 and calima-lev-01 are CC BY 4.0. |
 | (future) [SinaTools](https://github.com/SinaTools/) | Apache-2.0 | Arabic NLP toolkit |
 | (future) [Farasa](https://farasa.qcri.org/) | MIT | Arabic segmentation / POS / lemmatization |
 | `pyrsistent` | MIT | Required by CAMeL Tools |
 | `muddler` | MIT | Required by CAMeL Tools (database unpacking) |
 | `cachetools` | MIT | Required by CAMeL Tools (analyzer caching) |
 | `emoji` | MIT | Required by CAMeL Tools (charset detection) |
-
-**License compliance note:** Because calima-msa-r13 is GPL v2, users who
-downloadad and use it via CorpusMind are bound by GPL v2 for that specific
-component. This does not affect CorpusMind's own AGPL-3.0 license — GPL v2
-and AGPL-3.0 are compatible (both are strong copyleft). The morphology DBs
-are NOT bundled with CorpusMind; they are downloaded on demand by the user
-via `camel_data -i`. This keeps CorpusMind's distribution clean while still
-allowing users to use the full CAMeL Tools stack.
+| `camel-kenlm`, `editdistance`, `dill`, `docopt`, `tabulate`, `future` | `editdistance` MIT; `docopt` MIT; `future` MIT; `tabulate` MIT; `dill` BSD-3-Clause; `camel-kenlm`: license NOT stated in the wheel metadata (verify against github.com/CAMeL-Lab/camel-kenlm before release) | Required by CAMeL Tools 1.6.0 (license fields read from the installed wheel metadata, 2026-10-07). NOTE: camel-tools 1.6.0 also declares `torch` and `transformers` as dependencies (for its neural components); neither is used by CorpusMind's morphology/dialect paths and NEITHER is bundled (excluded in the PyInstaller spec). |
+| CAMeL Tools data pack (`calima-msa-r13` morphology DB, `dialectid-model6`) | GPL v2 (morphology DB, see above); dialect-ID model: license not stated inside the data pack | **v1.2.11 (Arabic Tools hang fix): this data pack IS now bundled with the desktop engine** (`camel-tools-data/` inside the bundle, collected from a `camel_data -i`-provisioned build machine) so Arabic Tools work offline. Before v1.2.11 the pack was deliberately NOT bundled; bundling became necessary so the desktop app's Arabic Tools function at all, and to keep camel_tools' download-at-first-use path (the root cause of the reported indefinite hang) out of the request path. **The GPL v2 provenance of calima-msa-r13 and the unstated license of the dialect-ID model files must be confirmed by the maintainer before a release that ships the bundle.** |
 
 ### Statistics
 

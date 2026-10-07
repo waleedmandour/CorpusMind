@@ -100,6 +100,38 @@ once 1.0 ships. Until then, expect breaking changes between 0.x releases.
   THIRD_PARTY_LICENSES.md: Stanza, Gemma 4, wordfreq data, bundled fonts.
 
 ### Fixed
+- **Arabic Tools "Analysis" spins forever** (field bug, reproduced on
+  v1.2.9 as well, so not a v1.2.11 regression): a three-layer defect.
+  (1) camel_tools, on a machine without its provisioned data, attempts a
+  blocking, TIMEOUT-LESS HTTPS download of its catalogue on first use
+  (`Catalogue.update_catalogue` → `requests.get` with no timeout), which
+  never returns on offline or firewalled machines; (2) every `/arabic/*`
+  route ran that synchronous pipeline inline in `async def` handlers, so
+  a slow or hung load froze the whole engine (`/health` included); and
+  (3) the frontend had no request deadline and no cancel, so the panel
+  spun forever. Fixes: a filesystem pre-flight refuses fast with an
+  actionable hint (`camel_data -i ...`) and pins `CAMELTOOLS_DATA` to the
+  resolved pack before camel_tools is imported (dev home or the new
+  bundled `camel-tools-data/` pack); all Arabic routes now run CAMeL work
+  in a worker thread under a hard deadline (`CORPUSMIND_ARABIC_TIMEOUT_S`,
+  default 30s) that returns **504** with a hint, missing data returns
+  **503** with the install command; the grounded-AI tool dispatcher
+  offloads the same tools; the panel shows an elapsed-seconds counter and
+  a working Cancel button, and its error state surfaces the engine's hint.
+  `/health/resources` now reports `languages.camel_tools`. The desktop
+  bundle ships the CAMeL data pack (`camel-tools-data/`, ~161 MB raw) so
+  Arabic Tools work offline; see THIRD_PARTY_LICENSES.md for the DB
+  licensing note. Measured on the dev reference machine: `/health` during
+  a 64k-token analysis went from blocked-for-the-whole-analysis (2304 ms)
+  to 20-24 ms; an unprovisioned machine with a blackholed network went
+  from an indefinite hang to HTTP 503 in 0.07 s.
+- The 9 CAMeL-backed Arabic tests had been silently skipped everywhere
+  (including CI, which installs the data) since their skip-guard was
+  written against a nonexistent API: `MorphologyDB.built_db` instead of
+  `builtin_db`. The guard is fixed, a typo canary test now fails loudly
+  if the guard regresses, and the suite gained regression tests for the
+  503/504 behavior, for `/health` responsiveness during a real analysis,
+  and for the camel block in `/health/resources`.
 - The partial v1.2.11 work on main left the repo red: 14 ruff errors
   (unused imports + duplicate stopword set items) and a TypeScript
   error (`string` not assignable to `"en" | "ar"` in the hub-search
@@ -115,21 +147,31 @@ once 1.0 ships. Until then, expect breaking changes between 0.x releases.
   explicit unavailability (see Added).
 
 ### Tests
-- **Engine: 645 passed, 9 skipped, 0 failed** (baseline before this
-  cycle: 587 passed / 9 skipped; documented v1.2.6 baseline: 447 / 9).
-  New: SQL/Python normalizer parity (incl. ZWNJ modes), script-detection
-  near-misses, per-language end-to-end fixtures (ingestion
-  TXT/DOCX/PDF/HTML, danda/۔ splits, normalized frequency/concordance,
-  collocation sanity, export BOM round-trip), languages-registry shape,
-  student-allowlist boundary, Gemma 4 catalogue/capability/version
-  classification, extended version lockstep.
+- **Engine: 674 passed, 1 skipped, 0 failed** (only remaining skip is the
+  optional Stanza backend; documented v1.2.6 baseline: 447 passed / 9
+  skipped). New since the previous count: SQL/Python normalizer parity
+  (incl. ZWNJ modes), script-detection near-misses, per-language
+  end-to-end fixtures (ingestion TXT/DOCX/PDF/HTML, danda/۔ splits,
+  normalized frequency/concordance, collocation sanity, export BOM
+  round-trip), languages-registry shape, student-allowlist boundary,
+  Gemma 4 catalogue/capability/version classification, extended version
+  lockstep, plus the Arabic Tools hang regression tests (503-fast,
+  504 deadline, /health responsiveness during a real analysis,
+  /health/resources camel block, skip-guard typo canary). The 9
+  CAMeL-backed tests that used to skip silently now actually run
+  (with camel-tools 1.6.0 + calima-msa-r13 + dialectid-model6
+  installed).
 - **Stanza backend verified live** (1.15.0, ur/fa/hi) through the engine
   wrapper; spaCy blank fallback verified in the packaged-app condition.
 - **Web**: tsc + build green; `check_contrast.mjs` 86/86. **Ruff**: clean.
-- **Wheel build**: verified. PyInstaller onedir + Docker boot: NOT RUN in
-  the release-prep environment (no Docker daemon / no macOS-Windows
-  toolchains); the smoke-gate assertions were updated in lockstep so the
-  release pipeline enforces the new resources.
+- **Wheel build**: verified. **PyInstaller onedir boot: RUN on Linux this
+  cycle** (bundled engine boots, resolves its own `camel-tools-data/`
+  pack, and completes real CAMeL morphology; `ci_smoke_engine.sh` full
+  PASS on the Linux bundle, including the new camel content gates).
+  Windows/macOS bundles: NOT RUN here (toolchains unavailable); the
+  release workflow now provisions camel-tools + its data before
+  packaging, and both smoke gates enforce the payload. Docker boot: NOT
+  RUN (no Docker daemon in this environment).
 
 ### Known limitations (per language, honest)
 - **ur/hi/fa POS/lemma/parse** require the optional Stanza install on the

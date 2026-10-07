@@ -104,3 +104,34 @@ Legend: DONE / PARTIAL / MISSING / BROKEN. "BROKEN" = exists but fails.
 | wheel boot / Docker | NOT RUN in this environment (no Docker daemon available) — the Docker CI job's resource probe was updated in lockstep and runs on push |
 | PyInstaller onedir boot | NOT RUN (Windows/macOS toolchains unavailable here); `ci_smoke_engine.sh/.ps1` now assert the three new reference files, so the release pipeline enforces them at packaging time |
 | installer size growth | +~2.0 MB (fonts) + ~0.1 MB (TSVs) before compression; the packaged app does NOT bundle stanza/torch, so no model-weight growth |
+
+---
+
+## Session 2 (2026-10-07, `release/1.2.11-prep`): Arabic Tools "Analysis spins forever"
+
+Field bug report: the Arabic Tools panel's Analysis never finishes. Root cause found
+BEFORE any code change; reproduced behaviorally on both v1.2.9 and this branch (the
+Arabic engine code is byte-identical between them, so this is NOT a v1.2.11
+regression).
+
+| Layer | Defect (verified) | Fix (verified) |
+| --- | --- | --- |
+| Data resolution | `MorphologyDB.builtin_db()` on a machine without `~/.camel_tools` triggers `Catalogue.update_catalogue()` — a blocking, TIMEOUT-LESS `requests.get` to GitHub; on an offline/firewalled machine it never returns (measured: >120 s, no return, blackholed proxy). | Filesystem pre-flight in `nlp/arabic/pipeline.py` (`_require_camel_data` + `camel_tools_data_dir()` in `app/resource_paths.py`); missing data raises `ArabicDataMissingError` → HTTP 503 with the install command in 0.07 s. `CAMELTOOLS_DATA` is pinned to the resolved pack before camel_tools is imported. |
+| Event loop | Every `/arabic/*` route ran CPU-bound CAMeL work inline in `async def` handlers; `/health` latency equalled the analysis duration (measured 2304 ms during a 2.3 s analysis). `ai/tools.py::execute_tool` had the same defect. | All Arabic routes + the grounded-AI tool dispatcher run CAMeL work via `asyncio.to_thread`; `/health` during a 64k-token analysis now answers in 20-24 ms (measured). |
+| Deadline | No server-side timeout, no client timeout, no cancel → infinite spinner. | Hard deadline `CORPUSMIND_ARABIC_TIMEOUT_S` (default 30 s) → HTTP 504 with a hint (measured: 504 at 1 s deadline in 1.72 s, `/health` still 200 immediately after); client 45 s deadline in `api.ts`; panel shows elapsed seconds and a working Cancel (react-query signal → fetch abort). |
+| Tests | `_camel_is_usable()` called the nonexistent `MorphologyDB.built_db` (typo) → the 9 CAMeL-backed tests skipped silently everywhere, CI included. | Typo fixed; new tests: skip-guard typo canary, 503-fast, 504 deadline, `/health` responsiveness during a REAL analysis (fails loudly if skipped where camel+data exist), `/health/resources` camel block. |
+| Packaging | The spec bundled neither camel_tools code+data nor provisioned anything; release workflow never installed `[arabic]`. The desktop app could never run Arabic Tools. | Spec collects `camel_tools` + `camel-tools-data/`; release.yml provisions CPU-torch + camel-tools + `camel_data -i` in all four OS jobs; both smoke gates assert the payload. Linux onedir boot VERIFIED: boots 1.5 s, resolves its own pack, real morphology (root ط.ل.ب) inside the frozen app; `ci_smoke_engine.sh` full PASS. |
+
+Gates this session (Linux, Python 3.12.14): engine `pytest` **674 passed / 1 skipped** (only
+the optional Stanza skip; was 660/10 with 9 false skips); `ruff check` clean; `tsc -b`,
+`npm run build`, `check_contrast.mjs` 86/86 all PASS; Linux PyInstaller onedir boot + full
+smoke gate PASS. Installer size: onedir 716 MB total; camel payload 161 MB (data) + ~0.1 MB
+(code) — NO torch/transformers bundled (excluded; morphology and DIDModel6 paths are
+non-neural, verified by import-chain probe).
+
+Human decision required before release: the calima-msa-r13 DB is GPL v2 (AraMorph/LDC
+provenance, per the LICENSE file shipped inside the DB) and the dialectid-model6 files
+carry no license statement; bundling reverses the previously documented "NOT bundled"
+choice. THIRD_PARTY_LICENSES.md records both facts and the flag. Fallback if the
+maintainer declines: drop the `camel-tools-data` block from the spec (the 503 +
+hint path stays correct either way).
