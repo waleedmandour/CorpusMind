@@ -174,8 +174,9 @@ async def resources_health() -> dict:
         pass
 
     # v1.2.11: per-language capability summary (bundled stopword lists per
-    # language and whether the optional Stanza backend is importable).
-    languages_report: dict = {"stopwords": {}, "stanza": {}}
+    # language, whether the optional Stanza backend is importable, and the
+    # CAMeL Tools provisioning state reported by the filesystem-only probe).
+    languages_report: dict = {"stopwords": {}, "stanza": {}, "camel_tools": {}}
     try:
         from nlp.stopwords import get_stopwords
 
@@ -192,6 +193,15 @@ async def resources_health() -> dict:
         }
     except Exception:
         pass
+    try:
+        # v1.2.11 (Arabic Tools hang fix): report CAMeL provisioning from
+        # filesystem checks only - this endpoint must never import camel_tools
+        # or be able to trigger its download-at-first-use path.
+        from nlp.arabic.pipeline import camel_data_status
+
+        languages_report["camel_tools"] = camel_data_status()
+    except Exception:
+        languages_report["camel_tools"] = {"installed": False}
     out["languages"] = languages_report
 
     try:

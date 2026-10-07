@@ -26,12 +26,159 @@ Arabic-specific features exposed (§8.21):
 from __future__ import annotations
 
 import functools
+import os
+import threading
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Protocol
 
 from app.logging import get_logger
 
 log = get_logger(__name__)
+
+
+# --------------------------------------------------------------------------- #
+# v1.2.11: CAMeL data pre-flight (root fix for the "Analysis spins forever"
+# hang). See the long comment in app/resource_paths.py: when camel_tools'
+# managed-data catalogue is missing, ``MorphologyDB.builtin_db()`` attempts a
+# BLOCKING, TIMEOUT-LESS HTTPS download on first use. On offline/firewalled
+# machines that never returns, and pre-v1.2.11 it ran on the event loop, so
+# the whole engine froze. The engine now refuses fast instead: no request
+# path may ever trigger a network download.
+# --------------------------------------------------------------------------- #
+
+
+class ArabicDataMissingError(RuntimeError):
+    """Raised when the CAMeL Tools morphology data is not provisioned.
+
+    Deliberately NOT an OSError subclass look-alike of camel_tools' internal
+    errors: the API layer maps this to HTTP 503 with an actionable hint,
+    while anything else stays a 500.
+    """
+
+
+_CAMEL_DATA_ENV_LOCK = threading.RLock()
+# Separate from the env lock: _load holds this while _require_camel_data
+# re-enters the env path. RLock keeps _ensure_camel_data_env safe if a future
+# caller nests it; the load lock must stay exclusive (a ~400MB single load).
+_CAMEL_ANALYZER_LOAD_LOCK = threading.Lock()
+
+
+def _ensure_camel_data_env() -> Path | None:
+    """Pin ``CAMELTOOLS_DATA`` to the resolved data pack BEFORE camel_tools
+    is imported (camel_tools reads the env var at import time).
+
+    Returns the resolved directory, or ``None`` when no provisioned pack
+    exists on this machine. Overriding (not ``setdefault``) is intentional:
+    a stale CAMELTOOLS_DATA pointing at an unprovisioned directory must not
+    shadow a valid bundle. No-ops once camel_tools has been imported, so an
+    operator-set env var honoured by the running process is never rewritten.
+    """
+    import sys
+
+    with _CAMEL_DATA_ENV_LOCK:
+        if "camel_tools" in sys.modules:
+            # camel_tools already imported: CT_DATA_DIR is computed; only
+            # report (do not rewrite the env mid-process).
+            env = os.environ.get("CAMELTOOLS_DATA", "").strip()
+            return Path(env) if env else None
+        from app.resource_paths import camel_tools_data_dir
+
+        resolved = camel_tools_data_dir()
+        if resolved is not None:
+            os.environ["CAMELTOOLS_DATA"] = str(resolved)
+        return resolved
+
+
+def camel_data_status() -> dict:
+    """Report CAMeL Tools provisioning WITHOUT importing or loading it.
+
+    Used by ``GET /api/v1/health/resources`` (v1.2.11): every check here is
+    a filesystem existence test, so the health endpoint can never trigger
+    the download-at-first-use hang this release fixes.
+    """
+    from app.resource_paths import camel_tools_data_dir
+
+    data_dir = camel_tools_data_dir()
+    out: dict = {
+        "installed": False,
+        "data_dir": None,
+        "morphology_db_msa": False,
+        "dialectid_model6": False,
+    }
+    if data_dir is None:
+        return out
+    out["installed"] = True
+    out["data_dir"] = str(data_dir)
+    msa_pkg, msa_dir = _camel_dataset_dir("calima-msa-r13")
+    did_pkg, did_dir = _camel_dataset_dir("dialectid-model6")
+    out["morphology_db_msa"] = (data_dir / "data" / msa_pkg / msa_dir).is_dir()
+    out["dialectid_model6"] = (data_dir / "data" / did_pkg / did_dir).is_dir()
+    return out
+
+
+def _require_camel_data(db_names: tuple[str, ...]) -> Path:
+    """Pre-flight: the provisioned catalogue + the requested datasets must
+    exist on disk, or raise ``ArabicDataMissingError`` with an actionable
+    hint. This is what keeps camel_tools' timeout-less downloader out of the
+    request path."""
+    from app.resource_paths import camel_tools_data_dir
+
+    # Resolve fresh (env-first, lru_cached): the env var alone cannot be
+    # trusted once camel_tools has been imported by another code path.
+    data_dir = camel_tools_data_dir()
+    if data_dir is None:
+        raise ArabicDataMissingError(
+            "Arabic morphology data is not installed on this machine. "
+            "Install it once with: camel_data -i morphology-db-msa-r13 "
+            "(and: camel_data -i dialectid-model6 for dialect detection). "
+            "The engine never downloads data at request time."
+        )
+    missing = [
+        name
+        for name in db_names
+        if not (
+            data_dir / "data" / _camel_dataset_dir(name)[0] / _camel_dataset_dir(name)[1]
+        ).is_dir()
+    ]
+    if missing:
+        packages = ", ".join(_camel_package_hint(name) for name in missing)
+        raise ArabicDataMissingError(
+            "Arabic morphology data is incomplete: missing "
+            + ", ".join(missing)
+            + ". Install it once with: camel_data -i "
+            + packages
+            + ". The engine never downloads data at request time."
+        )
+    # Validation passed: pin the env so the import below binds CT_DATA_DIR
+    # to the same pack that was just verified (no-op when already correct).
+    _ensure_camel_data_env()
+    return data_dir
+
+
+def _camel_dataset_dir(dataset: str) -> tuple[str, str]:
+    """Map a builtin-dataset name to its on-disk location under data/.
+
+    Verified against a live ``camel_data -i`` install (camel-tools 1.6.0):
+      builtin DB "calima-msa-r13" -> data/morphology_db/calima-msa-r13
+      package  "dialectid-model6" -> data/dialectid/model6
+
+    Note the naming trap: ``MorphologyDB.builtin_db()`` and
+    ``_CAMEL_DIALECT_DBS`` use the DATASET name (calima-msa-r13), while the
+    ``camel_data -i`` installer uses the PACKAGE name (morphology-db-msa-r13).
+    """
+    if dataset.startswith("dialectid"):
+        return ("dialectid", dataset.split("-", 1)[1])
+    return ("morphology_db", dataset)
+
+
+def _camel_package_hint(dataset: str) -> str:
+    """The ``camel_data -i <package>`` name for a builtin dataset name."""
+    if dataset.startswith("dialectid"):
+        return dataset
+    if dataset.startswith("calima-"):
+        return "morphology-db-" + dataset[len("calima-") :]
+    return dataset
 
 
 # --------------------------------------------------------------------------- #
@@ -115,6 +262,22 @@ class CamelBackend:
     def _load(self) -> None:
         if self._analyzers:
             return
+        # v1.2.11: the routes now run analysis in worker threads, so first
+        # load can race. The lock keeps the DB single-loaded (it is ~400MB
+        # resident); double-checked so the hot path stays lock-free.
+        with _CAMEL_ANALYZER_LOAD_LOCK:
+            if self._analyzers:
+                return
+            self._load_locked()
+
+    def _load_locked(self) -> None:
+        # Pre-flight BEFORE importing camel_tools: pins CAMELTOOLS_DATA to
+        # the resolved pack (frozen bundle or dev home) and refuses fast
+        # with an actionable error when nothing is provisioned. This is the
+        # guard that removes the timeout-less download from the request path.
+        db_name = _CAMEL_DIALECT_DBS.get(self._default_dialect, "calima-msa-r13")
+        _require_camel_data((db_name,))
+
         import camel_tools
         from camel_tools.morphology.analyzer import Analyzer
         from camel_tools.morphology.database import MorphologyDB
@@ -122,7 +285,6 @@ class CamelBackend:
 
         log.info("camel_loading", dialect=self._default_dialect)
         # Load the default dialect's morphology DB
-        db_name = _CAMEL_DIALECT_DBS.get(self._default_dialect, "calima-msa-r13")
         db = MorphologyDB.builtin_db(db_name)
         self._analyzers[self._default_dialect] = Analyzer(db)
         self._bw_mapper = CharMapper.builtin_mapper("ar2bw")
@@ -251,8 +413,14 @@ class CamelBackend:
             return self._heuristic_dialect(text)
 
     def _get_dialect_identifier(self):
-        """Lazily load the DIDModel6 (cached on the backend instance)."""
+        """Lazily load the DIDModel6 (cached on the backend instance).
+
+        v1.2.11: pre-flights the dialectid dataset the same way as the
+        morphology DB so the dialect route can never fall into the
+        download-at-first-use hang either.
+        """
         if not hasattr(self, "_did_model"):
+            _require_camel_data(("dialectid-model6",))
             from camel_tools.dialectid.model6 import DIDModel6
 
             self._did_model = DIDModel6.pretrained()
@@ -424,6 +592,11 @@ def segment_arabic_clitics(text: str) -> list[dict]:
 
 def transliterate_buckwalter(text: str) -> str:
     """Transliterate Arabic text to Buckwalter encoding (Latin)."""
+    # These three helpers only need camel_tools' PACKAGE data (char tables),
+    # not the managed DB, so they work without a provisioned pack; pin the
+    # env first anyway so a frozen bundle's pack wins the import-time
+    # CT_DATA_DIR resolution.
+    _ensure_camel_data_env()
     from camel_tools.utils.charmap import CharMapper
 
     bw = CharMapper.builtin_mapper("ar2bw")
@@ -432,6 +605,7 @@ def transliterate_buckwalter(text: str) -> str:
 
 def dediacritize_arabic(text: str) -> str:
     """Remove Arabic diacritics (التشكيل) from text."""
+    _ensure_camel_data_env()
     from camel_tools.utils.dediac import dediac_ar
 
     return dediac_ar(text)
@@ -439,6 +613,7 @@ def dediacritize_arabic(text: str) -> str:
 
 def normalize_arabic(text: str) -> str:
     """Normalize Arabic text (alef variants, teh marbuta, alef maksura)."""
+    _ensure_camel_data_env()
     from camel_tools.utils.normalize import (
         normalize_alef_ar,
         normalize_alef_maksura_ar,

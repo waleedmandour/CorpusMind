@@ -45,7 +45,13 @@ def _camel_is_usable() -> bool:
         import camel_tools  # noqa: F401
         from camel_tools.morphology.database import MorphologyDB
         # This will raise if the calima-msa-r13 database isn't downloaded.
-        MorphologyDB.built_db("calima-msa-r13")
+        # v1.2.11: this line read `MorphologyDB.built_db(...)` - a method
+        # that does not exist (the real name is `builtin_db`). The guard
+        # therefore ALWAYS raised AttributeError and returned False, so all
+        # 9 @_needs_camel tests silently skipped even on machines (incl. CI)
+        # where camel_tools AND its data were fully installed. That is how
+        # the Arabic Tools "spins forever" hang survived unnoticed.
+        MorphologyDB.builtin_db("calima-msa-r13")
         return True
     except Exception:
         return False
@@ -400,3 +406,203 @@ async def test_parallel_concordance(client):
     assert "ar_right" in pair
     assert "en_sentence" in pair
     assert pair["ar_node"] == "student"
+
+
+# ---------------------------------------------------------------------------
+# v1.2.11 regression tests - the "Arabic Tools Analysis spins forever" bug.
+#
+# Root cause chain (all three layers had to be fixed):
+#   1. camel_tools, on a machine without its provisioned data, attempts a
+#      BLOCKING, TIMEOUT-LESS HTTPS download of its catalogue on first use
+#      (Catalogue.update_catalogue -> requests.get with no timeout). On an
+#      offline/firewalled machine that never returns.
+#   2. The /arabic/* routes ran that synchronous pipeline inline in async
+#      handlers, so the hang (or any slow first load) froze the WHOLE
+#      engine: /health included.
+#   3. The frontend had no request deadline and no cancel, so the panel
+#      spun forever.
+# The guard typo fixed above kept every @_needs_camel test skipping, so
+# none of this was ever exercised.
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def _reset_camel_backend_cache():
+    """Isolate tests that fiddle with data resolution: drop the lru_cached
+    backend singleton and the lru_cached data-dir resolver, restore after."""
+    from nlp.arabic.pipeline import get_arabic_backend
+
+    get_arabic_backend.cache_clear()
+    yield
+    get_arabic_backend.cache_clear()
+
+
+@pytest.mark.asyncio
+async def test_camel_skip_guard_integrity():
+    """Typo canary for _camel_is_usable (v1.2.11).
+
+    This test ALWAYS runs. If camel_tools is importable AND its data is
+    provisioned on this machine, the guard MUST report available - a future
+    typo in the guard (e.g. the v1.2.x `built_db` typo that disabled the
+    whole Arabic suite, including in CI) fails HERE, loudly, instead of
+    silently skipping 9 tests forever.
+    """
+    import importlib.util
+
+    from app.resource_paths import camel_tools_data_dir
+
+    if importlib.util.find_spec("camel_tools") is None:
+        pytest.skip("camel_tools not installed on this machine at all")
+    # The API camel_tools actually exposes (would have caught built_db):
+    from camel_tools.morphology.database import MorphologyDB
+
+    assert hasattr(MorphologyDB, "builtin_db"), (
+        "camel_tools API changed: MorphologyDB.builtin_db is gone - "
+        "update _camel_is_usable() in this file"
+    )
+    if camel_tools_data_dir() is None:
+        pytest.skip(
+            "camel_tools installed but no provisioned data pack "
+            "(run: camel_data -i morphology-db-msa-r13)"
+        )
+    assert _CAMEL_AVAILABLE, (
+        "camel_tools IS installed AND its data IS provisioned, but "
+        "_camel_is_usable() returned False - the guard is broken again "
+        "(this is how the v1.2.x built_db typo hid the Arabic hang)"
+    )
+
+
+@pytest.mark.asyncio
+async def test_health_resources_reports_camel_tools(client):
+    """GET /health/resources must report CAMeL provisioning (v1.2.11).
+
+    Filesystem checks only - this endpoint must never import or load
+    camel_tools, and must never be able to trigger its download path.
+    """
+    from pathlib import Path
+
+    r = await client.get("/api/v1/health/resources")
+    assert r.status_code == 200
+    body = r.json()
+    camel = body["languages"]["camel_tools"]
+    assert set(camel) >= {"installed", "data_dir", "morphology_db_msa", "dialectid_model6"}
+    assert isinstance(camel["installed"], bool)
+    if camel["installed"]:
+        assert camel["data_dir"]
+        # The catalogue marker the resolver keys on must exist in data_dir
+        assert (Path(camel["data_dir"]) / "catalogue.json").is_file()
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("_reset_camel_backend_cache")
+async def test_arabic_data_missing_returns_503_fast(client, monkeypatch):
+    """Unprovisioned machine: Arabic analysis must fail FAST with HTTP 503
+    and an actionable hint - never attempt the timeout-less download that
+    caused the indefinite hang (v1.2.11)."""
+    import time as _time
+
+    from app import resource_paths
+
+    # Save the REAL resolver reference first: after monkeypatch replaces the
+    # module attribute, only this saved object still has .cache_clear().
+    from app.resource_paths import camel_tools_data_dir as _ct_resolver
+
+    monkeypatch.delenv("CAMELTOOLS_DATA", raising=False)
+    monkeypatch.setattr(resource_paths, "camel_tools_data_dir", lambda: None)
+    _ct_resolver.cache_clear()
+    try:
+        t0 = _time.perf_counter()
+        r = await client.post(
+            "/api/v1/arabic/analyze",
+            json={"text": "الطلاب يدرسون في المكتبة", "dialect": "msa"},
+        )
+        elapsed = _time.perf_counter() - t0
+        assert r.status_code == 503
+        detail = r.json()["detail"]
+        assert "camel_data -i" in detail
+        assert "never downloads data at request time" in detail
+        # "Fast" must mean fast: the pre-flight is a filesystem check, not a
+        # network attempt. Generous ceiling so slow CI runners stay green.
+        assert elapsed < 10, f"503 took {elapsed:.1f}s - pre-flight is no longer fast"
+    finally:
+        _ct_resolver.cache_clear()
+
+
+@pytest.mark.asyncio
+async def test_arabic_timeout_returns_504(client, monkeypatch):
+    """A stuck analysis must hit the hard deadline and return HTTP 504 with
+    a hint (v1.2.11). The event loop stays free throughout - that property
+    is asserted separately by the /health responsiveness test."""
+    import time as _time
+
+    from api import arabic as arabic_routes
+
+    def _slow_analysis(*args, **kwargs):
+        # Sync CPU-bound stub, slightly longer than the test deadline; the
+        # abandoned worker thread simply drains on its own after the 504.
+        _time.sleep(1.0)
+        return None
+
+    monkeypatch.setattr(arabic_routes, "analyze_arabic", _slow_analysis)
+    monkeypatch.setattr(arabic_routes, "ARABIC_TIMEOUT_S", 0.3)
+    t0 = _time.perf_counter()
+    r = await client.post(
+        "/api/v1/arabic/analyze",
+        json={"text": "الطلاب يدرسون في المكتبة", "dialect": "msa"},
+    )
+    elapsed = _time.perf_counter() - t0
+    assert r.status_code == 504
+    detail = r.json()["detail"]
+    assert "did not finish within" in detail
+    assert "shorter text" in detail or "try again" in detail
+    # 504 must come from the deadline, not after the work completed
+    assert elapsed < 0.9
+
+
+@_needs_camel
+@pytest.mark.asyncio
+async def test_health_stays_responsive_during_analysis(client):
+    """While a REAL Arabic analysis runs (CAMeL loaded), /health must still
+    answer promptly (v1.2.11). Before the fix the analysis ran ON the event
+    loop and /health latency equalled the analysis duration.
+
+    This test must NOT be skipped where camel_tools + data exist - the
+    skipif guard above only skips genuinely unprovisioned machines.
+    """
+    import asyncio as _asyncio
+    import time as _time
+
+    if not _CAMEL_AVAILABLE:
+        pytest.fail(
+            "camel_tools + data are expected on this machine but the guard "
+            "says otherwise; refusing to run this regression test as a "
+            "no-op. Install: camel_data -i morphology-db-msa-r13"
+        )
+    # ~64k tokens: even on a warm cache this takes seconds, guaranteeing the
+    # health probe overlaps a still-running analysis.
+    big_text = " ".join(["الطلاب يدرسون في المكتبة الكبيرة ويقرأون الكتب"] * 8000)
+    analyze_task = _asyncio.create_task(
+        client.post("/api/v1/arabic/analyze", json={"text": big_text, "dialect": "msa"})
+    )
+    # Let the analysis request reach the engine and start hogging time
+    await _asyncio.sleep(0.2)
+    t0 = _time.perf_counter()
+    health = await client.get("/api/v1/health")
+    health_s = _time.perf_counter() - t0
+    assert health.status_code == 200
+    # Remaining analysis time AFTER the health probe completed: if the loop
+    # were blocked by the analysis, the probe could only return once the
+    # analysis was already done, leaving ~0s here.
+    analysis_r = await analyze_task
+    analysis_s = _time.perf_counter() - t0 - health_s
+    assert analysis_r.status_code == 200
+    # The overlap must be real, otherwise the assertion below is vacuous.
+    assert analysis_s > 0.3, (
+        f"analysis had only {analysis_s:.2f}s of work left after the health "
+        f"probe returned ({health_s:.2f}s); enlarge the text"
+    )
+    # The loop must never be blocked for the whole analysis any more.
+    assert health_s < 1.5, (
+        f"/health took {health_s:.2f}s while analysis ran for "
+        f"{analysis_s:.2f}s - CPU-bound work is back on the event loop"
+    )

@@ -85,6 +85,83 @@ def resource_path(*parts: str) -> Path:
     return reference_data_dir().joinpath(*parts)
 
 
+# --------------------------------------------------------------------------- #
+# CAMeL Tools managed data (v1.2.11, Arabic Tools hang fix)
+#
+# camel_tools resolves its managed data directory at IMPORT time: the
+# ``CAMELTOOLS_DATA`` env var if set, else ``~/.camel_tools`` (see
+# ``camel_tools.data.catalogue.CT_DATA_DIR``). When its catalogue file is
+# MISSING, ``MorphologyDB.builtin_db()`` transparently launches a BLOCKING,
+# TIMEOUT-LESS HTTPS download (``Catalogue.update_catalogue()`` ->
+# ``requests.Session().get(url, stream=True)`` with no timeout) — on an
+# offline or firewalled machine (raw.githubusercontent.com is intermittently
+# unreachable in the Gulf region) that call never returns. Because the Arabic
+# routes ran this synchronously on the event loop, the whole engine froze and
+# the Arabic Tools panel spun forever (the reported "Analysis never finishes").
+#
+# The fix has two halves:
+#   1. THIS resolver: find the data directory in every supported layout
+#      (env override / PyInstaller bundle / dev home) WITHOUT any network IO,
+#      and put the bundled copy on the env var before camel_tools is imported.
+#   2. ``nlp.arabic.pipeline`` pre-flights the catalogue file and raises an
+#      actionable error instead of letting camel_tools attempt a download.
+# --------------------------------------------------------------------------- #
+
+_CAMEL_BUNDLE_SUBDIR = "camel-tools-data"
+_CAMEL_CATALOGUE_MARKER = "catalogue.json"
+
+
+def _camel_bundle_candidates() -> tuple[Path, ...]:
+    """Frozen-layout candidates for the bundled camel-tools data pack."""
+    candidates: list[Path] = []
+    meipass = getattr(sys, "_MEIPASS", None)
+    if meipass:
+        candidates.append(Path(meipass) / _CAMEL_BUNDLE_SUBDIR)
+    # onedir layout: data collected next to the launcher under _internal/.
+    candidates.append(
+        Path(os.path.dirname(os.path.abspath(sys.executable))) / "_internal" / _CAMEL_BUNDLE_SUBDIR
+    )
+    return tuple(candidates)
+
+
+@lru_cache(maxsize=1)
+def camel_tools_data_dir() -> Path | None:
+    """Locate the CAMeL Tools managed-data directory, or return ``None``.
+
+    Resolution order (first candidate containing ``catalogue.json`` wins):
+
+      1. ``CAMELTOOLS_DATA`` — camel_tools' own env override; respected so an
+         operator can point the engine at a shared, pre-provisioned pack.
+      2. the PyInstaller-bundled pack (``camel-tools-data/`` collected by the
+         spec from the build machine's ``~/.camel_tools``);
+      3. ``~/.camel_tools`` — the developer default populated by
+         ``camel_data -i morphology-db-msa-r13`` (+ ``dialectid-model6``).
+
+    ``None`` means "not provisioned on this machine" — callers MUST refuse
+    fast with an actionable message; they must NEVER fall back to camel_tools'
+    built-in download-at-first-use behaviour (that is the indefinite hang).
+    """
+    env_dir = os.environ.get("CAMELTOOLS_DATA", "").strip()
+    if env_dir and (Path(env_dir) / _CAMEL_CATALOGUE_MARKER).is_file():
+        return Path(env_dir)
+    for candidate in _camel_bundle_candidates():
+        if (candidate / _CAMEL_CATALOGUE_MARKER).is_file():
+            return candidate
+    home_dir = Path.home() / ".camel_tools"
+    if (home_dir / _CAMEL_CATALOGUE_MARKER).is_file():
+        return home_dir
+    return None
+
+
+def camel_tools_bundle_available() -> bool:
+    """True when a bundled/dev camel-tools data pack can be pinned via env.
+
+    Used by ``nlp.arabic.pipeline`` BEFORE importing camel_tools so the
+    frozen bundle's copy wins over a (possibly missing) ``~/.camel_tools``.
+    """
+    return camel_tools_data_dir() is not None
+
+
 def exists(*parts: str) -> bool:
     """True when the referenced resource exists (never raises)."""
     try:

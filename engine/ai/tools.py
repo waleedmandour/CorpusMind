@@ -8,6 +8,7 @@ true whenever at least one tool was invoked.
 """
 from __future__ import annotations
 
+import asyncio
 import time
 from typing import Any
 
@@ -1174,13 +1175,15 @@ async def execute_tool(name: str, args: dict) -> Any:
         raise KeyError(f"Unknown tool: {name}")
 
     if name in _STATELESS_TOOLS:
-        # Stateless sync tool — call directly
-        result = impl(**args)
-        # If it returns a coroutine (async), await it
+        # v1.2.11 (Arabic Tools hang fix): the Arabic stateless tools are
+        # CPU-bound CAMeL calls. They used to run inline on the event loop,
+        # freezing the whole engine for the duration (and forever when the
+        # morphology data was missing). Async impls are awaited; sync impls
+        # run in a worker thread so the loop never blocks.
         import inspect
-        if inspect.isawaitable(result):
-            return await result
-        return result
+        if inspect.iscoroutinefunction(impl):
+            return await impl(**args)
+        return await asyncio.to_thread(impl, **args)
 
     # Corpus-backed async tool — open a fresh session
     async with session_scope() as session:

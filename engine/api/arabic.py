@@ -1,6 +1,21 @@
-"""Phase 3 Arabic API routes (§8.21, §8.22)."""
+"""Phase 3 Arabic API routes (§8.21, §8.22).
+
+v1.2.11 (Arabic Tools hang fix): every CAMeL-backed handler here is CPU-
+bound, synchronous code (morphology analyzer, DIDModel6 loader). Running it
+inline in these ``async def`` handlers blocked the single event loop, so a
+slow/hung analysis froze the ENTIRE engine, /health included. Two rules now
+apply to every route in this module:
+
+  1. sync work runs in a worker thread via ``asyncio.to_thread``;
+  2. sync work is bounded by ``ARABIC_TIMEOUT_S`` — on timeout the client
+     gets HTTP 504 with a hint while the worker thread finishes in the
+     background (a running thread cannot be killed; the loop stays free).
+"""
 
 from __future__ import annotations
+
+import asyncio
+import os
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -13,6 +28,7 @@ from nlp.arabic.bilingual import (
     parallel_concordance,
 )
 from nlp.arabic.pipeline import (
+    ArabicDataMissingError,
     analyze_arabic,
     dediacritize_arabic,
     detect_arabic_register,
@@ -28,6 +44,40 @@ from storage.session import get_session
 log = get_logger(__name__)
 
 router = APIRouter()
+
+
+# Hard ceiling for one Arabic Tools request (worker-thread time). Env-
+# overridable so tests can exercise the 504 path without waiting.
+# 30s comfortably covers a cold calima-msa-r13 load (~2s on the dev
+# reference machine, tens of seconds with cold disk + antivirus) plus a
+# full-sentence analysis; a genuinely stuck load must not pin a worker
+# thread (and the user's patience) forever.
+ARABIC_TIMEOUT_S = float(os.environ.get("CORPUSMIND_ARABIC_TIMEOUT_S", "30"))
+
+
+async def _run_camel(fn, /, *args, **kwargs):
+    """Run a CAMeL-backed sync callable off the event loop, with a deadline.
+
+    - HTTP 503 + hint when the morphology data is not provisioned (the
+      pre-flight raises ``ArabicDataMissingError``; the engine refuses fast
+      instead of attempting camel_tools' timeout-less data download).
+    - HTTP 504 + hint when the deadline expires. The worker thread keeps
+      running in the background; the loop and every other route stay live.
+    """
+    try:
+        return await asyncio.wait_for(
+            asyncio.to_thread(fn, *args, **kwargs), timeout=ARABIC_TIMEOUT_S
+        )
+    except TimeoutError as e:
+        log.warning("arabic_route_timeout", route=fn.__name__, timeout_s=ARABIC_TIMEOUT_S)
+        raise HTTPException(
+            504,
+            f"Arabic analysis did not finish within {ARABIC_TIMEOUT_S:g}s. "
+            "The first run after installing CAMeL data loads a large "
+            "morphology database; try again, or use a shorter text.",
+        ) from e
+    except ArabicDataMissingError as e:
+        raise HTTPException(status_code=503, detail=str(e)) from e
 
 
 # --------------------------------------------------------------------------- #
@@ -52,7 +102,8 @@ async def analyze_arabic_route(body: AnalyzeArabicRequest) -> dict:
     pattern (وزن) identification + lemma normalization + POS + Buckwalter
     transliteration + dediacritization."""
     try:
-        analysis = analyze_arabic(
+        analysis = await _run_camel(
+            analyze_arabic,
             body.text,
             backend=body.backend,
             dialect=body.dialect,
@@ -98,6 +149,8 @@ async def analyze_arabic_route(body: AnalyzeArabicRequest) -> dict:
         }
     except NotImplementedError as e:
         raise HTTPException(status_code=501, detail=str(e)) from e
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Arabic analysis failed: {e}") from e
 
@@ -109,7 +162,7 @@ class RootsRequest(BaseModel):
 @router.post("/arabic/roots")
 async def roots_route(body: RootsRequest) -> dict:
     """Extract roots (الجذر) + patterns (الوزن) from Arabic text."""
-    return {"roots": extract_arabic_roots(body.text)}
+    return {"roots": await _run_camel(extract_arabic_roots, body.text)}
 
 
 class CliticsRequest(BaseModel):
@@ -119,7 +172,7 @@ class CliticsRequest(BaseModel):
 @router.post("/arabic/clitics")
 async def clitics_route(body: CliticsRequest) -> dict:
     """Segment Arabic clitics (التصاق الضمائر والات)."""
-    return {"segments": segment_arabic_clitics(body.text)}
+    return {"segments": await _run_camel(segment_arabic_clitics, body.text)}
 
 
 class TranslitRequest(BaseModel):
@@ -129,19 +182,25 @@ class TranslitRequest(BaseModel):
 @router.post("/arabic/buckwalter")
 async def buckwalter_route(body: TranslitRequest) -> dict:
     """Transliterate Arabic to Buckwalter encoding (Latin)."""
-    return {"buckwalter": transliterate_buckwalter(body.text), "original": body.text}
+    return {
+        "buckwalter": await _run_camel(transliterate_buckwalter, body.text),
+        "original": body.text,
+    }
 
 
 @router.post("/arabic/dediacritize")
 async def dediacritize_route(body: TranslitRequest) -> dict:
     """Remove Arabic diacritics (التشكيل)."""
-    return {"dediacritized": dediacritize_arabic(body.text), "original": body.text}
+    return {
+        "dediacritized": await _run_camel(dediacritize_arabic, body.text),
+        "original": body.text,
+    }
 
 
 @router.post("/arabic/normalize")
 async def normalize_route(body: TranslitRequest) -> dict:
     """Normalize Arabic text (alef variants, teh marbuta, alef maksura)."""
-    return {"normalized": normalize_arabic(body.text), "original": body.text}
+    return {"normalized": await _run_camel(normalize_arabic, body.text), "original": body.text}
 
 
 # --------------------------------------------------------------------------- #
@@ -163,13 +222,13 @@ async def dialect_route(body: DialectRequest) -> dict:
     With `include_cities=True`, also returns the raw city-level scores from
     the CAMeL DIDModel6 (Beirut, Cairo, Doha, MSA, Rabat, Tunis).
     """
-    return identify_arabic_dialect(body.text, include_cities=body.include_cities)
+    return await _run_camel(identify_arabic_dialect, body.text, include_cities=body.include_cities)
 
 
 @router.post("/arabic/register")
 async def register_route(body: TranslitRequest) -> dict:
     """Detect Arabic register: Classical / MSA / Dialectal."""
-    return {"register_distribution": detect_arabic_register(body.text)}
+    return {"register_distribution": await _run_camel(detect_arabic_register, body.text)}
 
 
 # --------------------------------------------------------------------------- #
@@ -195,7 +254,13 @@ async def list_backends() -> dict:
         info = {"name": name, "available": available}
         if available:
             try:
-                bi = get_arabic_backend(name).info()
+                # info() triggers the (pre-flight-guarded) DB load in a
+                # worker thread. Missing data lands as HTTPException(503)
+                # from _run_camel; any other load failure propagates as-is.
+                # Both mean "nominally installed but not actually usable",
+                # so this endpoint reports available=False + the reason in
+                # the error field rather than failing the whole status call.
+                bi = await _run_camel(get_arabic_backend(name).info)
                 info.update(
                     {
                         "version": bi.version,
@@ -203,6 +268,10 @@ async def list_backends() -> dict:
                         "dialects_supported": bi.dialects_supported,
                     }
                 )
+            except HTTPException as e:
+                info["available"] = False
+                info["error"] = str(e.detail)
+                log.warning("arabic_backend_unavailable", backend=name, error=str(e.detail))
             except Exception as e:
                 # A backend that can't actually load isn't available,
                 # regardless of whether the package is nominally installed.
