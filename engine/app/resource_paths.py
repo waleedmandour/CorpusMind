@@ -94,8 +94,7 @@ def resource_path(*parts: str) -> Path:
 # MISSING, ``MorphologyDB.builtin_db()`` transparently launches a BLOCKING,
 # TIMEOUT-LESS HTTPS download (``Catalogue.update_catalogue()`` ->
 # ``requests.Session().get(url, stream=True)`` with no timeout) — on an
-# offline or firewalled machine (raw.githubusercontent.com is intermittently
-# unreachable in the Gulf region) that call never returns. Because the Arabic
+# offline or firewalled machine that call never returns. Because the Arabic
 # routes ran this synchronously on the event loop, the whole engine froze and
 # the Arabic Tools panel spun forever (the reported "Analysis never finishes").
 #

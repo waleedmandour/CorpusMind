@@ -16,6 +16,15 @@ on:
 permissions:
   contents: write
 
+# v1.2.11 follow-up: the camel-tools data pack bundling is opt-in per
+# release via this repo VARIABLE. The value is read by (a) the guarded
+# provisioning step, (b) the PyInstaller env (spec collects the pack only
+# when 1), and (c) the platform smoke gates (which assert the pack's
+# presence or absence accordingly). Workflow-level env makes all three
+# agree; '0'/'unset' means installer-only default builds.
+env:
+  CORPUSMIND_BUNDLE_CAMEL_DATA: ${{ vars.CORPUSMIND_BUNDLE_CAMEL_DATA || '0' }}
+
 # Cancel any in-progress release build when a new tag is pushed. This prevents
 # two release runs from competing for the same GitHub Release and avoids
 # wasting runner minutes on a superseded build.
@@ -112,17 +121,30 @@ jobs:
           pip install -e .
           pip install pillow
 
-      - name: Provision CAMeL Tools data (Arabic Tools bundle)
+      - name: Install camel_tools code (always - Buckwalter/dediac char tables)
         working-directory: engine
         run: |
-          # v1.2.11 (Arabic Tools hang fix): the desktop bundle ships the
-          # CAMeL Tools morphology stack offline. camel-tools requires torch
-          # per its metadata, but the bundle EXCLUDES torch (the morphology
-          # + dialect-ID paths are non-neural), so the CPU wheel is installed
-          # first to keep build time sane. The data pack (~161MB raw) is
-          # collected by the spec from ~/.camel_tools into camel-tools-data/.
+          # v1.2.11 follow-up: the camel_tools CODE (MIT) is always installed
+          # and always collected - its package data carries the char tables
+          # Buckwalter/dediac/normalize need. camel-tools declares torch as a
+          # dependency; the bundle EXCLUDES torch (the morphology + dialect-ID
+          # paths are non-neural), so the CPU wheel is installed first to
+          # keep build time sane.
           pip install torch --index-url https://download.pytorch.org/whl/cpu
           pip install -e ".[arabic]"
+
+      - name: Provision CAMeL Tools data (opt-in, Arabic Tools bundle)
+        # v1.2.11 follow-up: the DATA pack is NOT bundled by default
+        # (GPL-2.0-only data; the in-app installer covers end users).
+        # Maintainers opt in per release with the repo variable
+        # CORPUSMIND_BUNDLE_CAMEL_DATA=1 - then this step provisions the
+        # pack and the spec collects it into camel-tools-data/.
+        working-directory: engine
+        if: ${{ vars.CORPUSMIND_BUNDLE_CAMEL_DATA == '1' }}
+        run: |
+          # The data pack (~161MB raw) is collected by the spec from
+          # ~/.camel_tools into camel-tools-data/. Default builds skip this
+          # entirely and the release smoke gate asserts the pack is ABSENT.
           camel_data -i morphology-db-msa-r13
           camel_data -i dialectid-model6
           python -c "from camel_tools.morphology.database import MorphologyDB; MorphologyDB.builtin_db('calima-msa-r13'); print('camel-tools data OK')"
@@ -377,17 +399,30 @@ jobs:
           pip install -e .
           pip install pillow
 
-      - name: Provision CAMeL Tools data (Arabic Tools bundle)
+      - name: Install camel_tools code (always - Buckwalter/dediac char tables)
         working-directory: engine
         run: |
-          # v1.2.11 (Arabic Tools hang fix): the desktop bundle ships the
-          # CAMeL Tools morphology stack offline. camel-tools requires torch
-          # per its metadata, but the bundle EXCLUDES torch (the morphology
-          # + dialect-ID paths are non-neural), so the CPU wheel is installed
-          # first to keep build time sane. The data pack (~161MB raw) is
-          # collected by the spec from ~/.camel_tools into camel-tools-data/.
+          # v1.2.11 follow-up: the camel_tools CODE (MIT) is always installed
+          # and always collected - its package data carries the char tables
+          # Buckwalter/dediac/normalize need. camel-tools declares torch as a
+          # dependency; the bundle EXCLUDES torch (the morphology + dialect-ID
+          # paths are non-neural), so the CPU wheel is installed first to
+          # keep build time sane.
           pip install torch --index-url https://download.pytorch.org/whl/cpu
           pip install -e ".[arabic]"
+
+      - name: Provision CAMeL Tools data (opt-in, Arabic Tools bundle)
+        # v1.2.11 follow-up: the DATA pack is NOT bundled by default
+        # (GPL-2.0-only data; the in-app installer covers end users).
+        # Maintainers opt in per release with the repo variable
+        # CORPUSMIND_BUNDLE_CAMEL_DATA=1 - then this step provisions the
+        # pack and the spec collects it into camel-tools-data/.
+        working-directory: engine
+        if: ${{ vars.CORPUSMIND_BUNDLE_CAMEL_DATA == '1' }}
+        run: |
+          # The data pack (~161MB raw) is collected by the spec from
+          # ~/.camel_tools into camel-tools-data/. Default builds skip this
+          # entirely and the release smoke gate asserts the pack is ABSENT.
           camel_data -i morphology-db-msa-r13
           camel_data -i dialectid-model6
           python -c "from camel_tools.morphology.database import MorphologyDB; MorphologyDB.builtin_db('calima-msa-r13'); print('camel-tools data OK')"
@@ -565,17 +600,30 @@ jobs:
           pip install -e .
           pip install pillow
 
-      - name: Provision CAMeL Tools data (Arabic Tools bundle)
+      - name: Install camel_tools code (always - Buckwalter/dediac char tables)
         working-directory: engine
         run: |
-          # v1.2.11 (Arabic Tools hang fix): the desktop bundle ships the
-          # CAMeL Tools morphology stack offline. camel-tools requires torch
-          # per its metadata, but the bundle EXCLUDES torch (the morphology
-          # + dialect-ID paths are non-neural), so the CPU wheel is installed
-          # first to keep build time sane. The data pack (~161MB raw) is
-          # collected by the spec from ~/.camel_tools into camel-tools-data/.
+          # v1.2.11 follow-up: the camel_tools CODE (MIT) is always installed
+          # and always collected - its package data carries the char tables
+          # Buckwalter/dediac/normalize need. camel-tools declares torch as a
+          # dependency; the bundle EXCLUDES torch (the morphology + dialect-ID
+          # paths are non-neural), so the CPU wheel is installed first to
+          # keep build time sane.
           pip install torch --index-url https://download.pytorch.org/whl/cpu
           pip install -e ".[arabic]"
+
+      - name: Provision CAMeL Tools data (opt-in, Arabic Tools bundle)
+        # v1.2.11 follow-up: the DATA pack is NOT bundled by default
+        # (GPL-2.0-only data; the in-app installer covers end users).
+        # Maintainers opt in per release with the repo variable
+        # CORPUSMIND_BUNDLE_CAMEL_DATA=1 - then this step provisions the
+        # pack and the spec collects it into camel-tools-data/.
+        working-directory: engine
+        if: ${{ vars.CORPUSMIND_BUNDLE_CAMEL_DATA == '1' }}
+        run: |
+          # The data pack (~161MB raw) is collected by the spec from
+          # ~/.camel_tools into camel-tools-data/. Default builds skip this
+          # entirely and the release smoke gate asserts the pack is ABSENT.
           camel_data -i morphology-db-msa-r13
           camel_data -i dialectid-model6
           python -c "from camel_tools.morphology.database import MorphologyDB; MorphologyDB.builtin_db('calima-msa-r13'); print('camel-tools data OK')"
@@ -738,17 +786,30 @@ jobs:
           pip install -e .
           pip install pillow
 
-      - name: Provision CAMeL Tools data (Arabic Tools bundle)
+      - name: Install camel_tools code (always - Buckwalter/dediac char tables)
         working-directory: engine
         run: |
-          # v1.2.11 (Arabic Tools hang fix): the desktop bundle ships the
-          # CAMeL Tools morphology stack offline. camel-tools requires torch
-          # per its metadata, but the bundle EXCLUDES torch (the morphology
-          # + dialect-ID paths are non-neural), so the CPU wheel is installed
-          # first to keep build time sane. The data pack (~161MB raw) is
-          # collected by the spec from ~/.camel_tools into camel-tools-data/.
+          # v1.2.11 follow-up: the camel_tools CODE (MIT) is always installed
+          # and always collected - its package data carries the char tables
+          # Buckwalter/dediac/normalize need. camel-tools declares torch as a
+          # dependency; the bundle EXCLUDES torch (the morphology + dialect-ID
+          # paths are non-neural), so the CPU wheel is installed first to
+          # keep build time sane.
           pip install torch --index-url https://download.pytorch.org/whl/cpu
           pip install -e ".[arabic]"
+
+      - name: Provision CAMeL Tools data (opt-in, Arabic Tools bundle)
+        # v1.2.11 follow-up: the DATA pack is NOT bundled by default
+        # (GPL-2.0-only data; the in-app installer covers end users).
+        # Maintainers opt in per release with the repo variable
+        # CORPUSMIND_BUNDLE_CAMEL_DATA=1 - then this step provisions the
+        # pack and the spec collects it into camel-tools-data/.
+        working-directory: engine
+        if: ${{ vars.CORPUSMIND_BUNDLE_CAMEL_DATA == '1' }}
+        run: |
+          # The data pack (~161MB raw) is collected by the spec from
+          # ~/.camel_tools into camel-tools-data/. Default builds skip this
+          # entirely and the release smoke gate asserts the pack is ABSENT.
           camel_data -i morphology-db-msa-r13
           camel_data -i dialectid-model6
           python -c "from camel_tools.morphology.database import MorphologyDB; MorphologyDB.builtin_db('calima-msa-r13'); print('camel-tools data OK')"

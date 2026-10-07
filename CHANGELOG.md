@@ -88,6 +88,67 @@ once 1.0 ships. Until then, expect breaking changes between 0.x releases.
   classroom model setting is unchanged (llama3.2:3b default; Gemma 4 is
   selectable — capacity estimates use its real on-disk footprint).
 
+### Added (Arabic follow-ups, same release cycle)
+- **In-app Arabic data pack installer** (`app/arabic_installer.py`,
+  `/api/v1/arabic/data/install` + `/status` + `/cancel`): a user-initiated
+  background job that downloads the two pinned CAMeL packages
+  (`morphology-db-msa-r13` 0.4.0, `dialectid-model6` 1.1.2) directly from
+  CAMeL Lab's official GitHub releases, verifies each zip's size and SHA256
+  before anything touches disk, extracts through a staging directory, and
+  records `versions.json` so `camel_data -l` sees consistent state. Connect
+  and read timeouts on every call (a firewalled machine fails in seconds,
+  not forever), cooperative cancellation between chunks, live progress
+  (bytes, stage, ETA), and EN+AR UI strings. Reachable from **Settings >
+  Arabic data pack** and from a button inside the Arabic Tools 503 card.
+  Verified live against the frozen desktop bundle: a bare machine goes
+  503 -> in-app install (161 MB) -> restart -> real morphology analysis and
+  DIDModel6 dialect identification.
+- **Chunked bulk Arabic analysis with progress**
+  (`app/arabic_bulk.py`, `POST /api/v1/arabic/analyze/job` + `/status` +
+  `/cancel` + `/result`): corpus-sized input (500K-1M+ tokens) runs as a
+  cancellable background job over ~2,000-token chunks with progress
+  (tokens done/total, chunks, ETA) and an aggregated JSON result
+  (frequency tables for tokens/lemmas/roots/patterns/POS, bounded) instead
+  of one request pinned for minutes. Motivated by a measured benchmark
+  (`scripts/benchmark_arabic_corpus.py`): the calima analyzer runs at
+  ~3,950 tokens/s on the dev reference machine, so 500K tokens takes ~126s
+  and 1M ~253s - far beyond any sane request deadline.
+- **Concurrency cap for Arabic analysis** (`app/arabic_concurrency.py`):
+  `/arabic/*` routes and the five grounded-AI Arabic tools share one
+  process-wide, non-blocking slot gate (`CORPUSMIND_ARABIC_CONCURRENCY`,
+  clamped to 1..2, default 1). Over the cap, HTTP callers get an immediate
+  **429** with `Retry-After`, and AI chats get a clean failed-tool-call
+  the model can relay - no hidden queues, no piled-up 400MB DB loads.
+
+### Changed (Arabic follow-ups, same release cycle)
+- **The desktop bundle no longer ships the CAMeL data pack by default.**
+  The pack is GPL-2.0-only data (`calima-msa-r13`'s LICENSE says
+  "Version 2" with no "or later"; verified from the file shipped inside
+  the DB; `dialectid-model6` is MIT per the camel_tools catalogue), so
+  bundling it is now **opt-in at build time** via
+  `CORPUSMIND_BUNDLE_CAMEL_DATA=1` (spec + release workflow + smoke gates
+  all follow the same flag). Default builds distribute none of the
+  GPL-2.0-only data and the in-app installer covers end users; see
+  THIRD_PARTY_LICENSES.md for the full what-is/what-is-not-redistributed
+  statement.
+- **Release verification hardened for Arabic**: the frozen-bundle smoke
+  gate now branches on the build mode. In bundled builds it asserts the
+  pack content, REAL morphology analysis, REAL dialect identification with
+  city-level scores, and ONE end-to-end AI-chat Arabic tool call through a
+  fake OpenAI-compatible provider (`scripts/ci_smoke_fake_provider.py`) -
+  no Ollama or cloud dependency. In default builds it asserts the pack is
+  ABSENT and that a bare machine gets the fast 503 with `/health` staying
+  live. `scripts/ci_smoke_installer_e2e.sh` additionally exercises the
+  in-app installer end-to-end (real download, SHA verification, install,
+  restart, analysis).
+- The inline `/arabic/analyze` route now refuses texts above
+  `CORPUSMIND_ARABIC_INLINE_MAX_TOKENS` (default 50,000 tokens) with an
+  HTTP **413** that quotes the measured throughput and points at the bulk
+  job endpoint; the interactive 30s deadline stays meaningful.
+- `ci_smoke_engine.sh` gained an installer-status endpoint check; the
+  Windows content gate follows the same bundling flag (default builds must
+  NOT contain `camel-tools-data/`).
+
 ### Changed
 - `normalize`/`zwnj` request parameters on concordance, frequency,
   collocation, and keyness (the engine-side per-language path); results
@@ -119,12 +180,22 @@ once 1.0 ships. Until then, expect breaking changes between 0.x releases.
   offloads the same tools; the panel shows an elapsed-seconds counter and
   a working Cancel button, and its error state surfaces the engine's hint.
   `/health/resources` now reports `languages.camel_tools`. The desktop
-  bundle ships the CAMeL data pack (`camel-tools-data/`, ~161 MB raw) so
-  Arabic Tools work offline; see THIRD_PARTY_LICENSES.md for the DB
-  licensing note. Measured on the dev reference machine: `/health` during
+  bundle shipped the CAMeL data pack (`camel-tools-data/`, ~161 MB raw)
+  in the first cut of this fix; later in this release cycle that was made
+  opt-in at build time (`CORPUSMIND_BUNDLE_CAMEL_DATA=1`) for the
+  GPL-2.0-only reasons above, with the in-app installer replacing it for
+  end users; see THIRD_PARTY_LICENSES.md for the licensing statement. Measured on the dev reference machine: `/health` during
   a 64k-token analysis went from blocked-for-the-whole-analysis (2304 ms)
   to 20-24 ms; an unprovisioned machine with a blackholed network went
   from an indefinite hang to HTTP 503 in 0.07 s.
+- **Dialect identification silently degraded inside the desktop bundle**
+  (caught by the new frozen-bundle smoke gate, not by any test before it):
+  the PyInstaller spec excluded `scikit-learn`, but camel_tools'
+  DIDModel6 model IS a pickled sklearn pipeline, so the packaged dialect
+  route fell back to the lexicon heuristic with only a log line
+  ("No module named 'sklearn'"). scikit-learn (and the `kenlm`/`dill`
+  model-loading stack) are now collected, and the smoke gate asserts REAL
+  city-level scores from the bundle, so the fallback can hide again.
 - The 9 CAMeL-backed Arabic tests had been silently skipped everywhere
   (including CI, which installs the data) since their skip-guard was
   written against a nonexistent API: `MorphologyDB.built_db` instead of
@@ -147,7 +218,7 @@ once 1.0 ships. Until then, expect breaking changes between 0.x releases.
   explicit unavailability (see Added).
 
 ### Tests
-- **Engine: 674 passed, 1 skipped, 0 failed** (only remaining skip is the
+- **Engine: 693 passed, 1 skipped, 0 failed** (only remaining skip is the
   optional Stanza backend; documented v1.2.6 baseline: 447 passed / 9
   skipped). New since the previous count: SQL/Python normalizer parity
   (incl. ZWNJ modes), script-detection near-misses, per-language
@@ -160,7 +231,13 @@ once 1.0 ships. Until then, expect breaking changes between 0.x releases.
   /health/resources camel block, skip-guard typo canary). The 9
   CAMeL-backed tests that used to skip silently now actually run
   (with camel-tools 1.6.0 + calima-msa-r13 + dialectid-model6
-  installed).
+  installed). The Arabic follow-ups add 19 more tests: 429 busy +
+  Retry-After, slot-release on error paths, AI-tool busy signalling, cap
+  clamping, installer happy/corrupt/size-mismatch/cancel/stall/conflict
+  paths against a local fake package server, catalogue-pin integrity,
+  bulk job progress/result/busy/cancel, the 413 inline cap, and a
+  licence-statement contract test pinning the verified GPL-2.0-only/MIT
+  facts into THIRD_PARTY_LICENSES.md.
 - **Stanza backend verified live** (1.15.0, ur/fa/hi) through the engine
   wrapper; spaCy blank fallback verified in the packaged-app condition.
 - **Web**: tsc + build green; `check_contrast.mjs` 86/86. **Ruff**: clean.

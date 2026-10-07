@@ -20,6 +20,7 @@ import clsx from "clsx";
 import { api } from "@/lib/api";
 import { t } from "@/lib/i18n";
 import { useUI } from "@/store/ui";
+import { ArabicDataPackCard } from "@/components/ArabicDataPackCard";
 
 type Tool = "morphology" | "roots" | "clitics" | "buckwalter" | "dediac" | "normalize" | "dialect" | "register" | "translate";
 
@@ -77,8 +78,20 @@ function posClass(tag: string): string {
  * Surfaces the engine's `detail` (503 missing-data hint, 504 timeout hint)
  * instead of a raw `HTTP 503: {"detail": ...}` dump, so the spinner's error
  * state always lands on something actionable.
+ *
+ * v1.2.11 follow-up: a 503 caused by the MISSING DATA PACK renders the
+ * in-app installer button right under the message (compact variant) so the
+ * user can fix the machine without opening a terminal.
  */
-function ArabicError({ error }: { error: unknown }) {
+export function isArabicDataMissingError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return (
+    message.includes("503") &&
+    /Arabic (morphology )?data is (not installed|incomplete)/.test(message)
+  );
+}
+
+export function ArabicError({ error }: { error: unknown }) {
   const message = error instanceof Error ? error.message : String(error);
   let detail = message;
   const httpIdx = message.indexOf(": ");
@@ -91,9 +104,15 @@ function ArabicError({ error }: { error: unknown }) {
       // body was not JSON; keep the raw text
     }
   }
+  const dataMissing = isArabicDataMissingError(message);
   return (
     <div className="error" role="alert">
       Error: {detail}
+      {dataMissing && (
+        <div style={{ marginTop: "var(--space-3)" }}>
+          <ArabicDataPackCard compact />
+        </div>
+      )}
     </div>
   );
 }

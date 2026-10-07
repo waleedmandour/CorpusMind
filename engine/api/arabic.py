@@ -21,6 +21,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.arabic_concurrency import ArabicBusyError, gate
 from app.logging import get_logger
 from nlp.arabic.bilingual import (
     align_parallel_corpora,
@@ -54,16 +55,41 @@ router = APIRouter()
 # thread (and the user's patience) forever.
 ARABIC_TIMEOUT_S = float(os.environ.get("CORPUSMIND_ARABIC_TIMEOUT_S", "30"))
 
+# v1.2.11 follow-up: measured ceiling for the INTERACTIVE analyze route.
+# scripts/benchmark_arabic_corpus.py measured ~3,950 tokens/s on the dev
+# reference machine (calima-msa-r13, warm cache): 100K tokens ≈ 25s, 500K ≈
+# 126s, 1M ≈ 253s. A 50k-token cap keeps the default 30s deadline
+# comfortably reachable on slower machines too; anything larger answers 413
+# and points at the chunked bulk job (POST /arabic/analyze/job) which
+# streams progress instead of holding one HTTP request for minutes.
+ARABIC_INLINE_MAX_TOKENS = int(os.environ.get("CORPUSMIND_ARABIC_INLINE_MAX_TOKENS", "50000"))
+
 
 async def _run_camel(fn, /, *args, **kwargs):
     """Run a CAMeL-backed sync callable off the event loop, with a deadline.
 
+    - HTTP 429 + Retry-After when the process-wide Arabic concurrency cap
+      (v1.2.11 follow-up: ``CORPUSMIND_ARABIC_CONCURRENCY``, 1..2, default
+      1) is fully used. The slot is taken NON-blocking on the event loop
+      thread, so a busy engine answers instantly instead of queueing an
+      unbounded number of hidden analyses.
     - HTTP 503 + hint when the morphology data is not provisioned (the
       pre-flight raises ``ArabicDataMissingError``; the engine refuses fast
       instead of attempting camel_tools' timeout-less data download).
     - HTTP 504 + hint when the deadline expires. The worker thread keeps
       running in the background; the loop and every other route stay live.
     """
+    if not gate.acquire():
+        log.warning(
+            "arabic_route_busy",
+            route=fn.__name__,
+            cap=gate.cap,
+        )
+        raise HTTPException(
+            429,
+            ArabicBusyError().args[0],
+            headers={"Retry-After": "2"},
+        )
     try:
         return await asyncio.wait_for(
             asyncio.to_thread(fn, *args, **kwargs), timeout=ARABIC_TIMEOUT_S
@@ -78,6 +104,8 @@ async def _run_camel(fn, /, *args, **kwargs):
         ) from e
     except ArabicDataMissingError as e:
         raise HTTPException(status_code=503, detail=str(e)) from e
+    finally:
+        gate.release()
 
 
 # --------------------------------------------------------------------------- #
@@ -100,7 +128,26 @@ class AnalyzeArabicRequest(BaseModel):
 async def analyze_arabic_route(body: AnalyzeArabicRequest) -> dict:
     """Full Arabic morphological analysis: tokenization + root extraction +
     pattern (وزن) identification + lemma normalization + POS + Buckwalter
-    transliteration + dediacritization."""
+    transliteration + dediacritization.
+
+    v1.2.11 follow-up: corpus-sized input (> ARABIC_INLINE_MAX_TOKENS
+    whitespace-delimited tokens, default 50,000) answers HTTP 413 with the
+    measured numbers and points at the bulk job endpoint instead of
+    holding one request for minutes.
+    """
+    # Cheap guard BEFORE the worker slot is taken: len(split()) on even a
+    # 5MB text is single-digit milliseconds, never a blocking risk.
+    if len(body.text.split()) > ARABIC_INLINE_MAX_TOKENS:
+        raise HTTPException(
+            413,
+            f"This text is larger than the interactive analysis limit "
+            f"({ARABIC_INLINE_MAX_TOKENS} tokens). Measured throughput of the "
+            f"morphology analyzer is ~3,950 tokens/s, so 500K tokens takes "
+            f"~2 minutes and 1M ~4 minutes. Use the chunked bulk job instead: "
+            f"POST /api/v1/arabic/analyze/job (progress via "
+            f"/arabic/analyze/job/status, result download via "
+            f"/arabic/analyze/job/result, cancel supported).",
+        )
     try:
         analysis = await _run_camel(
             analyze_arabic,
@@ -153,6 +200,13 @@ async def analyze_arabic_route(body: AnalyzeArabicRequest) -> dict:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Arabic analysis failed: {e}") from e
+
+
+# --------------------------------------------------------------------------- #
+# v1.2.11 follow-up: in-app Arabic data pack installer (background job).
+# Routes live in api/arabic_data.py; the 503 hint text lives in
+# nlp/arabic/pipeline.py (INSTALL_HINT) next to the error it annotates.
+# --------------------------------------------------------------------------- #
 
 
 class RootsRequest(BaseModel):

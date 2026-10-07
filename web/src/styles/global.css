@@ -7836,3 +7836,7 @@ html[dir="rtl"] .toggle-switch input:checked + .toggle-slider::before {
 }
 /* v1.2.10 (soak follow-up): queued-query note under heavy analysis spinners. */
 .sm-busy-note { color: var(--text-muted); font-style: italic; }
+
+/* v1.2.11 follow-up: in-app Arabic data pack installer card + 503 inline block. */
+.arabic-data-progress { font-weight: 600; margin-block-end: var(--space-2); }
+.arabic-data-compact { display: flex; flex-direction: column; gap: var(--space-2); align-items: flex-start; }

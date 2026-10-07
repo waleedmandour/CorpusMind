@@ -57,6 +57,20 @@ class ArabicDataMissingError(RuntimeError):
     """
 
 
+# v1.2.11 follow-up: one shared, actionable hint for every missing-data
+# error. Leads with the IN-APP installer (zero terminal knowledge needed),
+# keeps the explicit camel_data command for headless/SSH machines, and ends
+# with the contract line the 503 regression test asserts on.
+INSTALL_HINT = (
+    "Install the Arabic data pack from inside the app: Settings > Arabic "
+    "data pack > Install (it downloads the pinned pack from CAMeL Lab's "
+    "official releases and verifies its size and SHA256 before installing). "
+    "On a terminal: camel_data -i morphology-db-msa-r13 (and: camel_data -i "
+    "dialectid-model6 for dialect detection). The engine never downloads "
+    "data at request time."
+)
+
+
 _CAMEL_DATA_ENV_LOCK = threading.RLock()
 # Separate from the env lock: _load holds this while _require_camel_data
 # re-enters the env path. RLock keeps _ensure_camel_data_env safe if a future
@@ -130,9 +144,7 @@ def _require_camel_data(db_names: tuple[str, ...]) -> Path:
     if data_dir is None:
         raise ArabicDataMissingError(
             "Arabic morphology data is not installed on this machine. "
-            "Install it once with: camel_data -i morphology-db-msa-r13 "
-            "(and: camel_data -i dialectid-model6 for dialect detection). "
-            "The engine never downloads data at request time."
+            + INSTALL_HINT
         )
     missing = [
         name
@@ -142,13 +154,11 @@ def _require_camel_data(db_names: tuple[str, ...]) -> Path:
         ).is_dir()
     ]
     if missing:
-        packages = ", ".join(_camel_package_hint(name) for name in missing)
         raise ArabicDataMissingError(
             "Arabic morphology data is incomplete: missing "
             + ", ".join(missing)
-            + ". Install it once with: camel_data -i "
-            + packages
-            + ". The engine never downloads data at request time."
+            + ". "
+            + INSTALL_HINT
         )
     # Validation passed: pin the env so the import below binds CT_DATA_DIR
     # to the same pack that was just verified (no-op when already correct).

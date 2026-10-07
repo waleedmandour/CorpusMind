@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Post-build smoke gate for the packaged engine sidecar (v1.2.8, review #6;
-# v1.2.9 adds the Student Mode classroom stack: web-dist + Caddy).
+# v1.2.9 adds the Student Mode classroom stack; v1.2.11 follow-up branches on
+# the camel-tools data pack and adds dialect-ID + AI-chat Arabic tool checks).
 #
 # Launches the PyInstaller-built engine binary on a scratch port and asserts
 # that the features that regressed in the shipped v1.2.8 actually work
@@ -10,6 +11,17 @@
 #   - the persuasion-index package imports (dependency manifest + spec fix)
 #   - the bundled web-dist + Caddy binary exist (Student Mode prerequisites)
 #
+# CAMeL data pack (v1.2.11 follow-up), two modes driven by the SAME build
+# flag the spec reads (CORPUSMIND_BUNDLE_CAMEL_DATA):
+#   - =1 (data-bundled build): the bundle MUST contain camel-tools-data/,
+#     /health/resources must report it, and the smoke then exercises
+#     REAL Arabic analysis, REAL dialect identification (DIDModel6 city
+#     scores), and ONE AI-chat Arabic tool call end-to-end through a fake
+#     OpenAI-compatible provider (scripts/ci_smoke_fake_provider.py).
+#   - unset/0 (default build): the bundle MUST NOT contain the pack; with a
+#     scratch HOME (simulating a bare machine) Arabic analysis must answer
+#     the fast 503 + hint, and /health must stay responsive throughout.
+#
 # The release workflow runs this on every platform BEFORE the Tauri
 # packaging step; a failure fails the release. Usage:
 #   scripts/ci_smoke_engine.sh <path-to-engine-binary>
@@ -18,6 +30,7 @@ set -euo pipefail
 BIN="${1:?usage: ci_smoke_engine.sh <engine-binary>}"
 PORT="${CORPUSMIND_SMOKE_PORT:-8799}"
 BASE="http://127.0.0.1:${PORT}"
+BUNDLE_CAMEL_DATA="${CORPUSMIND_BUNDLE_CAMEL_DATA:-0}"
 
 # Content gate (hard): the data files the regressed features need must be
 # in THIS bundle before anything else is checked. Mirrors the Windows
@@ -43,6 +56,23 @@ else
   exit 1
 fi
 
+# v1.2.11 follow-up: camel-tools data pack content gate, mode-driven.
+if [ "${BUNDLE_CAMEL_DATA}" = "1" ]; then
+  if [ -f "${INTERNAL_DIR}/camel-tools-data/catalogue.json" ]; then
+    echo "[smoke] OK   camel-tools-data/catalogue.json (data pack bundled)"
+  else
+    echo "[smoke] FAIL: CORPUSMIND_BUNDLE_CAMEL_DATA=1 but camel-tools-data/catalogue.json is missing from the bundle"
+    exit 1
+  fi
+else
+  if [ ! -e "${INTERNAL_DIR}/camel-tools-data" ]; then
+    echo "[smoke] OK   camel-tools-data correctly ABSENT (default build; in-app installer covers it)"
+  else
+    echo "[smoke] FAIL: default build must NOT bundle camel-tools-data (GPL-2.0-only data is opt-in via CORPUSMIND_BUNDLE_CAMEL_DATA=1)"
+    exit 1
+  fi
+fi
+
 # v1.2.9 Student Mode classroom stack (hard content gate):
 # the PWA build Caddy serves + the Caddy binary itself.
 if [ -f "${INTERNAL_DIR}/web-dist/index.html" ]; then
@@ -60,11 +90,34 @@ else
   exit 1
 fi
 
-echo "[smoke] launching ${BIN} on port ${PORT}"
-CORPUSMIND_PORT="${PORT}" "${BIN}" &
-ENGINE_PID=$!
+echo "[smoke] launching ${BIN} on port ${PORT} (BUNDLE_CAMEL_DATA=${BUNDLE_CAMEL_DATA})"
+if [ "${BUNDLE_CAMEL_DATA}" = "1" ]; then
+  # Bundled mode: the pack resolves from the bundle itself. Also wire the
+  # fake OpenAI-compatible cloud provider so the AI-chat Arabic tool call
+  # can run without Ollama/LM Studio.
+  FAKE_PROVIDER_PORT="${CORPUSMIND_SMOKE_FAKE_PROVIDER_PORT:-8791}"
+  FAKE_PROVIDER_URL="http://127.0.0.1:${FAKE_PROVIDER_PORT}/v1"
+  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  python3 "${SCRIPT_DIR}/ci_smoke_fake_provider.py" "${FAKE_PROVIDER_PORT}" &
+  FAKE_PID=$!
+  CORPUSMIND_PORT="${PORT}" \
+  CORPUSMIND_CLOUD_PROVIDER="custom" \
+  CORPUSMIND_CLOUD_BASE_URL="${FAKE_PROVIDER_URL}" \
+  CORPUSMIND_CLOUD_API_KEY="smoke-not-a-real-key" \
+  CORPUSMIND_CLOUD_DEFAULT_MODEL="smoke-fake" \
+    "${BIN}" &
+  ENGINE_PID=$!
+else
+  # Default mode: run with a scratch HOME so the smoke reflects a BARE
+  # end-user machine (no ~/.camel_tools), regardless of what the build
+  # machine happens to have provisioned.
+  SCRATCH_HOME="$(mktemp -d)"
+  CORPUSMIND_PORT="${PORT}" HOME="${SCRATCH_HOME}" CAMELTOOLS_DATA="" "${BIN}" &
+  ENGINE_PID=$!
+fi
 cleanup() {
   kill "${ENGINE_PID}" 2>/dev/null || true
+  if [ -n "${FAKE_PID:-}" ]; then kill "${FAKE_PID}" 2>/dev/null || true; fi
   wait "${ENGINE_PID}" 2>/dev/null || true
 }
 trap cleanup EXIT
@@ -101,16 +154,15 @@ fail() {
 
 # ---------------------------------------------------------------------------
 # v1.2.10: /health/resources is the SINGLE asserted registry. Every key the
-# build contractually ships must be true here — asserting the whole payload
-# (instead of the three keys that regressed in v1.2.8) is what generalizes
-# the gate: a future resource added to the registry without being added to
-# the bundle fails HERE, on every platform, before release.
-# Report-only keys (spacy_model, sentiment) are printed for the record;
-# user-supplied resources can never be asserted.
+# build contractually ships must be true here. The camel_tools keys follow
+# the build mode: REQUIRED true in bundled builds, REQUIRED false in default
+# builds (with a scratch HOME they cannot silently come from the machine).
+# Report-only keys (spacy_model, sentiment) are printed for the record.
 # ---------------------------------------------------------------------------
-echo "${RES_JSON}" | python3 -c "
-import json, sys
+echo "${RES_JSON}" | CORPUSMIND_SMOKE_CAMEL_MODE="${BUNDLE_CAMEL_DATA}" python3 -c "
+import json, os, sys
 d = json.load(sys.stdin)
+mode = os.environ.get('CORPUSMIND_SMOKE_CAMEL_MODE', '0')
 problems = []
 
 def need(path, ok, what):
@@ -139,10 +191,14 @@ need('spacy_model.en_core_web_sm', d.get('spacy_model', {}).get('en_core_web_sm'
 need('wordfreq.installed', d.get('wordfreq', {}).get('installed') is True, 'wordfreq missing')
 
 cam = d.get('languages', {}).get('camel_tools', {})
-need('languages.camel_tools.morphology_db_msa', cam.get('morphology_db_msa') is True,
-     'CAMeL calima-msa-r13 not collected in bundle')
-need('languages.camel_tools.dialectid_model6', cam.get('dialectid_model6') is True,
-     'CAMeL dialectid model6 not collected in bundle')
+if mode == '1':
+    need('languages.camel_tools.morphology_db_msa', cam.get('morphology_db_msa') is True,
+         'CAMeL calima-msa-r13 not collected in bundle')
+    need('languages.camel_tools.dialectid_model6', cam.get('dialectid_model6') is True,
+         'CAMeL dialectid model6 not collected in bundle')
+else:
+    need('languages.camel_tools.installed', cam.get('installed') is False,
+         'default build reported a camel data pack (must be installer-only)')
 
 pi = d.get('persuasion_index') or {}
 need('persuasion_index.installed', pi.get('installed') is True, 'persuasion-index not importable in bundle')
@@ -177,7 +233,7 @@ assert d.get('installed') is True, f\"persuasion health installed!=true: {d}\"
 # are all expected FALSE on a CI runner (no Ollama/LM Studio/cloud); only
 # the response SHAPE is asserted.
 # ---------------------------------------------------------------------------
-for ep in "health/ready" "server-mode/status" "encryption/status" "facial-analysis/status" "troubleshoot/status"; do
+for ep in "health/ready" "server-mode/status" "encryption/status" "facial-analysis/status" "troubleshoot/status" "arabic/data/install/status"; do
   if curl -fsS "${BASE}/api/v1/${ep}" >/dev/null 2>&1; then
     echo "[smoke] OK   /api/v1/${ep}"
   else
@@ -190,4 +246,83 @@ d = json.load(sys.stdin)
 assert isinstance(d.get('providers'), dict), f\"health/ready providers shape wrong: {d}\"
 " || fail "health/ready did not report a providers object"
 
-echo "[smoke] PASS: full resource registry + persuasion + status endpoints verified in the bundle"
+# ---------------------------------------------------------------------------
+# v1.2.11 follow-up: CAMeL mode-specific Arabic behaviour.
+# ---------------------------------------------------------------------------
+if [ "${BUNDLE_CAMEL_DATA}" = "1" ]; then
+  # 1. REAL morphology analysis inside the bundle.
+  ANALYZE_JSON="$(curl -fsS -X POST "${BASE}/api/v1/arabic/analyze" \
+    -H "Content-Type: application/json" \
+    -d '{"text": "الطلاب يدرسون في المكتبة", "dialect": "msa"}')" \
+    || fail "POST /arabic/analyze failed in the data-bundled build"
+  echo "${ANALYZE_JSON}" | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+assert d.get('backend') == 'camel', d
+assert d.get('token_count', 0) >= 3, d
+assert any('ك.ت.ب' in (t.get('root') or '') for t in d.get('tokens', [])), 'no root ك.ت.ب in bundle analysis'
+" || fail "Arabic morphology analysis did not return a real calima analysis"
+  echo "[smoke] OK   POST /arabic/analyze (real calima morphology in bundle)"
+
+  # 2. REAL dialect identification (DIDModel6, city-level scores).
+  DIALECT_JSON="$(curl -fsS -X POST "${BASE}/api/v1/arabic/dialect" \
+    -H "Content-Type: application/json" \
+    -d '{"text": "شلون الحال اليوم وين رايح", "include_cities": true}')" \
+    || fail "POST /arabic/dialect failed in the data-bundled build"
+  echo "${DIALECT_JSON}" | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+dist = d.get('dialect_distribution') or {}
+assert set(('msa', 'egy', 'glf', 'lev')) <= set(dist), f'dialect buckets missing: {dist}'
+assert abs(sum(float(v) for v in dist.values()) - 1.0) < 0.05, f'distribution does not sum to 1: {dist}'
+cities = d.get('city_scores') or {}
+assert cities, f'city_scores missing (include_cities=true): {d}'
+assert d.get('top_city'), f'top_city missing: {d}'
+" || fail "Arabic dialect ID did not return a real DIDModel6 result"
+  echo "[smoke] OK   POST /arabic/dialect (DIDModel6 + city scores in bundle)"
+
+  # 3. ONE AI-chat Arabic tool call through the fake OpenAI-compatible
+  #    provider: the model asks for arabic_morphology, the ENGINE executes
+  #    it (real CAMeL, inside the bundle), the result feeds the final answer.
+  CHAT_JSON="$(curl -fsS -X POST "${BASE}/api/v1/ai/chat" \
+    -H "Content-Type: application/json" \
+    -d '{"message": "What are the roots of the words in: الكتب المفيدة في المكتبة", "provider": "cloud", "model": "smoke-fake"}')" \
+    || fail "POST /ai/chat with the fake provider failed"
+  echo "${CHAT_JSON}" | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+content = d.get('content') or ''
+assert 'SMOKE_ARABIC_TOOL_OK' in content, f'AI-chat Arabic tool call did not execute: {content[:300]}'
+calls = d.get('tool_calls') or []
+assert calls and calls[0].get('name') == 'arabic_morphology', f'tool_calls wrong: {calls}'
+assert calls[0].get('ok') is True, f'tool call recorded as failed: {calls}'
+" || fail "the AI-chat Arabic tool call did not produce a grounded answer"
+  echo "[smoke] OK   POST /ai/chat arabic_morphology tool call executed in bundle"
+
+  echo "[smoke] PASS: full resource registry + persuasion + status endpoints + Arabic analysis + dialect ID + AI-chat Arabic tool call verified in the bundle"
+else
+  # Default (installer-only) build: with a scratch HOME the Arabic routes
+  # must refuse fast with the actionable 503, and /health must stay live.
+  T0="$(date +%s)"
+  HTTP_CODE="$(curl -s -o /tmp/cm-smoke-503.json -w '%{http_code}' -X POST "${BASE}/api/v1/arabic/analyze" \
+    -H "Content-Type: application/json" \
+    -d '{"text": "الطلاب يدرسون في المكتبة", "dialect": "msa"}' || echo 000)"
+  T1="$(date +%s)"
+  if [ "${HTTP_CODE}" != "503" ]; then
+    fail "default build: POST /arabic/analyze on a bare machine returned ${HTTP_CODE}, expected fast 503 (body: $(cat /tmp/cm-smoke-503.json 2>/dev/null | head -c 200))"
+  fi
+  python3 -c "
+import json
+d = json.load(open('/tmp/cm-smoke-503.json'))
+detail = str(d.get('detail', ''))
+assert 'data is not installed' in detail, f'unexpected 503 detail: {detail[:200]}'
+assert 'never downloads data at request time' in detail, '503 hint lost its contract line'
+" || fail "503 detail is not the actionable missing-data hint"
+  echo "[smoke] OK   default build: POST /arabic/analyze answered fast 503 + hint on a bare machine ($((T1-T0))s)"
+  if ! curl -fsS "${BASE}/api/v1/health" >/dev/null 2>&1; then
+    fail "engine /health stopped answering after the 503 (event loop blocked?)"
+  fi
+  echo "[smoke] OK   /health still live after the 503"
+
+  echo "[smoke] PASS: full resource registry + persuasion + status endpoints verified in the bundle (installer-only Arabic mode)"
+fi

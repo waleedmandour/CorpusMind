@@ -561,7 +561,7 @@ async def test_arabic_timeout_returns_504(client, monkeypatch):
 
 @_needs_camel
 @pytest.mark.asyncio
-async def test_health_stays_responsive_during_analysis(client):
+async def test_health_stays_responsive_during_analysis(client, monkeypatch):
     """While a REAL Arabic analysis runs (CAMeL loaded), /health must still
     answer promptly (v1.2.11). Before the fix the analysis ran ON the event
     loop and /health latency equalled the analysis duration.
@@ -579,7 +579,13 @@ async def test_health_stays_responsive_during_analysis(client):
             "no-op. Install: camel_data -i morphology-db-msa-r13"
         )
     # ~64k tokens: even on a warm cache this takes seconds, guaranteeing the
-    # health probe overlaps a still-running analysis.
+    # health probe overlaps a still-running analysis. v1.2.11 follow-up: the
+    # interactive route now caps input at 50k tokens (413 beyond) — this
+    # regression test raises the cap for its own request only; the cap
+    # behaviour itself is covered by test_analyze_inline_token_cap_413.
+    from api import arabic as arabic_routes
+
+    monkeypatch.setattr(arabic_routes, "ARABIC_INLINE_MAX_TOKENS", 10_000_000)
     big_text = " ".join(["الطلاب يدرسون في المكتبة الكبيرة ويقرأون الكتب"] * 8000)
     analyze_task = _asyncio.create_task(
         client.post("/api/v1/arabic/analyze", json={"text": big_text, "dialect": "msa"})

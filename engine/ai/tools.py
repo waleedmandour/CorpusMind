@@ -14,6 +14,7 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.arabic_concurrency import ArabicBusyError, gate
 from app.logging import get_logger
 from discourse.service import (
     compute_dependency_analysis,
@@ -1163,6 +1164,16 @@ _STATELESS_TOOLS = {
     "visual_grammar", "social_semiotic", "cda", "persuasion", "framing",
 }
 
+# v1.2.11 follow-up: the Arabic stateless tools share the SAME process-wide
+# concurrency cap as the /arabic/* HTTP routes (one shared morphology DB,
+# one CPU budget). A chat that asks for two Arabic tools while an analysis
+# is running gets an immediate, clean ArabicBusyError instead of stacking
+# another ~400MB DB load onto an already-busy machine.
+_ARABIC_TOOLS = {
+    "arabic_morphology", "arabic_dialect_id", "arabic_roots",
+    "arabic_register", "arabic_transliterate",
+}
+
 
 async def execute_tool(name: str, args: dict) -> Any:
     """Execute a tool by name with the given args.
@@ -1181,6 +1192,22 @@ async def execute_tool(name: str, args: dict) -> Any:
         # morphology data was missing). Async impls are awaited; sync impls
         # run in a worker thread so the loop never blocks.
         import inspect
+
+        # v1.2.11 follow-up: Arabic tools honour the shared concurrency cap.
+        # ArabicBusyError propagates to the assistant's tool loop, which
+        # records it as a failed tool call (ok: False) the model can relay
+        # to the user — the chat itself stays alive.
+        if name in _ARABIC_TOOLS:
+            if not gate.acquire():
+                log.warning("arabic_tool_busy", tool=name, cap=gate.cap)
+                raise ArabicBusyError()
+            try:
+                if inspect.iscoroutinefunction(impl):
+                    return await impl(**args)
+                return await asyncio.to_thread(impl, **args)
+            finally:
+                gate.release()
+
         if inspect.iscoroutinefunction(impl):
             return await impl(**args)
         return await asyncio.to_thread(impl, **args)

@@ -1032,6 +1032,46 @@ export interface ArabicBackendInfo {
   dialects_supported?: string[];
 }
 
+// v1.2.11 follow-up: in-app Arabic data pack installer (background job).
+export interface ArabicDataInstallPackage {
+  name: string;
+  version: string;
+  size: number;
+  sha256: string;
+  license: string;
+  state: "installed" | "missing";
+}
+
+export interface ArabicDataInstallStatus {
+  state: "idle" | "running" | "done" | "error" | "cancelled";
+  busy: boolean;
+  stage?: string;
+  target_dir?: string | null;
+  packages_total?: number;
+  packages_done?: number;
+  current_package?: string | null;
+  bytes_done?: number;
+  bytes_total?: number;
+  started_at?: number | null;
+  finished_at?: number | null;
+  error?: string | null;
+  installed?: string[];
+  source?: string;
+  // Present when idle: what an install WOULD download (pinned versions).
+  offer?: {
+    target_dir: string;
+    packages: ArabicDataInstallPackage[];
+    total_bytes: number;
+  };
+  // Filesystem truth from /health/resources (drives the button states).
+  camel_tools?: {
+    installed: boolean;
+    data_dir: string | null;
+    morphology_db_msa: boolean;
+    dialectid_model6: boolean;
+  };
+}
+
 // Phase 3 polish — bilingual (8.22)
 export interface AlignedPair {
   ar_sentence: string;
@@ -2074,6 +2114,22 @@ export const api = {
 
   arabicBackends: (signal?: AbortSignal) =>
     jsonFetch<{ backends: ArabicBackendInfo[] }>(`/api/v1/arabic/backends`, { signal }, ARABIC_TIMEOUT_MS),
+
+  // --- v1.2.11 follow-up: in-app Arabic data pack installer ---
+  // The installer is a background job on the engine (start / status / cancel).
+  // Status is polled by the UI (1s interval) while a job runs; all calls use
+  // the ordinary engine deadline since they never block the engine itself.
+  arabicDataInstall: (includeDialectId = true) =>
+    jsonFetch<ArabicDataInstallStatus>(`/api/v1/arabic/data/install`, {
+      method: "POST",
+      body: JSON.stringify({ include_dialect_id: includeDialectId }),
+    }, ARABIC_TIMEOUT_MS),
+
+  arabicDataInstallStatus: (signal?: AbortSignal) =>
+    jsonFetch<ArabicDataInstallStatus>(`/api/v1/arabic/data/install/status`, { signal }),
+
+  arabicDataInstallCancel: () =>
+    jsonFetch<ArabicDataInstallStatus>(`/api/v1/arabic/data/install/cancel`, { method: "POST" }, ARABIC_TIMEOUT_MS),
 
   // --- Phase 3 polish — bilingual (8.22) ---
   bilingualAlign: (ar_corpus_id: string, en_corpus_id: string) =>

@@ -98,9 +98,15 @@ _hidden_imports = [
     "structlog",              # app/logging.py
     "websockets",             # uvicorn WebSocket support
     "pydantic_settings",      # app/settings.py
-    "httpx",                  # AI provider HTTP client
+    "httpx",                  # AI provider HTTP client + Arabic data installer
     "multipart",              # FastAPI form data parsing (python-multipart)
     "charset_normalizer.md",  # charset_normalizer sub-module
+    # v1.2.11 follow-up: the DIDModel6 dialect-ID stack (belt-and-braces —
+    # static analysis finds these through camel_tools.dialectid.model6, but
+    # kenlm is a top-level compiled .so from the camel_kenlm wheel and dill
+    # unpickles the model, so both are pinned explicitly).
+    "kenlm",
+    "dill",
     # v1.2.8 (review #6): persuasion-index stack. The package's public API
     # is imported LAZILY (persuasion_index/__init__ uses import_module), so
     # PyInstaller's static analysis cannot see the real modules — they must
@@ -169,23 +175,31 @@ except Exception:
     pass
 
 # --------------------------------------------------------------------------- #
-# v1.2.11 (Arabic Tools hang fix): bundle the CAMeL Tools stack so the
-# desktop app's Arabic Tools actually work offline.
+# v1.2.11 (Arabic Tools hang fix): bundle the CAMeL Tools stack so Arabic
+# Tools can work offline.
 #
 # Two parts:
 #   1. camel_tools CODE + PACKAGE data (char tables for Buckwalter /
 #      dediacritization). collect_data_files is required: camel_tools ships
 #      non-Python data inside the package that static analysis misses.
+#      This part is ALWAYS collected — it is small and license-clean
+#      (camel_tools is MIT).
 #   2. the MANAGED data pack (calima-msa-r13 morphology DB ~39MB raw +
-#      dialectid model6 ~122MB raw) provisioned on the build machine via
-#      `camel_data -i` into ~/.camel_tools, collected verbatim as
-#      camel-tools-data/. At runtime nlp.arabic.pipeline pins
-#      CAMELTOOLS_DATA to this directory (app/resource_paths.py) BEFORE
-#      importing camel_tools, so the frozen app resolves its own copy and
-#      never touches the network. If the build venv has no provisioned pack
-#      the bundle still builds, the release smoke gate FAILS on
-#      /health/resources (languages.camel_tools.*), and Arabic analysis
-#      returns an actionable 503 instead of hanging.
+#      dialectid model6 ~122MB raw). v1.2.11 follow-up: bundling this pack
+#      is now OPT-IN at build time via
+#          CORPUSMIND_BUNDLE_CAMEL_DATA=1
+#      Default builds DO NOT ship the pack (it is GPL-2.0-only data, and
+#      keeping it out of the default distribution avoids the redistribution
+#      obligations entirely). An unprovisioned app returns an actionable
+#      HTTP 503 for Arabic analysis, and the in-app Arabic data pack
+#      installer (Settings, or the button in the 503 card) downloads the
+#      pinned pack into the user's data directory with size + SHA256
+#      verification. When the flag IS set at build time, the pack is
+#      provisioned on the build machine via `camel_data -i` into
+#      ~/.camel_tools and collected verbatim as camel-tools-data/. At
+#      runtime nlp.arabic.pipeline pins CAMELTOOLS_DATA to this directory
+#      (app/resource_paths.py) BEFORE importing camel_tools, so the frozen
+#      app resolves its own copy and never touches the network.
 #
 # NOTE: torch (a hard camel-tools dependency) stays EXCLUDED below — the
 # morphology analyzer and DIDModel6 paths are non-neural (verified: no
@@ -200,9 +214,26 @@ except Exception:
     # camel-tools not installed in this build venv — non-fatal here (dev
     # builds); the release smoke gate refuses to publish such a bundle.
     pass
-_ct_home = Path.home() / ".camel_tools"
-if (_ct_home / "catalogue.json").is_file():
-    _datas.append((str(_ct_home), "camel-tools-data"))
+import os as _os  # noqa: E402 — placed here to keep the bundle block together
+
+if _os.environ.get("CORPUSMIND_BUNDLE_CAMEL_DATA", "").strip() == "1":
+    _ct_home = Path.home() / ".camel_tools"
+    if (_ct_home / "catalogue.json").is_file():
+        _datas.append((str(_ct_home), "camel-tools-data"))
+        print("[spec] CORPUSMIND_BUNDLE_CAMEL_DATA=1 -> bundling camel-tools-data/")
+    else:
+        print(
+            "[spec] WARNING: CORPUSMIND_BUNDLE_CAMEL_DATA=1 but no provisioned "
+            "pack at ~/.camel_tools (run: camel_data -i morphology-db-msa-r13 "
+            "&& camel_data -i dialectid-model6). Building WITHOUT the data "
+            "pack; the release smoke gate will fail unless the installer-only "
+            "mode is intended."
+        )
+else:
+    print(
+        "[spec] CORPUSMIND_BUNDLE_CAMEL_DATA not set -> NOT bundling the "
+        "camel-tools data pack (default; the in-app installer covers it)"
+    )
 
 # --------------------------------------------------------------------------- #
 # v1.2.9 Student Mode (classroom server) bundle additions.
@@ -262,8 +293,12 @@ a = Analysis(
         # separately and IS included.
         "cv2",
         "opencv-python",
-        "sklearn",
-        "scikit-learn",
+        # v1.2.11 follow-up: sklearn (scikit-learn) is NOT excluded any
+        # more — camel_tools' DIDModel6 dialect-ID model is a pickled
+        # sklearn pipeline (MultinomialNB / TfidfVectorizer / LabelEncoder).
+        # With the old exclusion the frozen bundle silently degraded the
+        # dialect route to the lexicon heuristic ("No module named
+        # 'sklearn'"); the smoke gate now asserts real city-level scores.
         # NOTE: "pandas" was removed from this exclude list in v1.2.8
         # (review #6) — persuasion_index.api imports pandas at module
         # scope, so excluding it crashed the Persuasion Index lens inside

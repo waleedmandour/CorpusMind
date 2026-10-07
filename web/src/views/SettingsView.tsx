@@ -39,6 +39,7 @@ import { t } from "@/lib/i18n";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { OllamaLanWarning } from "@/components/OllamaLanWarning";
 import { StudentModeServerCard } from "@/components/StudentModeServerCard";
+import { ArabicDataPackCard } from "@/components/ArabicDataPackCard";
 
 export function SettingsView() {
   const qc = useQueryClient();
@@ -409,6 +410,12 @@ export function SettingsView() {
           <OllamaModelManager ollamaHealthy={ollamaOk} />
         </div>
       </section>
+
+      {/* v1.2.11 follow-up: in-app Arabic data pack installer (background
+          job on the engine: pinned versions, size + SHA256 verification,
+          cancel, EN+AR labels). Also reachable from the Arabic Tools 503
+          card. */}
+      <ArabicDataPackCard />
 
       {/* v1.2.6: Gemini Interpretation is its OWN block (user request) -
           previously it sat inside the Smart Troubleshooting card. */}

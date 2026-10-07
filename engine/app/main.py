@@ -12,6 +12,8 @@ from api import (
     ai_provider_config,
     analysis,
     arabic,
+    arabic_bulk,
+    arabic_data,
     cleaning,
     corpora,
     export,
@@ -270,6 +272,12 @@ def create_app() -> FastAPI:
     app.include_router(network.router, prefix="/api/v1", tags=["network"])
     app.include_router(phase2.router, prefix="/api/v1", tags=["phase2"])
     app.include_router(arabic.router, prefix="/api/v1", tags=["arabic"])
+    # v1.2.11 follow-up: in-app Arabic data pack installer (background job,
+    # status, cancel). See app/arabic_installer.py.
+    app.include_router(arabic_data.router, prefix="/api/v1", tags=["arabic"])
+    # v1.2.11 follow-up: chunked bulk Arabic analysis with progress + cancel
+    # (500K-1M token corpora; the interactive route caps at 50k tokens).
+    app.include_router(arabic_bulk.router, prefix="/api/v1", tags=["arabic"])
     app.include_router(vision.router, prefix="/api/v1", tags=["vision"])
     app.include_router(phase5.router, prefix="/api/v1", tags=["phase5"])
     app.include_router(visual_corpus.router, prefix="/api/v1", tags=["visual-corpus"])

@@ -71,23 +71,33 @@ if (Test-Path $wfDir) {
     $Failures += "missing wordfreq data directory"
 }
 
-# v1.2.11 (Arabic Tools hang fix): the CAMeL Tools data pack ships in the
-# bundle (collected from ~/.camel_tools on the build machine) so the Arabic
-# Tools panel works offline and never triggers camel_tools' download-at-
-# first-use path (the root cause of the "Analysis spins forever" hang).
+# v1.2.11 (Arabic Tools hang fix) / follow-up (opt-in data pack): the CAMeL
+# Tools data pack ships ONLY in opt-in builds (CORPUSMIND_BUNDLE_CAMEL_DATA=1
+# at build time). Default builds must NOT contain it (GPL-2.0-only data; the
+# in-app installer covers end users), so the content gate follows the mode.
+$bundleCamelData = ($env:CORPUSMIND_BUNDLE_CAMEL_DATA -eq "1")
 $camelCatalogue = Join-Path $InternalDir "camel-tools-data\catalogue.json"
-if (Test-Path $camelCatalogue) {
-    Write-Host "[smoke] OK   camel-tools-data\catalogue.json (Arabic morphology stack)"
+if ($bundleCamelData) {
+    if (Test-Path $camelCatalogue) {
+        Write-Host "[smoke] OK   camel-tools-data\catalogue.json (data pack bundled)"
+    } else {
+        Write-Host "[smoke] MISS camel-tools-data\catalogue.json" -ForegroundColor Red
+        $Failures += "CORPUSMIND_BUNDLE_CAMEL_DATA=1 but camel-tools-data catalogue is missing"
+    }
+    $camelDb = Join-Path $InternalDir "camel-tools-data\data\morphology_db\calima-msa-r13"
+    if (Test-Path $camelDb) {
+        Write-Host "[smoke] OK   camel-tools-data morphology DB (calima-msa-r13)"
+    } else {
+        Write-Host "[smoke] MISS camel-tools-data\data\morphology_db\calima-msa-r13" -ForegroundColor Red
+        $Failures += "missing bundled CAMeL morphology DB"
+    }
 } else {
-    Write-Host "[smoke] MISS camel-tools-data\catalogue.json" -ForegroundColor Red
-    $Failures += "missing camel-tools-data catalogue (Arabic Tools cannot work in the bundle)"
-}
-$camelDb = Join-Path $InternalDir "camel-tools-data\data\morphology_db\calima-msa-r13"
-if (Test-Path $camelDb) {
-    Write-Host "[smoke] OK   camel-tools-data morphology DB (calima-msa-r13)"
-} else {
-    Write-Host "[smoke] MISS camel-tools-data\data\morphology_db\calima-msa-r13" -ForegroundColor Red
-    $Failures += "missing bundled CAMeL morphology DB"
+    if (Test-Path $camelCatalogue) {
+        Write-Host "[smoke] FAIL default build bundles camel-tools-data (must be opt-in)" -ForegroundColor Red
+        $Failures += "default build must NOT bundle the GPL-2.0-only camel data pack"
+    } else {
+        Write-Host "[smoke] OK   camel-tools-data correctly ABSENT (default build; in-app installer covers it)"
+    }
 }
 
 # v1.2.9 Student Mode classroom stack (hard content gate): the PWA build

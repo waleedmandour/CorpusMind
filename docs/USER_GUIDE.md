@@ -90,19 +90,34 @@ Open http://localhost:5173. The engine listens on `127.0.0.1:8765`
 
 ### Optional: Arabic Support
 
-The desktop installer bundles the Arabic morphology data, so Arabic Tools
-work out of the box there. For source/dev runs, install the CAMeL Tools
-stack once:
+Arabic morphology analysis (roots, patterns, dialect identification) needs
+the CAMeL Tools data pack, about 168 MB. There are three ways to get it:
 
-```
-pip install camel-tools pyrsistent muddler cachetools emoji future regex
-camel_data -i morphology-db-msa-r13
-camel_data -i dialectid-model6
-```
+1. **From inside the app (recommended)**: Settings has an **Arabic data
+   pack** card; the Arabic Tools error card offers the same Install
+   button. The installer downloads the pinned packages from CAMeL Lab's
+   official releases, verifies the size and SHA256 of every download, and
+   shows progress; you can cancel at any time.
+2. **From a terminal** (headless machines):
 
-If this data is missing, the Arabic Tools panel shows a clear error with
-these commands instead of silently hanging; the engine never downloads
-data at request time.
+   ```
+   pip install camel-tools pyrsistent muddler cachetools emoji future regex
+   camel_data -i morphology-db-msa-r13
+   camel_data -i dialectid-model6
+   ```
+
+3. **Bundled at build time** (maintainers only): a desktop build made with
+   `CORPUSMIND_BUNDLE_CAMEL_DATA=1` ships the pack inside the app, so
+   Arabic Tools work offline with no install step.
+
+If the data is missing, the Arabic Tools panel shows a clear error with an
+Install button instead of silently hanging; the engine never downloads
+data at request time. Only the explicit installer downloads anything.
+
+Note: the morphology data (`calima-msa-r13`) is GPL-2.0-only licensed
+data, which is why the default desktop build does not redistribute it;
+see THIRD_PARTY_LICENSES.md for the full statement of what is and is not
+redistributed.
 
 ---
 
