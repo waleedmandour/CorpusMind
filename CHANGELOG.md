@@ -43,6 +43,17 @@ once 1.0 ships. Until then, expect breaking changes between 0.x releases.
   `urls.app` / `urls.root_ca` are read defensively, so a status snapshot
   taken before Caddy is live can no longer throw during render (the likely
   white-screen trigger).
+- **A corpus tagged without the NLP model can no longer go unnoticed.**
+  When the tagger model cannot be loaded, ingestion used to silently
+  degrade to a tokenizer-only pipeline: every token was stored with
+  `pos='X'` and surface-form lemmas, the annotation version still claimed
+  the requested model, and POS-based analyses (KWIC by POS, POS
+  distributions, lemmatized search) returned nothing with no way to detect
+  or repair the corpus. The degraded pipeline is now recorded on the
+  version row and the corpus recipe, the corpora list badges the corpus
+  with "POS missing", the Documents view shows an alert banner, and
+  Recompile re-tags everything once the model is available (its response
+  also reports whether it ran degraded).
 - **The Windows installer no longer fails on a leftover Caddy process.**
   The NSIS pre-install/pre-uninstall hooks stopped `corpusmind-engine.exe`
   and `corpusmind-desktop.exe` but never `caddy.exe`; a Caddy that

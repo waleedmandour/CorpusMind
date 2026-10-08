@@ -234,3 +234,40 @@ Gates this session (Linux sandbox, Python 3.12.14): the four new tests pass
 report **PASS 1820 = 1820** (the 9 new test-side errors were annotated away,
 baseline untouched); web `tsc --noEmit` PASS; `npm run build` PASS; contrast
 regression check **86/86 PASS**.
+
+## Session 6 (2026-10-08, `release/1.2.12-prep`): field report — "POS in KWIC finds nothing" — degraded (blank) tagging is now recorded, surfaced, and repairable
+
+Repro first: with `en_core_web_sm` present, upload → `concordance level=pos`
+returns rows (5 hits for `NOUN` on a two-sentence fixture). With the model
+UNRESOLVABLE, `SpaCyPipeline._load()` strategy 4 silently degraded to
+`spacy.blank()` — every token stored with `pos='X'`, lemmas = surface forms —
+and **nothing recorded it**: `PipelineInfo` still reported the requested
+model name, so the AnnotationVersion row claimed a tagger that never ran.
+The user's corpora ingested under that condition can never be detected or
+repaired, and POS-based analyses are empty forever. (Arabic is separately
+guarded: ingestion without the MSA morphology DB fails loudly via the 503
+install-hint flow, so the silent path is the spaCy/blank one.)
+
+Fix (honest degradation + repair path):
+- `PipelineInfo.degraded: bool` — set by strategy 4; `get_pipeline`
+  docstring updated.
+- `ingestion/service.py` + `api/corpora.py::recompile_corpus` record it:
+  version row `model_name="spacy:<model>:degraded-blank"`,
+  `pipeline_recipe["degraded"]`, loud `ingest_degraded_pipeline` /
+  `recompile_degraded_pipeline` warnings.
+- `CorpusOut.tagging_degraded` (create/list/get) drives the UI: the corpus
+  list shows a "⚠ POS missing" chip and the Documents view shows a
+  persistent alert banner ("tagged WITHOUT the NLP model … Recompile").
+  Recompile's response carries `degraded`; when the model is STILL absent
+  the UI says so plainly instead of claiming success (and a real recompile
+  clears the flag — the POS banner disappears and POS-KWIC works again).
+
+Tests: new `tests/test_degraded_tagging.py` (4) — blank-fallback visibility,
+degraded upload → API surfacing, recompile-with-model clears the flag and
+re-tags (POS-KWIC then returns rows), recompile-still-missing stays honest.
+Full suite one process: **696 passed / 13 skipped / 0 failed**; `ruff`
+clean; web `tsc` + build PASS; contrast 86/86 PASS. mypy: the diff adds
+**zero** new errors (A/B diff of api error sets is byte-identical modulo
+line numbers); the rebuilt sandbox venv (mypy 2.3.1) reads HEAD itself at
+1822–1825 vs the 1820 baseline — environmental stub drift, baseline left
+untouched (CI env is pinned and still 1820).

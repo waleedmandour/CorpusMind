@@ -62,6 +62,20 @@ async def ingest_document(
     # runs on a thread pool without blocking.
     pipeline = get_pipeline(backend="spacy", language=lang)
     info = pipeline.info()
+    # v1.2.12: when the real tagger model could not be loaded, the pipeline
+    # runs blank (tokenization only). Record that on the version row and the
+    # corpus recipe — silently claiming the requested model name is how a
+    # POS-less corpus used to pass unnoticed (field report: POS-KWIC empty).
+    if info.degraded:
+        log.warning(
+            "ingest_degraded_pipeline",
+            language=lang,
+            model=info.model_name,
+            hint="Tokens will be stored with pos='X' and surface-form lemmas. "
+                 "POS/lemma analyses will be empty until the model is available "
+                 "and the corpus is recompiled.",
+        )
+    model_label = f"{info.backend}:{info.model_name}" + (":degraded-blank" if info.degraded else "")
     parsed = await asyncio.to_thread(pipeline.parse_document, cleaned_text)
 
     # Reuse the latest annotation version for this corpus if the pipeline recipe
@@ -74,7 +88,7 @@ async def ingest_document(
 
     needs_new_version = (
         existing is None
-        or existing.model_name != f"{info.backend}:{info.model_name}"
+        or existing.model_name != model_label
         or existing.model_version != info.model_version
     )
 
@@ -88,7 +102,7 @@ async def ingest_document(
         av = AnnotationVersion(
             corpus_id=corpus.id,
             version_label=f"v{version_n}",
-            model_name=f"{info.backend}:{info.model_name}",
+            model_name=model_label,
             model_version=info.model_version,
             tokenizer=info.backend,
             tagger=info.backend,
@@ -116,6 +130,10 @@ async def ingest_document(
         "model_version": info.model_version,
         "spacy_version": info.spacy_version,
         "language": info.language,
+        # v1.2.12: honest record of degraded (blank) tagging — the corpus
+        # list API surfaces this as tagging_degraded so the UI can ask for
+        # a recompile once the model is available.
+        "degraded": info.degraded,
     }
     # Update the annotation version's aggregate counts
     av.token_count += parsed.token_count

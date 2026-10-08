@@ -504,6 +504,8 @@ export interface Corpus {
   document_count: number;
   /** v1.1.0 (issue #8): image sets attached to this corpus — Lens list badge. */
   image_set_count: number;
+  /** v1.2.12: tagged by a degraded pipeline (no POS/lemma model) — needs recompile. */
+  tagging_degraded?: boolean;
 }
 
 export interface Document {
@@ -1761,7 +1763,7 @@ export const api = {
     ),
   // v0.1.17: recompile (re-run NLP pipeline) on all documents in a corpus
   recompileCorpus: (cid: string) =>
-    jsonFetch<{ recompiled: number; total_documents: number; token_count: number; type_count: number; success: boolean; failed: Array<{ document_id: string; filename: string; error: string }> }>(
+    jsonFetch<{ recompiled: number; total_documents: number; token_count: number; type_count: number; success: boolean; degraded?: boolean; failed: Array<{ document_id: string; filename: string; error: string }> }>(
       `/api/v1/corpora/${cid}/recompile`, { method: "POST" }
     ),
   // v0.1.19: update document metadata (genre, register, year, etc.)

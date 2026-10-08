@@ -150,6 +150,11 @@ class CorpusOut(BaseModel):
     # v1.2.0 learner facets
     l1: str = ""
     proficiency: str = ""
+    # v1.2.12: True when the corpus was tagged by a degraded pipeline (the
+    # real NLP model was unavailable, so tokens carry pos='X' and surface
+    # lemmas). The UI badges such corpora and offers a recompile, which
+    # re-tags everything once the model is present.
+    tagging_degraded: bool = False
 
 
 @router.post("/projects/{pid}/corpora", response_model=CorpusOut)
@@ -179,6 +184,7 @@ async def create_corpus(
         image_set_count=0,
         l1=c.l1,
         proficiency=c.proficiency,
+        tagging_degraded=bool((c.pipeline_recipe or {}).get("degraded", False)),
     )
 
 
@@ -224,6 +230,7 @@ async def list_corpora(pid: str, session: AsyncSession = Depends(get_session)) -
             image_set_count=set_counts.get(c.id, 0),
             l1=getattr(c, "l1", "") or "",
             proficiency=getattr(c, "proficiency", "") or "",
+            tagging_degraded=bool((c.pipeline_recipe or {}).get("degraded", False)),
         )
         for c in corpora
     ]
@@ -252,6 +259,7 @@ async def get_corpus(cid: str, session: AsyncSession = Depends(get_session)) -> 
         image_set_count=n_sets,
         l1=getattr(c, "l1", "") or "",
         proficiency=getattr(c, "proficiency", "") or "",
+        tagging_degraded=bool((c.pipeline_recipe or {}).get("degraded", False)),
     )
 
 
@@ -503,6 +511,17 @@ async def recompile_corpus(cid: str, session: AsyncSession = Depends(get_session
 
     pipeline = get_pipeline(backend="spacy", language=corpus.language or "en")
     info = pipeline.info()
+    # v1.2.12: same honest degraded recording as ingestion/service.py — a
+    # recompile under a missing model must be detectable too.
+    if info.degraded:
+        log.warning(
+            "recompile_degraded_pipeline",
+            cid=cid,
+            model=info.model_name,
+            hint="Recompiled tokens will carry pos='X'; re-run once the model "
+                 "is available.",
+        )
+    model_label = f"{info.backend}:{info.model_name}" + (":degraded-blank" if info.degraded else "")
 
     existing = await session.scalar(
         select(AnnotationVersion)
@@ -521,7 +540,7 @@ async def recompile_corpus(cid: str, session: AsyncSession = Depends(get_session
         corpus_id=cid,
         version_label=f"v{version_n}",
         # Mirror ingestion/service.py's column mapping exactly.
-        model_name=f"{info.backend}:{info.model_name}",
+        model_name=model_label,
         model_version=info.model_version,
         tokenizer=info.backend,
         tagger=info.backend,
@@ -594,6 +613,7 @@ async def recompile_corpus(cid: str, session: AsyncSession = Depends(get_session
             "model_name": info.model_name,
             "model_version": info.model_version,
             "spacy_version": info.spacy_version,
+            "degraded": info.degraded,
         }
     )
     corpus.pipeline_recipe = new_recipe  # reassign triggers SQLAlchemy change detection
@@ -607,6 +627,9 @@ async def recompile_corpus(cid: str, session: AsyncSession = Depends(get_session
         "success": recompiled == len(docs),
         "token_count": latest.token_count if latest else 0,
         "type_count": latest.type_count if latest else 0,
+        # v1.2.12: lets the UI tell a degraded recompile (model still absent)
+        # apart from a real one.
+        "degraded": info.degraded,
     }
 
 
