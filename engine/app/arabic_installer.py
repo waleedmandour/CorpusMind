@@ -13,16 +13,17 @@ Design contract (mirrors the engine's Arabic hard rules):
     (see nlp/arabic/pipeline.py::_require_camel_data). This job runs only
     when the user clicks Install.
   - PINNED SOURCES. Package URLs and SHA256 digests are frozen below and
-    verified against the OBSERVED release assets (2026-10-07, both zips
-    downloaded, hashed, and the extracted morphology DB diffed byte-for-byte
-    against a working `camel_data -i` install). The verification authority
-    is the code-pinned digest; the shipped catalogue snapshot's own
-    sha256/size metadata fields are cross-checked and only WARN on drift,
-    because CAMeL Lab's catalogue metadata is demonstrably stale (the
-    2022.03.21 morphology asset was re-uploaded: 214 bytes larger, same
-    extracted content; the catalogue's dialectid `size` is off by ~1.8 KB
-    while its sha matches). URL changes are a HARD error - a moved package
-    is a new supply chain and must ship as a new engine release.
+    verified against the OBSERVED release assets (msa + dialectid:
+    2026-10-07; egy/glf/lev dialect DBs: 2026-10-08, each zip downloaded,
+    hashed, and its structure/licence verified - root morphology.db + LICENSE
+    layout identical to the proven msa pack, licences match
+    THIRD_PARTY_LICENSES.md: egy GPL-2.0-only, glf/lev CC BY 4.0). All three
+    dialect zips show the SAME upstream re-upload drift as msa (exactly +214
+    bytes vs the catalogue snapshot, differing zip-level digest) - the third
+    independent proof that the code-pinned digest, not the catalogue's stale
+    metadata, must be the verification authority. URL changes are a HARD
+    error - a moved package is a new supply chain and must ship as a new
+    engine release.
   - BOUNDED NETWORK. Every HTTP call uses explicit connect AND read
     timeouts (httpx.Timeout), so a firewalled machine fails in seconds,
     not forever. Progress is reported per chunk; a cancel request is
@@ -79,6 +80,17 @@ def _read_timeout_s() -> float:
 
 _CHUNK = 256 * 1024
 
+# v1.2.11: the dialect morphology DBs the installer can now provision.
+# These map 1:1 to the UI's dialect dropdown (pipeline._CAMEL_DIALECT_DBS
+# minus the always-pinned MSA).
+_DIALECT_DB_PACKAGES = frozenset(
+    {
+        "morphology-db-egy-r13",
+        "morphology-db-glf-01",
+        "morphology-db-lev-01",
+    }
+)
+
 
 class ArabicInstallerError(RuntimeError):
     """Fatal installer problem (network, checksum, disk). Surfaces in the
@@ -113,14 +125,19 @@ def _load_catalogue_snapshot() -> dict[str, Any]:
 
 
 def catalog_packages() -> list[dict[str, Any]]:
-    """The two packages the installer manages, in install order.
+    """The packages the installer manages, in install order: the MSA
+    morphology DB first (analysis works with just it), then the Egyptian /
+    Gulf / Levantine dialect DBs (v1.2.11: the installer fetches these too -
+    before this change the UI's dialect dropdown offered DBs nothing could
+    provision), then the dialect-ID model last (the largest optional one).
 
     URLs + SHA256 digests below are the RELEASE-VERIFIED pins, checked
-    against the actual release assets on 2026-10-07 (see module docstring
-    for the content-identity verification). The shipped catalogue snapshot
-    supplies url/destination/version/license; its own sha256/size metadata
-    is advisory and a mismatch is logged, not fatal (the catalogue has
-    shipped stale metadata; the observed asset digest is the pin).
+    against the actual release assets on 2026-10-07 (msa, dialectid) and
+    2026-10-08 (egy, glf, lev - see module docstring for the verification).
+    The shipped catalogue snapshot supplies url/destination/version/license;
+    its own sha256/size metadata is advisory and a mismatch is logged, not
+    fatal (the catalogue has shipped stale metadata; the observed asset
+    digest is the pin).
     """
     cat = _load_catalogue_snapshot()
     out: list[dict[str, Any]] = []
@@ -134,13 +151,39 @@ def catalog_packages() -> list[dict[str, Any]]:
             "fe6531250c5529307627cc63ed56447cbb9968020d6ea3ab867e6ad9af94c738",
             40488532,
         ),
+        # v1.2.11: dialect morphology DBs, observed 2026-10-08. All three
+        # show the same +214-byte re-upload drift as msa (catalogue-level
+        # digest/size stale, zip content structurally identical to the msa
+        # layout: root morphology.db + LICENSE).
+        "morphology-db-egy-r13": (
+            "https://github.com/CAMeL-Lab/camel-tools-data/releases/download/2022.03.21/morphology_db_calima-egy-r13-0.2.0.zip",
+            "eb8a2d3a115cad819a808931e7fb941d54344096e563643ba742708892e862ac",
+            67255921,
+        ),
+        "morphology-db-glf-01": (
+            "https://github.com/CAMeL-Lab/camel-tools-data/releases/download/2022.03.30/morphology_db_calima-glf-01-0.1.0.zip",
+            "385a29aa4737335d6431768546aaaf7ecf848dfd4bef460c7e3358168c73c9b3",
+            7977135,
+        ),
+        "morphology-db-lev-01": (
+            "https://github.com/CAMeL-Lab/camel-tools-data/releases/download/2022.05.30/morphology_db_calima-lev-01-0.1.0.zip",
+            "34f012383f18196554ec38ec1d4e6c8d1cc767b25e00c397cd36c67afaf4c3c4",
+            10622164,
+        ),
         "dialectid-model6": (
             "https://github.com/CAMeL-Lab/camel-tools-data/releases/download/2026.06.08/dialectid_model6-1.1.2.zip",
             "579258f6fad13df92a24251c5d68a4495c24c132f3970cb745855191d66613c5",
             127877916,
         ),
     }
-    for name in ("morphology-db-msa-r13", "dialectid-model6"):
+    order = (
+        "morphology-db-msa-r13",
+        "morphology-db-egy-r13",
+        "morphology-db-glf-01",
+        "morphology-db-lev-01",
+        "dialectid-model6",
+    )
+    for name in order:
         pkg = cat["packages"].get(name)
         if pkg is None or pkg.get("private"):
             raise ArabicInstallerError(f"Catalogue snapshot is missing public package {name!r}.")
@@ -271,8 +314,18 @@ class ArabicDataInstaller:
     # Job control
     # ------------------------------------------------------------------ #
 
-    def start(self, include_dialect_id: bool = True) -> dict[str, Any]:
+    def start(
+        self,
+        include_dialect_id: bool = True,
+        include_dialects: bool = True,
+    ) -> dict[str, Any]:
         """Start an install job. Returns the immediate status snapshot.
+
+        ``include_dialects`` (v1.2.11) also downloads the Egyptian / Gulf /
+        Levantine morphology DBs - the dialect dropdown cannot analyze those
+        dialects without them. ``include_dialect_id`` keeps controlling the
+        (larger) dialect-ID model. Both default to True: one click must fix
+        every data-driven 503 the UI can produce.
 
         Raises ArabicInstallerError with a user-readable message when the
         request cannot even start (already running, nothing to do, no
@@ -293,7 +346,12 @@ class ArabicDataInstaller:
                     "Set CAMELTOOLS_DATA to a writable directory and restart."
                 ) from e
             packages = catalog_packages()
-            wanted = [p for p in packages if p["name"] != "dialectid-model6" or include_dialect_id]
+            wanted = [
+                p
+                for p in packages
+                if (p["name"] != "dialectid-model6" or include_dialect_id)
+                and (p["name"] not in _DIALECT_DB_PACKAGES or include_dialects)
+            ]
             pending = [p for p in wanted if _package_state(target, p) == "missing"]
             if not pending:
                 raise ArabicInstallerError(

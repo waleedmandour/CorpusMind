@@ -161,3 +161,23 @@ after typing the new test file; web `tsc --noEmit` PASS; `npm run build` PASS.
 Real-morphology end-to-end (DB load + root extraction through the fixed path) is
 verified by CI's provisioned-pack jobs on push (test-gate + four OS smoke gates).
 CHANGELOG.md gained both fixes under [1.2.11] Fixed.
+
+## Session 4 (2026-10-08, `release/1.2.11-prep`): rc2 field report — radar Export dead + installer learns dialect packs; final v1.2.11
+
+User confirmed rc2 resolved the "cannot analyze after install" report ("Everything
+looks good now"), then filed the pre-final blockers: (1) the Discourse radar
+charts' Export PNG button does nothing (bar-graph export works), and (2) the
+installer must fetch the dialect packs before v1.2.11 is tagged.
+
+| # | Root cause (verified before any change) | Fix (verified) |
+| --- | --- | --- |
+| 1 | Radar Export dead in every framework: `ChartExportButton` located the chart via `targetRef.current.querySelector("svg")` — descendants only. The bar charts pass a `<figure>` wrapper ref (svg inside → works), but `TaxonomyRadar` and `PersuasionRadar` attach the ref directly to the `<svg>` element; querying that svg for a DESCENDANT svg matches nothing and the handler silently returned. The prop type even declared `RefObject<SVGSVGElement>` as supported — the implementation just never handled it. | `ChartExportButton` now matches the ref host itself when it IS an `SVGSVGElement` (`instanceof`), else falls back to the descendant search; a missing svg logs a console warning instead of failing silently. One fix in the shared component covers every framework's radar (Hyland, Halliday & Hasan, Martin & White, Cialdini, SFG, persuasion). |
+| 2 | The installer managed exactly two packages (`morphology-db-msa-r13`, `dialectid-model6`); the UI's egy/glf/lev options relied on the terminal fallback. | `catalog_packages()` grew the three dialect morphology DBs with pins observed against the LIVE release assets on 2026-10-08 (each zip downloaded and hashed: egy 67,255,921 B `eb8a2d3a…`, glf 7,977,135 B `385a29aa…`, lev 10,622,164 B `34f01238…`); all three show the same +214-byte upstream re-upload drift as msa — third independent proof that the observed digest, not the catalogue's stale metadata, is the pin. Zip structure and shipped LICENSE verified (root `morphology.db` + `LICENSE`, same layout as the proven msa pack; egy GPL-2.0-only, glf/lev CC BY 4.0). `start()` gained `include_dialects` (default True — one click must fix every data-driven 503 the UI can produce); install order msa → egy → glf → lev → dialectid. InstallRequest exposes both flags; Settings preview lists all five packages with licences (EN+AR i18n); THIRD_PARTY_LICENSES.md states the five-package download and keeps "never bundled" exact. |
+
+Gates this session (Linux sandbox, Python 3.12.14): full engine suite **688 passed /
+13 skipped, 0 failed** (one env-only failure during bring-up was the reset sandbox's
+missing `en_core_web_sm`, not a regression; passes with the model installed); Arabic
+installer + cache-refresh suites 26/26 (incl. the new `test_installer_dialects_flag`
+and the updated snapshot-integrity test asserting all five pins); `ruff check .`
+clean; mypy strict report **PASS, 1829 → 1820** (baseline re-locked, lower is fine);
+web `tsc --noEmit` PASS; `npm run build` PASS.

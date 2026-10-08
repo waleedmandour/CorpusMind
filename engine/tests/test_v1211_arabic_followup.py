@@ -293,7 +293,7 @@ class _FakePackServer:
     def url(self, name: str) -> str:
         return f"http://127.0.0.1:{self.port}/{name}"
 
-    def stop(self):
+    def stop(self) -> None:
         self.server.shutdown()
         self.server.server_close()
 
@@ -308,9 +308,19 @@ def _make_zip() -> bytes:
 
 def _fake_descriptors(server: _FakePackServer, sizes: dict[str, int] | None = None) -> list[dict]:
     """Descriptors shaped exactly like catalog_packages() output, but with
-    real sha256/size of the fabricated zips."""
+    real sha256/size of the fabricated zips. Order mirrors the installer's
+    pinned install order (msa -> egy -> glf -> lev -> dialectid)."""
+    order = (
+        "morphology-db-msa-r13",
+        "morphology-db-egy-r13",
+        "morphology-db-glf-01",
+        "morphology-db-lev-01",
+        "dialectid-model6",
+    )
     out = []
-    for name in ("morphology-db-msa-r13", "dialectid-model6"):
+    for name in order:
+        if name not in server.packages:
+            continue
         data = server.packages[name]
         out.append(
             {
@@ -320,7 +330,7 @@ def _fake_descriptors(server: _FakePackServer, sizes: dict[str, int] | None = No
                 "size": (sizes or {}).get(name, len(data)),
                 "destination": f"fake/{name}",
                 "version": "0.0.0-test",
-                "license": "GPL v2" if "msa" in name else "MIT",
+                "license": "GPL v2" if "msa" in name or "egy" in name else "MIT",
             }
         )
     return out
@@ -494,21 +504,82 @@ def test_installer_start_conflicts(tmp_camel_target, monkeypatch):
         server.stop()
 
 
+def test_installer_dialects_flag(tmp_camel_target: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """v1.2.11: include_dialects=False skips the egy/glf/lev DBs (only the
+    MSA morphology DB installs), while the default installs ALL five pinned
+    packages in order (dialect DBs before the big dialectid model)."""
+    import app.arabic_installer as inst_mod
+
+    names = (
+        "morphology-db-msa-r13",
+        "morphology-db-egy-r13",
+        "morphology-db-glf-01",
+        "morphology-db-lev-01",
+        "dialectid-model6",
+    )
+    server = _FakePackServer({n: _make_zip() for n in names})
+    descs = _fake_descriptors(server)
+    assert len(descs) == 5
+    try:
+        monkeypatch.setattr(inst_mod, "catalog_packages", lambda: descs)
+        inst = inst_mod.get_arabic_installer()
+
+        # Restricted start: dialect DBs and the dialect-ID model stay out.
+        s = inst.start(include_dialect_id=False, include_dialects=False)
+        assert s["packages_total"] == 1
+        s = _wait_for_state(inst, {"done"})
+        assert s["installed"] == ["morphology-db-msa-r13"]
+        assert not (tmp_camel_target / "data" / "fake" / "morphology-db-egy-r13").exists()
+
+        # A follow-up start with the defaults fills in the rest, in order.
+        s = inst.start()
+        assert s["packages_total"] == 4
+        s = _wait_for_state(inst, {"done"})
+        assert s["installed"] == [
+            "morphology-db-egy-r13",
+            "morphology-db-glf-01",
+            "morphology-db-lev-01",
+            "dialectid-model6",
+        ]
+    finally:
+        server.stop()
+
+
 def test_installer_catalog_snapshot_integrity():
     """The REAL shipped snapshot must exist, parse, match the release-verified
     URLs/sizes/digests, and carry the licence fields the docs state."""
     from app.arabic_installer import catalog_packages
 
     pkgs = catalog_packages()
-    assert [p["name"] for p in pkgs] == ["morphology-db-msa-r13", "dialectid-model6"]
-    msa, did = pkgs
+    assert [p["name"] for p in pkgs] == [
+        "morphology-db-msa-r13",
+        "morphology-db-egy-r13",
+        "morphology-db-glf-01",
+        "morphology-db-lev-01",
+        "dialectid-model6",
+    ]
+    msa, egy, glf, lev, did = pkgs
     assert msa["license"] == "GPL v2" and msa["version"] == "0.4.0"
+    # v1.2.11: dialect packs - licences per THIRD_PARTY_LICENSES.md.
+    assert egy["license"] == "GPL v2" and egy["version"] == "0.2.0"
+    assert glf["license"] == "CC BY 4.0" and glf["version"] == "0.1.0"
+    assert lev["license"] == "CC BY 4.0" and lev["version"] == "0.1.0"
     assert did["license"] == "MIT" and did["version"] == "1.1.2"
-    # Digests pinned to the OBSERVED release assets (2026-10-07): the msa
-    # asset was re-uploaded upstream (content diffed identical to a fresh
-    # `camel_data -i` install); the dialectid sha matches the catalogue.
+    # Digests pinned to the OBSERVED release assets (msa+dialectid:
+    # 2026-10-07; egy/glf/lev: 2026-10-08). Every one of the four morphology
+    # zips drifted from the catalogue snapshot by exactly +214 bytes (upstream
+    # re-upload); only the code pins match what users actually download.
     assert msa["size"] == 40488532 and did["size"] == 127877916
+    assert egy["size"] == 67255921
+    assert glf["size"] == 7977135 and lev["size"] == 10622164
     assert msa["sha256"].startswith("fe653125") and did["sha256"].startswith("579258f6")
+    assert egy["sha256"].startswith("eb8a2d3a")
+    assert glf["sha256"].startswith("385a29aa") and lev["sha256"].startswith("34f01238")
+    # Destinations must land where MorphologyDB.builtin_db() looks.
+    assert msa["destination"] == "morphology_db/calima-msa-r13"
+    assert egy["destination"] == "morphology_db/calima-egy-r13"
+    assert glf["destination"] == "morphology_db/calima-glf-01"
+    assert lev["destination"] == "morphology_db/calima-lev-01"
 
 
 def test_installer_refuses_tampered_snapshot(monkeypatch):
@@ -527,6 +598,33 @@ def test_installer_refuses_tampered_snapshot(monkeypatch):
                 "destination": "morphology_db/calima-msa-r13",
                 "version": "9.9.9",
                 "license": "GPL v2",
+                "private": False,
+            },
+            "morphology-db-egy-r13": {
+                "url": "https://evil.example/e.zip",
+                "sha256": "2" * 64,
+                "size": 3,
+                "destination": "morphology_db/calima-egy-r13",
+                "version": "9.9.9",
+                "license": "GPL v2",
+                "private": False,
+            },
+            "morphology-db-glf-01": {
+                "url": "https://evil.example/g.zip",
+                "sha256": "3" * 64,
+                "size": 4,
+                "destination": "morphology_db/calima-glf-01",
+                "version": "9.9.9",
+                "license": "CC BY 4.0",
+                "private": False,
+            },
+            "morphology-db-lev-01": {
+                "url": "https://evil.example/l.zip",
+                "sha256": "4" * 64,
+                "size": 5,
+                "destination": "morphology_db/calima-lev-01",
+                "version": "9.9.9",
+                "license": "CC BY 4.0",
                 "private": False,
             },
             "dialectid-model6": {
@@ -564,7 +662,7 @@ async def test_installer_routes_conflict_and_status(client, monkeypatch, tmp_cam
     # Make start() fail with "already installed" and check the 409 mapping.
     monkeypatch.setattr(
         inst_mod.ArabicDataInstaller, "start",
-        lambda self, include_dialect_id=True: (_ for _ in ()).throw(
+        lambda self, include_dialect_id=True, include_dialects=True: (_ for _ in ()).throw(
             inst_mod.ArabicInstallerError("The Arabic data pack is already installed (nothing to download).")
         ),
     )

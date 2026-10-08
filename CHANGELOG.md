@@ -108,6 +108,21 @@ once 1.0 ships. Until then, expect breaking changes between 0.x releases.
   Verified live against the frozen desktop bundle: a bare machine goes
   503 -> in-app install (161 MB) -> restart -> real morphology analysis and
   DIDModel6 dialect identification.
+- **Installer fetches the dialect packs** (v1.2.11 final follow-up): the
+  installer now provisions the Egyptian / Gulf / Levantine dialect
+  morphology DBs too (`morphology-db-egy-r13` 0.2.0 GPL-2.0-only,
+  `morphology-db-glf-01` 0.1.0 CC BY 4.0, `morphology-db-lev-01` 0.1.0
+  CC BY 4.0), so the Arabic Tools dialect dropdown is fully provisionable
+  in-app - selecting Egyptian no longer dead-ends in a 503 the installer
+  cannot fix. All five pinned packages are installed by default (MSA ->
+  egy -> glf -> lev -> dialectid model, ~254 MB total); the request body
+  accepts `include_dialects` / `include_dialect_id` to narrow it. Every
+  new pin was verified against the live release assets on 2026-10-08
+  (structure and shipped LICENSE checked), and all three dialect zips
+  show the same +214-byte upstream re-upload drift as the MSA pack -
+  the observed digest, not the stale catalogue metadata, is the pin.
+  Settings preview table lists all five packages with their licences
+  (EN+AR).
 - **Chunked bulk Arabic analysis with progress**
   (`app/arabic_bulk.py`, `POST /api/v1/arabic/analyze/job` + `/status` +
   `/cancel` + `/result`): corpus-sized input (500K-1M+ tokens) runs as a
@@ -190,6 +205,19 @@ once 1.0 ships. Until then, expect breaking changes between 0.x releases.
   (`morphology_dbs` in the install-status payload), and the 503 message
   for a missing dialect DB now names the exact terminal command
   (`camel_data -i morphology-db-egy-r13`, `-glf-01`, `-lev-01`).
+- **The Discourse radar charts' Export PNG button did nothing** (field
+  report on v1.2.11-rc2, all discourse frameworks): the shared
+  `ChartExportButton` located the chart with
+  `targetRef.current.querySelector("svg")`, which only searches
+  DESCENDANTS of the ref. The bar charts pass a `<figure>` wrapper ref
+  (svg inside, export worked), but both radars attach the ref directly
+  to the `<svg>` element itself, so the query matched nothing and the
+  click silently no-op'ed. The button now accepts both wirings (the ref
+  host itself when it IS the svg, otherwise a descendant search) and
+  warns to the console when a target has no svg, so the next wiring
+  mistake cannot be silent. Fixed in the one shared component, so every
+  framework's radar (Hyland, Halliday & Hasan, Martin & White, Cialdini,
+  SFG, and the persuasion radar) exports correctly.
 - **Arabic Tools "Analysis" spins forever** (field bug, reproduced on
   v1.2.9 as well, so not a v1.2.11 regression): a three-layer defect.
   (1) camel_tools, on a machine without its provisioned data, attempts a

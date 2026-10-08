@@ -29,6 +29,17 @@ function fill(s: string, vars: Record<string, string>): string {
   return out;
 }
 
+// v1.2.11: every package the installer can fetch gets a human label
+// (EN+AR from i18n); an unknown catalogue name falls back to the raw name
+// rather than mislabeling it.
+const PKG_LABEL_KEYS: Record<string, Parameters<typeof t>[1]> = {
+  "morphology-db-msa-r13": "ar_data_pkg_msa",
+  "morphology-db-egy-r13": "ar_data_pkg_egy",
+  "morphology-db-glf-01": "ar_data_pkg_glf",
+  "morphology-db-lev-01": "ar_data_pkg_lev",
+  "dialectid-model6": "ar_data_pkg_did",
+};
+
 function stageLabel(state: string | undefined, stage: string | undefined, lang: "en" | "ar"): string {
   switch (stage) {
     case "downloading":
@@ -60,7 +71,8 @@ export function ArabicDataPackCard({ compact = false }: { compact?: boolean }) {
   });
 
   const startInstall = useMutation({
-    mutationFn: (includeDialectId: boolean) => api.arabicDataInstall(includeDialectId),
+    mutationFn: (opts: { includeDialectId: boolean; includeDialects: boolean }) =>
+      api.arabicDataInstall(opts.includeDialectId, opts.includeDialects),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["arabic-data-install"] }),
   });
 
@@ -130,7 +142,7 @@ export function ArabicDataPackCard({ compact = false }: { compact?: boolean }) {
       <button
         className="run-btn"
         type="button"
-        onClick={() => startInstall.mutate(true)}
+        onClick={() => startInstall.mutate({ includeDialectId: true, includeDialects: true })}
         disabled={startInstall.isPending}
       >
         {t(lang, "ar_data_install_btn")}
@@ -172,11 +184,7 @@ export function ArabicDataPackCard({ compact = false }: { compact?: boolean }) {
             <tbody>
               {s.offer.packages.map((p) => (
                 <tr key={p.name}>
-                  <td>
-                    {p.name === "morphology-db-msa-r13"
-                      ? t(lang, "ar_data_pkg_msa")
-                      : t(lang, "ar_data_pkg_did")}
-                  </td>
+                  <td>{PKG_LABEL_KEYS[p.name] ? t(lang, PKG_LABEL_KEYS[p.name]) : p.name}</td>
                   <td><code>{p.version}</code></td>
                   <td>{fmtMB(p.size)}</td>
                   <td><code title={p.sha256}>{p.sha256.slice(0, 10)}…</code></td>
@@ -229,7 +237,7 @@ export function ArabicDataPackCard({ compact = false }: { compact?: boolean }) {
             <button
               className="run-btn"
               type="button"
-              onClick={() => startInstall.mutate(true)}
+              onClick={() => startInstall.mutate({ includeDialectId: true, includeDialects: true })}
               disabled={startInstall.isPending || installed}
             >
               {installed ? t(lang, "ar_data_stage_done") : t(lang, "ar_data_install_btn")}

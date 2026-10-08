@@ -2129,10 +2129,10 @@ export const api = {
   // The installer is a background job on the engine (start / status / cancel).
   // Status is polled by the UI (1s interval) while a job runs; all calls use
   // the ordinary engine deadline since they never block the engine itself.
-  arabicDataInstall: (includeDialectId = true) =>
+  arabicDataInstall: (includeDialectId = true, includeDialects = true) =>
     jsonFetch<ArabicDataInstallStatus>(`/api/v1/arabic/data/install`, {
       method: "POST",
-      body: JSON.stringify({ include_dialect_id: includeDialectId }),
+      body: JSON.stringify({ include_dialect_id: includeDialectId, include_dialects: includeDialects }),
     }, ARABIC_TIMEOUT_MS),
 
   arabicDataInstallStatus: (signal?: AbortSignal) =>

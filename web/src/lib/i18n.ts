@@ -74,6 +74,9 @@ export const translations = {
     ar_data_settings_title: "Arabic data pack (CAMeL morphology)",
     ar_data_settings_desc: "Required for Arabic morphology, roots and dialect ID. Downloaded from CAMeL Lab's official releases at pinned versions; size and SHA256 verified before install. Stored under: {dir}",
     ar_data_pkg_msa: "MSA morphology DB (calima-msa-r13, GPL-2.0-only)",
+    ar_data_pkg_egy: "Egyptian dialect DB (calima-egy-r13, GPL-2.0-only)",
+    ar_data_pkg_glf: "Gulf dialect DB (calima-glf-01, CC BY 4.0)",
+    ar_data_pkg_lev: "Levantine dialect DB (calima-lev-01, CC BY 4.0)",
     ar_data_pkg_did: "Dialect-ID model (dialectid-model6, MIT)",
     ar_data_busy_conflict: "An Arabic analysis is already running. Please wait a few seconds and try again.",
     // v1.2.11-rc1 fix: dialect DBs the installer does not provision are
@@ -1129,6 +1132,9 @@ export const translations = {
     ar_data_settings_title: "حزمة بيانات العربية (الصرف في CAMeL)",
     ar_data_settings_desc: "مطلوبة للتحليل الصرفي والجذور وتحديد اللهجة. تُنزّل من إصدارات CAMeL Lab الرسمية بإصدارات مثبتة، ويُتحقق من الحجم وبصمة SHA256 قبل التثبيت. تُحفظ تحت: {dir}",
     ar_data_pkg_msa: "قاعدة الصرف الفصحى (calima-msa-r13، GPL-2.0-only)",
+    ar_data_pkg_egy: "قاعدة صرف اللهجة المصرية (calima-egy-r13، GPL-2.0-only)",
+    ar_data_pkg_glf: "قاعدة صرف اللهجة الخليجية (calima-glf-01، CC BY 4.0)",
+    ar_data_pkg_lev: "قاعدة صرف اللهجة الشامية (calima-lev-01، CC BY 4.0)",
     ar_data_pkg_did: "نموذج تحديد اللهجة (dialectid-model6، MIT)",
     ar_data_busy_conflict: "هناك تحليل عربي قيد التشغيل بالفعل. يُرجى الانتظار بضع ثوانٍ والمحاولة مجدداً.",
     // v1.2.11-rc1 fix: قواعد اللهجات التي لا يوفرها المثبّت تُعلَّم وتُعطَّل في القائمة

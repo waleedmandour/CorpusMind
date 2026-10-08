@@ -59,17 +59,22 @@ class ArabicDataMissingError(RuntimeError):
 
 # v1.2.11 follow-up: one shared, actionable hint for every missing-data
 # error. Leads with the IN-APP installer (zero terminal knowledge needed),
-# states plainly which packs the installer provisions (the MSA morphology
-# DB + the dialect-ID model - not the Egyptian/Gulf/Levantine dialect DBs),
-# and ends with the contract lines the 503 regression test asserts on
-# ("camel_data -i" and "never downloads data at request time").
+# states plainly which packs the installer provisions - since the v1.2.11
+# dialect-pack follow-up that is the MSA morphology DB, the
+# Egyptian/Gulf/Levantine dialect DBs, AND the dialect-ID model (before
+# that, a user who selected the Egyptian DB got a 503 whose in-app "fix"
+# could never fix it) - and ends with the contract lines the 503 regression
+# test asserts on ("camel_data -i" and "never downloads data at request
+# time"; the terminal command remains the alternative for any other
+# catalogue pack, e.g. morphology-db-msa-s31).
 INSTALL_HINT = (
     "Install the Arabic data pack from inside the app: Settings > Arabic "
-    "data pack > Install (it downloads the pinned pack from CAMeL Lab's "
-    "official releases and verifies its size and SHA256 before installing; "
-    "it provisions the MSA morphology DB and the dialect-ID model). Other "
-    "dialect DBs need a terminal: camel_data -i morphology-db-egy-r13 (or "
-    "-glf-01 / -lev-01). The engine never downloads data at request time."
+    "data pack > Install (it downloads the pinned packs from CAMeL Lab's "
+    "official releases and verifies their size and SHA256 before installing; "
+    "it provisions the MSA morphology DB, the Egyptian/Gulf/Levantine "
+    "dialect DBs, and the dialect-ID model). Any other pack needs a "
+    "terminal: camel_data -i morphology-db-msa-s31. The engine never "
+    "downloads data at request time."
 )
 
 

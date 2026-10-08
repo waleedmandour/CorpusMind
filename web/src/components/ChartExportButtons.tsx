@@ -7,10 +7,16 @@
  * no menu. Built as shared components so other analysis tabs can adopt
  * them without new plumbing:
  *
- * - ChartExportButton finds the inline SVG inside `targetRef` and
+ * - ChartExportButton finds the inline SVG for `targetRef` and
  *   rasterizes it with the chart's computed theme colors (see
  *   lib/chartExport.ts) — the PNG matches the on-screen chart and is
  *   saved through the app-wide download (native dialog under Tauri).
+ *   v1.2.11 fix: `targetRef` may point at a wrapper that CONTAINS the
+ *   svg (the bar charts pass the <figure>) OR at the <svg> element
+ *   itself (both radars attach the ref directly to <svg>). The original
+ *   querySelector("svg") only searched descendants, so every radar
+ *   Export button silently did nothing — the exact field report this
+ *   fix closes.
  * - ChartCsvExportButton emits an RFC-4180 file with a UTF-8 BOM, so
  *   Arabic text opens cleanly in Excel/Sheets.
  *
@@ -38,8 +44,19 @@ export function ChartExportButton({
       className="chart-export-btn"
       disabled={busy}
       onClick={() => {
-        const svg = targetRef.current?.querySelector("svg");
-        if (!svg) return;
+        const host = targetRef.current;
+        if (!host) return;
+        // v1.2.11 radar-export fix: accept BOTH wiring styles. The bar
+        // charts pass a wrapper (<figure> containing the svg), while the
+        // radars attach the ref to the <svg> element itself. A plain
+        // querySelector("svg") only searches DESCENDANTS, so the svg-direct
+        // refs matched nothing and the button silently no-op'ed. Match the
+        // host itself first, then fall back to descendant search.
+        const svg = host instanceof SVGSVGElement ? host : host.querySelector("svg");
+        if (!svg) {
+          console.warn("chart export: no <svg> found in export target");
+          return;
+        }
         setBusy(true);
         exportSvgAsPng(svg as SVGSVGElement, filename)
           .catch((err: unknown) => console.warn("chart export failed", err))
