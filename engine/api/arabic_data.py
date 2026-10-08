@@ -6,7 +6,8 @@ job itself runs in its own thread - none of these routes ever touch the
 event loop's budget for analysis work.
 
   POST /arabic/data/install          start (409 when a job is already
-                                     running or nothing is missing)
+                                     running or nothing is missing -
+                                     pass force=true to reinstall anyway)
   GET  /arabic/data/install/status   live progress (bytes, stage, packages)
   POST /arabic/data/install/cancel   cooperative cancel between chunks
 
@@ -53,6 +54,13 @@ class InstallRequest(BaseModel):
         "egy/glf/lev options answer 503; v1.2.11 teaches the installer to "
         "fetch them so the dropdown is fully provisionable in-app.",
     )
+    force: bool = Field(
+        False,
+        description="Re-install (repair), v1.2.12: re-download EVERY wanted "
+        "package and replace whatever is on disk, even when the pack already "
+        "counts as installed. The way out of a partial or corrupted install "
+        "(app reinstall, cancelled job, crashed extraction).",
+    )
 
 
 @router.post("/arabic/data/install")
@@ -63,6 +71,7 @@ async def start_install(body: InstallRequest) -> dict[str, Any]:
         return installer.start(
             include_dialect_id=body.include_dialect_id,
             include_dialects=body.include_dialects,
+            force=body.force,
         )
     except ArabicInstallerError as e:
         # "Already running" / "already installed" / "target not writable":

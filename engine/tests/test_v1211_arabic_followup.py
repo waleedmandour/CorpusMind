@@ -662,7 +662,9 @@ async def test_installer_routes_conflict_and_status(client, monkeypatch, tmp_cam
     # Make start() fail with "already installed" and check the 409 mapping.
     monkeypatch.setattr(
         inst_mod.ArabicDataInstaller, "start",
-        lambda self, include_dialect_id=True, include_dialects=True: (_ for _ in ()).throw(
+        lambda self, include_dialect_id=True, include_dialects=True, force=False: (
+            _ for _ in ()
+        ).throw(
             inst_mod.ArabicInstallerError("The Arabic data pack is already installed (nothing to download).")
         ),
     )

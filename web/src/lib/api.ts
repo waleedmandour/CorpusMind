@@ -2137,10 +2137,13 @@ export const api = {
   // The installer is a background job on the engine (start / status / cancel).
   // Status is polled by the UI (1s interval) while a job runs; all calls use
   // the ordinary engine deadline since they never block the engine itself.
-  arabicDataInstall: (includeDialectId = true, includeDialects = true) =>
+  // force=true (v1.2.12) is the Re-install/repair path: re-download every
+  // package and replace what is on disk even when the pack counts as
+  // installed (partial/corrupted data dir after an app reinstall).
+  arabicDataInstall: (includeDialectId = true, includeDialects = true, force = false) =>
     jsonFetch<ArabicDataInstallStatus>(`/api/v1/arabic/data/install`, {
       method: "POST",
-      body: JSON.stringify({ include_dialect_id: includeDialectId, include_dialects: includeDialects }),
+      body: JSON.stringify({ include_dialect_id: includeDialectId, include_dialects: includeDialects, force }),
     }, ARABIC_TIMEOUT_MS),
 
   arabicDataInstallStatus: (signal?: AbortSignal) =>

@@ -71,8 +71,8 @@ export function ArabicDataPackCard({ compact = false }: { compact?: boolean }) {
   });
 
   const startInstall = useMutation({
-    mutationFn: (opts: { includeDialectId: boolean; includeDialects: boolean }) =>
-      api.arabicDataInstall(opts.includeDialectId, opts.includeDialects),
+    mutationFn: (opts: { includeDialectId: boolean; includeDialects: boolean; force?: boolean }) =>
+      api.arabicDataInstall(opts.includeDialectId, opts.includeDialects, opts.force === true),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["arabic-data-install"] }),
   });
 
@@ -98,46 +98,53 @@ export function ArabicDataPackCard({ compact = false }: { compact?: boolean }) {
   const camel = s?.camel_tools;
   const installed = camel?.installed === true;
   const busy = s?.busy === true;
+  // v1.2.12: "installed" only means the data DIR resolves (camel_data_status
+  // keys on its existence), so a pack left half-installed by an app
+  // reinstall (e.g. MSA + dialect-ID present, the three dialect DBs gone)
+  // used to disable the install button with no way back. Count the missing
+  // components from the idle preview and re-open the paths that fix them.
+  const packages = s?.offer?.packages ?? [];
+  const missingCount = packages.filter((p) => p.state !== "installed").length;
+  const partial = installed && missingCount > 0;
   const pct =
     s && s.bytes_total && s.bytes_total > 0
       ? Math.min(100, Math.round(((s.bytes_done ?? 0) / s.bytes_total) * 100))
       : 0;
 
   // The 503 card only needs the button + progress; Settings shows everything.
-  if (compact && (installed || busy)) {
+  if (compact && busy && s) {
     return (
       <div className="arabic-data-compact">
-        {busy && s && (
-          <>
-            <div className="arabic-data-progress" role="status">
-              {fill(t(lang, "ar_data_installing"), {
-                pct: String(pct),
-                done: fmtMB(s.bytes_done ?? 0),
-                total: fmtMB(s.bytes_total ?? 0),
-              })}
-              {" \u00b7 "}
-              {stageLabel(s.state, s.stage, lang)}
-            </div>
-            <div className="bar-track" aria-hidden>
-              <div className="bar-fill" style={{ width: `${pct}%`, background: "var(--bar-brand)" }} />
-            </div>
-            <button
-              className="run-btn run-btn-cancel"
-              type="button"
-              onClick={() => cancelInstall.mutate()}
-              disabled={cancelInstall.isPending}
-            >
-              {t(lang, "ar_data_cancel_btn")}
-            </button>
-          </>
-        )}
-        {installed && <div className="status-ok">{t(lang, "ar_data_done")}</div>}
+        <div className="arabic-data-progress" role="status">
+          {fill(t(lang, "ar_data_installing"), {
+            pct: String(pct),
+            done: fmtMB(s.bytes_done ?? 0),
+            total: fmtMB(s.bytes_total ?? 0),
+          })}
+          {" \u00b7 "}
+          {stageLabel(s.state, s.stage, lang)}
+        </div>
+        <div className="bar-track" aria-hidden>
+          <div className="bar-fill" style={{ width: `${pct}%`, background: "var(--bar-brand)" }} />
+        </div>
+        <button
+          className="run-btn run-btn-cancel"
+          type="button"
+          onClick={() => cancelInstall.mutate()}
+          disabled={cancelInstall.isPending}
+        >
+          {t(lang, "ar_data_cancel_btn")}
+        </button>
       </div>
     );
   }
 
   if (compact) {
-    // Idle + not installed: the 503 card shows just the install button.
+    if (installed && !partial) {
+      return <div className="status-ok">{t(lang, "ar_data_done")}</div>;
+    }
+    // Idle + (not installed OR installed with components missing,
+    // v1.2.12): offer the install path instead of a dead "installed" note.
     return (
       <button
         className="run-btn"
@@ -145,7 +152,9 @@ export function ArabicDataPackCard({ compact = false }: { compact?: boolean }) {
         onClick={() => startInstall.mutate({ includeDialectId: true, includeDialects: true })}
         disabled={startInstall.isPending}
       >
-        {t(lang, "ar_data_install_btn")}
+        {partial
+          ? fill(t(lang, "ar_data_install_missing_btn"), { count: String(missingCount) })
+          : t(lang, "ar_data_install_btn")}
       </button>
     );
   }
@@ -162,9 +171,15 @@ export function ArabicDataPackCard({ compact = false }: { compact?: boolean }) {
               : t(lang, "ar_data_missing_hint")}
           </p>
         </div>
-        <span className={`settings-badge ${installed ? "ok" : busy ? "warn" : "warn"}`}>
+        <span className={`settings-badge ${installed && !partial ? "ok" : "warn"}`}>
           <span className="settings-badge-dot" />
-          {installed ? t(lang, "ar_data_installed_badge") : busy ? t(lang, "ar_data_stage_download") : t(lang, "ar_data_install_btn")}
+          {installed
+            ? partial
+              ? fill(t(lang, "ar_data_missing_badge"), { count: String(missingCount) })
+              : t(lang, "ar_data_installed_badge")
+            : busy
+              ? t(lang, "ar_data_stage_download")
+              : t(lang, "ar_data_install_btn")}
         </span>
       </div>
 
@@ -231,17 +246,45 @@ export function ArabicDataPackCard({ compact = false }: { compact?: boolean }) {
           </div>
         )}
 
+        {/* v1.2.12: honest state for a half-installed pack. */}
+        {partial && !busy && (
+          <div className="settings-text-muted" style={{ marginBottom: "var(--space-3)" }}>
+            {fill(t(lang, "ar_data_missing_components_hint"), {
+              count: String(missingCount),
+              total: String(packages.length),
+            })}
+          </div>
+        )}
+
         {/* Actions */}
         <div style={{ display: "flex", gap: "var(--space-3)", flexWrap: "wrap" }}>
           {!busy && (
-            <button
-              className="run-btn"
-              type="button"
-              onClick={() => startInstall.mutate({ includeDialectId: true, includeDialects: true })}
-              disabled={startInstall.isPending || installed}
-            >
-              {installed ? t(lang, "ar_data_stage_done") : t(lang, "ar_data_install_btn")}
-            </button>
+            <>
+              <button
+                className="run-btn"
+                type="button"
+                onClick={() => startInstall.mutate({ includeDialectId: true, includeDialects: true })}
+                disabled={startInstall.isPending || (installed && !partial)}
+              >
+                {installed
+                  ? partial
+                    ? fill(t(lang, "ar_data_install_missing_btn"), { count: String(missingCount) })
+                    : t(lang, "ar_data_stage_done")
+                  : t(lang, "ar_data_install_btn")}
+              </button>
+              {installed && (
+                <button
+                  className="run-btn run-btn-cancel"
+                  type="button"
+                  onClick={() =>
+                    startInstall.mutate({ includeDialectId: true, includeDialects: true, force: true })
+                  }
+                  disabled={startInstall.isPending}
+                >
+                  {t(lang, "ar_data_reinstall_btn")}
+                </button>
+              )}
+            </>
           )}
           {busy && (
             <button

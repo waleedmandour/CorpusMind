@@ -61,6 +61,18 @@ once 1.0 ships. Until then, expect breaking changes between 0.x releases.
   older install) held a write-lock on `_internal\caddy\caddy.exe` and the
   upgrade died with "Error opening file for writing". Both hooks now stop
   Caddy by image name before any file operation.
+- **A partially installed Arabic data pack is recoverable in-app.** The
+  pack counts as "installed" as soon as its data directory exists, so an
+  app reinstall that kept the MSA DB but lost the dialect DBs (any
+  partial or cancelled install) showed "Arabic data pack installed",
+  disabled the Settings install button, and left no way to fetch the
+  missing components. The card now reports the honest state
+  ("Components missing (N)"), offers "Install missing components (N)"
+  (the engine already provisioned gaps - now pinned by tests), and a new
+  "Re-install (repair)" action re-downloads the whole pack and replaces
+  what is on disk (`POST /arabic/data/install` accepts `force`), which
+  also repairs corrupted destinations. The Arabic Tools 503 card offers
+  the same install path instead of a dead "installed" note.
 
 ### Changed
 - The classroom status payload's Ollama `/api/ps` probe timeout is 1 s

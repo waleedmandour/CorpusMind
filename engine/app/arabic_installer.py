@@ -318,6 +318,7 @@ class ArabicDataInstaller:
         self,
         include_dialect_id: bool = True,
         include_dialects: bool = True,
+        force: bool = False,
     ) -> dict[str, Any]:
         """Start an install job. Returns the immediate status snapshot.
 
@@ -326,6 +327,14 @@ class ArabicDataInstaller:
         dialects without them. ``include_dialect_id`` keeps controlling the
         (larger) dialect-ID model. Both default to True: one click must fix
         every data-driven 503 the UI can produce.
+
+        ``force`` (v1.2.12) is the Re-install / repair path: re-download
+        EVERY wanted package and replace whatever is on disk, instead of
+        refusing with "already installed" when nothing is missing. This is
+        the way out of a corrupted or half-written data dir (a cancelled
+        job, a crashed extraction, an app reinstall): the per-package
+        install already replaces the destination directory, so a forced run
+        is exactly a normal install over possibly-present state.
 
         Raises ArabicInstallerError with a user-readable message when the
         request cannot even start (already running, nothing to do, no
@@ -352,7 +361,11 @@ class ArabicDataInstaller:
                 if (p["name"] != "dialectid-model6" or include_dialect_id)
                 and (p["name"] not in _DIALECT_DB_PACKAGES or include_dialects)
             ]
-            pending = [p for p in wanted if _package_state(target, p) == "missing"]
+            if force:
+                # Repair semantics: replace everything, installed or not.
+                pending = list(wanted)
+            else:
+                pending = [p for p in wanted if _package_state(target, p) == "missing"]
             if not pending:
                 raise ArabicInstallerError(
                     "The Arabic data pack is already installed (nothing to download)."

@@ -79,6 +79,11 @@ export const translations = {
     ar_data_pkg_lev: "Levantine dialect DB (calima-lev-01, CC BY 4.0)",
     ar_data_pkg_did: "Dialect-ID model (dialectid-model6, MIT)",
     ar_data_busy_conflict: "An Arabic analysis is already running. Please wait a few seconds and try again.",
+    // v1.2.12: partial-install recovery (Re-install button).
+    ar_data_install_missing_btn: "Install missing components ({count})",
+    ar_data_reinstall_btn: "Re-install (repair)",
+    ar_data_missing_badge: "Components missing ({count})",
+    ar_data_missing_components_hint: "{count} of {total} components are missing. Install fetches only the missing ones; Re-install re-downloads the whole pack and replaces what is on disk.",
     // v1.2.11-rc1 fix: dialect DBs the installer does not provision are
     // marked (and disabled) in the Dialect DB dropdown instead of 503ing.
     ar_dialect_db_missing: "(data pack not installed)",
@@ -1141,6 +1146,11 @@ export const translations = {
     ar_data_pkg_lev: "قاعدة صرف اللهجة الشامية (calima-lev-01، CC BY 4.0)",
     ar_data_pkg_did: "نموذج تحديد اللهجة (dialectid-model6، MIT)",
     ar_data_busy_conflict: "هناك تحليل عربي قيد التشغيل بالفعل. يُرجى الانتظار بضع ثوانٍ والمحاولة مجدداً.",
+    // v1.2.12: استعادة الحزمة المثبتة جزئياً (زر إعادة التثبيت).
+    ar_data_install_missing_btn: "تثبيت المكوّنات الناقصة ({count})",
+    ar_data_reinstall_btn: "إعادة التثبيت (إصلاح)",
+    ar_data_missing_badge: "مكوّنات ناقصة ({count})",
+    ar_data_missing_components_hint: "{count} من إجمالي {total} مكوّنات ناقصة. يُنزّل زر التثبيت المكوّنات الناقصة فقط، بينما تُنزّل إعادة التثبيت الحزمة كاملة وتستبدل ما على القرص.",
     // v1.2.11-rc1 fix: قواعد اللهجات التي لا يوفرها المثبّت تُعلَّم وتُعطَّل في القائمة
     ar_dialect_db_missing: "(حزمة البيانات غير مثبتة)",
     // v1.2.0: nav_vision_suite removed (parent-app vision tab is gone); vision_* content keys stay.
