@@ -128,8 +128,16 @@ async def lifespan(app: FastAPI):
     app.state.providers = registry
 
     # v1.2.12: warm the Arabic morphology backend in the background so the
-    # user's FIRST analysis is warm (see _start_arabic_warmup).
-    _start_arabic_warmup(log)
+    # user's FIRST analysis is warm (see _start_arabic_warmup). Never during
+    # tests: the suite boots many app instances and relies on simulating an
+    # unprovisioned machine (resolver patches + backend-cache clears) — a
+    # background warm load would pin CAMELTOOLS_DATA via the camel_tools
+    # import and re-populate the backend cache behind the tests' backs
+    # (observed on CI: 503-simulation tests returned 200, the 504 timing
+    # test raced the warm load). _start_arabic_warmup stays directly
+    # testable; only the lifespan call site is guarded.
+    if "PYTEST_CURRENT_TEST" not in os.environ:
+        _start_arabic_warmup(log)
 
     try:
         yield

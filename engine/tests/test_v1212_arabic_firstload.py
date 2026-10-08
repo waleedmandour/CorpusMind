@@ -216,3 +216,36 @@ class TestStartupWarmup:
         t = app_main._start_arabic_warmup(log)
         assert t is None
         assert calls == []
+
+    @pytest.mark.asyncio
+    async def test_lifespan_skips_warmup_during_tests(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """CI regression pin (run 178): several tests run the real lifespan
+        and then simulate an UNPROVISIONED machine; a background warm load
+        pinned CAMELTOOLS_DATA via the camel_tools import and re-populated
+        the backend cache, so the 503 simulations returned 200 and the 504
+        timing test raced the loader. The lifespan call site must skip the
+        warm-up whenever a test is running."""
+        from httpx import ASGITransport, AsyncClient
+
+        import app.main as app_main
+        from storage.session import dispose_db
+
+        calls: list[Any] = []
+
+        def _spy(log: Any) -> None:
+            calls.append(log)
+
+        monkeypatch.setattr(app_main, "_start_arabic_warmup", _spy)
+        app = app_main.create_app()
+        try:
+            async with AsyncClient(
+                transport=ASGITransport(app=app), base_url="http://test"
+            ) as ac:
+                async with app.router.lifespan_context(app):
+                    r = await ac.get("/api/v1/health")
+                    assert r.status_code == 200
+        finally:
+            await dispose_db()
+        assert calls == [], "lifespan started the Arabic warm-up during tests"
