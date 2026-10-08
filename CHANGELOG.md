@@ -43,6 +43,13 @@ once 1.0 ships. Until then, expect breaking changes between 0.x releases.
   `urls.app` / `urls.root_ca` are read defensively, so a status snapshot
   taken before Caddy is live can no longer throw during render (the likely
   white-screen trigger).
+- **The Windows installer no longer fails on a leftover Caddy process.**
+  The NSIS pre-install/pre-uninstall hooks stopped `corpusmind-engine.exe`
+  and `corpusmind-desktop.exe` but never `caddy.exe`; a Caddy that
+  outlived its engine (failed Job-Object assignment, engine hard-killed,
+  older install) held a write-lock on `_internal\caddy\caddy.exe` and the
+  upgrade died with "Error opening file for writing". Both hooks now stop
+  Caddy by image name before any file operation.
 
 ### Changed
 - The classroom status payload's Ollama `/api/ps` probe timeout is 1 s
