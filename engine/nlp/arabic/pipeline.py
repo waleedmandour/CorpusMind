@@ -79,10 +79,19 @@ INSTALL_HINT = (
 
 
 _CAMEL_DATA_ENV_LOCK = threading.RLock()
-# Separate from the env lock: _load holds this while _require_camel_data
-# re-enters the env path. RLock keeps _ensure_camel_data_env safe if a future
-# caller nests it; the load lock must stay exclusive (a ~400MB single load).
-_CAMEL_ANALYZER_LOAD_LOCK = threading.Lock()
+
+# v1.2.12 (field report: "sample text fails to analyze even after the data
+# pack install"): the v1.2.11 plain Lock made the DB single-loaded but every
+# queued request still burned its OWN deadline waiting on that lock. On a
+# slow disk with real-time antivirus the first load takes minutes, so every
+# retry stacked ANOTHER waiting thread and 504'd while the original loader
+# was still working. The Condition below makes the first thread THE loader
+# and every concurrent caller a waitER that reuses the in-flight load's
+# result: when the loader finishes (or fails), all waiters wake, see the
+# warm cache, and return instantly — one ~400MB load per process, no matter
+# how many requests race it.
+_CAMEL_LOAD_COND = threading.Condition()
+_CAMEL_LOADING = False
 
 
 def _ensure_camel_data_env() -> Path | None:
@@ -295,17 +304,42 @@ class CamelBackend:
         self._info: ArabicBackendInfo | None = None
 
     def _load(self) -> None:
+        global _CAMEL_LOADING
         if self._analyzers:
             return
         # v1.2.11: the routes now run analysis in worker threads, so first
-        # load can race. The lock keeps the DB single-loaded (it is ~400MB
-        # resident); double-checked so the hot path stays lock-free.
-        with _CAMEL_ANALYZER_LOAD_LOCK:
-            if self._analyzers:
-                return
+        # load can race. v1.2.12: one designated loader + piggybacking
+        # waiters (see _CAMEL_LOAD_COND above) — concurrent requests share
+        # the single ~400MB load instead of each burning their own request
+        # deadline queued behind an exclusive lock.
+        is_loader = False
+        with _CAMEL_LOAD_COND:
+            while not self._analyzers:
+                if _CAMEL_LOADING:
+                    # Another thread is loading right now: wait for its
+                    # outcome and reuse it. The bounded wait re-checks both
+                    # the warm cache and the loader flag each wakeup, so a
+                    # failed loader hands the duty to the first waiter.
+                    _CAMEL_LOAD_COND.wait(timeout=2.0)
+                    continue
+                _CAMEL_LOADING = True
+                is_loader = True
+                break
+        if not is_loader:
+            # Woke up because the shared load landed: the cache is warm and
+            # this thread's own deadline was spent waiting, not re-loading.
+            return
+        try:
             self._load_locked()
+        finally:
+            with _CAMEL_LOAD_COND:
+                _CAMEL_LOADING = False
+                _CAMEL_LOAD_COND.notify_all()
 
     def _load_locked(self) -> None:
+        """The actual load. Must run only as the designated loader (the
+        ``_CAMEL_LOADING`` flag guarantees exclusivity; no lock is held while
+        the heavy work runs)."""
         # Pre-flight BEFORE importing camel_tools: pins CAMELTOOLS_DATA to
         # the resolved pack (frozen bundle or dev home) and refuses fast
         # with an actionable error when nothing is provisioned. This is the

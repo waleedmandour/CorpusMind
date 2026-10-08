@@ -78,6 +78,19 @@ once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 - The classroom status payload's Ollama `/api/ps` probe timeout is 1 s
   (was 3 s); it runs on a 5 s poll and must never stack up behind a slow
   probe.
+- **The first Arabic analysis after an engine start no longer fails with a
+  30 s timeout on slow machines.** The ~400 MB calima morphology DB load
+  (cold disk + real-time antivirus) can take minutes — far past the old
+  30 s per-request deadline — so the sample sentence 504'd on every first
+  run even with a correctly installed pack, and every retry stacked
+  another duplicate loader behind the old exclusive load lock, burning
+  its own deadline while waiting. Three changes: the interactive deadline
+  default is 120 s (`CORPUSMIND_ARABIC_TIMEOUT_S`); concurrent requests
+  now piggyback on the in-flight load — one designated loader, waiters
+  reuse its result, and a failed loader hands the duty to the first
+  waiter (pinned by race tests); and the engine pre-loads the MSA backend
+  in a background thread at startup so the first click is already warm
+  (disable with `CORPUSMIND_ARABIC_WARMUP=0` on low-RAM machines).
 
 ## [1.2.11] — 2026-10-07 — Urdu, Hindi, and Farsi corpus support; Gemma 4 catalogue; language capability registry
 

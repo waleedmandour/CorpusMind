@@ -1551,11 +1551,13 @@ async function getTauriFetch(): Promise<(input: string, init?: RequestInit) => P
 
 /**
  * v1.2.11 (Arabic Tools hang fix): client-side deadline for the Arabic Tools
- * calls. Deliberately LONGER than the engine's per-route 30s deadline
- * (CORPUSMIND_ARABIC_TIMEOUT_S) so the server's specific 504 hint normally
- * arrives first; this backstop only fires when the engine itself is stuck.
+ * calls. Deliberately LONGER than the engine's per-route deadline
+ * (CORPUSMIND_ARABIC_TIMEOUT_S — 120s since v1.2.12, sized for cold
+ * ~400MB morphology-DB loads on slow/antivirus-scanned disks) so the
+ * server's specific 504 hint normally arrives first; this backstop only
+ * fires when the engine itself is stuck.
  */
-const ARABIC_TIMEOUT_MS = 45_000;
+const ARABIC_TIMEOUT_MS = 150_000;
 
 /**
  * Unified fetch that picks the Tauri plugin inside the desktop webview and
