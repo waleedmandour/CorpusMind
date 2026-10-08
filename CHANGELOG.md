@@ -6,6 +6,49 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
+## [1.2.12] — 2026-10-08 — Classroom server toggle fixes (white-screen field report)
+
+### Fixed
+- **Enabling the classroom server no longer kills Caddy the moment it starts
+  (Linux).** On Linux, `PR_SET_PDEATHSIG` is delivered when the forking
+  *thread* exits, not when the process exits; v1.2.10's phased start spawned
+  Caddy from a throw-away `threading.Thread`, so the kernel SIGTERMed a
+  healthy Caddy as soon as that thread returned. The start worker now runs on
+  a long-lived single-thread executor (`app.server_mode.SPAWN_EXECUTOR`),
+  keeping the "die with the engine" semantics without the early kill. A
+  self-validating test reproduces both the bug (throw-away thread) and the
+  fix (executor) on Linux.
+- **Disabling the classroom server no longer stalls the engine's event
+  loop.** `stop_caddy` can block up to 10 s (terminate + wait); it ran
+  inline on the event loop, so a slow Caddy shutdown stalled `/health`,
+  which the desktop shell treats as a dead engine and force-restarts,
+  killing the classroom with it. All `/server-mode/*` handlers now offload
+  blocking status and stop work to worker threads (`asyncio.to_thread`).
+- **A failed classroom start always carries a reason.** When Caddy dies
+  after a clean start, the status chip showed "failed" with empty error
+  text; the payload now falls back to a message that names the
+  `caddy-stdout.log` path. Empty exception strings get a fallback with the
+  exception type so the card never renders an empty banner.
+- **The classroom control plane can no longer trigger a desktop engine
+  restart.** A failed `/server-mode/*` request (enable/disable/status) used
+  to ask the shell to probe-and-restart the engine; a restart kills the
+  engine AND the Caddy it supervises, and its blocking wait leaves pending
+  Tauri IPC callbacks that surface as "Couldn't find callback id" after a
+  reload. Classroom calls now fail fast and report their own error.
+- **Render errors show a message instead of a blank window.** A new
+  top-level `ErrorBoundary` catches render exceptions, records them in
+  Smart Troubleshooting, and offers "Try again" (re-mount, no page reload)
+  and "Reload app" (EN+AR).
+- **The classroom card tolerates a partially populated status payload.**
+  `urls.app` / `urls.root_ca` are read defensively, so a status snapshot
+  taken before Caddy is live can no longer throw during render (the likely
+  white-screen trigger).
+
+### Changed
+- The classroom status payload's Ollama `/api/ps` probe timeout is 1 s
+  (was 3 s); it runs on a 5 s poll and must never stack up behind a slow
+  probe.
+
 ## [1.2.11] — 2026-10-07 — Urdu, Hindi, and Farsi corpus support; Gemma 4 catalogue; language capability registry
 
 ### Added

@@ -181,3 +181,56 @@ installer + cache-refresh suites 26/26 (incl. the new `test_installer_dialects_f
 and the updated snapshot-integrity test asserting all five pins); `ruff check .`
 clean; mypy strict report **PASS, 1829 → 1820** (baseline re-locked, lower is fine);
 web `tsc --noEmit` PASS; `npm run build` PASS.
+
+## Session 5 (2026-10-08, `release/1.2.12-prep`): classroom toggle white screen — two engine defects, a UI boundary, and a real end-to-end toggle proof
+
+Field report on the v1.2.11 desktop build: toggling the Student Mode classroom
+server (Settings) intermittently white-screens the window. Investigation pinned
+two reproduced engine defects plus one fragile render path; fixes verified by
+four new tests and a real end-to-end toggle run (real engine, real Caddy).
+
+| # | Root cause (verified before any change) | Fix (verified) |
+| --- | --- | --- |
+| 1 | Linux `PR_SET_PDEATHSIG` is delivered when the forking THREAD exits, not the process (prctl(2)); the v1.2.10 phased start spawned Caddy from a throw-away `threading.Thread`, so the kernel SIGTERMed a healthy Caddy the moment the thread returned — `enabled=True`, `caddy_running=False`, empty error text. | The start worker runs on a long-lived single-thread executor (`app.server_mode.SPAWN_EXECUTOR`, prefix `classroom-spawn`). A self-validating Linux test forks a child from a throw-away thread (dies — proves the test can detect the bug) and from the executor (survives). |
+| 2 | `/server-mode/disable` ran `stop_caddy()` (terminate + wait up to 10 s) inline on the event loop; a stalled `/health` exceeds the desktop shell's 3 s probe and `ensure_engine` force-restarts the engine, killing the classroom. All `_status_payload` call sites had the same inline-blocking shape. | `/server-mode/*` handlers offload blocking work (`stop_caddy`, `_status_payload`) via `asyncio.to_thread`; the Ollama `/api/ps` status probe drops 3 s → 1 s. A test polls `/health` at 50 ms during a 1.5 s patched stop and asserts worst-case latency < 0.5 s. |
+| 3 | Render fragility: `StudentModeServerCard` dereferenced `s.urls.app` / `s.urls.root_ca` directly, so a status snapshot taken before Caddy is live could throw during render and unmount the whole tree (white window). | Defensive optional chaining with empty-string guards in the URL memos and QR block; a new top-level `ErrorBoundary` (EN+AR) catches any render error, records it in Smart Troubleshooting, and offers Try again / Reload app. A failed phase now always carries a reason (fallback names `caddy-stdout.log`). |
+
+Also in this change: the classroom control plane (`/server-mode/*`) can no
+longer trigger the shell-level engine restart from the web `jsonFetch` retry
+path — a restart kills the engine AND the Caddy it supervises and leaves
+pending Tauri IPC callbacks ("Couldn't find callback id") after a reload.
+Failed classroom calls now fail fast and report their own error.
+
+Real end-to-end toggle proof (Linux sandbox, real engine + pinned Caddy
+2.10.0, `scripts/toggle_smoke_test.py`): **11/11** — enable → live and still
+live after 8 s of polling (the old bug killed Caddy here), disable right
+after enable (0.02 s response), status off, no orphan Caddy, re-enable live,
+and `kill -9` of the engine takes Caddy down with it ("die with the engine"
+preserved).
+
+Deferred, stated honestly: the Rust-side hardening of `ensure_engine`
+(wait ≈ 15 s, restart only if the engine process is actually dead) is NOT in
+this build — this sandbox has no Rust toolchain or webkit2gtk headers to
+compile-verify a bootstrap change. The web-side classroom guard and the
+engine-side event-loop fixes remove the two reproduced triggers; the Rust
+change remains recommended belt-and-suspenders for a machine with the Tauri
+toolchain.
+
+Known order-dependence, separate look: `test_batch_describe_run_completes`
+and `test_batch_describe_skips_cached` (vision batch) fail in the reporter's
+full-suite run but pass alone, pass in the author's full run (692 passed /
+13 skipped, 0 failed), pass with `--ignore=tests/test_phase3_arabic.py`
+(681 / 2 skipped), and CI's Test gate is green. Suspected mechanism: ~10
+test modules mutate `CORPUSMIND_DB_URL` at import time and share the global
+provider registry (`app.state.providers._instances`), so failure depends on
+machine-specific import/state order. Not fixed here — no repro, and a
+speculative fix would violate the root-cause-first rule. Needs the
+reporter's full-suite `--tb=short` output; a conftest-level isolation pass
+(env + registry snapshot/restore) is the likely shape.
+
+Gates this session (Linux sandbox, Python 3.12.14): the four new tests pass
+(`test_student_mode.py` 36/36); full suite in one process **692 passed /
+13 skipped / 0 failed**; `ruff check` clean on changed files; mypy strict
+report **PASS 1820 = 1820** (the 9 new test-side errors were annotated away,
+baseline untouched); web `tsc --noEmit` PASS; `npm run build` PASS; contrast
+regression check **86/86 PASS**.
