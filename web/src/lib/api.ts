@@ -1649,6 +1649,12 @@ async function jsonFetch<T>(path: string, init?: RequestInit, timeoutMs?: number
   // Only retry on /health and /version endpoints — other endpoints
   // should fail fast so the user sees errors, not silent retries.
   const isStartupEndpoint = path.includes("/health") || path.includes("/version");
+  // v1.2.12: the classroom control plane (enable/disable/status/...) must NEVER
+  // cause a shell-level engine restart. A restart kills the engine AND the
+  // Caddy it supervises, and its blocking wait (up to 120 s) leaves pending
+  // Tauri IPC callbacks that surface as "Couldn't find callback id" after the
+  // window is reloaded. A failed classroom call just reports its own error.
+  const isClassroomControl = path.includes("/server-mode/");
   try {
     return await jsonFetchAttempt<T>(path, init, isStartupEndpoint ? 5 : 0, timeoutMs);
   } catch (e: any) {
@@ -1660,7 +1666,7 @@ async function jsonFetch<T>(path: string, init?: RequestInit, timeoutMs?: number
     // genuinely down engine — then retry the request once. Startup
     // endpoints keep their own fast retry budget instead (boot polling
     // expects quick answers, not a blocking restart).
-    if (isTauriRuntime() && !isStartupEndpoint) {
+    if (isTauriRuntime() && !isStartupEndpoint && !isClassroomControl) {
       try {
         const st = await ensureEngine();
         if (st.engine_running) {

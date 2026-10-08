@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import { QueryClient, QueryClientProvider, QueryCache, MutationCache } from "@tanstack/react-query";
 
 import App from "@/App";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import "@/styles/global.css";
 import { useTroubleshoot } from "@/store/troubleshooting";
 import { api, isTauriRuntime, setStudentSession } from "@/lib/api";
@@ -133,8 +134,10 @@ void initTroubleshooting();
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <App />
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <App />
+      </QueryClientProvider>
+    </ErrorBoundary>
   </React.StrictMode>,
 );

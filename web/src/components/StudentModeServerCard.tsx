@@ -208,13 +208,15 @@ export function StudentModeServerCard() {
 
   const studentUrl = useMemo(() => {
     if (!s?.enabled) return "";
-    const base = s.urls.app;
+    const base = s.urls?.app ?? "";
+    if (!base) return "";
     return `${base}/?mode=student&server=${encodeURIComponent(base)}&token=${encodeURIComponent(s.student_token ?? "")}`;
   }, [s]);
 
   const teacherUrl = useMemo(() => {
     if (!s?.enabled) return "";
-    const base = s.urls.app;
+    const base = s.urls?.app ?? "";
+    if (!base) return "";
     return `${base}/?mode=student&server=${encodeURIComponent(base)}&token=${encodeURIComponent(s.teacher_token ?? "")}`;
   }, [s]);
 
@@ -398,10 +400,10 @@ export function StudentModeServerCard() {
               </div>
               {s.mode === "secure" && (
                 <div className="sm-qr-box">
-                  <QrImage value={s.urls.root_ca ?? ""} />
+                  <QrImage value={s.urls?.root_ca ?? ""} />
                   <strong>{t(lang, "sm_qr_cert")}</strong>
-                  <code className="sm-url">{s.urls.root_ca}</code>
-                  <CopyBtn text={s.urls.root_ca ?? ""} lang={lang} />
+                  <code className="sm-url">{s.urls?.root_ca}</code>
+                  <CopyBtn text={s.urls?.root_ca ?? ""} lang={lang} />
                 </div>
               )}
               <div className="sm-qr-box sm-qr-text">

@@ -1050,6 +1050,10 @@ export const translations = {
     sm_taskbar_starting: "Starting classroom server…",
     sm_taskbar_live: "Classroom live",
     sm_taskbar_failed: "Classroom failed — details",
+    err_boundary_title: "Something went wrong on this screen",
+    err_boundary_body: "The app caught an error instead of going blank. Your data and the engine are untouched. Try again, or reload the app if this keeps happening.",
+    err_boundary_retry: "Try again",
+    err_boundary_reload: "Reload app",
     // v1.2.10: fresh exposure probe on the LAN warning banner.
     sm_recheck: "Check again",
     sm_rechecking: "Checking…",
@@ -2097,6 +2101,10 @@ export const translations = {
     sm_taskbar_starting: "جارٍ بدء خادم الفصل الدراسي…",
     sm_taskbar_live: "الفصل الدراسي يعمل",
     sm_taskbar_failed: "فشل الفصل الدراسي — التفاصيل",
+    err_boundary_title: "حدث خطأ في هذه الشاشة",
+    err_boundary_body: "التقط التطبيق الخطأ بدل أن تصبح الشاشة فارغة. بياناتك والمحرك لم يتأثرا. حاول مرة أخرى، أو أعد تحميل التطبيق إذا تكرر الأمر.",
+    err_boundary_retry: "حاول مرة أخرى",
+    err_boundary_reload: "إعادة تحميل التطبيق",
     // v1.2.10: فحص جديد لتحذير شبكة Ollama.
     sm_recheck: "تحقق مجددًا",
     sm_rechecking: "جارٍ التحقق…",

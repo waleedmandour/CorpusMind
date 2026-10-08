@@ -14,6 +14,7 @@ Every route here is teacher-gated twice:
 
 from __future__ import annotations
 
+import asyncio
 from datetime import UTC
 from typing import Any, Literal
 
@@ -33,6 +34,7 @@ from app.server_mode import (
     lan_ips,
     ollama_model_size,
     save_config,
+    server_mode_dir,
     spawn_caddy,
     stop_caddy,
 )
@@ -86,8 +88,14 @@ def _status_payload(
     # enable or disable; a Caddy that died after a clean start also reads
     # as failed so the chip never shows green over a dead server.
     phase = state.start_phase
+    caddy_error = state.caddy_error
     if cfg.enabled and phase == "live" and not running:
         phase = "failed"
+        if not caddy_error:
+            caddy_error = (
+                "The classroom server (Caddy) stopped unexpectedly after starting. "
+                f"Check {server_mode_dir(settings) / 'caddy-stdout.log'} and turn it off and on again."
+            )
     elif not cfg.enabled and phase not in ("failed", "starting"):
         phase = "off"
     payload: dict[str, Any] = {
@@ -99,7 +107,7 @@ def _status_payload(
         "caddy_running": running,
         "caddy_binary_found": caddy_bin is not None,
         "caddy_version": caddy_version(caddy_bin),
-        "caddy_error": state.caddy_error,
+        "caddy_error": caddy_error,
         "web_dist_bundled": find_web_dist(settings) is not None,
         "lan_ips": lan_ips(),
         "urls": classroom_urls(settings, cfg) if cfg.enabled else {},
@@ -132,7 +140,7 @@ def _ollama_running_models(settings: Any) -> int | None:
 
     base = settings.ollama_base_url.rstrip("/")
     try:
-        r = httpx.get(f"{base}/api/ps", timeout=3.0)
+        r = httpx.get(f"{base}/api/ps", timeout=1.0)
         if r.status_code == 200:
             return len(r.json().get("models", []))
     except Exception:
@@ -228,7 +236,7 @@ async def server_mode_status(request: Request) -> dict:
     settings = get_settings()
     state: sm.ServerModeState = request.app.state.server_mode
     seats = await state.effective_seats(settings) if state.config.enabled else None
-    payload = _status_payload(settings, state, seats)
+    payload = await asyncio.to_thread(_status_payload, settings, state, seats)
     # v1.2.10 (5a): loopback-vs-LAN Ollama exposure — cached 60 s so the
     # 5 s status poll never re-probes and the warning stays stable.
     payload["ollama_exposure"] = await _ollama_lan_exposure(state)
@@ -250,7 +258,6 @@ async def server_mode_enable(request: Request, body: EnableRequest) -> dict[str,
     progress instead of a frozen app.
     """
     require_teacher(request)
-    import threading
 
     from app.settings import get_settings
 
@@ -261,7 +268,7 @@ async def server_mode_enable(request: Request, body: EnableRequest) -> dict[str,
     # A start is already in flight: report it instead of double-spawning.
     if state.start_phase == "starting":
         seats = await state.effective_seats(settings) if cfg.enabled else None
-        return _status_payload(settings, state, seats)
+        return await asyncio.to_thread(_status_payload, settings, state, seats)
 
     cfg.enabled = True
     cfg.mode = body.mode
@@ -343,7 +350,7 @@ async def server_mode_enable(request: Request, body: EnableRequest) -> dict[str,
                 return
             cfg.enabled = False
             settings.student_token = ""
-            state.caddy_error = str(exc)
+            state.caddy_error = str(exc) or f"{type(exc).__name__} while starting the classroom server"
             state.start_phase = "failed"
             try:
                 audit.write("classroom_start_failed", error=str(exc))
@@ -351,9 +358,11 @@ async def server_mode_enable(request: Request, body: EnableRequest) -> dict[str,
             except Exception:
                 pass
 
-    threading.Thread(target=_start_worker, name="classroom-start", daemon=True).start()
+    # v1.2.12: long-lived spawn thread (see app.server_mode.SPAWN_EXECUTOR) — a
+    # throw-away thread made Linux's PDEATHSIG kill Caddy as soon as it returned.
+    sm.SPAWN_EXECUTOR.submit(_start_worker)
     seats = await state.effective_seats(settings)
-    return _status_payload(settings, state, seats)
+    return await asyncio.to_thread(_status_payload, settings, state, seats)
 
 
 @router.post("/server-mode/disable")
@@ -376,10 +385,13 @@ async def server_mode_disable(request: Request) -> dict:
             students_joined_total=state.joined_total,
             chats_total=state.chats_total,
         )
-    stop_caddy(state)
+    # v1.2.12: terminate()+wait() can block up to 10 s — never on the event loop
+    # (a stalled /health makes the desktop shell's ensure_engine force-restart
+    # the engine, which also kills the classroom).
+    await asyncio.to_thread(stop_caddy, state)
     save_config(settings, state.config)
     seats = await state.effective_seats(settings)
-    return _status_payload(settings, state, seats)
+    return await asyncio.to_thread(_status_payload, settings, state, seats)
 
 
 @router.post("/server-mode/recheck-ollama")
@@ -419,7 +431,7 @@ async def server_mode_config(request: Request, body: ConfigUpdate) -> dict:
     state._cap_cache = None  # seat override / model changes take effect now
     save_config(settings, state.config)
     seats = await state.effective_seats(settings)
-    return _status_payload(settings, state, seats)
+    return await asyncio.to_thread(_status_payload, settings, state, seats)
 
 
 @router.get("/server-mode/capacity")

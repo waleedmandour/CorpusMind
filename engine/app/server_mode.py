@@ -44,6 +44,7 @@ import socket
 import subprocess
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
@@ -576,6 +577,19 @@ def generate_caddyfile(
 
 def _caddy_data_dir(settings: Any) -> Path:
     return server_mode_dir(settings) / "caddy-data"
+
+
+# v1.2.12: the thread that spawns Caddy must OUTLIVE the spawn.
+#
+# On Linux, PR_SET_PDEATHSIG (see _posix_close_on_parent_death) is delivered
+# when the *thread* that forked the child exits, not when the process exits
+# (prctl(2): "the 'parent' in this piece of information refers to the thread
+# that created this process"). The v1.2.10 phased start spawned Caddy from a
+# throw-away ``threading.Thread``; the moment that thread finished, the kernel
+# SIGTERMed a perfectly healthy Caddy, leaving ``enabled=True`` with
+# ``caddy_running=False`` and no error text. One long-lived worker thread keeps
+# the death-signal semantics ("die with the engine") without the early kill.
+SPAWN_EXECUTOR = ThreadPoolExecutor(max_workers=1, thread_name_prefix="classroom-spawn")
 
 
 def _posix_close_on_parent_death() -> None:  # pragma: no cover — POSIX only

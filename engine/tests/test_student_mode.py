@@ -834,3 +834,140 @@ async def test_student_chat_question_and_response_audited(classroom, monkeypatch
     assert entry["model"] == "llama3.2:3b"
     assert entry["elapsed_ms"] == 42
     assert sm_state.chats_total == 1
+
+
+# --------------------------------------------------------------------------- #
+# v1.2.12: enable/disable white-screen field report
+#
+# Root causes pinned here:
+#   1. Linux PR_SET_PDEATHSIG is tied to the forking THREAD; spawning Caddy from
+#      a throw-away thread killed it as soon as the thread returned
+#      (enabled=True, caddy_running=False, "failed" with an EMPTY reason).
+#   2. /server-mode/disable ran stop_caddy() (terminate + wait, up to 10 s)
+#      on the event loop; a >3 s /health stall makes the desktop shell's
+#      ensure_engine treat the engine as dead and force-restart it.
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.skipif(
+    not __import__("sys").platform.startswith("linux"),
+    reason="PR_SET_PDEATHSIG semantics are Linux-specific",
+)
+def test_spawn_thread_outliving_the_spawn_keeps_child_alive() -> None:
+    """Self-validating: a child forked from a throw-away thread dies with that
+    thread (the bug); the same fork from SPAWN_EXECUTOR's long-lived worker
+    survives (the fix)."""
+    import subprocess
+    import sys
+    import threading
+    import time
+
+    from app import server_mode as sm
+
+    def _fork() -> subprocess.Popen[Any]:
+        return subprocess.Popen(
+            [sys.executable, "-c", "import time; time.sleep(30)"],
+            preexec_fn=sm._posix_close_on_parent_death,
+        )
+
+    # Control: the pre-fix behaviour (proves the test can detect the bug).
+    holder: dict[str, subprocess.Popen[Any]] = {}
+    t = threading.Thread(target=lambda: holder.update(p=_fork()))
+    t.start()
+    t.join()
+    bad = holder["p"]
+    try:
+        for _ in range(40):
+            if bad.poll() is not None:
+                break
+            time.sleep(0.05)
+        assert bad.poll() is not None, "control child should die with its forking thread"
+    finally:
+        if bad.poll() is None:
+            bad.kill()
+
+    # Fix: forked from the long-lived spawn worker; must survive the task's return.
+    good = sm.SPAWN_EXECUTOR.submit(_fork).result(timeout=5)
+    try:
+        time.sleep(1.0)
+        assert good.poll() is None, "child forked from SPAWN_EXECUTOR must outlive the task"
+    finally:
+        good.kill()
+        good.wait(timeout=5)
+
+
+@pytest.mark.asyncio
+async def test_enable_spawns_on_the_long_lived_worker(classroom: Any, monkeypatch: Any) -> None:
+    ac, sm_state = classroom
+    import asyncio
+    import threading
+
+    import api.server_mode as router_mod
+
+    sm_state.config.enabled = False
+    seen: dict[str, Any] = {}
+
+    def _fake_spawn(settings: Any, state: Any) -> None:
+        seen["thread"] = threading.current_thread().name
+
+    monkeypatch.setattr(router_mod, "find_caddy_binary", lambda settings: Path("/x/caddy"))
+    monkeypatch.setattr(router_mod, "find_web_dist", lambda settings: Path("/x/web"))
+    monkeypatch.setattr(router_mod, "spawn_caddy", _fake_spawn)
+
+    r = await ac.post("/api/v1/server-mode/enable", json={"mode": "simple"})
+    assert r.status_code == 200
+    for _ in range(60):
+        if sm_state.start_phase == "live":
+            break
+        await asyncio.sleep(0.05)
+    assert sm_state.start_phase == "live"
+    assert seen["thread"].startswith("classroom-spawn"), seen
+
+
+@pytest.mark.asyncio
+async def test_disable_does_not_block_the_event_loop(classroom: Any, monkeypatch: Any) -> None:
+    """A slow Caddy shutdown must not stall /health (shell health probe = 3 s)."""
+    ac, _sm_state = classroom
+    import asyncio
+    import time
+
+    import api.server_mode as router_mod
+
+    monkeypatch.setattr(router_mod, "stop_caddy", lambda state: time.sleep(1.5))
+
+    worst = 0.0
+    done = False
+
+    async def _poll_health() -> None:
+        nonlocal worst
+        while not done:
+            t0 = time.monotonic()
+            r = await ac.get("/api/v1/health")
+            assert r.status_code == 200
+            worst = max(worst, time.monotonic() - t0)
+            await asyncio.sleep(0.02)
+
+    poller = asyncio.create_task(_poll_health())
+    try:
+        t0 = time.monotonic()
+        r = await ac.post("/api/v1/server-mode/disable")
+        assert r.status_code == 200
+        assert time.monotonic() - t0 >= 1.4  # the slow stop really ran
+    finally:
+        done = True
+        await poller
+    assert worst < 0.5, f"/health stalled {worst:.2f}s while disable ran (event loop blocked)"
+
+
+@pytest.mark.asyncio
+async def test_failed_phase_always_carries_a_reason(classroom: Any) -> None:
+    """enabled + 'live' but Caddy gone must read as failed WITH text — the card
+    and task-bar chip only show their banner when caddy_error is non-empty."""
+    ac, sm_state = classroom
+    sm_state.start_phase = "live"
+    sm_state.caddy_proc = None
+    sm_state.caddy_error = ""
+    body = (await ac.get("/api/v1/server-mode/status")).json()
+    assert body["phase"] == "failed"
+    assert body["caddy_running"] is False
+    assert body["caddy_error"].strip(), "failed phase must never have an empty reason"
