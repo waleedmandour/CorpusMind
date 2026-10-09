@@ -73,6 +73,30 @@ once 1.0 ships. Until then, expect breaking changes between 0.x releases.
   what is on disk (`POST /arabic/data/install` accepts `force`), which
   also repairs corrupted destinations. The Arabic Tools 503 card offers
   the same install path instead of a dead "installed" note.
+- **Arabic Tools no longer opens stuck on a disabled "Analyzing… 0s"
+  (rc7).** The view read `result.isPending` from TanStack Query v5 as the
+  in-flight flag, but v5 reports `isPending === true` for an
+  `enabled`-gated query from its very first render (status "pending",
+  fetchStatus "idle") — before any click. The Run button was therefore
+  disabled and the spinner+Cancel shown the moment the view opened, so no
+  analysis could ever be started; the same flag also gated the elapsed
+  ticker and the 10 s hint, and (because a same-input re-run only bumped
+  state, never the query key) retrying after an error or a Cancel
+  silently did nothing. The view now uses `isFetching` ("a request is
+  actually in flight"), re-clicking Run with identical inputs triggers an
+  explicit refetch, and the Cancel path aborts without being misread as a
+  connection failure: jsonFetch no longer classifies an `AbortError` as a
+  connection error (which asked the shell to probe/restart the engine
+  mid-analysis), and the client deadline now also honours the abort
+  signal, so Cancel is immediate even if the Tauri transport swallows it.
+  Two sibling misuses of the same v5 semantics were fixed: the Analysis
+  collocation panel's "queued under load" note keyed off `isPending`
+  (false note while the query was merely idle — now `isLoading`), and the
+  status-bar "N processing..." counter counted never-run gated queries
+  (now `fetchStatus === "fetching"`). Guarded by a new source-level CI
+  check (`scripts/check_query_pending.mjs`) and jsdom regression tests
+  that render the real view against the shipped QueryClient defaults
+  (`web/src/__tests__/arabic-ui-regression.test.tsx`).
 
 ### Changed
 - The classroom status payload's Ollama `/api/ps` probe timeout is 1 s

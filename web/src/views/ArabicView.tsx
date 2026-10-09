@@ -184,11 +184,22 @@ export function ArabicView() {
     gcTime: 0,
   });
 
+  // v1.2.12 (field report: Arabic Tools stuck on a disabled "Analyzing… 0s"):
+  // in TanStack Query v5 a query that has not run yet — `enabled: false`, i.e.
+  // before the first click — reports `isPending === true` (status "pending",
+  // fetchStatus "idle"). Using isPending as the in-flight flag therefore
+  // rendered "Analyzing… 0s" + Cancel and DISABLED the Run button from the
+  // moment the view opened, so no analysis could ever be started. "A request
+  // is actually in flight" is `isFetching` (true only while fetchStatus is
+  // "fetching"). Never use `isPending` for enabled-gated queries; see
+  // scripts/check_query_pending.mjs (CI guard).
+  const busy = result.isFetching;
+
   // v1.2.11 (Arabic Tools hang fix): elapsed-seconds ticker while a request
   // is in flight, so "Analyzing…" never looks like a silent freeze again.
   const [elapsed, setElapsed] = useState(0);
   useEffect(() => {
-    if (!result.isPending || !submitted) {
+    if (!busy || !submitted) {
       setElapsed(0);
       return;
     }
@@ -197,15 +208,23 @@ export function ArabicView() {
       setElapsed(Math.floor((Date.now() - startedAt) / 1000));
     }, 1000);
     return () => window.clearInterval(id);
-  }, [result.isPending, submitted]);
+  }, [busy, submitted]);
 
   const onCancel = () => {
     void queryClient.cancelQueries({ queryKey: ["arabic", submitted] });
   };
 
   const onRun = () => {
-    if (!text.trim()) return;
-    setSubmitted({ text: text.trim(), tool, dialect, tagset });
+    if (!text.trim() || busy) return;
+    const next = { text: text.trim(), tool, dialect, tagset };
+    // v1.2.12: same inputs => same query key => setSubmitted would be a no-op
+    // and the click would silently do nothing (e.g. retrying after an error
+    // or after a Cancel). Ask for a fresh fetch explicitly in that case.
+    if (submitted && JSON.stringify(submitted) === JSON.stringify(next)) {
+      void result.refetch();
+    } else {
+      setSubmitted(next);
+    }
   };
 
   // v1.2.11-rc1 fix: if the selected dialect DB turns out to be missing
@@ -299,15 +318,15 @@ export function ArabicView() {
             </button>
           ))}
         </div>
-        <button onClick={onRun} disabled={!text.trim() || result.isPending} className="run-btn">
-          {result.isPending ? t(lang, "ar_analyzing_elapsed").replace("{n}", String(elapsed)) : "Run analysis"}
+        <button onClick={onRun} disabled={!text.trim() || busy} className="run-btn">
+          {busy ? t(lang, "ar_analyzing_elapsed").replace("{n}", String(elapsed)) : "Run analysis"}
         </button>
-        {result.isPending && (
+        {busy && (
           <button onClick={onCancel} className="run-btn run-btn-cancel" type="button">
             {t(lang, "ar_cancel")}
           </button>
         )}
-        {result.isPending && elapsed >= 10 && (
+        {busy && elapsed >= 10 && (
           <div className="error" role="status">{t(lang, "ar_still_working_hint")}</div>
         )}
       </div>

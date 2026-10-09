@@ -455,8 +455,13 @@ function CollocationPanel({ cid }: { cid: string }) {
   return (
     <div className="panel-content">
       {/* v1.2.10: queued-under-load feedback instead of a silent spinner —
-          the soak showed ~40 s waits at full classroom width. */}
-      <SlowQueryNote pending={result.isPending} lang={lang} />
+          the soak showed ~40 s waits at full classroom width.
+          v1.2.12 (rc7): `isLoading` (first fetch actually in flight), NOT
+          `isPending` — on an enabled-gated query isPending is also true
+          while the query sits idle before the first search, which showed a
+          false "queued under load" note. Same bug class as ArabicView;
+          see scripts/check_query_pending.mjs. */}
+      <SlowQueryNote pending={result.isLoading} lang={lang} />
       <div className="toolbar">
         <input
           type="text"

@@ -1635,15 +1635,57 @@ export async function waitForEngine(maxAttempts = 30): Promise<boolean> {
  * classification treats any error message WITHOUT it as a connection error
  * and would otherwise silently re-issue the whole request.
  */
-function withDeadline<T>(p: Promise<T>, timeoutMs?: number): Promise<T> {
-  if (!timeoutMs || timeoutMs <= 0) return p;
+function makeAbortError(): Error {
+  // The name is the contract: jsonFetch classifies `name === "AbortError"`
+  // as a user Cancel (never a connection failure), so it is neither retried
+  // nor routed into the shell's probe/restart path.
+  const e = new Error("The request was aborted");
+  e.name = "AbortError";
+  return e;
+}
+
+function withDeadline<T>(p: Promise<T>, timeoutMs?: number, signal?: AbortSignal | null): Promise<T> {
+  // v1.2.12 (rc7): honour the caller's Cancel even when the transport
+  // (Tauri plugin-http) ignores the abort — reject with an AbortError the
+  // moment the signal fires, so a Cancel is always immediate.
+  if ((!timeoutMs || timeoutMs <= 0) && !signal) return p;
   return new Promise<T>((resolve, reject) => {
-    const timer = setTimeout(() => {
-      reject(new Error(`HTTP 504: no response from the engine within ${Math.round(timeoutMs / 1000)}s (client deadline)`));
-    }, timeoutMs);
+    let settled = false;
+    const timer = timeoutMs && timeoutMs > 0
+      ? setTimeout(() => {
+          if (settled) return;
+          settled = true;
+          reject(new Error(`HTTP 504: no response from the engine within ${Math.round(timeoutMs / 1000)}s (client deadline)`));
+        }, timeoutMs)
+      : null;
+    const onAbort = () => {
+      if (settled) return;
+      settled = true;
+      if (timer) clearTimeout(timer);
+      reject(makeAbortError());
+    };
+    if (signal) {
+      if (signal.aborted) {
+        onAbort();
+        return;
+      }
+      signal.addEventListener("abort", onAbort);
+    }
     p.then(
-      (v) => { clearTimeout(timer); resolve(v); },
-      (e) => { clearTimeout(timer); reject(e); },
+      (v) => {
+        if (settled) return;
+        settled = true;
+        if (timer) clearTimeout(timer);
+        signal?.removeEventListener("abort", onAbort);
+        resolve(v);
+      },
+      (e) => {
+        if (settled) return;
+        settled = true;
+        if (timer) clearTimeout(timer);
+        signal?.removeEventListener("abort", onAbort);
+        reject(e);
+      },
     );
   });
 }
@@ -1662,6 +1704,11 @@ async function jsonFetch<T>(path: string, init?: RequestInit, timeoutMs?: number
   try {
     return await jsonFetchAttempt<T>(path, init, isStartupEndpoint ? 5 : 0, timeoutMs);
   } catch (e: any) {
+    // v1.2.12 (rc7): a user Cancel (AbortController) is not a connection
+    // failure — never classify it as one (that path asks the shell to
+    // probe/restart the engine while an analysis is legitimately still
+    // running) and never retry it.
+    if (e?.name === "AbortError" || init?.signal?.aborted) throw e;
     const isConnError = !!e?.message && !e.message.includes("HTTP ");
     if (!isConnError) throw e;
     // v1.2.5: the engine may have died mid-session or still be starting up
@@ -1700,7 +1747,7 @@ async function jsonFetchAttempt<T>(
           "Content-Type": "application/json",
           ...(init?.headers ?? {}),
         },
-      }), timeoutMs);
+      }), timeoutMs, init?.signal);
       if (!r.ok) {
         const body = await r.text();
         throw new Error(`HTTP ${r.status}: ${body}`);
@@ -1708,6 +1755,9 @@ async function jsonFetchAttempt<T>(
       return (await r.json()) as T;
     } catch (e: any) {
       lastError = e;
+      // v1.2.12 (rc7): an aborted request must never be retried — rethrow
+      // immediately so the Cancel resolves this attempt for good.
+      if (e?.name === "AbortError" || init?.signal?.aborted) throw e;
       // Only retry on connection errors (engine not ready), not on HTTP errors
       const isConnError = !e.message?.includes("HTTP ");
       if (isConnError && attempt < maxRetries) {
