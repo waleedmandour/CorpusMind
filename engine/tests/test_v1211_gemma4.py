@@ -56,6 +56,51 @@ class TestCatalogue:
                 assert "minimum ollama" not in m["description"].lower()
 
 
+class TestGemma4QatCard:
+    """v1.2.12: the gemma3:27b card is replaced by gemma4:12b-it-qat.
+
+    Facts verified from the authoritative tag page on 2026-10-09
+    (ollama.com/library/gemma4:12b-it-qat):
+      * tag exists and pulls natively by name;
+      * "model arch gemma4 · parameters 11.9B · quantization Q4_0 · 7.0GB"
+        + "projector arch clip · parameters 52.4M · quantization BF16 ·
+        175MB" -> 7.2 GB total download;
+      * license Apache (2.0).
+    The replacement reason: gemma3:27b needed 24 GB+ RAM, beyond most
+    classroom/office machines the app targets; the QAT 12B card keeps
+    workstation quality at 7.2 GB / ~8 GB RAM.
+    """
+
+    def test_qat_card_present(self) -> None:
+        names = {m["name"] for m in RECOMMENDED_OLLAMA_MODELS}
+        assert "gemma4:12b-it-qat" in names
+
+    def test_gemma3_27b_removed(self) -> None:
+        names = {m["name"] for m in RECOMMENDED_OLLAMA_MODELS}
+        assert "gemma3:27b" not in names
+
+    def test_qat_card_metadata_matches_verified_facts(self) -> None:
+        card = next(
+            m for m in RECOMMENDED_OLLAMA_MODELS if m["name"] == "gemma4:12b-it-qat"
+        )
+        assert card["size"] == "7.2 GB"
+        assert card["size_bytes"] == 7_200_000_000
+        assert card["task"] == "text"
+        assert card["ram"], "RAM hint needed for the Settings card"
+        for lang in ("en", "ar", "ur", "hi", "fa"):
+            assert lang in card["languages"]
+        # Pulling must work natively: explicit quant tags are kept by
+        # canonical_model_name (see TestCanonicalName).
+        assert canonical_model_name(card["name"]) == "gemma4:12b-it-qat"
+
+    def test_card_urls_are_https_ollama_pages(self) -> None:
+        """Every url the catalogue carries must be an https Ollama library
+        page (the card links it for manual download)."""
+        for m in RECOMMENDED_OLLAMA_MODELS:
+            if "url" in m:
+                assert m["url"].startswith("https://ollama.com/library/"), m["url"]
+
+
 class TestCanonicalName:
     def test_explicit_quant_tags_are_kept(self) -> None:
         assert canonical_model_name("gemma4:e4b") == "gemma4:e4b"

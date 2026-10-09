@@ -17,6 +17,7 @@
 //! without first building the PyInstaller bundle.
 
 use std::process::{Child, Command, Stdio};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
@@ -311,6 +312,20 @@ struct EngineSidecar {
     // same rich diagnostic treatment as an immediate one, instead of a
     // generic timeout.
     stderr_log_path: Mutex<Option<std::path::PathBuf>>,
+    // v1.2.12 (rc6 field report: classroom toggle still reset the engine):
+    // serializes full restarts so two racing self-heal calls (e.g. several
+    // webview queries failing during the same boot window) can never kill
+    // each other's freshly spawned engine. Held across shutdown → spawn →
+    // health-wait; queued callers re-probe health once they hold it.
+    restart_lock: Mutex<()>,
+    // v1.2.12 (rc6): true once the engine has answered /health in this app
+    // session (spawn-time cross-process hit, or any successful health probe).
+    // Lets ensure_engine distinguish "still BOOTING" (child process alive,
+    // never healthy yet: WAIT for it — killing a booting engine resets its
+    // whole startup and was the startup engine-reset report) from "died or
+    // wedged mid-session" (healthy once before: brief grace, then a real
+    // restart is the correct self-heal).
+    was_healthy: AtomicBool,
 }
 
 impl EngineSidecar {
@@ -318,6 +333,20 @@ impl EngineSidecar {
         Self {
             child: Mutex::new(None),
             stderr_log_path: Mutex::new(None),
+            restart_lock: Mutex::new(()),
+            was_healthy: AtomicBool::new(false),
+        }
+    }
+
+    /// v1.2.12 (rc6): true when the shell owns a child engine process that
+    /// has not exited yet. `try_wait()` returns Ok(None) while running,
+    /// Ok(Some(status)) once exited; a None child slot (never spawned, or
+    /// reaped) counts as not alive.
+    fn child_alive(&self) -> bool {
+        let child_opt = self.child.lock().unwrap();
+        match child_opt.as_mut() {
+            Some(child) => matches!(child.try_wait(), Ok(None)),
+            None => false,
         }
     }
 
@@ -344,6 +373,10 @@ impl EngineSidecar {
                     "engine already running on port {} (likely from another CorpusMind app) - connecting instead of spawning",
                     ENGINE_PORT
                 );
+                // v1.2.12 (rc6): an engine we can talk to IS healthy — record
+                // it so ensure_engine's boot-wait logic knows this session has
+                // seen a healthy engine even though we own no child process.
+                self.was_healthy.store(true, Ordering::Relaxed);
                 return Ok(());
             }
         }
@@ -738,6 +771,10 @@ impl EngineSidecar {
             match client.get(&url).send() {
                 Ok(r) if r.status().is_success() => {
                     info!(target: "sidecar", "engine healthy after {:?}", start.elapsed());
+                    // v1.2.12 (rc6): flip the session health flag so
+                    // ensure_engine treats later probe failures as a
+                    // died/wedged engine (grace + restart), not a booting one.
+                    self.was_healthy.store(true, Ordering::Relaxed);
                     return Ok(());
                 }
                 Ok(r) => warn!(target: "sidecar", "health check returned {}", r.status()),
@@ -873,13 +910,41 @@ async fn ollama_health() -> String {
     }
 }
 
-/// Probe the engine and restart it ONLY if it is actually down (v1.2.5).
+// v1.2.12 (rc6 field reports: "engine keeps resetting at startup" + the
+// classroom toggle still resetting the engine on slow machines): the old
+// ensure_engine answered a SINGLE failed 3s probe with a full engine restart.
+// On a machine where the sidecar boots for 10-60 s (PyInstaller one-file
+// extraction + real-time antivirus) every early webview request failed, so
+// the shell killed and respawned the BOOTING engine — resetting its startup
+// progress, killing any classroom session the restart had just spawned, and
+// repeating as long as requests kept failing. The constants below give the
+// state machine honest budgets instead:
+//   - a child that exists but has never answered health is BOOTING: wait for
+//     it (the shell's own boot budget, HEALTH_TIMEOUT, is 120 s — 60 s here
+//     keeps the self-heal strictly inside that envelope),
+//   - an engine that WAS healthy this session gets one short grace re-probe
+//     before any restart (a busy event loop can outrun a single probe),
+//   - only a genuinely exited/gone child restarts immediately.
+const ENSURE_BOOT_WAIT: Duration = Duration::from_secs(60);
+const ENSURE_BOOT_POLL: Duration = Duration::from_millis(500);
+const ENSURE_WEDGE_GRACE: Duration = Duration::from_secs(2);
+
+/// Probe the engine and self-heal ONLY genuinely dead engines (v1.2.5).
 /// Callable from the webview whenever a request fails at the connection
 /// level ("error sending request"): boot races (the webview is interactive
 /// while the sidecar is still extracting/booting) and mid-session deaths
-/// both heal here, on every platform, without user intervention. Reuses the
-/// full restart path (shutdown → spawn → wait_for_health → diagnostics) so
-/// the result carries the same fields as restart_engine.
+/// both heal here, on every platform, without user intervention.
+///
+/// v1.2.12 (rc6) state machine — never kill a live engine on a failed probe:
+///   1. health OK → remember the session saw a healthy engine, return.
+///   2. child process gone/none → full restart (restart_engine serializes
+///      and re-checks health first, so exactly one restart runs).
+///   3. child alive + was healthy this session → transient stall most
+///      likely: one grace re-probe, restart only if STILL unreachable.
+///   4. child alive + never healthy → the engine is BOOTING: poll up to
+///      ENSURE_BOOT_WAIT and let the request retry land on the warm engine.
+/// Reuses the full restart path (shutdown → spawn → wait_for_health →
+/// diagnostics) so the result carries the same fields as restart_engine.
 #[tauri::command]
 async fn ensure_engine(app: tauri::AppHandle) -> String {
     let health_url = format!("http://{ENGINE_HOST}:{ENGINE_PORT}/api/v1/health");
@@ -887,9 +952,20 @@ async fn ensure_engine(app: tauri::AppHandle) -> String {
         .timeout(Duration::from_secs(3))
         .no_proxy()
         .build();
-    if let Ok(client) = probe {
+    let client = match probe {
+        Ok(c) => c,
+        // No HTTP client at all (TLS init failure): fall back to the full
+        // restart path, whose own diagnostics speak for this state.
+        Err(_) => return restart_engine(app).await,
+    };
+
+    let sidecar: State<EngineSidecar> = app.state();
+    let started = Instant::now();
+    let mut gave_grace = false;
+    loop {
         if let Ok(r) = client.get(&health_url).send().await {
             if r.status().is_success() {
+                sidecar.was_healthy.store(true, Ordering::Relaxed);
                 return serde_json::json!({
                     "restarted": false,
                     "engine_running": true,
@@ -898,74 +974,159 @@ async fn ensure_engine(app: tauri::AppHandle) -> String {
                 .to_string();
             }
         }
+
+        // The probe failed. Decide WAIT vs RESTART from process liveness,
+        // never from the probe alone. (restart_engine takes a CLONE: the
+        // `sidecar` state below borrows `app` for the whole loop.)
+        if !sidecar.child_alive() {
+            info!(target: "sidecar", "ensure_engine: engine process is gone - restarting");
+            return restart_engine(app.clone()).await;
+        }
+
+        if sidecar.was_healthy.load(Ordering::Relaxed) {
+            // Healthy earlier this session: a single failed probe is usually
+            // a transient stall (busy loop, slow disk burst). One grace
+            // re-probe, then treat it as genuinely wedged/dead.
+            if !gave_grace {
+                gave_grace = true;
+                tokio::time::sleep(ENSURE_WEDGE_GRACE).await;
+                continue;
+            }
+            info!(target: "sidecar", "ensure_engine: engine unreachable past grace window - restarting");
+            return restart_engine(app.clone()).await;
+        }
+
+        // Child alive, never healthy: BOOTING. Wait for it instead of
+        // resetting its startup (the rc6 field report: every early request
+        // used to respawn the engine, which read as "engine keeps resetting").
+        if started.elapsed() > ENSURE_BOOT_WAIT {
+            warn!(
+                target: "sidecar",
+                "ensure_engine: engine still booting after {:?} - giving up without restarting",
+                started.elapsed()
+            );
+            return serde_json::json!({
+                "restarted": false,
+                "engine_running": false,
+                "message": "The engine process is running but has not finished starting yet. Give it a few more seconds; if it never comes up, check Settings → System for the engine logs."
+            })
+            .to_string();
+        }
+        tokio::time::sleep(ENSURE_BOOT_POLL).await;
     }
-    info!(target: "sidecar", "ensure_engine: health probe failed - restarting engine");
-    restart_engine(app).await
 }
 
-/// Restart the engine sidecar — callable from the UI "Recheck" button.
-/// Shuts down any existing engine process, then spawns a new one.
+/// Restart the engine sidecar — callable from the UI "Recheck" button (and
+/// by ensure_engine when the engine is genuinely gone or wedged).
+///
+/// v1.2.12 (rc6): the WHOLE restart — health double-check, shutdown, spawn,
+/// health wait — runs inside ONE blocking task serialized by restart_lock.
+/// Racing callers (several failed webview requests during the same boot
+/// window used to each kill the previous caller's fresh engine — the
+/// "engine keeps resetting" storm) queue on the lock, re-probe health once
+/// they hold it, and find the engine the first caller just started:
+/// exactly one restart, ever.
+enum RestartOutcome {
+    /// Double-check found a healthy engine (another caller fixed it first).
+    AlreadyHealthy,
+    /// shutdown + spawn + health-wait all succeeded.
+    Restarted,
+    /// spawn() could not launch a new engine.
+    SpawnFailed(SidecarError),
+    /// The new engine died mid-wait or never became healthy.
+    Unhealthy(SidecarError),
+}
+
 #[tauri::command]
 async fn restart_engine(app: tauri::AppHandle) -> String {
-    let sidecar: State<EngineSidecar> = app.state();
+    let handle = app.clone();
+    let outcome = tauri::async_runtime::spawn_blocking(move || {
+        let sidecar = handle.state::<EngineSidecar>();
+        let _guard = sidecar.restart_lock.lock().unwrap();
 
-    // Shut down existing engine
-    sidecar.shutdown();
-
-    // Small delay to let the port free up
-    std::thread::sleep(Duration::from_millis(500));
-
-    // Spawn new engine
-    match sidecar.spawn(&app) {
-        Ok(()) => {
-            // Wait for health in a blocking thread
-            let handle = app.clone();
-            let result = tauri::async_runtime::spawn_blocking(move || {
-                let sidecar_ref = handle.state::<EngineSidecar>();
-                sidecar_ref.wait_for_health()
-            }).await;
-
-            match result {
-                Ok(Ok(())) => serde_json::json!({
-                    "ok": true,
-                    "engine_running": true,
-                    "message": "Engine restarted successfully"
-                }).to_string(),
-                // FIX 10 Step 4: Surface the died-mid-wait detail in the
-                // Recheck button's returned message, and write to stderr log.
-                Ok(Err(SidecarError::Health(msg))) => {
-                    if let Ok(log_dir) = app.path().app_log_dir() {
-                        let _ = std::fs::write(
-                            log_dir.join("engine.stderr.log"),
-                            format!("CorpusMind engine died while starting up.\n\n{msg}\n"),
-                        );
-                    }
-                    serde_json::json!({
-                        "ok": false,
-                        "engine_running": false,
-                        "message": format!("Engine started but died during health check: {msg}")
-                    }).to_string()
+        // Double-check under the lock: a queued caller usually arrives here
+        // AFTER the first caller's engine is already up. Never kill a
+        // healthy engine (a restart also flushes the warm bge-m3 embedding
+        // model — the same reason the macOS Reopen handler avoids
+        // needless restarts).
+        if let Ok(c) = reqwest::blocking::Client::builder()
+            .timeout(Duration::from_secs(2))
+            .no_proxy()
+            .build()
+        {
+            if let Ok(r) = c
+                .get(format!("http://{ENGINE_HOST}:{ENGINE_PORT}/api/v1/health"))
+                .send()
+            {
+                if r.status().is_success() {
+                    sidecar.was_healthy.store(true, Ordering::Relaxed);
+                    return RestartOutcome::AlreadyHealthy;
                 }
-                Ok(Err(e)) => serde_json::json!({
-                    "ok": false,
-                    "engine_running": false,
-                    "message": format!("Engine started but health check failed: {}", e)
-                }).to_string(),
-                Err(e) => serde_json::json!({
-                    "ok": false,
-                    "engine_running": false,
-                    "message": format!("Health check task panicked: {}", e)
-                }).to_string(),
             }
         }
-        Err(e) => {
+
+        // Shut down existing engine
+        sidecar.shutdown();
+
+        // Small delay to let the port free up
+        std::thread::sleep(Duration::from_millis(500));
+
+        // Spawn the new engine and wait for health — both blocking, both
+        // under the lock, so a restart is atomic from the webview's view.
+        match sidecar.spawn(&handle) {
+            Ok(()) => match sidecar.wait_for_health() {
+                Ok(()) => RestartOutcome::Restarted,
+                Err(e) => RestartOutcome::Unhealthy(e),
+            },
+            Err(e) => RestartOutcome::SpawnFailed(e),
+        }
+    })
+    .await;
+
+    match outcome {
+        Ok(RestartOutcome::AlreadyHealthy) => serde_json::json!({
+            "ok": true,
+            "engine_running": true,
+            "message": "Engine is already running"
+        })
+        .to_string(),
+        Ok(RestartOutcome::Restarted) => serde_json::json!({
+            "ok": true,
+            "engine_running": true,
+            "message": "Engine restarted successfully"
+        })
+        .to_string(),
+        // FIX 10 Step 4: Surface the died-mid-wait detail in the
+        // Recheck button's returned message, and write to stderr log.
+        Ok(RestartOutcome::Unhealthy(SidecarError::Health(msg))) => {
+            if let Ok(log_dir) = app.path().app_log_dir() {
+                let _ = std::fs::write(
+                    log_dir.join("engine.stderr.log"),
+                    format!("CorpusMind engine died while starting up.\n\n{msg}\n"),
+                );
+            }
+            serde_json::json!({
+                "ok": false,
+                "engine_running": false,
+                "message": format!("Engine started but died during health check: {msg}")
+            })
+            .to_string()
+        }
+        Ok(RestartOutcome::Unhealthy(e)) => serde_json::json!({
+            "ok": false,
+            "engine_running": false,
+            "message": format!("Engine started but health check failed: {}", e)
+        })
+        .to_string(),
+        Ok(RestartOutcome::SpawnFailed(e)) => {
             // Return diagnostic info about what was tried
-            let (program, args, wd) = sidecar.resolve_command(&app);
+            let sidecar: State<EngineSidecar> = app.state();
             // FIX 9: Tailor the hint to which resolution branch was used.
             // The dev-venv hint is only useful when running `python -m app.main`
             // from Documents\CorpusMind\engine\. For the bundled sidecar exe
             // (the common case for installed users), the hint should point at
             // VC++ Redistributable + antivirus — matching Fix 1's guidance.
+            let (program, args, wd) = sidecar.resolve_command(&app);
             let is_bundled = program.ends_with("corpusmind-engine.exe")
                 || program.ends_with("corpusmind-engine");
             let hint = if is_bundled {
@@ -986,8 +1147,15 @@ async fn restart_engine(app: tauri::AppHandle) -> String {
                     "working_dir": wd.map(|d| d.display().to_string()).unwrap_or_else(|| "(none)".to_string()),
                     "hint": hint
                 }
-            }).to_string()
+            })
+            .to_string()
         }
+        Err(e) => serde_json::json!({
+            "ok": false,
+            "engine_running": false,
+            "message": format!("Health check task panicked: {}", e)
+        })
+        .to_string(),
     }
 }
 

@@ -2891,6 +2891,9 @@ export interface OllamaModel {
   /** v1.2.0: machine-aware rule-of-thumb fit badge (curated rows too). */
   fit?: "gpu" | "cpu" | "tight" | "too-big" | "unknown" | string;
   fit_note?: string;
+  /** v1.2.12: upstream page for manual download (e.g. the Ollama library
+   * tag page). Optional — in-app Download pulls by name regardless. */
+  url?: string;
 }
 
 // ----------------------------------------------------------------------- //

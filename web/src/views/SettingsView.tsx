@@ -1324,6 +1324,19 @@ function OllamaModelManager({ ollamaHealthy }: { ollamaHealthy: boolean }) {
                 )}
                 {m.fit && <FitChip fit={m.fit} fitNote={m.fit_note} />}
                 {m.languages.includes("ar") && <span className="ollama-meta-tag ar">Arabic</span>}
+                {/* v1.2.12: upstream page (e.g. the Ollama library tag page) for
+                    manual download — the in-app button pulls by name regardless. */}
+                {m.url && (
+                  <a
+                    className="ollama-meta-tag ollama-model-url"
+                    href={m.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    title={`Open the upstream page for ${m.name}`}
+                  >
+                    ollama.com ↗
+                  </a>
+                )}
               </div>
               {isPulling && (
                 <div className="ollama-pull-progress">

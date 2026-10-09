@@ -78,6 +78,28 @@ once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 - The classroom status payload's Ollama `/api/ps` probe timeout is 1 s
   (was 3 s); it runs on a 5 s poll and must never stack up behind a slow
   probe.
+- **The desktop shell no longer restarts an engine that is merely still
+  starting** (field report: "when restarting the app, I get these two
+  error messages" + the classroom toggle still resetting the engine). The
+  shell's self-heal used to answer a single failed 3 s health probe with a
+  full engine restart, so on machines where the sidecar boots for tens of
+  seconds (PyInstaller extraction + antivirus) every early webview request
+  killed and respawned the booting engine — resetting startup progress,
+  surfacing raw "error sending request for url …" errors, and killing any
+  classroom session a restart had just created. `ensure_engine` is now a
+  small state machine: it waits (60 s) for a live-but-booting engine
+  instead of killing it; an engine that was already healthy this session
+  gets one grace re-probe before any restart; only a genuinely exited
+  process restarts immediately; and concurrent restarts are serialized
+  under a shell-side lock that re-checks health first, so exactly one
+  restart runs no matter how many requests asked for one.
+- **The `gemma3:27b` card in Settings → Model Providers is replaced by
+  `gemma4:12b-it-qat`.** The 27 B model needed 24 GB+ RAM, beyond most
+  classroom and office machines; the Gemma 4 12B QAT card carries
+  workstation quality at a 7.2 GB download / ~8 GB RAM (tag page verified
+  2026-10-09: 11.9B params, QAT Q4_0 + CLIP projector, Apache-2.0). The
+  in-app Download button pulls it natively through Ollama, and the card
+  links its upstream page (`url` field) for manual download.
 - **The first Arabic analysis after an engine start no longer fails with a
   30 s timeout on slow machines.** The ~400 MB calima morphology DB load
   (cold disk + real-time antivirus) can take minutes — far past the old

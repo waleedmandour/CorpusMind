@@ -240,18 +240,7 @@ RECOMMENDED_OLLAMA_MODELS: list[dict] = [
         "recommended": False,
         "task": "text",
     },
-    {
-        "name": "gemma3:27b",
-        "size": "17 GB",
-        "size_bytes": 17000000000,
-        "params": "27B",
-        "ram": "24 GB",
-        "description": "Google Gemma 3 27B - flagship quality, needs 24 GB+ RAM. Best for complex interpretive tasks. Multilingual.",
-        "languages": ["en", "ar", "fr", "de", "es", "ja", "ko", "zh"],
-        "recommended": False,
-        "task": "text",
-    },
-    # --- Google Gemma 4 (v1.2.11) ---
+    # --- Google Gemma 4 (v1.2.11; 12B QAT card v1.2.12 replaces gemma3:27b) ---
     # Tags, sizes, context windows, and capabilities verified on
     # ollama.com/library/gemma4 (+ /tags) on 2026-10-07; multilingual
     # claim ("140+ languages pre-trained, 35+ out-of-the-box") and the
@@ -262,6 +251,27 @@ RECOMMENDED_OLLAMA_MODELS: list[dict] = [
     # -it-bf16); the recommended quantization is noted in each
     # description. The model is pulled by the user through Ollama —
     # never bundled.
+    #
+    # v1.2.12: gemma3:27b (17 GB, 24 GB+ RAM) was beyond most classroom
+    # and office machines and is replaced by the Gemma 4 12B QAT card.
+    # Tag page verified 2026-10-09: ollama.com/library/gemma4:12b-it-qat —
+    # "model arch gemma4 · parameters 11.9B · quantization Q4_0 · 7.0GB"
+    # + "projector arch clip · parameters 52.4M · quantization BF16 ·
+    # 175MB" = 7.2 GB total download, license Apache, digest
+    # 38044be4f923. Ollama pulls it natively by tag; the browser URL for
+    # manual download is the tag page itself.
+    {
+        "name": "gemma4:12b-it-qat",
+        "size": "7.2 GB",
+        "size_bytes": 7200000000,
+        "params": "12B (11.9B, QAT Q4_0)",
+        "ram": "8 GB",
+        "description": "Google Gemma 4 12B QAT - workstation quality at a third of the fp16 download: quantization-aware training keeps Q4_0 quality close to full precision. 256K context, text+image input, tool calling. Multilingual (140+ languages pre-trained). Apache-2.0.",
+        "languages": ["en", "ar", "ur", "hi", "fa", "fr", "de", "es", "zh"],
+        "recommended": False,
+        "task": "text",
+        "url": "https://ollama.com/library/gemma4:12b-it-qat",
+    },
     {
         "name": "gemma4:e2b",
         "size": "4.3-10 GB",

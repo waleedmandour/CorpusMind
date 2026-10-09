@@ -4922,6 +4922,16 @@ html[dir="rtl"] .toggle-switch input:checked + .toggle-slider::before {
   color: var(--brand-600);
   font-weight: 600;
 }
+/* v1.2.12: the upstream-download link chip on curated model cards
+   (anchor needs its own colour + hover, spans above inherit theirs). */
+a.ollama-model-url {
+  color: var(--brand-600);
+  text-decoration: none;
+  cursor: pointer;
+}
+a.ollama-model-url:hover {
+  text-decoration: underline;
+}
 .ollama-pull-btn {
   align-self: flex-start;
   font-size: 12px;
