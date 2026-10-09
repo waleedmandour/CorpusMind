@@ -343,7 +343,7 @@ impl EngineSidecar {
     /// Ok(Some(status)) once exited; a None child slot (never spawned, or
     /// reaped) counts as not alive.
     fn child_alive(&self) -> bool {
-        let child_opt = self.child.lock().unwrap();
+        let mut child_opt = self.child.lock().unwrap();
         match child_opt.as_mut() {
             Some(child) => matches!(child.try_wait(), Ok(None)),
             None => false,
