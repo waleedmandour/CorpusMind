@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.corpora import resolve_subcorpus_document_ids
 from api.wordlists import resolve_stopword_set
+from stats.cql import CqlSyntaxError, search_concordance_cql
 from stats.service import (
     compute_collocations,
     compute_corpus_readability,
@@ -84,6 +85,64 @@ async def concordance(cid: str, body: ConcordanceRequest, session: AsyncSession 
         normalize=body.normalize,
         zwnj=body.zwnj,
     )
+    return {
+        "lines": [asdict(l) for l in result.lines],
+        "total": result.total,
+        "query": result.query,
+    }
+
+
+class CqlRequest(BaseModel):
+    """CQL-lite concordance request (Phase 1 — no schema change).
+
+    Grammar and semantics are documented in stats/cql.py. The response shape
+    is identical to POST /corpora/{cid}/concordance so clients render CQL
+    results with the existing KWIC components.
+    """
+
+    query: str = Field(
+        ...,
+        min_length=1,
+        description='CQL-lite query, e.g. [lemma="take"] []{0,3} "risk" within sentence',
+    )
+    window: int = Field(5, ge=1, le=20)
+    limit: int = Field(100, ge=1, le=1000)
+    offset: int = Field(0, ge=0)
+    subcorpus_id: str | None = None
+    random_sample: int | None = Field(None, ge=1, le=10000)
+    sample_seed: int | None = None
+    sort: list[SortSpec] | None = None
+    normalize: bool | None = None       # v1.2.11: language-appropriate normalization
+    normalize_arabic: bool = False      # v1.2.0: legacy Arabic folding
+    zwnj: Literal["keep", "space", "strip"] = "keep"
+
+
+@router.post("/corpora/{cid}/concordance/cql")
+async def concordance_cql(cid: str, body: CqlRequest, session: AsyncSession = Depends(get_session)) -> dict:
+    """CQL-lite concordance: token-attribute sequences, gaps, alternation,
+    quantifiers, and sentence/document scoping over the stored token stream.
+
+    Invalid queries return 422 with a position-annotated syntax message.
+    """
+    if not await session.get(Corpus, cid):
+        raise HTTPException(404, "Corpus not found")
+    document_ids = (
+        await resolve_subcorpus_document_ids(session, body.subcorpus_id)
+        if body.subcorpus_id
+        else None
+    )
+    try:
+        result = await search_concordance_cql(
+            session, cid, body.query,
+            window=body.window, limit=body.limit, offset=body.offset,
+            document_ids=document_ids,
+            random_sample=body.random_sample, sample_seed=body.sample_seed,
+            sort=[s.model_dump() for s in body.sort] if body.sort else None,
+            normalize=body.normalize, normalize_arabic=body.normalize_arabic,
+            zwnj=body.zwnj,
+        )
+    except CqlSyntaxError as exc:
+        raise HTTPException(422, detail=f"Invalid CQL query: {exc}") from exc
     return {
         "lines": [asdict(l) for l in result.lines],
         "total": result.total,
