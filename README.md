@@ -1,6 +1,6 @@
 # CorpusMind
 
-[![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.23052753-blue)](https://doi.org/10.5281/zenodo.23052753)
+[![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.23265315-blue)](https://doi.org/10.5281/zenodo.23265315)
 [![License: AGPL-3.0-only](https://img.shields.io/badge/License-AGPL--3.0--only-blue.svg)](https://www.gnu.org/licenses/agpl-3.0.html)
 [![GitHub release](https://img.shields.io/badge/release-v1.2.11-blue)](https://github.com/waleedmandour/CorpusMind/releases)
 [![CI](https://github.com/waleedmandour/CorpusMind/actions/workflows/ci.yml/badge.svg)](https://github.com/waleedmandour/CorpusMind/actions/workflows/ci.yml)
