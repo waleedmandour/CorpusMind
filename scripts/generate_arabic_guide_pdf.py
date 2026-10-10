@@ -18,7 +18,7 @@ from reportlab.pdfbase.pdfmetrics import registerFontFamily
 import arabic_reshaper
 from bidi.algorithm import get_display
 
-# v1.2.12: the guide version is read from the engine itself so a guide can
+# v1.2.13-1: the guide version is read from the engine itself so a guide can
 # never be regenerated against a stale number (the release pipeline rejects
 # a version mismatch; this makes the mismatch structurally impossible).
 _REPO = Path(__file__).resolve().parent.parent

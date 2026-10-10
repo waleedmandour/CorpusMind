@@ -1,3 +1,61 @@
+## [1.2.13-1] — 2026-10-11 — CQL-lite pre-release (Phase 1) + Arabic Tools export
+
+> Pre-release of 1.2.13, cut for field testing before the final rebuild. Tag:
+> `v1.2.13-1` (numeric-only semver pre-release — the MSI bundler accepts
+> numeric-only pre-release identifiers). Installers publish marked as a
+> GitHub pre-release.
+
+### Added
+- **CQL-lite corpus query language, Phase 1 (engine).** A CQP-flavoured query
+  language for the concordancer: token-attribute sequences with gaps and
+  quantifiers, exactly what Sketch Engine / CWB users expect to type first.
+  `engine/stats/cql.py` (~1,000 lines: lexer + recursive-descent parser +
+  backtracking stream matcher + SQL anchor prefilter) and
+  `POST /api/v1/corpora/{cid}/concordance/cql`. Grammar: quoted literals with
+  wildcards (`"risk*"`), token specs over eight attributes (`word`, `lemma`,
+  `pos` (UPOS), `xpos`, `rel`, `morph`, `root`, `pattern`) with `&`/`|`
+  combinations and `/regex/` values, any-token `[]`, quantifiers `? * + {m,n}`,
+  groups with alternation `(cat|dog)*`, `%c` (ignore case) and `%d` (fold
+  diacritics) flags, and `within sentence | document` scoping. Arabic root and
+  pattern are queryable attributes — something CQPweb does not offer out of the
+  box. No schema change; invalid queries return 422 with a position-annotated
+  message; KWIC window, sort, seeded sampling, pagination and the match-set
+  cap integrate unchanged.
+- **Concordancer CQL mode (web).** A Simple|CQL toggle on the concordancer:
+  CQL mode swaps the level/regex/case controls for the pattern box (CQL is
+  case-sensitive by CQP convention; flags are part of the query), shows a
+  one-line syntax crib, renders results through the existing KWIC table,
+  surfaces syntax errors from the engine's detail, and exports the fetched
+  lines client-side (the export endpoint re-runs a *simple* query and cannot
+  represent a CQL pattern).
+- **Arabic Tools export.** The Arabic Tools window can now export every tool
+  result — morphology, roots, clitics, Buckwalter, dediacritized, normalized,
+  dialect ID, register, translate — as xlsx / csv / tsv / txt / json via the
+  same Export dropdown as the analysis panels. Table tools export their
+  on-screen columns; text tools export an original/result pair; distributions
+  export a sorted probability table. CSV/TSV carry a UTF-8 BOM so Arabic opens
+  cleanly in Excel/Sheets.
+- **Release workflow.** A tag containing a pre-release suffix publishes as a
+  GitHub pre-release, and the guide-attachment gate strips any pre-release
+  suffix (not just `-rcN`) when comparing the tag to the committed guide.
+
+### Changed
+- The Issue 5 client-side export helpers moved from `AnalysisView` to the
+  shared `lib/resultExport` module so every exporting view uses one
+  serialization path (and so the Arabic/CQL shaping is unit-testable).
+- The concordance query layer no longer retries at the TanStack level: a 422
+  is deterministic and retrying only delayed the same message (connection-
+  level restarts remain handled inside the fetch layer).
+
+### Tests
+- Engine: `engine/tests/test_cql.py` (19 tests) — parser accept/reject,
+  canonical round-trip, matcher semantics, Arabic root/pattern +
+  normalization, fetch-cap metadata, pagination/sort/sampling, endpoint
+  200/422/404.
+- Web: `web/src/__tests__/result-export.test.tsx` (19 tests) — per-tool
+  Arabic table shaping, BOM/quoting/escaping, export dropdown wiring,
+  CQL mode end-to-end with a mocked engine (happy path + 422 detail).
+
 # Changelog
 
 All notable changes to CorpusMind are documented in this file.

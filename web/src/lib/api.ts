@@ -1869,6 +1869,43 @@ export const api = {
       }),
     }),
 
+  // --- v1.2.13-1: CQL-lite concordance (engine: engine/stats/cql.py) ---
+  // Same response shape as `concordance` (ConcordanceResult) so the existing
+  // KWIC table renders the lines; `query.mode === "cql"` in the payload
+  // marks the echo metadata. Invalid queries reject with the engine's
+  // position-annotated 422 detail ("Invalid CQL query: …").
+  concordanceCql: (
+    cid: string,
+    req: {
+      query: string;
+      window?: number;
+      limit?: number;
+      offset?: number;
+      subcorpus_id?: string | null;
+      random_sample?: number | null;
+      sample_seed?: number | null;
+      sort?: ConcordanceSortSpec[] | null;
+      normalize?: boolean | null;
+      normalize_arabic?: boolean;
+      zwnj?: "keep" | "space" | "strip";
+    },
+  ) =>
+    jsonFetch<ConcordanceResult>(`/api/v1/corpora/${cid}/concordance/cql`, {
+      method: "POST",
+      body: JSON.stringify({
+        query: req.query,
+        window: req.window,
+        limit: req.limit,
+        offset: req.offset,
+        ...(req.subcorpus_id ? { subcorpus_id: req.subcorpus_id } : {}),
+        ...(req.random_sample ? { random_sample: req.random_sample, ...(req.sample_seed != null ? { sample_seed: req.sample_seed } : {}) } : {}),
+        ...(req.sort && req.sort.length ? { sort: req.sort } : {}),
+        ...(req.normalize ? { normalize: true } : {}),
+        ...(req.normalize_arabic ? { normalize_arabic: true } : {}),
+        ...(req.zwnj ? { zwnj: req.zwnj } : {}),
+      }),
+    }),
+
   // --- v1.2.0: Vector KWIC (Anthony 2025) ---
   vectorKwic: (
     cid: string,

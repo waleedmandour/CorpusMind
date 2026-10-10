@@ -354,6 +354,8 @@ jobs:
       - name: Attach to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          # Pre-release tags (e.g. v1.2.13-1) must not publish as full releases.
+          prerelease: ${{ contains(github.ref_name, '-') }}
           files: |
             desktop/src-tauri/target/release/bundle/nsis/*.exe
             desktop/src-tauri/target/release/bundle/msi/*.msi
@@ -558,6 +560,8 @@ jobs:
       - name: Attach to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          # Pre-release tags (e.g. v1.2.13-1) must not publish as full releases.
+          prerelease: ${{ contains(github.ref_name, '-') }}
           files: |
             desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
           fail_on_unmatched_files: true  # Issue 14: a silently-empty release must fail
@@ -755,6 +759,8 @@ jobs:
       - name: Attach to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          # Pre-release tags (e.g. v1.2.13-1) must not publish as full releases.
+          prerelease: ${{ contains(github.ref_name, '-') }}
           files: |
             desktop/src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/*.dmg
           fail_on_unmatched_files: true  # Issue 14: a silently-empty release must fail
@@ -931,6 +937,8 @@ jobs:
       - name: Attach to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          # Pre-release tags (e.g. v1.2.13-1) must not publish as full releases.
+          prerelease: ${{ contains(github.ref_name, '-') }}
           files: |
             desktop/src-tauri/target/release/bundle/deb/*.deb
             desktop/src-tauri/target/release/bundle/appimage/*.AppImage
@@ -967,10 +975,11 @@ jobs:
           # v1.2.6 PDF because nothing asserted the guide matches the tag.
           # Refuse to publish when the newest committed guide is older
           # than the release tag (strip the leading v from both).
-          # v1.2.11-rc1: rc tags ship the FINAL-version guide, so strip a
-          # trailing -rcN suffix before comparing (v1.2.11-rc1 -> 1.2.11).
+          # v1.2.11-rc1: rc tags ship the FINAL-version guide; v1.2.13-1:
+          # any semver pre-release suffix is stripped before comparing
+          # (v1.2.11-rc1 -> 1.2.11, v1.2.13-1 -> 1.2.13).
           TAG_NUM="${{ github.ref_name }}"
-          TAG_NUM="${TAG_NUM%%-rc*}"
+          TAG_NUM="${TAG_NUM%%-*}"
           PDF_NUM=$(basename "$PDF" | sed -E 's/.*_v([0-9.]+)\.pdf/\1/')
           if [ "$PDF_NUM" != "${TAG_NUM#v}" ]; then
             echo "ERROR: newest guide PDF is v$PDF_NUM but release tag is ${TAG_NUM}"

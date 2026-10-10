@@ -160,6 +160,34 @@ BE06 frequency list.
 Each line has a stable ID (`doc:0:3`) that the AI Assistant can cite as
 evidence. Results export to five formats.
 
+### CQL mode (corpus query language, v1.2.13)
+
+Switch the concordancer from **Simple** to **CQL** to search for whole
+*patterns* instead of single nodes. The syntax is CQP-flavoured, so queries
+written for Sketch Engine or CWB transfer directly:
+
+- Literal words: `"risk"` — wildcards allowed: `"book*"`, `"coll??ate"`.
+- Token attributes: `[lemma="take"]`, `[pos="NOUN"]`, `[word="book" &
+  pos="NOUN"]` (`&` = and, `|` = or; `!=` for negation; `/…/` for regular
+  expressions: `[word=/colou?r/]`).
+- Attributes available: `word`, `lemma`, `pos` (UPOS), `xpos`, `rel` (UD
+  dependency), `morph` (features), and — for Arabic — `root` and `pattern`
+  (e.g. `[root="k.t.b"]`), which few corpus tools expose at all.
+- Sequences and gaps: `[lemma="take"] []{0,3} "risk"` (0–3 any-token gap),
+  quantifiers `?`, `+`, `{m,n}` and star (zero-or-more), groups with
+  alternation `(cat|dog)`.
+- Flags: `%c` ignore case, `%d` fold Arabic diacritics — inside or after a
+  token: `[lemma="kitab" %c]`. CQL is case-sensitive by default (CQP
+  convention); the Simple box is not.
+- Scoping: append `within sentence` (or `within document`) to constrain every
+  match; by default a sequence may cross a sentence boundary.
+
+Results render in the same KWIC table with sort, seeded sampling, pagination,
+and export. An invalid pattern returns the position of the error, e.g.
+*"Invalid CQL query: syntax error at position 12: …"*. Sequences match over
+the stored token stream with a 20,000-token candidate cap per query; the
+result panel flags when the total is a lower bound.
+
 ### Vector KWIC (Semantic Search)
 
 **Vector KWIC** finds lines by *meaning*, not just form: pick an embedding
@@ -340,6 +368,11 @@ Purpose-built for learner-corpus studies (Granger 1998; Housen & Kuiken
 - **Buckwalter / Dediacritize / Normalize**: script utilities.
 - **Register**: Classical / MSA / Dialectal detection.
 - **Translate**: Arabic–English lookup equivalents.
+- **Export** (v1.2.13): every tool result can be saved as xlsx / csv / tsv /
+  txt / json — the morphology, roots, and clitics tools export their
+  on-screen table columns; Buckwalter, dediacritized, and normalized export
+  an original/result pair; dialect and register export a probability table.
+  CSV/TSV files carry a UTF-8 BOM so Arabic opens cleanly in Excel/Sheets.
 
 Arabic normalization is also available inside corpus cleaning, and Arabic
 is supported end-to-end in Vector KWIC via the multilingual bge-m3 model.

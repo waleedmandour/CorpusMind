@@ -21,6 +21,13 @@ import { api } from "@/lib/api";
 import { t } from "@/lib/i18n";
 import { useUI } from "@/store/ui";
 import { ArabicDataPackCard } from "@/components/ArabicDataPackCard";
+// v1.2.13-1: Arabic Tools Export — the analysis results (morphology table,
+// roots, clitics, transliteration, dialect/register distributions) can now be
+// saved in the same xlsx/csv/tsv/txt/json formats as every other analysis
+// panel. Shaping lives in lib/resultExport so it is unit-testable and shared
+// with the other export paths.
+import { ExportButton } from "@/components/ExportButton";
+import { useExportStatus, downloadTable, arabicResultToTable } from "@/lib/resultExport";
 
 type Tool = "morphology" | "roots" | "clitics" | "buckwalter" | "dediac" | "normalize" | "dialect" | "register" | "translate";
 
@@ -134,6 +141,8 @@ export function ArabicView() {
   const [submitted, setSubmitted] = useState<{ text: string; tool: Tool; dialect: string; tagset: string } | null>(null);
   const lang = useUI((s) => s.lang);
   const queryClient = useQueryClient();
+  // v1.2.13-1: export feedback shared with the other analysis views.
+  const exportStatus = useExportStatus();
 
   const backends = useQuery({ queryKey: ["arabic-backends"], queryFn: ({ signal }) => api.arabicBackends(signal) });
 
@@ -332,6 +341,23 @@ export function ArabicView() {
       </div>
 
       {/* Result */}
+      {/* v1.2.13-1: Export above every tool result — the table tools export
+          their on-screen columns, the text tools a two-column original/result
+          pair, the distribution tools a probability table. */}
+      {result.data && (
+        <div className="result-export-bar">
+          <ExportButton
+            label={t(lang, "analysis_export")}
+            formats={["xlsx", "csv", "tsv", "txt", "json"]}
+            onExport={(fmt) => {
+              if (!result.data) return;
+              const { headers, rows } = arabicResultToTable(result.data);
+              void downloadTable(headers, rows, `arabic_${submitted?.tool ?? "tools"}.${fmt}`, exportStatus.set);
+            }}
+          />
+          {exportStatus.el}
+        </div>
+      )}
       {result.data && <ArabicResult result={result.data} />}
 
       {result.isError && <ArabicError error={result.error} />}

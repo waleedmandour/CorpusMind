@@ -982,6 +982,12 @@ export const translations = {
     arb_normalize: "Arabic normalization",
     arb_normalize_hint: "Unifies أ إ آ → ا, ة → ه, ى → ي and strips diacritics before matching/aggregation.",
 
+    // --- v1.2.13-1: CQL-lite query mode (Concordancer) -----------------------
+    cql_mode_simple: "Simple",
+    cql_mode_simple_hint: "Single-node search: word/lemma/POS (or root/pattern) with wildcards, regex, and whitespace phrases.",
+    cql_placeholder: 'CQL pattern, e.g. [lemma="take"] []{0,3} "risk" within sentence',
+    cql_hint: 'CQL: "literal" · [attr="val"] · [word="book" & pos="NOUN"] · [] any token · []{m,n} gap · (a|b) groups · ? * + {m,n} · %c ignore case · %d fold diacritics · within sentence|document. Attributes: word, lemma, pos, xpos, rel, morph, root, pattern.',
+
     // --- v1.2.0: User Guide — Companion Apps section --------------------------
     ug_companion_title: "Companion Apps",
     ug_companion_intro: "CorpusMind ships as a family. The main app covers text; the companions extend it to images and audio - all reading the same engine and data directory.",
@@ -2027,6 +2033,12 @@ export const translations = {
     // --- v1.2.0: مفتاح توحيد الرسم العربي (مشترك) ---
     arb_normalize: "توحيد الرسم العربي",
     arb_normalize_hint: "يوحّد أ إ آ ← ا، ة ← ه، ى ← ي ويزيل الحركات قبل المطابقة/الإحصاء.",
+
+    // --- v1.2.13-1: وضع استعلام CQL (المفردة) ---
+    cql_mode_simple: "بسيط",
+    cql_mode_simple_hint: "بحث بعقدة واحدة: كلمة/ lemma / POS (أو الجذر/الوزن) مع البدائل والتعبيرات النمطية والعبارات.",
+    cql_placeholder: 'نمط CQL، مثال: [lemma="take"] []{0,3} "risk" within sentence',
+    cql_hint: 'CQL: "نص" · [attr="قيمة"] · [word="book" & pos="NOUN"] · [] أي رمز · []{m,n} فجوة · (أ|ب) مجموعات · ? * + {m,n} · %c تجاهل الحالة · %d توحيد الحركات · within sentence|document. الخصائص: word، lemma، pos، xpos، rel، morph، root، pattern.',
 
     // --- v1.2.0: دليل المستخدم — قسم التطبيقات الرفيقة ---
     ug_companion_title: "التطبيقات الرفيقة",

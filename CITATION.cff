@@ -46,8 +46,8 @@ license: AGPL-3.0-only
 repository-code: "https://github.com/waleedmandour/CorpusMind"
 repository-artifact: "https://github.com/waleedmandour/CorpusMind/releases"
 url: "https://doi.org/10.5281/zenodo.21226650"
-version: 1.2.12
-date-released: 2026-10-07
+version: 1.2.13-1
+date-released: 2026-10-11
 identifiers:
   - type: doi
     value: "10.5281/zenodo.21226650"
@@ -66,7 +66,7 @@ preferred-citation:
   doi: "10.5281/zenodo.21226650"
   publisher:
     name: "Zenodo"
-  date-released: 2026-10-07
+  date-released: 2026-10-11
   keywords:
     - corpus linguistics
     - discourse analysis
