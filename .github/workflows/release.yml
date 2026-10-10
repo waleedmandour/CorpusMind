@@ -975,14 +975,19 @@ jobs:
           # v1.2.6 PDF because nothing asserted the guide matches the tag.
           # Refuse to publish when the newest committed guide is older
           # than the release tag (strip the leading v from both).
-          # v1.2.11-rc1: rc tags ship the FINAL-version guide; v1.2.13-1:
-          # any semver pre-release suffix is stripped before comparing
-          # (v1.2.11-rc1 -> 1.2.11, v1.2.13-1 -> 1.2.13).
-          TAG_NUM="${{ github.ref_name }}"
-          TAG_NUM="${TAG_NUM%%-*}"
-          PDF_NUM=$(basename "$PDF" | sed -E 's/.*_v([0-9.]+)\.pdf/\1/')
-          if [ "$PDF_NUM" != "${TAG_NUM#v}" ]; then
-            echo "ERROR: newest guide PDF is v$PDF_NUM but release tag is ${TAG_NUM}"
+          # v1.2.11-rc1: rc tags ship the FINAL-version guide (strip the
+          # pre-release suffix before comparing). v1.2.13-1: pre-release
+          # guides are named with the FULL pre-release version
+          # (CorpusMind_User_Guide_v1.2.13-1.pdf), so the extraction and
+          # the comparison accept a semver pre-release suffix on both
+          # sides: PDF 1.2.13-1 matches tag v1.2.13-1, and PDF 1.2.13
+          # still matches a pre-release tag of 1.2.13.
+          TAG_FULL="${{ github.ref_name }}"
+          TAG_FULL="${TAG_FULL#v}"
+          TAG_BASE="${TAG_FULL%%-*}"
+          PDF_NUM=$(basename "$PDF" | sed -E 's/.*_v([0-9.]+(-[0-9A-Za-z.]+)?)\.pdf/\1/')
+          if [ "$PDF_NUM" != "$TAG_FULL" ] && [ "$PDF_NUM" != "$TAG_BASE" ]; then
+            echo "ERROR: newest guide PDF is v$PDF_NUM but release tag is v$TAG_FULL"
             echo "Regenerate the User Guide for this version (scripts/generate_user_guide_pdf.py) and commit it."
             exit 1
           fi
