@@ -44,8 +44,8 @@ Work budget and deadline (v1.2.13-2)
 Matching runs off the event loop (``asyncio.to_thread``) under an explicit
 budget: a step counter (attribute tests + frontier expansions), a max span
 length, and a wall-clock deadline. Exceeding the step budget or span bound
-raises ``CqlTooExpensive`` (HTTP 422 with an actionable message); exceeding
-the deadline raises ``CqlDeadlineExceeded`` (HTTP 504). Regex tests are
+raises ``CqlTooExpensiveError`` (HTTP 422 with an actionable message); exceeding
+the deadline raises ``CqlDeadlineExceededError`` (HTTP 504). Regex tests are
 screened at parse time for catastrophic nested-quantifier patterns, and the
 budget/deadline backstop covers the rest. Students get a stricter budget
 (see api/analysis.py).
@@ -115,30 +115,31 @@ import unicodedata
 from collections import OrderedDict
 from dataclasses import dataclass, field
 
-from sqlalchemy import and_ as _and, func, or_ as _or, select
+from sqlalchemy import and_ as _and
+from sqlalchemy import func, select
+from sqlalchemy import or_ as _or
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.elements import ColumnElement
 
-from storage.models import Document, Token
 from stats.service import (
+    _CONCORDANCE_FETCH_CAP,
     ConcordanceLine,
     ConcordanceResult,
-    _CONCORDANCE_FETCH_CAP,
     _latest_version_id,
-    _morph_component_cond,
-    _norm_description,
     _Norm,
+    _norm_description,
     _resolve_norm,
     _sort_token,
     check_regex_safe,
 )
+from storage.models import Document, Token
 
 
 class CqlSyntaxError(ValueError):
     """A CQL-lite query could not be parsed or validated."""
 
 
-class CqlTooExpensive(ValueError):
+class CqlTooExpensiveError(ValueError):
     """The query exceeded the matcher work budget or span bound.
 
     Surfaced as HTTP 422 with an actionable message (bound the gaps,
@@ -146,7 +147,7 @@ class CqlTooExpensive(ValueError):
     """
 
 
-class CqlDeadlineExceeded(TimeoutError):
+class CqlDeadlineExceededError(TimeoutError):
     """The query exceeded the matcher wall-clock deadline. HTTP 504."""
 
 
@@ -172,7 +173,7 @@ STUDENT_MATCH_LIMITS = MatchLimits(max_steps=300_000, max_span=1_000, deadline_s
 class _Budget:
     """Mutable step counter + deadline for one match phase."""
 
-    __slots__ = ("max_steps", "max_span", "deadline", "steps")
+    __slots__ = ("deadline", "max_span", "max_steps", "steps")
 
     def __init__(self, limits: MatchLimits) -> None:
         self.max_steps = limits.max_steps
@@ -183,7 +184,7 @@ class _Budget:
     def spend(self, n: int = 1) -> None:
         self.steps += n
         if self.steps > self.max_steps:
-            raise CqlTooExpensive(
+            raise CqlTooExpensiveError(
                 f"query exceeded the matcher work budget ({self.max_steps:,} steps). "
                 "Narrow it: add a literal anchor (a quoted word), bound unbounded "
                 "gaps ([]* → []{0,50}), or scope with 'within sentence'."
@@ -192,14 +193,14 @@ class _Budget:
         # so between checks we never accumulate more than microseconds of
         # non-regex work. Catastrophic regexes are rejected at parse time.
         if (self.steps & 0x3FF) == 0 and time.monotonic() > self.deadline:
-            raise CqlDeadlineExceeded(
+            raise CqlDeadlineExceededError(
                 "query exceeded the matcher wall-clock deadline — narrow the "
                 "pattern (bound gaps, add a literal anchor, 'within sentence')"
             )
 
     def check_deadline(self) -> None:
         if time.monotonic() > self.deadline:
-            raise CqlDeadlineExceeded(
+            raise CqlDeadlineExceededError(
                 "query exceeded the matcher wall-clock deadline — narrow the "
                 "pattern (bound gaps, add a literal anchor, 'within sentence')"
             )
@@ -244,7 +245,7 @@ class AnyUnit:
 
 @dataclass(frozen=True, slots=True)
 class GroupUnit:
-    alts: tuple[tuple["Element", ...], ...]
+    alts: tuple[tuple[Element, ...], ...]
 
 
 @dataclass(frozen=True, slots=True)
@@ -957,8 +958,8 @@ def _match_all(
 ) -> list[tuple[str, int, int]]:
     """Match every anchor start; returns (doc, start, end_inclusive) spans.
 
-    Pure CPU — runs inside asyncio.to_thread. Raises CqlTooExpensive /
-    CqlDeadlineExceeded when the budget or deadline is hit.
+    Pure CPU — runs inside asyncio.to_thread. Raises CqlTooExpensiveError /
+    CqlDeadlineExceededError when the budget or deadline is hit.
     """
     budget = _Budget(limits)
     per_sentence = parsed.within == "sentence"
@@ -1131,7 +1132,7 @@ class CqlMatchSet:
 # Span cache: pagination must not re-run the matcher for every page. Keyed by
 # everything that changes the span set; capped LRU with a TTL and a global
 # span ceiling so memory stays bounded.
-_SPAN_CACHE: "OrderedDict[tuple, tuple[float, list[tuple[str, int, int]], bool]]" = OrderedDict()
+_SPAN_CACHE: OrderedDict[tuple, tuple[float, list[tuple[str, int, int]], bool]] = OrderedDict()
 _SPAN_CACHE_MAX_ENTRIES = 24
 _SPAN_CACHE_TTL_S = 600.0
 _SPAN_CACHE_MAX_SPANS = 2_000_000
@@ -1202,7 +1203,9 @@ async def _load_streams(
             )
         ).all()
         views: list[_TokenView] = []
-        for tok, fname in rows:
+        # B007 suppressed: fname IS used below the inner loop — every row in
+        # this query belongs to the same doc, so its last row names the doc.
+        for tok, fname in rows:  # noqa: B007
             index_of[tok.id] = len(views)
             views.append(
                 _TokenView(
@@ -1241,8 +1244,8 @@ async def find_cql_spans(
     Returns the earliest-ending span per start (ascending) plus the token
     streams, so consumers (concordance, export, AI tools, statistics over a
     CQL node, subcorpus-by-CQL) share one implementation with the same
-    budget/deadline guards. Raises CqlSyntaxError / CqlTooExpensive /
-    CqlDeadlineExceeded.
+    budget/deadline guards. Raises CqlSyntaxError / CqlTooExpensiveError /
+    CqlDeadlineExceededError.
     """
     parsed = parse_cql(query, cqp_compat=cqp_compat)
     if limits is None:
@@ -1425,8 +1428,8 @@ async def search_concordance_cql(
 ) -> ConcordanceResult:
     """CQL-lite KWIC search.
 
-    Raises CqlSyntaxError on invalid queries, CqlTooExpensive when the work
-    budget / span bound is hit (HTTP 422), CqlDeadlineExceeded on the
+    Raises CqlSyntaxError on invalid queries, CqlTooExpensiveError when the work
+    budget / span bound is hit (HTTP 422), CqlDeadlineExceededError on the
     wall-clock deadline (HTTP 504). Matching runs in a worker thread.
 
     Paging (v1.2.13-2): match spans are computed once (and cached per

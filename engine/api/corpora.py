@@ -765,12 +765,23 @@ async def create_subcorpus_from_cql(
     """
     if not await session.get(Corpus, cid):
         raise HTTPException(404, "Corpus not found")
-    from stats.cql import CqlSyntaxError, find_cql_spans
+    from stats.cql import (
+        CqlDeadlineExceededError,
+        CqlSyntaxError,
+        CqlTooExpensiveError,
+        find_cql_spans,
+    )
 
+    # Dry-run validation only — membership is re-resolved at analysis time so
+    # re-annotation keeps the filter honest. The match set itself is discarded.
     try:
-        match_set = await find_cql_spans(session, cid, body.query)
+        await find_cql_spans(session, cid, body.query)
     except CqlSyntaxError as exc:
         raise HTTPException(422, detail=f"Invalid CQL query: {exc}") from exc
+    except CqlTooExpensiveError as exc:
+        raise HTTPException(422, detail=f"CQL query too expensive: {exc}") from exc
+    except CqlDeadlineExceededError as exc:
+        raise HTTPException(504, detail=f"CQL query timed out: {exc}") from exc
     criteria = {"kind": "cql", "query": body.query}
     sc = Subcorpus(
         corpus_id=cid,
@@ -850,9 +861,9 @@ async def resolve_subcorpus_document_ids(session: AsyncSession, subcorpus_id: st
     # v1.2.13-2: CQL-defined subcorpus — documents with ≥1 match.
     if sc.filter_criteria.get("kind") == "cql":
         from stats.cql import (
-            CqlDeadlineExceeded,
+            CqlDeadlineExceededError,
             CqlSyntaxError,
-            CqlTooExpensive,
+            CqlTooExpensiveError,
             find_cql_spans,
         )
 
@@ -861,9 +872,9 @@ async def resolve_subcorpus_document_ids(session: AsyncSession, subcorpus_id: st
             return []
         try:
             match_set = await find_cql_spans(session, sc.corpus_id, query)
-        except (CqlSyntaxError, CqlTooExpensive) as exc:
+        except (CqlSyntaxError, CqlTooExpensiveError) as exc:
             raise HTTPException(422, detail=f"Subcorpus CQL query failed: {exc}") from exc
-        except CqlDeadlineExceeded as exc:
+        except CqlDeadlineExceededError as exc:
             raise HTTPException(504, detail=f"Subcorpus CQL query timed out: {exc}") from exc
         return sorted(match_set.per_document().keys())
     # Find documents whose meta matches the filter criteria

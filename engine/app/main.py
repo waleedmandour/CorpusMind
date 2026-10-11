@@ -30,6 +30,7 @@ from api import (
     phase6,
     reference_corpus,
     research,
+    saved_queries,
     system,
     troubleshoot,
     vision,
@@ -37,7 +38,6 @@ from api import (
     wordlists,
 )
 from api import (
-    saved_queries,
     server_mode as server_mode_routes,
 )
 from app import __version__, server_mode

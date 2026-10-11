@@ -12,11 +12,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from api.corpora import resolve_subcorpus_document_ids
 from api.wordlists import resolve_stopword_set
 from stats.cql import (
-    CqlDeadlineExceeded,
-    CqlSyntaxError,
-    CqlTooExpensive,
-    MatchLimits,
     STUDENT_MATCH_LIMITS,
+    CqlDeadlineExceededError,
+    CqlSyntaxError,
+    CqlTooExpensiveError,
+    MatchLimits,
     search_concordance_cql,
 )
 from stats.service import (
@@ -171,9 +171,9 @@ async def concordance_cql(
         )
     except CqlSyntaxError as exc:
         raise HTTPException(422, detail=f"Invalid CQL query: {exc}") from exc
-    except CqlTooExpensive as exc:
+    except CqlTooExpensiveError as exc:
         raise HTTPException(422, detail=f"CQL query too expensive: {exc}") from exc
-    except CqlDeadlineExceeded as exc:
+    except CqlDeadlineExceededError as exc:
         raise HTTPException(504, detail=f"CQL query timed out: {exc}") from exc
     return {
         "lines": [asdict(l) for l in result.lines],
@@ -393,9 +393,9 @@ async def frequency(cid: str, body: FrequencyRequest, session: AsyncSession = De
                 normalize=body.normalize, normalize_arabic=body.normalize_arabic,
                 zwnj=body.zwnj,
             )
-        except (CqlSyntaxError, CqlTooExpensive) as exc:
+        except (CqlSyntaxError, CqlTooExpensiveError) as exc:
             raise HTTPException(422, detail=str(exc)) from exc
-        except CqlDeadlineExceeded as exc:
+        except CqlDeadlineExceededError as exc:
             raise HTTPException(504, detail=str(exc)) from exc
     r = await compute_frequency(
         session, cid,
@@ -460,9 +460,9 @@ async def collocations(cid: str, body: CollocationRequest, session: AsyncSession
                     normalize=body.normalize, normalize_arabic=body.normalize_arabic,
                     zwnj=body.zwnj,
                 )
-            except (CqlSyntaxError, CqlTooExpensive) as exc:
+            except (CqlSyntaxError, CqlTooExpensiveError) as exc:
                 raise HTTPException(422, detail=str(exc)) from exc
-            except CqlDeadlineExceeded as exc:
+            except CqlDeadlineExceededError as exc:
                 raise HTTPException(504, detail=str(exc)) from exc
         r = await compute_collocations(
             session, cid, body.node,
@@ -551,9 +551,9 @@ async def dispersion(cid: str, body: DispersionRequest, session: AsyncSession = 
                 session, cid, body.cql_query,
                 normalize_arabic=False,
             )
-        except (CqlSyntaxError, CqlTooExpensive) as exc:
+        except (CqlSyntaxError, CqlTooExpensiveError) as exc:
             raise HTTPException(422, detail=str(exc)) from exc
-        except CqlDeadlineExceeded as exc:
+        except CqlDeadlineExceededError as exc:
             raise HTTPException(504, detail=str(exc)) from exc
         return asdict(r)
     r = await compute_dispersion(session, cid, body.term, level=body.level)

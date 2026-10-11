@@ -39,19 +39,19 @@ import io
 import json
 import urllib.parse
 from datetime import UTC, datetime
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
-from typing import Literal
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.logging import get_logger
 from api.corpora import resolve_subcorpus_document_ids
+from app.logging import get_logger
 from stats.cql import (
-    CqlDeadlineExceeded,
+    CqlDeadlineExceededError,
     CqlSyntaxError,
-    CqlTooExpensive,
+    CqlTooExpensiveError,
     search_concordance_cql,
 )
 from stats.service import (
@@ -368,9 +368,9 @@ async def _export_cql_concordance(
         )
     except CqlSyntaxError as exc:
         raise HTTPException(422, detail=f"Invalid CQL query: {exc}") from exc
-    except CqlTooExpensive as exc:
+    except CqlTooExpensiveError as exc:
         raise HTTPException(422, detail=f"CQL query too expensive: {exc}") from exc
-    except CqlDeadlineExceeded as exc:
+    except CqlDeadlineExceededError as exc:
         raise HTTPException(504, detail=f"CQL query timed out: {exc}") from exc
     headers = ["Line ID", "Document", "Sentence", "Token Idx", "Left Context", "Node", "Right Context", "POS", "Lemma"]
     rows = [[l.line_id, l.document_filename, l.sentence_idx, l.token_idx, l.left, l.node, l.right, l.pos, l.lemma] for l in r.lines]

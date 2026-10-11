@@ -9,7 +9,6 @@ statistic) includes that ID so the AI Assistant can cite it (§11.1).
 from __future__ import annotations
 
 import re
-
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from typing import Literal

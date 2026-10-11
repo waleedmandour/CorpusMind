@@ -19,17 +19,17 @@ collocations endpoint, so numbers are directly comparable).
 from __future__ import annotations
 
 from collections import Counter, defaultdict
-from dataclasses import dataclass
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from discourse.service import NGramResult
 from stats.cql import MatchLimits, find_cql_spans
 from stats.measures import (
     chi2_min_expected,
     chi_square_2x2,
-    dice_coefficient,
     delta_p,
+    dice_coefficient,
     fisher_exact_2x2,
     gries_dp,
     gries_dp_norm,
@@ -39,10 +39,8 @@ from stats.measures import (
     mutual_information,
     t_score,
 )
-from stats.service import _is_real_token, DispersionResult
-from discourse.service import NGramResult
+from stats.service import DispersionResult, _is_real_token
 from storage.models import Document, Token
-
 
 DEFAULT_MEASURES = ["mi", "t_score", "log_likelihood", "dice", "log_dice"]
 

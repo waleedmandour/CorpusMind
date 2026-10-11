@@ -9,7 +9,7 @@ stored; the response echoes the parsed canonical form.
 """
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field

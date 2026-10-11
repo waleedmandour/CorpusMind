@@ -25,16 +25,7 @@ from collections.abc import AsyncIterator
 
 import pytest
 
-from stats.cql import (
-    CqlDeadlineExceeded,
-    CqlSyntaxError,
-    CqlTooExpensive,
-    MatchLimits,
-    STUDENT_MATCH_LIMITS,
-    ast_to_str,
-    parse_cql,
-)
-
+from stats.cql import CqlDeadlineExceededError, CqlTooExpensiveError, MatchLimits
 
 # --------------------------------------------------------------------------- #
 # Fixture: same seeded corpora as test_cql.py, plus a Unicode doc
@@ -49,8 +40,7 @@ async def hard_env() -> AsyncIterator[tuple[str, str]]:
     from app.settings import get_settings
 
     get_settings.cache_clear()
-    from app.main import app  # noqa: F401
-
+    from app.main import app
     from storage.session import dispose_db
 
     async with app.router.lifespan_context(app):
@@ -123,9 +113,8 @@ async def hard_env() -> AsyncIterator[tuple[str, str]]:
 
 
 async def _run(cid: str, query: str, **kw):
-    from stats.cql import search_concordance_cql
-
     import storage.session as _ss
+    from stats.cql import search_concordance_cql
 
     sm = _ss._sessionmaker
     async with sm() as session:
@@ -160,12 +149,10 @@ async def test_unicode_case_matrix(hard_env, query, expected, label) -> None:
     # result as a full scan (prefilter OFF). Any drift = silent under-match.
     import stats.cql as cql_mod
 
-    original = cql_mod._anchor_condition
-
     async def _run_no_prefilter():
         # run the same query with the anchor condition disabled
-        from stats.cql import search_concordance_cql
         import storage.session as _ss
+        from stats.cql import search_concordance_cql
 
         sm = _ss._sessionmaker
         async with sm() as session:
@@ -216,7 +203,7 @@ async def test_wildcard_helper_consistent_across_layers(hard_env) -> None:
 async def test_budget_raises_cql_too_expensive(hard_env, monkeypatch) -> None:
     cid, _ = hard_env
     tiny = MatchLimits(max_steps=2, max_span=100, deadline_s=10.0)
-    with pytest.raises(CqlTooExpensive, match="work budget"):
+    with pytest.raises(CqlTooExpensiveError, match="work budget"):
         await _run(cid, '"quick"', limits=tiny)
 
 
@@ -261,7 +248,7 @@ async def test_deadline_raises_and_maps_to_504(hard_env) -> None:
     import stats.cql as cql_mod
 
     limits = MatchLimits(max_steps=10_000_000, max_span=100, deadline_s=-1.0)
-    with pytest.raises(CqlDeadlineExceeded, match="deadline"):
+    with pytest.raises(CqlDeadlineExceededError, match="deadline"):
         await _run(cid, '"quick"', limits=limits)
 
     from httpx import ASGITransport, AsyncClient
@@ -331,8 +318,7 @@ async def test_matcher_cost_50k_tokens_memory_bounded() -> None:
     from app.settings import get_settings
 
     get_settings.cache_clear()
-    from app.main import app  # noqa: F401
-
+    from app.main import app
     from storage.session import dispose_db
 
     async with app.router.lifespan_context(app):
@@ -356,7 +342,6 @@ async def test_matcher_cost_50k_tokens_memory_bounded() -> None:
             # one 'sentence' so the document-scope gap path is exercised
             N = 50_000
             rows = []
-            i = 0
             pos_i = 0
             while len(rows) < N:
                 rows.append(("the", "the", "DET"))
@@ -523,7 +508,7 @@ async def test_simple_regex_redos_guard(hard_env) -> None:
 async def test_cql_regex_budget_counts_steps(hard_env) -> None:
     cid, _ = hard_env
     tiny = MatchLimits(max_steps=2, max_span=100, deadline_s=10.0)
-    with pytest.raises(CqlTooExpensive):
+    with pytest.raises(CqlTooExpensiveError):
         await _run(cid, "[word=/fox|dog/]", limits=tiny)
 
 
@@ -554,6 +539,9 @@ async def test_paging_fetches_context_for_page_only(hard_env, monkeypatch) -> No
     r_page1 = await _run(cid, '[pos="NOUN"]', limit=1, offset=1)
     # 2 fixture NOUNs + 16 unicode NOUNs = 18
     assert r_page0.total == 18
+    # page 2 must report the same total (offset must not shrink the match set)
+    assert r_page1.total == r_page0.total
+    assert r_page1.lines, "page 1 must still carry lines"
     # context fetch happened once per request, bounded by the page size
     assert calls, "context fetch never ran"
     for n in calls:
@@ -664,8 +652,8 @@ async def test_cqp_compat_anchored_regex_semantics(hard_env) -> None:
 
 @pytest.mark.asyncio
 async def test_find_cql_spans_service(hard_env) -> None:
-    from stats.cql import find_cql_spans
     import storage.session as _ss
+    from stats.cql import find_cql_spans
 
     cid, _ = hard_env
     sm = _ss._sessionmaker
@@ -689,8 +677,8 @@ async def test_consumer_cql_frequency(hard_env) -> None:
 
 
 async def _run_freq(cid: str, query: str, **kw) -> dict:
-    from stats.cql_stats import compute_cql_frequency
     import storage.session as _ss
+    from stats.cql_stats import compute_cql_frequency
 
     sm = _ss._sessionmaker
     async with sm() as session:
@@ -699,8 +687,8 @@ async def _run_freq(cid: str, query: str, **kw) -> dict:
 
 @pytest.mark.asyncio
 async def test_consumer_cql_collocations(hard_env) -> None:
-    from stats.cql_stats import compute_cql_collocations
     import storage.session as _ss
+    from stats.cql_stats import compute_cql_collocations
 
     cid, _ = hard_env
     sm = _ss._sessionmaker
@@ -720,8 +708,8 @@ async def test_consumer_cql_collocations(hard_env) -> None:
 
 @pytest.mark.asyncio
 async def test_consumer_cql_dispersion(hard_env) -> None:
-    from stats.cql_stats import compute_cql_dispersion
     import storage.session as _ss
+    from stats.cql_stats import compute_cql_dispersion
 
     cid, _ = hard_env
     sm = _ss._sessionmaker
@@ -734,8 +722,8 @@ async def test_consumer_cql_dispersion(hard_env) -> None:
 
 @pytest.mark.asyncio
 async def test_consumer_cql_ngrams(hard_env) -> None:
-    from stats.cql_stats import compute_cql_ngrams
     import storage.session as _ss
+    from stats.cql_stats import compute_cql_ngrams
 
     cid, _ = hard_env
     sm = _ss._sessionmaker
@@ -819,7 +807,6 @@ async def test_saved_queries_crud(hard_env) -> None:
         # create a project
         r = await ac.post("/api/v1/projects", json={"name": "SavedQ", "language": "en"})
         pid = r.json()["id"]
-        _, ar_cid = hard_env
         r = await ac.post(
             f"/api/v1/projects/{pid}/saved-queries",
             json={"project_id": pid, "name": "adj-noun", "query": '[pos="ADJ"] "fox"', "mode": "cql"},
@@ -877,9 +864,9 @@ def test_student_allowlist_cql_boundary() -> None:
 async def test_student_request_uses_stricter_budget(hard_env) -> None:
     from types import SimpleNamespace
 
-    from api.analysis import CqlRequest, concordance_cql
-    from stats.cql import MatchLimits, STUDENT_MATCH_LIMITS
     import storage.session as _ss
+    from api.analysis import CqlRequest, concordance_cql
+    from stats.cql import STUDENT_MATCH_LIMITS, MatchLimits
     from storage.models import Corpus
 
     cid, _ = hard_env

@@ -18,11 +18,16 @@
   (was: 23 s / 1.4 GB).
 - **Work budget + wall-clock deadline.** Matching runs in a worker thread
   (`asyncio.to_thread`) under an explicit budget (steps, max span length,
-  deadline). Over-budget queries raise CqlTooExpensive -> HTTP 422 with an
+  deadline). Over-budget queries raise CqlTooExpensiveError -> HTTP 422 with an
   actionable message ("Narrow it: add a literal anchor, bound unbounded gaps,
-  'within sentence'"); deadline overruns -> HTTP 504. The event loop (and
+  'within sentence'"); deadline overruns (CqlDeadlineExceededError) -> HTTP 504. The event loop (and
   /health) stays responsive during heavy queries — asserted by a test that
   polls /health (< 0.5 s) while a CQL query runs.
+- **Subcorpus-from-CQL dry-run error mapping.** Creating a named subcorpus
+  from a CQL query validates the query up front; a too-expensive or timed-out
+  validation query now surfaces as 422/504 with the same actionable message
+  as the concordance endpoint (previously only syntax errors were mapped, so
+  an over-budget query would have escaped as a 500).
 - **/regex/ ReDoS exposure.** Catastrophic nested-quantifier regexes
   (`(a+)+$`) are rejected at parse time with an actionable message; the
   budget/deadline backstop covers the rest. The SIMPLE concordance's regex

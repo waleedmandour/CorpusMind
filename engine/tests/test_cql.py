@@ -28,12 +28,10 @@ import pytest
 
 from stats.cql import (
     CqlSyntaxError,
-    AnyUnit,
     WordUnit,
     ast_to_str,
     parse_cql,
 )
-
 
 # --------------------------------------------------------------------------- #
 # Parser (no DB)
@@ -171,7 +169,7 @@ async def corpus_env() -> AsyncIterator[tuple[str, str]]:
     from app.settings import get_settings
 
     get_settings.cache_clear()
-    from app.main import app  # noqa: F401  (import AFTER env is pinned)
+    from app.main import app  # imported AFTER env is pinned
     from storage.session import dispose_db
 
     async with app.router.lifespan_context(app):
@@ -319,9 +317,8 @@ async def corpus_env() -> AsyncIterator[tuple[str, str]]:
 
 
 async def _run_cql(cid: str, query: str, **kw):
-    from stats.cql import search_concordance_cql
-
     import storage.session as _ss
+    from stats.cql import search_concordance_cql
 
     sm = _ss._sessionmaker
     assert sm is not None

@@ -53,7 +53,7 @@ async def ngrams(
     if body.cql_query:
         from fastapi import HTTPException as _HTTPException
 
-        from stats.cql import CqlDeadlineExceeded, CqlSyntaxError, CqlTooExpensive
+        from stats.cql import CqlDeadlineExceededError, CqlSyntaxError, CqlTooExpensiveError
         from stats.cql_stats import compute_cql_ngrams
 
         try:
@@ -67,9 +67,9 @@ async def ngrams(
                 limit=body.limit,
                 skip_punct=body.skip_punct,
             )
-        except (CqlSyntaxError, CqlTooExpensive) as exc:
+        except (CqlSyntaxError, CqlTooExpensiveError) as exc:
             raise _HTTPException(422, detail=str(exc)) from exc
-        except CqlDeadlineExceeded as exc:
+        except CqlDeadlineExceededError as exc:
             raise _HTTPException(504, detail=str(exc)) from exc
         return asdict(r)
     r = await compute_ngrams(
