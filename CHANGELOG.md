@@ -1,3 +1,113 @@
+## [1.2.13-2] — 2026-10-11 — CQL hardening + platform-wide coverage
+
+> Second pre-release of 1.2.13, cut from tag `v1.2.13-1` for the review round
+> (matcher cost, Unicode case folding, Student Mode, documentation truth),
+> then extended across the platform. Tag: `v1.2.13-2`.
+
+### Fixed (P0 — with regression tests that fail on 1.2.13-1)
+- **Matcher cost (O(n^2) time and memory).** The v1.2.13-1 matcher enumerated
+  every end position per start and memoized a set per (element, position):
+  `"the" []* "of"` measured 23 s / 1.4 GB at 20K tokens and was OOM-killed at
+  50K. The matching strategy is now DECIDED and documented — one match per
+  start, the earliest-ending span (for literal + gap patterns this is exactly
+  the shortest span, CQP-style) — and implemented efficiently: element ends
+  stream in increasing order and the search stops at the first accept
+  (linear for gaps). `within sentence` now BOUNDS the scan to the sentence
+  instead of post-filtering. Measured on the same 50K-token probe corpus:
+  4.0 s / 110 MB peak (was: OOM kill), and 20K dropped to 1.6 s / 43 MB
+  (was: 23 s / 1.4 GB).
+- **Work budget + wall-clock deadline.** Matching runs in a worker thread
+  (`asyncio.to_thread`) under an explicit budget (steps, max span length,
+  deadline). Over-budget queries raise CqlTooExpensive -> HTTP 422 with an
+  actionable message ("Narrow it: add a literal anchor, bound unbounded gaps,
+  'within sentence'"); deadline overruns -> HTTP 504. The event loop (and
+  /health) stays responsive during heavy queries — asserted by a test that
+  polls /health (< 0.5 s) while a CQL query runs.
+- **/regex/ ReDoS exposure.** Catastrophic nested-quantifier regexes
+  (`(a+)+$`) are rejected at parse time with an actionable message; the
+  budget/deadline backstop covers the rest. The SIMPLE concordance's regex
+  level gets the same shared screen (ValueError -> 422 instead of a hang).
+- **%c on non-ASCII.** The SQL prefilter used SQLite lower()/LIKE
+  (ASCII-only), so `"école" %c` found 1 of 3 and `"москва" %c` 1 of 2. A
+  Unicode-aware `unicase()` SQL function (NFC + casefold, kept exactly in
+  sync with the Python matcher) replaces them. Matrix-tested: French é/É,
+  German ß/SS, Greek final sigma ς/Σ/σ, Cyrillic, plus Arabic %d — each also
+  asserting the prefilter-superset property (prefilter ON == prefilter OFF).
+  Turkish İ/ı are documented as not fold-equivalent to i (consistent in both
+  layers).
+- **Student Mode.** POST /concordance/cql joined the student allowlist —
+  only now that the guards above exist — with a deliberately stricter budget
+  (STUDENT_MATCH_LIMITS: fewer steps, shorter spans, 10 s deadline). The web
+  UI hides the CQL toggle and falls back to Simple with a visible notice when
+  the server rejects CQL for the role (403). Allowlist boundary tests added.
+- **Truth in documentation.** (a) The module docstring contradicted the
+  executor (claimed every span is reported; behaviour was shortest-per-start)
+  — rewritten with the explicit matching strategy. (b) morph is a WHOLE-STRING
+  match, not "substring" — documented with the `*…*` wildcard hint and pinned
+  by tests. (c) Arabic root/pattern examples now use the REAL CAMeL format —
+  verified against the actual calima-msa-r13 morphology.db AND the live
+  backend: dotted roots (`root=ك.ت.ب`), template patterns with digit radical
+  slots (`pattern=1ُ2ُ3` for كُتُب); the old hand-seeded `root=ك ت ب` fixtures
+  were wrong and are fixed; tests ingest REAL Arabic text through the real
+  backend (loud skip + reason when the data pack is absent). (d) The
+  "transfer directly from Sketch Engine/CWB" claim is removed everywhere; a
+  "Differences from CQP" table ships in the module docstring, the in-app
+  guide, and both USER_GUIDE files. `within s`/`within doc` aliases accepted;
+  an opt-in CQP-compat mode treats quoted values as anchored regexes
+  (request field `cqp_compat`).
+
+### Added
+- **Wildcard single-source-of-truth.** One `_wildcard_regex` helper now feeds
+  BOTH the SQL prefilter and the Python matcher (fnmatch removed — it treated
+  `[..]` as a character class, diverging from the SQL layer).
+- **Server-side CQL export.** POST /corpora/{cid}/export/concordance/cql
+  re-runs the query under the matcher guards and streams xlsx/csv/tsv/txt/json
+  covering the FULL match set (the v1.2.13-1 client-side export only had the
+  on-screen 200-line page). On the student allowlist (same surface as the
+  simple export). svg/png were never offered for concordance (verified — they
+  are collocation-network diagram formats).
+- **Paging overhaul.** Match spans are computed once and cached per
+  (corpus, query, version, filters); the page is sliced FIRST and sentence
+  context is fetched only for the page's spans. A regression test pins that
+  re-paging never re-runs the matcher and context stays page-bounded.
+- **Cancel + elapsed counter.** concordanceCql accepts react-query's
+  AbortSignal and a 60 s client deadline; a visible Cancel button and an
+  elapsed-seconds ticker in CQL mode mirror the Arabic Tools pattern.
+- **Stale-seed fix.** The sampled search re-used the PREVIOUS click's seed
+  (state read in the same tick); the seed is now computed locally for both
+  Simple and CQL, with a regression test.
+- **Shared KWIC table.** The concordancer's two byte-identical table copies
+  (Simple vs CQL) are extracted into components/KwicTable.tsx + a shared
+  pager so they cannot drift.
+- **CQL across the platform (P2).** `stats/cql.py` now exposes the reusable
+  `find_cql_spans` service (spans + streams under the same guards), and the
+  consumers built on it: CQL frequency/collocations/dispersion/n-grams (same
+  row shapes and measures as the simple endpoints), Vector-KWIC CQL
+  pre-filtering, subcorpus-by-CQL (member set = documents with >= 1 match,
+  re-resolved at analysis time), per-project saved queries (teacher-only
+  CRUD, CQL validated at save time), and the grounded AI tool `search_cql`
+  (line_id-cited evidence; tool-capable models only via the existing
+  supports_tools gate). Every consumer's student-allowlist status is decided
+  and documented in app/server_mode.py.
+- **Query helper in the concordancer.** Example chips, an expandable syntax
+  panel carrying the Differences-from-CQP table, and an error caret drawn
+  under the offending position of the engine's 422 message.
+
+### Tests
+- Engine: tests/test_cql_hardening.py (40 tests) — 50K-token memory-bounded
+  perf regression, budget/deadline/504/422 mapping, /health latency < 0.5 s
+  under heavy CQL, Unicode %c matrix + superset property, wildcard-helper
+  consistency, morph semantics, real-CAMeL root format (real morphology.db +
+  real ingestion path), student allowlist boundary + stricter budget, paging
+  span-cache, server-side CQL export, cqp_compat, all P2 consumers. Full
+  suite: 787 passed / 0 failed. Reproduction probes for the reviewed bugs
+  live in tests/cql_probes_v1.2.13-1.py (scratch, not committed as tests).
+- Web: src/__tests__/cql-ui-regression.test.tsx (10 tests) — mode toggle,
+  422 error + caret rendering, budget message, Cancel + abort signal,
+  elapsed counter, student gating, server-side export, stale-seed regression.
+  Full web suite: 34 passed. tsc clean, PWA build OK, contrast 86/86,
+  query-pending guard PASS, source guards PASS.
+
 ## [1.2.13-1] — 2026-10-11 — CQL-lite pre-release (Phase 1) + Arabic Tools export
 
 > Pre-release of 1.2.13, cut for field testing before the final rebuild. Tag:

@@ -52,6 +52,41 @@ log = get_logger(__name__)
 # They return JSON-serializable dicts that get fed back to the LLM.
 
 
+async def _search_cql(session: AsyncSession, *, corpus_id: str, query: str,
+                      window: int = 5, limit: int = 20) -> dict:
+    """v1.2.13-2 AI tool: CQL-lite concordance with grounded line_ids.
+
+    Runs under the SAME matcher guards as the HTTP route (work budget,
+    deadline, thread offloading); returns KWIC lines the model can cite by
+    line_id (grounded evidence, kind: concordance_line).
+    """
+    from stats.cql import search_concordance_cql
+
+    r = await search_concordance_cql(
+        session, corpus_id, query, window=window, limit=max(1, min(limit, 50)),
+    )
+    return {
+        "mode": "cql",
+        "query": query,
+        "parsed": r.query.get("parsed"),
+        "within": r.query.get("within"),
+        "total": r.total,
+        "total_capped": bool(r.query.get("total_capped")),
+        "lines": [
+            {
+                "line_id": l.line_id,
+                "document": l.document_filename,
+                "left": l.left,
+                "node": l.node,
+                "right": l.right,
+                "pos": l.pos,
+                "lemma": l.lemma,
+            }
+            for l in r.lines
+        ],
+    }
+
+
 async def _search_concordance(session: AsyncSession, *, corpus_id: str, query: str,
                               level: str = "word", window: int = 5, limit: int = 20) -> dict:
     r = await search_concordance(
@@ -628,6 +663,34 @@ TOOL_SCHEMAS: list[dict] = [
     {
         "type": "function",
         "function": {
+            "name": "search_cql",
+            "description": (
+                "Run a CQL-lite corpus query (token sequences with attributes, "
+                "gaps, quantifiers, alternation) and return KWIC lines with "
+                "stable line_ids. Cite the line_id in your answer. Use this "
+                "instead of search_concordance when the user describes a "
+                "PATTERN rather than a single word, e.g. [lemma=\"take\"] "
+                "[]{0,3} \"risk\" or [pos=\"ADJ\"] \"dog\". Syntax: \"literal\" "
+                "(wildcards * ?), [attr=\"value\"] over word/lemma/pos/xpos/rel/"
+                "morph/root/pattern, [] any token, []{m,n} gap, (a|b) groups, "
+                "? * + quantifiers, %c ignore case, %d fold diacritics, "
+                "within sentence|document."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "corpus_id": {"type": "string", "description": "The active corpus ID"},
+                    "query": {"type": "string", "description": 'CQL-lite pattern, e.g. [lemma="take"] []{0,3} "risk"'},
+                    "window": {"type": "integer", "default": 5, "minimum": 1, "maximum": 20},
+                    "limit": {"type": "integer", "default": 20, "minimum": 1, "maximum": 50},
+                },
+                "required": ["corpus_id", "query"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "get_frequency",
             "description": (
                 "Get frequency statistics (top items, total tokens/types, STTR) for a corpus. "
@@ -1123,6 +1186,7 @@ TOOL_SCHEMAS: list[dict] = [
 TOOL_IMPLS = {
     # Phase 1 — corpus-backed
     "search_concordance": _search_concordance,
+    "search_cql": _search_cql,
     "get_frequency": _get_frequency,
     "compute_collocations": _compute_collocations,
     "compute_keyness": _compute_keyness,

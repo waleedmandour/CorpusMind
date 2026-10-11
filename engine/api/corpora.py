@@ -699,6 +699,19 @@ class SubcorpusCreate(BaseModel):
     filter_criteria: dict = Field(default_factory=dict)
 
 
+class SubcorpusFromCql(BaseModel):
+    """v1.2.13-2: create a subcorpus from a CQL query.
+
+    Members are the documents containing at least one match. The query is
+    stored (kind="cql") and re-resolved at analysis time, so the member set
+    follows re-annotation.
+    """
+
+    name: str = Field(..., min_length=1, max_length=128)
+    query: str = Field(..., min_length=1)
+    description: str = ""
+
+
 class SubcorpusOut(BaseModel):
     id: str
     corpus_id: str
@@ -727,6 +740,43 @@ async def create_subcorpus(
         name=body.name,
         description=body.description,
         filter_criteria=body.filter_criteria,
+    )
+    session.add(sc)
+    await session.flush()
+    return SubcorpusOut(
+        id=sc.id,
+        corpus_id=sc.corpus_id,
+        name=sc.name,
+        description=sc.description,
+        filter_criteria=sc.filter_criteria,
+        created_at=sc.created_at,
+    )
+
+
+@router.post("/corpora/{cid}/subcorpora/from-cql", response_model=SubcorpusOut)
+async def create_subcorpus_from_cql(
+    cid: str, body: SubcorpusFromCql, session: AsyncSession = Depends(get_session)
+) -> SubcorpusOut:
+    """v1.2.13-2: create a named subcorpus from a CQL query (teacher-only).
+
+    OFF the student allowlist on purpose — this is subcorpus management.
+    The query is validated up front (CqlSyntaxError → 422); membership is
+    re-resolved at analysis time so re-annotation keeps the filter honest.
+    """
+    if not await session.get(Corpus, cid):
+        raise HTTPException(404, "Corpus not found")
+    from stats.cql import CqlSyntaxError, find_cql_spans
+
+    try:
+        match_set = await find_cql_spans(session, cid, body.query)
+    except CqlSyntaxError as exc:
+        raise HTTPException(422, detail=f"Invalid CQL query: {exc}") from exc
+    criteria = {"kind": "cql", "query": body.query}
+    sc = Subcorpus(
+        corpus_id=cid,
+        name=body.name,
+        description=body.description or f"CQL: {body.query}",
+        filter_criteria=criteria,
     )
     session.add(sc)
     await session.flush()
@@ -783,6 +833,12 @@ async def resolve_subcorpus_document_ids(session: AsyncSession, subcorpus_id: st
     keyness) now accept an optional ``subcorpus_id``, resolve it through this
     function, and restrict their token queries to the returned documents.
 
+    v1.2.13-2: a subcorpus created by-CQL stores
+    ``filter_criteria = {"kind": "cql", "query": …}`` and resolves to the
+    documents containing at least one match (the CQL pattern is re-run at
+    resolution time under the standard matcher guards, so the member set
+    always reflects the current annotation version).
+
     Raises HTTPException(404) if the subcorpus does not exist. Returns the
     (possibly empty) list of matching document IDs.
     """
@@ -791,6 +847,25 @@ async def resolve_subcorpus_document_ids(session: AsyncSession, subcorpus_id: st
         raise HTTPException(404, "Subcorpus not found")
     if not sc.filter_criteria:
         return []
+    # v1.2.13-2: CQL-defined subcorpus — documents with ≥1 match.
+    if sc.filter_criteria.get("kind") == "cql":
+        from stats.cql import (
+            CqlDeadlineExceeded,
+            CqlSyntaxError,
+            CqlTooExpensive,
+            find_cql_spans,
+        )
+
+        query = str(sc.filter_criteria.get("query", ""))
+        if not query:
+            return []
+        try:
+            match_set = await find_cql_spans(session, sc.corpus_id, query)
+        except (CqlSyntaxError, CqlTooExpensive) as exc:
+            raise HTTPException(422, detail=f"Subcorpus CQL query failed: {exc}") from exc
+        except CqlDeadlineExceeded as exc:
+            raise HTTPException(504, detail=f"Subcorpus CQL query timed out: {exc}") from exc
+        return sorted(match_set.per_document().keys())
     # Find documents whose meta matches the filter criteria
     doc_stmt = select(Document.id).where(Document.corpus_id == sc.corpus_id)
     # Apply each filter criterion as a JSON match

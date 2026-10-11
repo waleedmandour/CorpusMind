@@ -285,10 +285,12 @@ describe("Concordancer CQL mode (v1.2.13-1)", () => {
     const { getByRole, getByText, getAllByText, container } = mount();
     fireEvent.click(getByRole("button", { name: "CQL" }));
     fireEvent.change(getByRole("textbox"), { target: { value: '[lemma="take"] []{0,3} "risk"' } });
-    fireEvent.click(getByRole("button", { name: "Search" }));
+    // v1.2.13-2: the CQL run button is labelled "Run CQL"
+    fireEvent.click(getByRole("button", { name: "Run CQL" }));
 
-    await waitFor(() => expect(getByText('[lemma="take"] []{0,3} "risk"')).toBeTruthy());
-    expect(container.textContent).toContain("for CQL");
+    // v1.2.13-2: the query text also appears in the helper chips — wait for
+    // the RESULT meta line instead.
+    await waitFor(() => expect(container.textContent).toContain("for CQL"));
     // "take" appears as the node AND the lemma cell
     expect(getAllByText("take").length).toBeGreaterThanOrEqual(2);
     expect(getByText("the risk")).toBeTruthy();
@@ -322,7 +324,7 @@ describe("Concordancer CQL mode (v1.2.13-1)", () => {
     const { getByRole, container } = mount();
     fireEvent.click(getByRole("button", { name: "CQL" }));
     fireEvent.change(getByRole("textbox"), { target: { value: '[lemma="take"' } });
-    fireEvent.click(getByRole("button", { name: "Search" }));
+    fireEvent.click(getByRole("button", { name: "Run CQL" }));
 
     await waitFor(() =>
       expect(container.textContent).toContain("Invalid CQL query: syntax error at position 5"),

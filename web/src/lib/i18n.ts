@@ -987,6 +987,15 @@ export const translations = {
     cql_mode_simple_hint: "Single-node search: word/lemma/POS (or root/pattern) with wildcards, regex, and whitespace phrases.",
     cql_placeholder: 'CQL pattern, e.g. [lemma="take"] []{0,3} "risk" within sentence',
     cql_hint: 'CQL: "literal" · [attr="val"] · [word="book" & pos="NOUN"] · [] any token · []{m,n} gap · (a|b) groups · ? * + {m,n} · %c ignore case · %d fold diacritics · within sentence|document. Attributes: word, lemma, pos, xpos, rel, morph, root, pattern.',
+    // v1.2.13-2: query helper + student gating
+    cql_examples_label: "Examples:",
+    cql_example_insert: "Insert this example into the query box",
+    cql_syntax_show: "Syntax & CQP differences",
+    cql_syntax_hide: "Hide syntax",
+    cql_diffs_title: "Differences from CQP (deliberate):",
+    cql_error_here: "← the query breaks here",
+    cql_cancel_hint: "Cancel the running CQL query (the engine also enforces its own 20 s deadline)",
+    cql_blocked_student: "CQL is not available in Student Mode on this server — using the Simple search instead.",
 
     // --- v1.2.0: User Guide — Companion Apps section --------------------------
     ug_companion_title: "Companion Apps",
@@ -2039,6 +2048,15 @@ export const translations = {
     cql_mode_simple_hint: "بحث بعقدة واحدة: كلمة/ lemma / POS (أو الجذر/الوزن) مع البدائل والتعبيرات النمطية والعبارات.",
     cql_placeholder: 'نمط CQL، مثال: [lemma="take"] []{0,3} "risk" within sentence',
     cql_hint: 'CQL: "نص" · [attr="قيمة"] · [word="book" & pos="NOUN"] · [] أي رمز · []{m,n} فجوة · (أ|ب) مجموعات · ? * + {m,n} · %c تجاهل الحالة · %d توحيد الحركات · within sentence|document. الخصائص: word، lemma، pos، xpos، rel، morph، root، pattern.',
+    // v1.2.13-2: مساعد الاستعلام + بوابة وضع الطالب
+    cql_examples_label: "أمثلة:",
+    cql_example_insert: "أدرج هذا المثال في مربع الاستعلام",
+    cql_syntax_show: "الصياغة والفروقات عن CQP",
+    cql_syntax_hide: "إخفاء الصياغة",
+    cql_diffs_title: "فروقات مقصودة عن CQP:",
+    cql_error_here: "← انكسار الاستعلام هنا",
+    cql_cancel_hint: "إلغاء استعلام CQL الجاري (المحرك يفرض أيضاً مهلة 20 ثانية)",
+    cql_blocked_student: "لغة استعلام CQL غير متاحة في وضع الطالب على هذا الخادم — تم التحويل إلى البحث البسيط.",
 
     // --- v1.2.0: دليل المستخدم — قسم التطبيقات الرفيقة ---
     ug_companion_title: "التطبيقات الرفيقة",

@@ -10,8 +10,12 @@ Fixture corpus (English, cid):
   doc1 s1: The/DT the|dog/NN dog|barked/VBZ bark|/PUNCT .
   doc2 s0: A/DT a|fox/NN fox|sleeps/VBZ sleep|/PUNCT .
   doc2 s1: Dogs/NNS dog|are/VBP be|loyal/JJ loyal|/PUNCT .
-Arabic corpus (ar_cid):
-  s0: أحمد/NOUN | كتب/VERB (root=ك ت ب|pattern=فعل) | كتابا/NOUN (root=ك ت ب|pattern=فاعل) | ./PUNCT
+Arabic corpus (ar_cid) — morph strings use the REAL CAMeL calima-msa-r13
+format (verified against the official morphology.db, see
+test_cql_hardening.py::test_arabic_root_format_matches_real_camel_data):
+root = DOTTED and undiacritised (ك.ت.ب); pattern = the calima template with
+digit radical slots, e.g. كَتَبَ (PV) → 1َ2َ3, كُتُب (N) → 1ُ2ُ3:
+  s0: أحمد/NOUN | كتب/VERB (root=ك.ت.ب|pattern=1َ2َ3) | كتابا/NOUN (root=ك.ت.ب|pattern=1ُ2ُ3) | ./PUNCT
   s1: إحمد/NOUN | نام/VERB | ./PUNCT
 """
 
@@ -24,6 +28,8 @@ import pytest
 
 from stats.cql import (
     CqlSyntaxError,
+    AnyUnit,
+    WordUnit,
     ast_to_str,
     parse_cql,
 )
@@ -52,6 +58,12 @@ def test_parser_accepts_core_forms() -> None:
         "[word=/fox|dog/] %c",
         '[root="ك ت ب"]',
         '"x" within document',
+        # v1.2.13-2: CQP-style scope aliases + merged flag spellings
+        '"x" within s',
+        '"x" within doc',
+        '"a" %c%d',
+        '"a" %cd',
+        '"a" %c %d',
     ]
     for q in forms:
         assert ast_to_str(parse_cql(q)), q
@@ -71,13 +83,58 @@ def test_parser_rejects_malformed() -> None:
         '("a" | ',
         "",
         "   ",
-        '[pos="X"] %c %d',
         "bare_word",
         '[lemma="x" & ]',
+        # v1.2.13-2: catastrophic regexes are rejected at parse time
+        "[word=/(a+)+$/]",
+        "[word=/((a+)+b)+$/]",
     ]
     for q in bad:
         with pytest.raises(CqlSyntaxError):
             parse_cql(q)
+
+
+def test_parser_within_aliases() -> None:
+    assert parse_cql('"x" within s').within == "sentence"
+    assert parse_cql('"x" within sentence').within == "sentence"
+    assert parse_cql('"x" within doc').within == "document"
+    assert parse_cql('"x" within document').within == "document"
+
+
+def test_parser_merged_flags() -> None:
+    el = parse_cql('"a" %c%d').sequence[0]
+    assert el.flags.ignore_case and el.flags.fold_diacritics
+    el = parse_cql('"a" %cd').sequence[0]
+    assert el.flags.ignore_case and el.flags.fold_diacritics
+
+
+def test_parser_rejects_catastrophic_regex() -> None:
+    # ReDoS guard: nested quantifiers over quantified groups are rejected
+    # at parse time with an actionable message.
+    for q in ['"a" [word=/(a+)+$/]', '[lemma=/(x*|y*)*$/]']:
+        with pytest.raises(CqlSyntaxError, match="catastrophically"):
+            parse_cql(q)
+    # bounded, non-nested forms are fine
+    assert parse_cql('[word=/(ab)+/]').sequence[0].unit.dnf[0][0].regex
+
+
+def test_parser_cqp_compat_quoted_are_anchored_regex() -> None:
+    q = parse_cql('"cat.*"', cqp_compat=True)
+    el = q.sequence[0]
+    # Compat mode: the quoted token becomes an anchored regex test on word.
+    t = el.unit.dnf[0][0]
+    assert t.regex and t.value == "^(?:cat.*)$"
+    # Round-trips through the canonical rendering.
+    once = ast_to_str(q)
+    assert ast_to_str(parse_cql(once)) == once
+    # Non-compat: wildcard literal (no regex).
+    q2 = parse_cql('"cat.*"')
+    assert isinstance(q2.sequence[0].unit, WordUnit)
+    assert q2.sequence[0].unit.value == "cat.*"
+    # Spec values convert too.
+    q3 = parse_cql('[lemma="tak.*"]', cqp_compat=True)
+    t3 = q3.sequence[0].unit.dnf[0][0]
+    assert t3.regex and t3.value == "^(?:tak.*)$"
 
 
 def test_parser_canonical_round_trip() -> None:
@@ -228,8 +285,8 @@ async def corpus_env() -> AsyncIterator[tuple[str, str]]:
         await s.flush()
         AR0 = [
             ("أحمد", "أحمد", "NOUN", "", "nsubj", False, ""),
-            ("كتب", "كتب", "VERB", "", "root", False, "root=ك ت ب|pattern=فعل"),
-            ("كتابا", "كتابا", "NOUN", "", "obj", False, "root=ك ت ب|pattern=فاعل"),
+            ("كتب", "كتب", "VERB", "", "root", False, "root=ك.ت.ب|pattern=1َ2َ3"),
+            ("كتابا", "كتابا", "NOUN", "", "obj", False, "root=ك.ت.ب|pattern=1ُ2ُ3"),
             (".", ".", "PUNCT", "", "punct", True, ""),
         ]
         AR1 = [
@@ -388,11 +445,17 @@ async def test_no_match_and_meta(corpus_env) -> None:
 @pytest.mark.asyncio
 async def test_arabic_morph_layer_and_normalization(corpus_env) -> None:
     _, ar_cid = corpus_env
-    r = await _run_cql(ar_cid, '[root="ك ت ب"]')
+    # REAL CAMeL calima-msa-r13 format: dotted root (ك.ت.ب), template
+    # pattern with digit radical slots (1َ2َ3 = PV كَتَبَ; 1ُ2ُ3 = N كُتُب).
+    r = await _run_cql(ar_cid, '[root="ك.ت.ب"]')
     assert r.total == 2 and {l.lemma for l in r.lines} == {"كتب", "كتابا"}
 
-    r = await _run_cql(ar_cid, '[pattern="فاعل"]')
+    r = await _run_cql(ar_cid, '[pattern="1ُ2ُ3"]')
     assert r.total == 1 and r.lines[0].lemma == "كتابا"
+
+    # wildcard substring over the morph layer (documented *…* style)
+    r = await _run_cql(ar_cid, '[morph="*root=ك.ت.ب*"]')
+    assert r.total == 2
 
     # normalization folds أ/إ → ا on both sides
     assert (await _run_cql(ar_cid, '"احمد"')).total == 0

@@ -39,6 +39,9 @@ class NGramRequest(BaseModel):
     limit: int = Field(200, ge=1, le=1000)
     skip_punct: bool = True
     skip_stop: bool = False
+    # v1.2.13-2 (CQL consumer, deliberate on the already-allowlisted route):
+    # when set, n-grams are node-initial bundles anchored at CQL matches.
+    cql_query: str | None = None
 
 
 @router.post("/corpora/{cid}/ngrams")
@@ -47,6 +50,28 @@ async def ngrams(
 ) -> dict:
     if not await session.get(Corpus, cid):
         raise HTTPException(404, "Corpus not found")
+    if body.cql_query:
+        from fastapi import HTTPException as _HTTPException
+
+        from stats.cql import CqlDeadlineExceeded, CqlSyntaxError, CqlTooExpensive
+        from stats.cql_stats import compute_cql_ngrams
+
+        try:
+            r = await compute_cql_ngrams(
+                session,
+                cid,
+                body.cql_query,
+                n=body.n,
+                min_freq=body.min_freq,
+                min_range=body.min_range,
+                limit=body.limit,
+                skip_punct=body.skip_punct,
+            )
+        except (CqlSyntaxError, CqlTooExpensive) as exc:
+            raise _HTTPException(422, detail=str(exc)) from exc
+        except CqlDeadlineExceeded as exc:
+            raise _HTTPException(504, detail=str(exc)) from exc
+        return asdict(r)
     r = await compute_ngrams(
         session,
         cid,

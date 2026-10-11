@@ -42,10 +42,18 @@ from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from typing import Literal
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.logging import get_logger
+from api.corpora import resolve_subcorpus_document_ids
+from stats.cql import (
+    CqlDeadlineExceeded,
+    CqlSyntaxError,
+    CqlTooExpensive,
+    search_concordance_cql,
+)
 from stats.service import (
     compute_collocations,
     compute_frequency,
@@ -70,6 +78,26 @@ class ExportConcordanceRequest(BaseModel):
     case_sensitive: bool = False
     window: int = 5
     limit: int = 1000
+
+
+class ExportCqlConcordanceRequest(BaseModel):
+    """v1.2.13-2: server-side CQL export.
+
+    The engine RE-RUNS the CQL query under the same matcher guards
+    (budget/deadline/thread-offloading) with an export-sized limit, so the
+    file contains the full match set — not just the 200 lines the client had
+    on screen (the v1.2.13-1 client-side export exported only the fetched
+    page). All five simple-export formats are offered.
+    """
+
+    query: str
+    window: int = 5
+    limit: int = Field(10000, ge=1, le=50000)
+    subcorpus_id: str | None = None
+    normalize: bool | None = None
+    normalize_arabic: bool = False
+    zwnj: Literal["keep", "space", "strip"] = "keep"
+    cqp_compat: bool = False
 
 
 class ExportFrequencyRequest(BaseModel):
@@ -317,6 +345,49 @@ async def export_concordance_multi(
 ) -> StreamingResponse:
     """Export concordance results in the requested format."""
     return await _export_concordance(cid, body, fmt, session)
+
+
+async def _export_cql_concordance(
+    cid: str, body: ExportCqlConcordanceRequest, fmt: ExportFormat, session: AsyncSession
+) -> StreamingResponse:
+    """v1.2.13-2: server-side CQL export (full match set, all 5 formats)."""
+    if not await session.get(Corpus, cid):
+        raise HTTPException(404, "Corpus not found")
+    document_ids = (
+        await resolve_subcorpus_document_ids(session, body.subcorpus_id)
+        if body.subcorpus_id
+        else None
+    )
+    try:
+        r = await search_concordance_cql(
+            session, cid, body.query,
+            window=body.window, limit=body.limit,
+            document_ids=document_ids,
+            normalize=body.normalize, normalize_arabic=body.normalize_arabic,
+            zwnj=body.zwnj, cqp_compat=body.cqp_compat,
+        )
+    except CqlSyntaxError as exc:
+        raise HTTPException(422, detail=f"Invalid CQL query: {exc}") from exc
+    except CqlTooExpensive as exc:
+        raise HTTPException(422, detail=f"CQL query too expensive: {exc}") from exc
+    except CqlDeadlineExceeded as exc:
+        raise HTTPException(504, detail=f"CQL query timed out: {exc}") from exc
+    headers = ["Line ID", "Document", "Sentence", "Token Idx", "Left Context", "Node", "Right Context", "POS", "Lemma"]
+    rows = [[l.line_id, l.document_filename, l.sentence_idx, l.token_idx, l.left, l.node, l.right, l.pos, l.lemma] for l in r.lines]
+    data, media, ext = _serialize(fmt, "Concordance (CQL)", headers, rows)
+    fname = f"cql_concordance_{cid}_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}.{ext}"
+    return _make_response(data, media, fname)
+
+
+@router.post("/corpora/{cid}/export/concordance/cql")
+async def export_cql_concordance_multi(
+    cid: str,
+    body: ExportCqlConcordanceRequest,
+    fmt: ExportFormat = Query("xlsx", pattern="^(xlsx|csv|tsv|txt|json)$"),
+    session: AsyncSession = Depends(get_session),
+) -> StreamingResponse:
+    """Export CQL concordance results (engine re-runs the query server-side)."""
+    return await _export_cql_concordance(cid, body, fmt, session)
 
 
 @router.post("/corpora/{cid}/export/frequency")

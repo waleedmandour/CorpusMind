@@ -36,7 +36,7 @@ registerFontFamily("LibMono", normal="LibMono", bold="LibMono-Bold")
 # Arabic font (for the Arabic user guide)
 import os
 
-# v1.2.13-1: the guide version is read from the engine itself so a guide can
+# v1.2.13-2: the guide version is read from the engine itself so a guide can
 # never be regenerated against a stale number (the release pipeline rejects
 # a version mismatch; this makes the mismatch structurally impossible).
 _REPO = Path(__file__).resolve().parent.parent

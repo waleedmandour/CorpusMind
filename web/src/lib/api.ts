@@ -1558,6 +1558,10 @@ async function getTauriFetch(): Promise<(input: string, init?: RequestInit) => P
  * fires when the engine itself is stuck.
  */
 const ARABIC_TIMEOUT_MS = 150_000;
+// v1.2.13-2: CQL client deadline — comfortably above the engine's 20 s
+// matcher wall-clock deadline (504 arrives from the engine first in the
+// normal case; the client deadline only guards a hung connection).
+const CQL_TIMEOUT_MS = 60_000;
 
 /**
  * Unified fetch that picks the Tauri plugin inside the desktop webview and
@@ -1873,7 +1877,11 @@ export const api = {
   // Same response shape as `concordance` (ConcordanceResult) so the existing
   // KWIC table renders the lines; `query.mode === "cql"` in the payload
   // marks the echo metadata. Invalid queries reject with the engine's
-  // position-annotated 422 detail ("Invalid CQL query: …").
+  // position-annotated 422 detail ("Invalid CQL query: …"); budget
+  // overruns 422 with an actionable message; deadline overruns 504.
+  // v1.2.13-2: accepts an AbortSignal (react-query passes one so Cancel
+  // works) and a client deadline (60 s > the engine's 20 s matcher
+  // deadline, mirroring the Arabic Tools pattern).
   concordanceCql: (
     cid: string,
     req: {
@@ -1888,7 +1896,9 @@ export const api = {
       normalize?: boolean | null;
       normalize_arabic?: boolean;
       zwnj?: "keep" | "space" | "strip";
+      cqp_compat?: boolean;
     },
+    signal?: AbortSignal,
   ) =>
     jsonFetch<ConcordanceResult>(`/api/v1/corpora/${cid}/concordance/cql`, {
       method: "POST",
@@ -1903,7 +1913,44 @@ export const api = {
         ...(req.normalize ? { normalize: true } : {}),
         ...(req.normalize_arabic ? { normalize_arabic: true } : {}),
         ...(req.zwnj ? { zwnj: req.zwnj } : {}),
+        ...(req.cqp_compat ? { cqp_compat: true } : {}),
       }),
+      signal,
+    }, CQL_TIMEOUT_MS),
+
+  // --- v1.2.13-2: server-side CQL export (all 5 formats; the engine
+  // re-runs the query under the matcher guards and streams the file, so
+  // the export covers the FULL match set, not the on-screen page). ---
+  exportConcordanceCql: (
+    cid: string,
+    req: {
+      query: string;
+      window?: number;
+      limit?: number;
+      subcorpus_id?: string | null;
+      normalize?: boolean | null;
+      normalize_arabic?: boolean;
+      zwnj?: "keep" | "space" | "strip";
+      cqp_compat?: boolean;
+    },
+    fmt: ExportFormat = "xlsx",
+  ) =>
+    smartFetch(`/api/v1/corpora/${cid}/export/concordance/cql?fmt=${fmt}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        query: req.query,
+        window: req.window,
+        limit: req.limit,
+        ...(req.subcorpus_id ? { subcorpus_id: req.subcorpus_id } : {}),
+        ...(req.normalize ? { normalize: true } : {}),
+        ...(req.normalize_arabic ? { normalize_arabic: true } : {}),
+        ...(req.zwnj ? { zwnj: req.zwnj } : {}),
+        ...(req.cqp_compat ? { cqp_compat: true } : {}),
+      }),
+    }).then((r) => {
+      if (!r.ok) throw new Error(`HTTP ${r.status}: ${r.statusText}`);
+      return r.blob();
     }),
 
   // --- v1.2.0: Vector KWIC (Anthony 2025) ---

@@ -240,6 +240,12 @@ _STUDENT_ROUTES: list[tuple[set[str], re.Pattern[str]]] = [
     ({"GET"}, re.compile(r"^/api/v1/corpora/[^/]+/subcorpora$")),
     # Core analysis tools.
     ({"POST"}, re.compile(r"^/api/v1/corpora/[^/]+/concordance$")),
+    # v1.2.13-2 (deliberate ON-listing): CQL-lite concordance. Admitted ONLY
+    # because the route enforces the matcher work budget + wall-clock
+    # deadline + max-span bound off the event loop, and students get the
+    # stricter STUDENT_MATCH_LIMITS (see stats/cql.py + api/analysis.py).
+    # It is the same read-only analysis surface as /concordance.
+    ({"POST"}, re.compile(r"^/api/v1/corpora/[^/]+/concordance/cql$")),
     ({"POST"}, re.compile(r"^/api/v1/corpora/[^/]+/concordance/vector$")),
     ({"POST"}, re.compile(r"^/api/v1/corpora/[^/]+/frequency$")),
     ({"POST"}, re.compile(r"^/api/v1/corpora/[^/]+/collocations$")),
@@ -258,6 +264,10 @@ _STUDENT_ROUTES: list[tuple[set[str], re.Pattern[str]]] = [
     # Direct analysis-result downloads (files returned inline; NOT the
     # server-side export queue, which stays teacher-only).
     ({"POST"}, re.compile(r"^/api/v1/corpora/[^/]+/export/(concordance|frequency|collocations|keyness)(\.xlsx)?$")),
+    # v1.2.13-2 (deliberate ON-listing): server-side CQL export — same
+    # inline-file surface as export/concordance; the engine re-runs the
+    # query under the same matcher guards.
+    ({"POST"}, re.compile(r"^/api/v1/corpora/[^/]+/export/concordance/cql$")),
     ({"POST"}, re.compile(r"^/api/v1/corpora/[^/]+/export/collocations\.network\.(svg|png)$")),
     ({"GET"}, re.compile(r"^/api/v1/corpora/[^/]+/methods.pdf$")),
     # Learner Research (analysis).
@@ -284,6 +294,21 @@ _STUDENT_ROUTES: list[tuple[set[str], re.Pattern[str]]] = [
     # Read-only hub catalogue (search/metadata only — downloads stay teacher-only).
     ({"GET"}, re.compile(r"^/api/v1/hub/(search|catalogue)$")),
 ]
+
+# v1.2.13-2 (deliberate OFF-listing — students are DENIED these CQL-adjacent
+# routes with 403, consistent with the existing subcorpus-management and
+# settings exclusions):
+#   * POST /api/v1/corpora/{cid}/subcorpora/from-cql — subcorpus MANAGEMENT
+#     (creating shared named filters) stays teacher-only.
+#   * /api/v1/corpora/{cid}/saved-queries (GET/POST/DELETE) — saved queries
+#     are per-project and shared through the teacher token; student saves
+#     would clutter the class space under the shared student token.
+#   * The CQL statistics consumers (frequency/collocations/dispersion/ngrams
+#     with a cql_query field, vector pre-filter) need NO new rules: they are
+#     new PARAMETERS on already-allowlisted analysis routes, so the existing
+#     entries above admit them deliberately.
+#   * The AI assistant's search_cql tool runs inside POST /ai/chat (already
+#     allowlisted); it inherits chat's gating and adds grounded line_ids only.
 
 
 def student_route_allowed(method: str, path: str) -> bool:

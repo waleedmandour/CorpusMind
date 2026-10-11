@@ -37,6 +37,7 @@ from api import (
     wordlists,
 )
 from api import (
+    saved_queries,
     server_mode as server_mode_routes,
 )
 from app import __version__, server_mode
@@ -340,6 +341,8 @@ def create_app() -> FastAPI:
     app.include_router(reference_corpus.router, prefix="/api/v1", tags=["reference-corpus"])
     app.include_router(open_access.router, prefix="/api/v1", tags=["open-access"])
     app.include_router(wordlists.router, prefix="/api/v1", tags=["wordlists"])
+    # v1.2.13-2: saved queries (teacher-only CRUD, per project).
+    app.include_router(saved_queries.router, prefix="/api/v1", tags=["saved-queries"])
     # v1.2.9 Student Mode — classroom server control plane (teacher-only).
     app.include_router(server_mode_routes.router, prefix="/api/v1", tags=["server-mode"])
     return app

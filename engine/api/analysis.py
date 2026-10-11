@@ -11,7 +11,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.corpora import resolve_subcorpus_document_ids
 from api.wordlists import resolve_stopword_set
-from stats.cql import CqlSyntaxError, search_concordance_cql
+from stats.cql import (
+    CqlDeadlineExceeded,
+    CqlSyntaxError,
+    CqlTooExpensive,
+    MatchLimits,
+    STUDENT_MATCH_LIMITS,
+    search_concordance_cql,
+)
 from stats.service import (
     compute_collocations,
     compute_corpus_readability,
@@ -73,18 +80,23 @@ async def concordance(cid: str, body: ConcordanceRequest, session: AsyncSession 
         if body.subcorpus_id
         else None
     )
-    result = await search_concordance(
-        session, cid, body.query,
-        level=body.level, case_sensitive=body.case_sensitive,
-        regex=body.regex,
-        window=body.window, limit=body.limit, offset=body.offset,
-        document_ids=document_ids,
-        random_sample=body.random_sample, sample_seed=body.sample_seed,
-        sort=[s.model_dump() for s in body.sort] if body.sort else None,
-        normalize_arabic=body.normalize_arabic,
-        normalize=body.normalize,
-        zwnj=body.zwnj,
-    )
+    try:
+        result = await search_concordance(
+            session, cid, body.query,
+            level=body.level, case_sensitive=body.case_sensitive,
+            regex=body.regex,
+            window=body.window, limit=body.limit, offset=body.offset,
+            document_ids=document_ids,
+            random_sample=body.random_sample, sample_seed=body.sample_seed,
+            sort=[s.model_dump() for s in body.sort] if body.sort else None,
+            normalize_arabic=body.normalize_arabic,
+            normalize=body.normalize,
+            zwnj=body.zwnj,
+        )
+    except ValueError as exc:
+        # v1.2.13-2: catastrophic regexes are rejected at validation time
+        # (shared ReDoS screen) — surface as 422, not a 500.
+        raise HTTPException(422, detail=str(exc)) from exc
     return {
         "lines": [asdict(l) for l in result.lines],
         "total": result.total,
@@ -115,14 +127,24 @@ class CqlRequest(BaseModel):
     normalize: bool | None = None       # v1.2.11: language-appropriate normalization
     normalize_arabic: bool = False      # v1.2.0: legacy Arabic folding
     zwnj: Literal["keep", "space", "strip"] = "keep"
+    # v1.2.13-2: opt-in CQP compat — quoted values are anchored regexes.
+    cqp_compat: bool = False
 
 
 @router.post("/corpora/{cid}/concordance/cql")
-async def concordance_cql(cid: str, body: CqlRequest, session: AsyncSession = Depends(get_session)) -> dict:
+async def concordance_cql(
+    cid: str, body: CqlRequest, request: Request, session: AsyncSession = Depends(get_session)
+) -> dict:
     """CQL-lite concordance: token-attribute sequences, gaps, alternation,
     quantifiers, and sentence/document scoping over the stored token stream.
 
     Invalid queries return 422 with a position-annotated syntax message.
+    Queries exceeding the matcher work budget return 422 with an actionable
+    message; queries exceeding the wall-clock deadline return 504. Matching
+    runs in a worker thread, so the event loop (and /health) stays responsive
+    during heavy queries. Students run under a stricter budget
+    (STUDENT_MATCH_LIMITS) — the endpoint is on the student allowlist ONLY
+    with these guards in place.
     """
     if not await session.get(Corpus, cid):
         raise HTTPException(404, "Corpus not found")
@@ -131,6 +153,12 @@ async def concordance_cql(cid: str, body: CqlRequest, session: AsyncSession = De
         if body.subcorpus_id
         else None
     )
+    # v1.2.13-2: role-aware budget. request.state.role is set by the auth
+    # middleware for classroom-proxied requests; direct loopback (the
+    # teacher's desktop app) has no role set and gets the teacher limits.
+    limits: MatchLimits = MatchLimits()
+    if getattr(request.state, "role", None) == "student":
+        limits = STUDENT_MATCH_LIMITS
     try:
         result = await search_concordance_cql(
             session, cid, body.query,
@@ -139,10 +167,14 @@ async def concordance_cql(cid: str, body: CqlRequest, session: AsyncSession = De
             random_sample=body.random_sample, sample_seed=body.sample_seed,
             sort=[s.model_dump() for s in body.sort] if body.sort else None,
             normalize=body.normalize, normalize_arabic=body.normalize_arabic,
-            zwnj=body.zwnj,
+            zwnj=body.zwnj, limits=limits, cqp_compat=body.cqp_compat,
         )
     except CqlSyntaxError as exc:
         raise HTTPException(422, detail=f"Invalid CQL query: {exc}") from exc
+    except CqlTooExpensive as exc:
+        raise HTTPException(422, detail=f"CQL query too expensive: {exc}") from exc
+    except CqlDeadlineExceeded as exc:
+        raise HTTPException(504, detail=f"CQL query timed out: {exc}") from exc
     return {
         "lines": [asdict(l) for l in result.lines],
         "total": result.total,
@@ -176,6 +208,10 @@ class VectorKwicRequest(BaseModel):
     normalize_arabic: bool = False
     model: str | None = Field(None, description="Embedding model; chain: request → settings → bge-m3")
     subcorpus_id: str | None = None
+    # v1.2.13-2 (CQL consumer): pre-filter Mode A candidates with a CQL
+    # pattern instead of a single node word (node ignored when set).
+    cql_query: str | None = None
+    cqp_compat: bool = False
 
 
 @router.post("/corpora/{cid}/concordance/vector")
@@ -241,6 +277,7 @@ async def concordance_vector(cid: str, body: VectorKwicRequest, request: Request
             normalize_arabic=body.normalize_arabic,
             model=body.model,
             document_ids=document_ids,
+            cql_query=body.cql_query, cqp_compat=body.cqp_compat,
         )
     except EmbeddingModelUnreachableError as e:
         # v1.2.5: Ollama dropped/refused the connection (crash, restart, or
@@ -327,6 +364,10 @@ class FrequencyRequest(BaseModel):
     normalize_arabic: bool = False  # v1.2.0 item 6
     normalize: bool | None = None   # v1.2.11: language-appropriate normalization
     zwnj: Literal["keep", "space", "strip"] = "keep"  # v1.2.11: fa/ur ZWNJ mode
+    # v1.2.13-2 (CQL consumer, deliberate on the already-allowlisted route):
+    # when set, frequency is computed over the CQL match node (unit becomes
+    # word|lemma|pos of each match's first token).
+    cql_query: str | None = None
 
 
 @router.post("/corpora/{cid}/frequency")
@@ -339,6 +380,23 @@ async def frequency(cid: str, body: FrequencyRequest, session: AsyncSession = De
         else None
     )
     stopword_set = await resolve_stopword_set(session, body.stopword_list_id)
+    if body.cql_query:
+        # v1.2.13-2: frequency over the CQL match node (same row shape).
+        from stats.cql_stats import compute_cql_frequency
+
+        try:
+            return await compute_cql_frequency(
+                session, cid, body.cql_query,
+                unit=body.unit if body.unit in ("word", "lemma", "pos") else "word",
+                min_freq=body.min_freq, limit=body.limit,
+                document_ids=document_ids,
+                normalize=body.normalize, normalize_arabic=body.normalize_arabic,
+                zwnj=body.zwnj,
+            )
+        except (CqlSyntaxError, CqlTooExpensive) as exc:
+            raise HTTPException(422, detail=str(exc)) from exc
+        except CqlDeadlineExceeded as exc:
+            raise HTTPException(504, detail=str(exc)) from exc
     r = await compute_frequency(
         session, cid,
         unit=body.unit, min_freq=body.min_freq, limit=body.limit, include_punct=body.include_punct,
@@ -372,6 +430,9 @@ class CollocationRequest(BaseModel):
     normalize_arabic: bool = False         # v1.2.0 item 6
     normalize: bool | None = None          # v1.2.11: language-appropriate normalization
     zwnj: Literal["keep", "space", "strip"] = "keep"  # v1.2.11: fa/ur ZWNJ mode
+    # v1.2.13-2 (CQL consumer, deliberate on the already-allowlisted route):
+    # when set, the node is the CQL match span (and `node` is ignored).
+    cql_query: str | None = None
 
 
 @router.post("/corpora/{cid}/collocations")
@@ -386,6 +447,23 @@ async def collocations(cid: str, body: CollocationRequest, session: AsyncSession
             else None
         )
         stopword_set = await resolve_stopword_set(session, body.stopword_list_id)
+        if body.cql_query:
+            # v1.2.13-2: collocations of the CQL match span (same measures).
+            from stats.cql_stats import compute_cql_collocations
+
+            try:
+                return await compute_cql_collocations(
+                    session, cid, body.cql_query,
+                    window=body.window, min_freq=body.min_freq,
+                    measures=body.measures, limit=body.limit,
+                    document_ids=document_ids,
+                    normalize=body.normalize, normalize_arabic=body.normalize_arabic,
+                    zwnj=body.zwnj,
+                )
+            except (CqlSyntaxError, CqlTooExpensive) as exc:
+                raise HTTPException(422, detail=str(exc)) from exc
+            except CqlDeadlineExceeded as exc:
+                raise HTTPException(504, detail=str(exc)) from exc
         r = await compute_collocations(
             session, cid, body.node,
             level=body.level, window=body.window,
@@ -455,12 +533,29 @@ async def keyness(cid: str, body: KeynessRequest, session: AsyncSession = Depend
 class DispersionRequest(BaseModel):
     term: str = Field(..., min_length=1)
     level: Literal["word", "lemma"] = "word"
+    # v1.2.13-2 (CQL consumer, deliberate on the already-allowlisted route):
+    # when set, dispersion counts the CQL match spans per document and
+    # `term`/`level` are ignored (term echoes the query for the UI).
+    cql_query: str | None = None
 
 
 @router.post("/corpora/{cid}/dispersion")
 async def dispersion(cid: str, body: DispersionRequest, session: AsyncSession = Depends(get_session)) -> dict:
     if not await session.get(Corpus, cid):
         raise HTTPException(404, "Corpus not found")
+    if body.cql_query:
+        from stats.cql_stats import compute_cql_dispersion
+
+        try:
+            r = await compute_cql_dispersion(
+                session, cid, body.cql_query,
+                normalize_arabic=False,
+            )
+        except (CqlSyntaxError, CqlTooExpensive) as exc:
+            raise HTTPException(422, detail=str(exc)) from exc
+        except CqlDeadlineExceeded as exc:
+            raise HTTPException(504, detail=str(exc)) from exc
+        return asdict(r)
     r = await compute_dispersion(session, cid, body.term, level=body.level)
     return asdict(r)
 

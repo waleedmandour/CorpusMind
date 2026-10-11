@@ -163,30 +163,57 @@ evidence. Results export to five formats.
 ### CQL mode (corpus query language, v1.2.13)
 
 Switch the concordancer from **Simple** to **CQL** to search for whole
-*patterns* instead of single nodes. The syntax is CQP-flavoured, so queries
-written for Sketch Engine or CWB transfer directly:
+*patterns* instead of single nodes. The syntax is **CQP-flavoured but not
+CQP** — quoted values are wildcard patterns (not regexes), regex only via
+`/re/` and unanchored, scoping is `within sentence | document` only. What you
+can type:
 
 - Literal words: `"risk"` — wildcards allowed: `"book*"`, `"coll??ate"`.
 - Token attributes: `[lemma="take"]`, `[pos="NOUN"]`, `[word="book" &
   pos="NOUN"]` (`&` = and, `|` = or; `!=` for negation; `/…/` for regular
   expressions: `[word=/colou?r/]`).
 - Attributes available: `word`, `lemma`, `pos` (UPOS), `xpos`, `rel` (UD
-  dependency), `morph` (features), and — for Arabic — `root` and `pattern`
-  (e.g. `[root="k.t.b"]`), which few corpus tools expose at all.
+  dependency), `morph` (features), and — for Arabic — `root` and `pattern`,
+  which few corpus tools expose at all. The **real stored format** (verified
+  against the CAMeL calima-msa-r13 backend) is a DOTTED root and a template
+  pattern with digit radical slots: `[root="ك.ت.ب"]` matches كتب/الكتاب/
+  المكتبة, and `[pattern="1ُ2ُ3"]` matches كُتُب-type nouns.
 - Sequences and gaps: `[lemma="take"] []{0,3} "risk"` (0–3 any-token gap),
   quantifiers `?`, `+`, `{m,n}` and star (zero-or-more), groups with
   alternation `(cat|dog)`.
-- Flags: `%c` ignore case, `%d` fold Arabic diacritics — inside or after a
-  token: `[lemma="kitab" %c]`. CQL is case-sensitive by default (CQP
+- Flags: `%c` ignore case (Unicode-aware folding — école/École, STRASSE/
+  straße, final sigma, Cyrillic), `%d` fold Arabic diacritics — inside or
+  after a token: `[lemma="kitab" %c]`. CQL is case-sensitive by default (CQP
   convention); the Simple box is not.
-- Scoping: append `within sentence` (or `within document`) to constrain every
-  match; by default a sequence may cross a sentence boundary.
+- Scoping: append `within sentence` (alias `within s`) or `within document`
+  to constrain every match; by default a sequence may cross a sentence
+  boundary.
 
 Results render in the same KWIC table with sort, seeded sampling, pagination,
-and export. An invalid pattern returns the position of the error, e.g.
-*"Invalid CQL query: syntax error at position 12: …"*. Sequences match over
-the stored token stream with a 20,000-token candidate cap per query; the
-result panel flags when the total is a lower bound.
+and **server-side export** (the engine re-runs the query, so the file contains
+the full match set, not just the on-screen page). An invalid pattern returns
+the position of the error, e.g. *"Invalid CQL query: syntax error at position
+12: …"*, and the concordancer draws a caret under the offending character.
+Patterns run in a worker thread under an explicit work budget and a
+wall-clock deadline: an over-expensive pattern (e.g. an unbounded gap with no
+literal anchor) returns an actionable message — *"Narrow it: add a literal
+anchor, bound unbounded gaps ([]\* → []{0,50}), or scope with 'within
+sentence'"* — instead of freezing the app, and a running query can be
+cancelled while in flight. Students get the same CQL surface under a stricter
+budget. One match per start is reported (the earliest-ending span). The
+20,000-token candidate cap per query remains; the result panel flags when the
+total is a lower bound.
+
+### CQL statistics (v1.2.13-2)
+
+The CQL match node feeds the statistics tools as well: **frequency**,
+**collocations**, **dispersion**, and **n-grams** all accept a CQL pattern
+(`cql_query`), so you can sketch, say, the collocates of `[pos="ADJ"] "fox"`
+or the dispersion of `[root="ك.ت.ب"]` across documents with the same
+association measures as the simple endpoints. Subcorpora can be created
+**from a CQL query** (documents containing at least one match become the
+member set), queries can be saved per project, and the grounded AI assistant
+gains a `search_cql` tool (tool-capable models only).
 
 ### Vector KWIC (Semantic Search)
 
