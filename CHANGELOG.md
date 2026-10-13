@@ -1,10 +1,88 @@
-## [1.2.13-2] — 2026-10-11 — CQL hardening + platform-wide coverage
+# Changelog
 
-> Second pre-release of 1.2.13, cut from tag `v1.2.13-1` for the review round
-> (matcher cost, Unicode case folding, Student Mode, documentation truth),
-> then extended across the platform. Tag: `v1.2.13-2`.
+All notable changes to CorpusMind are documented in this file.
 
-### Fixed (P0 — with regression tests that fail on 1.2.13-1)
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
+once 1.0 ships. Until then, expect breaking changes between 0.x releases.
+
+## [1.2.13] — 2026-10-14 — CQL-lite concordance query language (Phase 1 + hardening) + Arabic Tools export
+
+> Shipped first as pre-releases `v1.2.13-1` (Phase 1) and `v1.2.13-2` (the
+> review-round hardening), then finalized with the Arabic Tools export-bar
+> placement fix. This section merges both pre-releases.
+
+### Added
+- **CQL-lite corpus query language, Phase 1 (engine).** A CQP-flavoured query
+  language for the concordancer: token-attribute sequences with gaps and
+  quantifiers, exactly what Sketch Engine / CWB users expect to type first.
+  `engine/stats/cql.py` (~1,000 lines: lexer + recursive-descent parser +
+  backtracking stream matcher + SQL anchor prefilter) and
+  `POST /api/v1/corpora/{cid}/concordance/cql`. Grammar: quoted literals with
+  wildcards (`"risk*"`), token specs over eight attributes (`word`, `lemma`,
+  `pos` (UPOS), `xpos`, `rel`, `morph`, `root`, `pattern`) with `&`/`|`
+  combinations and `/regex/` values, any-token `[]`, quantifiers `? * + {m,n}`,
+  groups with alternation `(cat|dog)*`, `%c` (ignore case) and `%d` (fold
+  diacritics) flags, and `within sentence | document` scoping. Arabic root and
+  pattern are queryable attributes — something CQPweb does not offer out of the
+  box. No schema change; invalid queries return 422 with a position-annotated
+  message; KWIC window, sort, seeded sampling, pagination and the match-set
+  cap integrate unchanged.
+- **Concordancer CQL mode (web).** A Simple|CQL toggle on the concordancer:
+  CQL mode swaps the level/regex/case controls for the pattern box (CQL is
+  case-sensitive by CQP convention; flags are part of the query), shows a
+  one-line syntax crib, renders results through the existing KWIC table,
+  surfaces syntax errors from the engine's detail, and exports the fetched
+  lines client-side (the export endpoint re-runs a *simple* query and cannot
+  represent a CQL pattern).
+- **Arabic Tools export.** The Arabic Tools window can now export every tool
+  result — morphology, roots, clitics, Buckwalter, dediacritized, normalized,
+  dialect ID, register, translate — as xlsx / csv / tsv / txt / json via the
+  same Export dropdown as the analysis panels. Table tools export their
+  on-screen columns; text tools export an original/result pair; distributions
+  export a sorted probability table. CSV/TSV carry a UTF-8 BOM so Arabic opens
+  cleanly in Excel/Sheets.
+- **Release workflow.** A tag containing a pre-release suffix publishes as a
+  GitHub pre-release, and the guide-attachment gate strips any pre-release
+  suffix (not just `-rcN`) when comparing the tag to the committed guide.
+
+- **Wildcard single-source-of-truth.** One `_wildcard_regex` helper now feeds
+  BOTH the SQL prefilter and the Python matcher (fnmatch removed — it treated
+  `[..]` as a character class, diverging from the SQL layer).
+- **Server-side CQL export.** POST /corpora/{cid}/export/concordance/cql
+  re-runs the query under the matcher guards and streams xlsx/csv/tsv/txt/json
+  covering the FULL match set (the v1.2.13-1 client-side export only had the
+  on-screen 200-line page). On the student allowlist (same surface as the
+  simple export). svg/png were never offered for concordance (verified — they
+  are collocation-network diagram formats).
+- **Paging overhaul.** Match spans are computed once and cached per
+  (corpus, query, version, filters); the page is sliced FIRST and sentence
+  context is fetched only for the page's spans. A regression test pins that
+  re-paging never re-runs the matcher and context stays page-bounded.
+- **Cancel + elapsed counter.** concordanceCql accepts react-query's
+  AbortSignal and a 60 s client deadline; a visible Cancel button and an
+  elapsed-seconds ticker in CQL mode mirror the Arabic Tools pattern.
+- **Stale-seed fix.** The sampled search re-used the PREVIOUS click's seed
+  (state read in the same tick); the seed is now computed locally for both
+  Simple and CQL, with a regression test.
+- **Shared KWIC table.** The concordancer's two byte-identical table copies
+  (Simple vs CQL) are extracted into components/KwicTable.tsx + a shared
+  pager so they cannot drift.
+- **CQL across the platform (P2).** `stats/cql.py` now exposes the reusable
+  `find_cql_spans` service (spans + streams under the same guards), and the
+  consumers built on it: CQL frequency/collocations/dispersion/n-grams (same
+  row shapes and measures as the simple endpoints), Vector-KWIC CQL
+  pre-filtering, subcorpus-by-CQL (member set = documents with >= 1 match,
+  re-resolved at analysis time), per-project saved queries (teacher-only
+  CRUD, CQL validated at save time), and the grounded AI tool `search_cql`
+  (line_id-cited evidence; tool-capable models only via the existing
+  supports_tools gate). Every consumer's student-allowlist status is decided
+  and documented in app/server_mode.py.
+- **Query helper in the concordancer.** Example chips, an expandable syntax
+  panel carrying the Differences-from-CQP table, and an error caret drawn
+  under the offending position of the engine's 422 message.
+
+### Fixed
 - **Matcher cost (O(n^2) time and memory).** The v1.2.13-1 matcher enumerated
   every end position per start and memoized a set per (element, position):
   `"the" []* "of"` measured 23 s / 1.4 GB at 20K tokens and was OOM-killed at
@@ -60,124 +138,33 @@
   guide, and both USER_GUIDE files. `within s`/`within doc` aliases accepted;
   an opt-in CQP-compat mode treats quoted values as anchored regexes
   (request field `cqp_compat`).
-
-### Added
-- **Wildcard single-source-of-truth.** One `_wildcard_regex` helper now feeds
-  BOTH the SQL prefilter and the Python matcher (fnmatch removed — it treated
-  `[..]` as a character class, diverging from the SQL layer).
-- **Server-side CQL export.** POST /corpora/{cid}/export/concordance/cql
-  re-runs the query under the matcher guards and streams xlsx/csv/tsv/txt/json
-  covering the FULL match set (the v1.2.13-1 client-side export only had the
-  on-screen 200-line page). On the student allowlist (same surface as the
-  simple export). svg/png were never offered for concordance (verified — they
-  are collocation-network diagram formats).
-- **Paging overhaul.** Match spans are computed once and cached per
-  (corpus, query, version, filters); the page is sliced FIRST and sentence
-  context is fetched only for the page's spans. A regression test pins that
-  re-paging never re-runs the matcher and context stays page-bounded.
-- **Cancel + elapsed counter.** concordanceCql accepts react-query's
-  AbortSignal and a 60 s client deadline; a visible Cancel button and an
-  elapsed-seconds ticker in CQL mode mirror the Arabic Tools pattern.
-- **Stale-seed fix.** The sampled search re-used the PREVIOUS click's seed
-  (state read in the same tick); the seed is now computed locally for both
-  Simple and CQL, with a regression test.
-- **Shared KWIC table.** The concordancer's two byte-identical table copies
-  (Simple vs CQL) are extracted into components/KwicTable.tsx + a shared
-  pager so they cannot drift.
-- **CQL across the platform (P2).** `stats/cql.py` now exposes the reusable
-  `find_cql_spans` service (spans + streams under the same guards), and the
-  consumers built on it: CQL frequency/collocations/dispersion/n-grams (same
-  row shapes and measures as the simple endpoints), Vector-KWIC CQL
-  pre-filtering, subcorpus-by-CQL (member set = documents with >= 1 match,
-  re-resolved at analysis time), per-project saved queries (teacher-only
-  CRUD, CQL validated at save time), and the grounded AI tool `search_cql`
-  (line_id-cited evidence; tool-capable models only via the existing
-  supports_tools gate). Every consumer's student-allowlist status is decided
-  and documented in app/server_mode.py.
-- **Query helper in the concordancer.** Example chips, an expandable syntax
-  panel carrying the Differences-from-CQP table, and an error caret drawn
-  under the offending position of the engine's 422 message.
-
-### Tests
-- Engine: tests/test_cql_hardening.py (40 tests) — 50K-token memory-bounded
-  perf regression, budget/deadline/504/422 mapping, /health latency < 0.5 s
-  under heavy CQL, Unicode %c matrix + superset property, wildcard-helper
-  consistency, morph semantics, real-CAMeL root format (real morphology.db +
-  real ingestion path), student allowlist boundary + stricter budget, paging
-  span-cache, server-side CQL export, cqp_compat, all P2 consumers. Full
-  suite: 787 passed / 0 failed. Reproduction probes for the reviewed bugs
-  live in tests/cql_probes_v1.2.13-1.py (scratch, not committed as tests).
-- Web: src/__tests__/cql-ui-regression.test.tsx (10 tests) — mode toggle,
-  422 error + caret rendering, budget message, Cancel + abort signal,
-  elapsed counter, student gating, server-side export, stale-seed regression.
-  Full web suite: 34 passed. tsc clean, PWA build OK, contrast 86/86,
-  query-pending guard PASS, source guards PASS.
-
-## [1.2.13-1] — 2026-10-11 — CQL-lite pre-release (Phase 1) + Arabic Tools export
-
-> Pre-release of 1.2.13, cut for field testing before the final rebuild. Tag:
-> `v1.2.13-1` (numeric-only semver pre-release — the MSI bundler accepts
-> numeric-only pre-release identifiers). Installers publish marked as a
-> GitHub pre-release.
-
-### Added
-- **CQL-lite corpus query language, Phase 1 (engine).** A CQP-flavoured query
-  language for the concordancer: token-attribute sequences with gaps and
-  quantifiers, exactly what Sketch Engine / CWB users expect to type first.
-  `engine/stats/cql.py` (~1,000 lines: lexer + recursive-descent parser +
-  backtracking stream matcher + SQL anchor prefilter) and
-  `POST /api/v1/corpora/{cid}/concordance/cql`. Grammar: quoted literals with
-  wildcards (`"risk*"`), token specs over eight attributes (`word`, `lemma`,
-  `pos` (UPOS), `xpos`, `rel`, `morph`, `root`, `pattern`) with `&`/`|`
-  combinations and `/regex/` values, any-token `[]`, quantifiers `? * + {m,n}`,
-  groups with alternation `(cat|dog)*`, `%c` (ignore case) and `%d` (fold
-  diacritics) flags, and `within sentence | document` scoping. Arabic root and
-  pattern are queryable attributes — something CQPweb does not offer out of the
-  box. No schema change; invalid queries return 422 with a position-annotated
-  message; KWIC window, sort, seeded sampling, pagination and the match-set
-  cap integrate unchanged.
-- **Concordancer CQL mode (web).** A Simple|CQL toggle on the concordancer:
-  CQL mode swaps the level/regex/case controls for the pattern box (CQL is
-  case-sensitive by CQP convention; flags are part of the query), shows a
-  one-line syntax crib, renders results through the existing KWIC table,
-  surfaces syntax errors from the engine's detail, and exports the fetched
-  lines client-side (the export endpoint re-runs a *simple* query and cannot
-  represent a CQL pattern).
-- **Arabic Tools export.** The Arabic Tools window can now export every tool
-  result — morphology, roots, clitics, Buckwalter, dediacritized, normalized,
-  dialect ID, register, translate — as xlsx / csv / tsv / txt / json via the
-  same Export dropdown as the analysis panels. Table tools export their
-  on-screen columns; text tools export an original/result pair; distributions
-  export a sorted probability table. CSV/TSV carry a UTF-8 BOM so Arabic opens
-  cleanly in Excel/Sheets.
-- **Release workflow.** A tag containing a pre-release suffix publishes as a
-  GitHub pre-release, and the guide-attachment gate strips any pre-release
-  suffix (not just `-rcN`) when comparing the tag to the committed guide.
+- **Arabic Tools Export placement.** The Export button above the tool result
+  sat flush on the column edge, glued to the Run analysis button, and its
+  dropdown (right-aligned to the trigger) opened ~100 px past the app-main
+  scroll boundary — clipped labels. The bar is now inset to align with the
+  result card's inner content and, in Arabic Tools only, the menu anchors to
+  the trigger's start so every format row is fully readable.
 
 ### Changed
-- The Issue 5 client-side export helpers moved from `AnalysisView` to the
-  shared `lib/resultExport` module so every exporting view uses one
-  serialization path (and so the Arabic/CQL shaping is unit-testable).
-- The concordance query layer no longer retries at the TanStack level: a 422
-  is deterministic and retrying only delayed the same message (connection-
-  level restarts remain handled inside the fetch layer).
+
 
 ### Tests
-- Engine: `engine/tests/test_cql.py` (19 tests) — parser accept/reject,
-  canonical round-trip, matcher semantics, Arabic root/pattern +
-  normalization, fetch-cap metadata, pagination/sort/sampling, endpoint
-  200/422/404.
-- Web: `web/src/__tests__/result-export.test.tsx` (19 tests) — per-tool
-  Arabic table shaping, BOM/quoting/escaping, export dropdown wiring,
-  CQL mode end-to-end with a mocked engine (happy path + 422 detail).
-
-# Changelog
-
-All notable changes to CorpusMind are documented in this file.
-
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
-once 1.0 ships. Until then, expect breaking changes between 0.x releases.
+- Engine: `tests/test_cql.py` (19 tests) — parser accept/reject, canonical
+  round-trip, matcher semantics, Arabic root/pattern + normalization,
+  fetch-cap metadata, pagination/sort/sampling, endpoint 200/422/404.
+- Engine hardening: `tests/test_cql_hardening.py` (40+ tests) — 50K-token
+  memory-bounded perf regression, budget/deadline/504/422 mapping, /health
+  latency < 0.5 s under heavy CQL, Unicode %c matrix + prefilter-superset
+  property, wildcard-helper consistency, morph semantics, real-CAMeL root
+  format, student allowlist boundary + stricter budget, paging span-cache,
+  server-side CQL export, cqp_compat, all P2 consumers. Full suite at the
+  v1.2.13 tag: 787 passed / 1 skipped / 0 failed.
+- Web: `src/__tests__/result-export.test.tsx` (19 tests) — per-tool Arabic
+  table shaping, BOM/quoting/escaping, export dropdown wiring, CQL mode
+  end-to-end with a mocked engine; `src/__tests__/cql-ui-regression.test.tsx`
+  (10 tests) — mode toggle, 422 caret, budget message, Cancel + abort,
+  elapsed counter, student gating, server-side export, stale-seed. Full web
+  suite at the v1.2.13 tag: 34 passed; tsc clean; PWA build OK.
 
 ## [1.2.12] — 2026-10-08 — Classroom server toggle fixes (white-screen field report)
 

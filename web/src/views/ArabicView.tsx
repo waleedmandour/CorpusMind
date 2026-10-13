@@ -345,7 +345,7 @@ export function ArabicView() {
           their on-screen columns, the text tools a two-column original/result
           pair, the distribution tools a probability table. */}
       {result.data && (
-        <div className="result-export-bar">
+        <div className="result-export-bar arabic-export-bar">
           <ExportButton
             label={t(lang, "analysis_export")}
             formats={["xlsx", "csv", "tsv", "txt", "json"]}

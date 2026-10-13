@@ -7885,3 +7885,19 @@ a.ollama-model-url:hover {
   margin-bottom: var(--space-2);
   flex-wrap: wrap;
 }
+/* v1.2.13: the Arabic Tools export bar sits flush on the column edge,
+   glued to the Run analysis button above it; inset it a touch so it
+   aligns with the result card's inner content instead. */
+.arabic-export-bar {
+  margin-left: var(--space-4);
+}
+/* v1.2.13: the export menu is right-aligned to its trigger, so next to the
+   left column edge it opened ~100px PAST the app-main scroll boundary and
+   was clipped (labels unreadable). Arabic Tools' button sits at the bar's
+   left edge with 900+ px of open row to its right — anchor the menu to the
+   trigger's start there. Scoped: chart/toolbars elsewhere anchor right and
+   must keep the current behaviour. */
+.arabic-export-bar .export-menu {
+  inset-inline-end: auto;
+  inset-inline-start: 0;
+}
