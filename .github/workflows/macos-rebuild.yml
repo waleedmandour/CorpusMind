@@ -434,6 +434,11 @@ jobs:
           path: dmgs
           merge-multiple: true
 
+      # NOTE: every gh call below passes -R explicitly — this job has no
+      # actions/checkout, and gh falls back to git discovery ("failed to
+      # run git: fatal: not a git repository") without a repo flag.
+      # (v1.2.13 rebuild: the first attach attempt failed on exactly this.)
+
       - name: Remove the unsigned DMG assets from the release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -443,12 +448,12 @@ jobs:
           echo "Sealed DMGs to attach:"; ls -lh dmgs
           N=$(ls dmgs/*.dmg | wc -l)
           if [ "$N" -ne 2 ]; then echo "ERROR: expected exactly 2 DMGs, got $N"; exit 1; fi
-          gh api "repos/$REPO/releases/tags/$TAG" --jq '.assets[] | select(.name | endswith(".dmg")) | "\(.id) \(.name)"' | tee /tmp/old-dmgs.txt
+          gh api -R "$REPO" "repos/$REPO/releases/tags/$TAG" --jq '.assets[] | select(.name | endswith(".dmg")) | "\(.id) \(.name)"' | tee /tmp/old-dmgs.txt
           OLDCOUNT=$(wc -l < /tmp/old-dmgs.txt)
           if [ "$OLDCOUNT" -ne 2 ]; then echo "ERROR: expected exactly 2 old DMG assets, got $OLDCOUNT"; exit 1; fi
           while read -r id name; do
             echo "Deleting unsigned asset: $name (id $id)"
-            gh api -X DELETE "repos/$REPO/releases/assets/$id"
+            gh api -R "$REPO" -X DELETE "repos/$REPO/releases/assets/$id"
           done < /tmp/old-dmgs.txt
           echo "Old DMG assets removed."
 
@@ -458,16 +463,16 @@ jobs:
         run: |
           TAG="${{ inputs.tag }}"
           REPO="${{ github.repository }}"
-          gh release upload "$TAG" dmgs/*.dmg --clobber
+          gh release upload -R "$REPO" "$TAG" dmgs/*.dmg --clobber
           echo "Sealed DMGs uploaded to release $TAG (same release page)."
           # Regenerate the manifest from the CURRENT release assets — same
           # convention as the release workflow (exclude the manifest itself
           # and the User Guide PDF, which is attached after the manifest).
           mkdir assets
-          gh release download "$TAG" -D assets
+          gh release download -R "$REPO" "$TAG" -D assets
           cd assets
           rm -f SHA256SUMS.txt CorpusMind_User_Guide_*.pdf
           sha256sum * > SHA256SUMS.txt
           echo "New manifest:"; cat SHA256SUMS.txt
-          gh release upload "$TAG" SHA256SUMS.txt --clobber
+          gh release upload -R "$REPO" "$TAG" SHA256SUMS.txt --clobber
           echo "SHA256SUMS.txt refreshed."
