@@ -54,6 +54,10 @@ jobs:
     env:
       CM_APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
       CM_APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+      # job-level so the seal step can see it: when a Developer ID identity
+      # is configured, tauri-bundler signs the .app itself and the ad-hoc
+      # seal step must NOT run (it would clobber the real signature).
+      CM_APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -193,6 +197,7 @@ jobs:
           cargo tauri build --target aarch64-apple-darwin --bundles app
 
       - name: Seal the app bundle (ad-hoc) and verify
+        if: ${{ env.CM_APPLE_CERTIFICATE == '' && env.CM_APPLE_SIGNING_IDENTITY == '' }}
         run: |
           APP="desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/macos/CorpusMind.app"
           test -d "$APP" || { echo "ERROR: $APP not found"; exit 1; }
@@ -246,6 +251,10 @@ jobs:
     env:
       CM_APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
       CM_APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+      # job-level so the seal step can see it: when a Developer ID identity
+      # is configured, tauri-bundler signs the .app itself and the ad-hoc
+      # seal step must NOT run (it would clobber the real signature).
+      CM_APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -381,6 +390,7 @@ jobs:
           cargo tauri build --target x86_64-apple-darwin --bundles app
 
       - name: Seal the app bundle (ad-hoc) and verify
+        if: ${{ env.CM_APPLE_CERTIFICATE == '' && env.CM_APPLE_SIGNING_IDENTITY == '' }}
         run: |
           APP="desktop/src-tauri/target/x86_64-apple-darwin/release/bundle/macos/CorpusMind.app"
           test -d "$APP" || { echo "ERROR: $APP not found"; exit 1; }
