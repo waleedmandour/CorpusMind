@@ -1,0 +1,473 @@
+name: macOS rebuild (seal + attach)
+
+# v1.2.13 follow-up: the release DMGs shipped .app bundles with NO code
+# signature at all. With signingIdentity: null and no APPLE_* secrets
+# configured, tauri-bundler skips the codesign step entirely (the old
+# workflow comment claiming an "ad-hoc-signed .app/.dmg" was wrong — that
+# is Tauri v2's behaviour only when an identity is configured). A downloaded
+# unsigned bundle carries the com.apple.quarantine attribute and macOS 12+
+# Gatekeeper then reports it as "damaged and can't be opened. You should
+# move it to the Trash."
+#
+# This workflow surgically rebuilds BOTH macOS DMG targets from a given ref
+# (default: the release tag itself, so the app code is identical), seals the
+# bundle with a valid AD-HOC code signature (xattr cleanup -> codesign
+# --force --deep --sign - -> codesign --verify --deep --strict) before the
+# DMG is created, and REPLACES the .dmg assets on the SAME release page —
+# no new release is created. A valid signature downgrades the Gatekeeper
+# verdict from "damaged" to the bypassable "unidentified developer" prompt;
+# the note in the release body documents the first-open steps.
+#
+# Fully silent Gatekeeper acceptance still requires a paid Apple Developer
+# ID certificate + notarization (APPLE_* secrets), which this repo does not
+# have — the optional import/export path from release.yml is preserved so
+# this workflow picks up real signing material automatically if it is ever
+# added.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag whose page receives the rebuilt DMGs'
+        required: true
+        default: 'v1.2.13'
+      build_ref:
+        description: 'Git ref to build from (defaults to the tag above)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+concurrency:
+  group: macos-rebuild-${{ github.event.inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  # ──────────────────────────────────────────────────────────────────────
+  # macOS Apple Silicon (arm64) — mirrors release.yml's macos-arm64 job
+  # ──────────────────────────────────────────────────────────────────────
+  macos-arm64:
+    name: macOS (Apple Silicon) — sealed
+    runs-on: macos-14
+    timeout-minutes: 60
+    env:
+      CM_APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+      CM_APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.build_ref || inputs.tag }}
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Set up Rust (stable, aarch64-apple-darwin)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
+
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli --version '^2.0' --locked
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            desktop/src-tauri/target
+          key: macos-arm64-cargo-${{ hashFiles('desktop/src-tauri/Cargo.toml') }}
+          restore-keys: macos-arm64-cargo-
+
+      - name: Install PyInstaller + engine deps (production only)
+        working-directory: engine
+        run: |
+          python -m pip install --upgrade pip wheel
+          pip install pyinstaller python-multipart cryptography
+          pip install -e .
+          pip install pillow
+
+      - name: Install camel_tools code (always - Buckwalter/dediac char tables)
+        working-directory: engine
+        run: |
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -e ".[arabic]"
+
+      - name: Provision CAMeL Tools data (opt-in, Arabic Tools bundle)
+        working-directory: engine
+        if: ${{ vars.CORPUSMIND_BUNDLE_CAMEL_DATA == '1' }}
+        run: |
+          camel_data -i morphology-db-msa-r13
+          camel_data -i dialectid-model6
+          python -c "from camel_tools.morphology.database import MorphologyDB; MorphologyDB.builtin_db('calima-msa-r13'); print('camel-tools data OK')"
+
+      - name: Download spaCy model (en_core_web_sm)
+        working-directory: engine
+        run: |
+          python -m spacy download en_core_web_sm
+          python -c "import en_core_web_sm; print('spaCy model OK:', en_core_web_sm.__version__)"
+
+      - name: Fetch Caddy binary (Student Mode sidecar)
+        run: python scripts/fetch_caddy.py
+
+      - name: Build web PWA
+        working-directory: web
+        env:
+          VITE_ENGINE_URL: http://127.0.0.1:8765
+        run: |
+          npm ci
+          npm run build
+
+      - name: Build engine sidecar (PyInstaller)
+        working-directory: engine
+        run: pyinstaller corpusmind-engine.spec --noconfirm --clean --log-level WARN
+
+      - name: Stage sidecar for Tauri (onedir)
+        working-directory: desktop/src-tauri
+        run: |
+          mkdir -p binaries
+          cp -r ../../engine/dist/corpusmind-engine binaries/corpusmind-engine
+          chmod +x binaries/corpusmind-engine/corpusmind-engine
+          if [ ! -f binaries/corpusmind-engine/corpusmind-engine ]; then
+            echo "ERROR: Sidecar binary not found!"
+            exit 1
+          fi
+          echo "OK: Sidecar binary verified"
+
+      - name: Verify spaCy model is bundled
+        run: |
+          model_dir="desktop/src-tauri/binaries/corpusmind-engine/_internal/en_core_web_sm"
+          if [ ! -f "$model_dir/meta.json" ]; then
+            echo "ERROR: spaCy model en_core_web_sm not bundled!"
+            exit 1
+          fi
+          echo "OK: spaCy model bundled ($(du -sh "$model_dir" | cut -f1))"
+
+      - name: Smoke-test engine sidecar (USAS + AWL + persuasion-index)
+        run: bash scripts/ci_smoke_engine.sh desktop/src-tauri/binaries/corpusmind-engine/corpusmind-engine
+
+      - name: Import macOS signing certificate (optional)
+        if: env.CM_APPLE_CERTIFICATE != ''
+        run: |
+          CERT_PATH=$RUNNER_TEMP/build_certificate.p12
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          echo -n "$CM_APPLE_CERTIFICATE" | base64 --decode -o $CERT_PATH
+          security create-keychain -p corpusmind-ci $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p corpusmind-ci $KEYCHAIN_PATH
+          security import $CERT_PATH -P "$CM_APPLE_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          security set-key-partition-list -S apple-tool:,apple: -k corpusmind-ci $KEYCHAIN_PATH
+          security list-keychain -d user -s $KEYCHAIN_PATH
+
+      - name: Build Tauri app only (arm64)
+        working-directory: desktop/src-tauri
+        env:
+          CM_APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          CM_APPLE_ID: ${{ secrets.APPLE_ID }}
+          CM_APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          CM_APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          # Conditional signing export — identical to release.yml. With no
+          # secrets configured NOTHING is exported and the explicit seal
+          # step below provides the ad-hoc signature.
+          if [ -n "$CM_APPLE_CERTIFICATE" ]; then
+            export APPLE_CERTIFICATE="$CM_APPLE_CERTIFICATE"
+            export APPLE_CERTIFICATE_PASSWORD="$CM_APPLE_CERTIFICATE_PASSWORD"
+            export APPLE_SIGNING_IDENTITY="${CM_APPLE_SIGNING_IDENTITY:-Developer ID Application}"
+            export APPLE_ID="$CM_APPLE_ID"
+            export APPLE_PASSWORD="$CM_APPLE_PASSWORD"
+            export APPLE_TEAM_ID="$CM_APPLE_TEAM_ID"
+          elif [ -n "$CM_APPLE_SIGNING_IDENTITY" ]; then
+            export APPLE_SIGNING_IDENTITY="$CM_APPLE_SIGNING_IDENTITY"
+          fi
+          # --bundles app: build ONLY the .app so the DMG is created AFTER
+          # the bundle has been sealed (a pre-signed dmg cannot be patched).
+          cargo tauri build --target aarch64-apple-darwin --bundles app
+
+      - name: Seal the app bundle (ad-hoc) and verify
+        run: |
+          APP="desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/macos/CorpusMind.app"
+          test -d "$APP" || { echo "ERROR: $APP not found"; exit 1; }
+          # 1) strip runner-added extended attributes (com.apple.provenance
+          #    etc.) so the seal is computed over clean files
+          xattr -cr "$APP"
+          # 2) deep ad-hoc seal: every nested Mach-O (PyInstaller sidecar
+          #    executables/dylibs/.so) + the bundle-level CodeResources seal
+          codesign --force --deep --sign - "$APP"
+          # 3) hard-fail the job if the seal is not strictly valid
+          codesign --verify --deep --strict "$APP"
+          echo "Seal verified:"
+          codesign -dv "$APP" 2>&1 | sed -n '1,6p'
+
+      - name: Create the DMG (app + Applications symlink)
+        run: |
+          APP="desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/macos/CorpusMind.app"
+          VER=$(python3 -c "import json;print(json.load(open('desktop/src-tauri/tauri.conf.json'))['version'])")
+          STAGE="$RUNNER_TEMP/dmg-stage"
+          rm -rf "$STAGE"; mkdir -p "$STAGE/CorpusMind"
+          cp -R "$APP" "$STAGE/CorpusMind/CorpusMind.app"
+          ln -s /Applications "$STAGE/CorpusMind/Applications"
+          hdiutil create -volname "CorpusMind" -srcfolder "$STAGE/CorpusMind" -format UDZO -ov "CorpusMind_${VER}_aarch64.dmg"
+          ls -lh "CorpusMind_${VER}_aarch64.dmg"
+          echo "DMG_PATH=CorpusMind_${VER}_aarch64.dmg" >> "$GITHUB_ENV"
+
+      - name: Re-verify the seal inside the shipped DMG
+        run: |
+          MNT="$RUNNER_TEMP/dmg-mount"
+          mkdir -p "$MNT"
+          hdiutil attach "$DMG_PATH" -mountpoint "$MNT" -nobrowse -readonly
+          codesign --verify --deep --strict "$MNT/CorpusMind.app"
+          test -f "$MNT/CorpusMind.app/Contents/_CodeSignature/CodeResources"
+          echo "DMG-internal seal OK"
+          hdiutil detach "$MNT"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-arm64-sealed
+          path: CorpusMind_*_aarch64.dmg
+          if-no-files-found: error
+
+  # ──────────────────────────────────────────────────────────────────────
+  # macOS Intel (x86_64) — mirrors release.yml's macos-intel job
+  # ──────────────────────────────────────────────────────────────────────
+  macos-intel:
+    name: macOS (Intel) — sealed
+    runs-on: macos-15-intel
+    timeout-minutes: 60
+    env:
+      CM_APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+      CM_APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.build_ref || inputs.tag }}
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Set up Rust (stable, x86_64-apple-darwin)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-apple-darwin
+
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli --version '^2.0' --locked
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            desktop/src-tauri/target
+          key: macos-intel-cargo-${{ hashFiles('desktop/src-tauri/Cargo.toml') }}
+          restore-keys: macos-intel-cargo-
+
+      - name: Install PyInstaller + engine deps (production only)
+        working-directory: engine
+        run: |
+          python -m pip install --upgrade pip wheel
+          pip install pyinstaller python-multipart cryptography
+          pip install -e .
+          pip install pillow
+
+      - name: Install camel_tools code (always - Buckwalter/dediac char tables)
+        working-directory: engine
+        run: |
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -e ".[arabic]"
+
+      - name: Provision CAMeL Tools data (opt-in, Arabic Tools bundle)
+        working-directory: engine
+        if: ${{ vars.CORPUSMIND_BUNDLE_CAMEL_DATA == '1' }}
+        run: |
+          camel_data -i morphology-db-msa-r13
+          camel_data -i dialectid-model6
+          python -c "from camel_tools.morphology.database import MorphologyDB; MorphologyDB.builtin_db('calima-msa-r13'); print('camel-tools data OK')"
+
+      - name: Download spaCy model (en_core_web_sm)
+        working-directory: engine
+        run: |
+          python -m spacy download en_core_web_sm
+          python -c "import en_core_web_sm; print('spaCy model OK:', en_core_web_sm.__version__)"
+
+      - name: Fetch Caddy binary (Student Mode sidecar)
+        run: python scripts/fetch_caddy.py
+
+      - name: Build web PWA
+        working-directory: web
+        env:
+          VITE_ENGINE_URL: http://127.0.0.1:8765
+        run: |
+          npm ci
+          npm run build
+
+      - name: Build engine sidecar (PyInstaller)
+        working-directory: engine
+        run: pyinstaller corpusmind-engine.spec --noconfirm --clean --log-level WARN
+
+      - name: Stage sidecar for Tauri (onedir)
+        working-directory: desktop/src-tauri
+        run: |
+          mkdir -p binaries
+          cp -r ../../engine/dist/corpusmind-engine binaries/corpusmind-engine
+          chmod +x binaries/corpusmind-engine/corpusmind-engine
+          if [ ! -f binaries/corpusmind-engine/corpusmind-engine ]; then
+            echo "ERROR: Sidecar binary not found!"
+            exit 1
+          fi
+          echo "OK: Sidecar binary verified"
+
+      - name: Verify spaCy model is bundled
+        run: |
+          model_dir="desktop/src-tauri/binaries/corpusmind-engine/_internal/en_core_web_sm"
+          if [ ! -f "$model_dir/meta.json" ]; then
+            echo "ERROR: spaCy model en_core_web_sm not bundled!"
+            exit 1
+          fi
+          echo "OK: spaCy model bundled ($(du -sh "$model_dir" | cut -f1))"
+
+      - name: Smoke-test engine sidecar (USAS + AWL + persuasion-index)
+        run: bash scripts/ci_smoke_engine.sh desktop/src-tauri/binaries/corpusmind-engine/corpusmind-engine
+
+      - name: Import macOS signing certificate (optional)
+        if: env.CM_APPLE_CERTIFICATE != ''
+        run: |
+          CERT_PATH=$RUNNER_TEMP/build_certificate.p12
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          echo -n "$CM_APPLE_CERTIFICATE" | base64 --decode -o $CERT_PATH
+          security create-keychain -p corpusmind-ci $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p corpusmind-ci $KEYCHAIN_PATH
+          security import $CERT_PATH -P "$CM_APPLE_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          security set-key-partition-list -S apple-tool:,apple: -k corpusmind-ci $KEYCHAIN_PATH
+          security list-keychain -d user -s $KEYCHAIN_PATH
+
+      - name: Build Tauri app only (x86_64)
+        working-directory: desktop/src-tauri
+        env:
+          CM_APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          CM_APPLE_ID: ${{ secrets.APPLE_ID }}
+          CM_APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          CM_APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          # Conditional signing export — see macos-arm64 above.
+          if [ -n "$CM_APPLE_CERTIFICATE" ]; then
+            export APPLE_CERTIFICATE="$CM_APPLE_CERTIFICATE"
+            export APPLE_CERTIFICATE_PASSWORD="$CM_APPLE_CERTIFICATE_PASSWORD"
+            export APPLE_SIGNING_IDENTITY="${CM_APPLE_SIGNING_IDENTITY:-Developer ID Application}"
+            export APPLE_ID="$CM_APPLE_ID"
+            export APPLE_PASSWORD="$CM_APPLE_PASSWORD"
+            export APPLE_TEAM_ID="$CM_APPLE_TEAM_ID"
+          elif [ -n "$CM_APPLE_SIGNING_IDENTITY" ]; then
+            export APPLE_SIGNING_IDENTITY="$CM_APPLE_SIGNING_IDENTITY"
+          fi
+          cargo tauri build --target x86_64-apple-darwin --bundles app
+
+      - name: Seal the app bundle (ad-hoc) and verify
+        run: |
+          APP="desktop/src-tauri/target/x86_64-apple-darwin/release/bundle/macos/CorpusMind.app"
+          test -d "$APP" || { echo "ERROR: $APP not found"; exit 1; }
+          xattr -cr "$APP"
+          codesign --force --deep --sign - "$APP"
+          codesign --verify --deep --strict "$APP"
+          echo "Seal verified:"
+          codesign -dv "$APP" 2>&1 | sed -n '1,6p'
+
+      - name: Create the DMG (app + Applications symlink)
+        run: |
+          APP="desktop/src-tauri/target/x86_64-apple-darwin/release/bundle/macos/CorpusMind.app"
+          VER=$(python3 -c "import json;print(json.load(open('desktop/src-tauri/tauri.conf.json'))['version'])")
+          STAGE="$RUNNER_TEMP/dmg-stage"
+          rm -rf "$STAGE"; mkdir -p "$STAGE/CorpusMind"
+          cp -R "$APP" "$STAGE/CorpusMind/CorpusMind.app"
+          ln -s /Applications "$STAGE/CorpusMind/Applications"
+          hdiutil create -volname "CorpusMind" -srcfolder "$STAGE/CorpusMind" -format UDZO -ov "CorpusMind_${VER}_x64.dmg"
+          ls -lh "CorpusMind_${VER}_x64.dmg"
+          echo "DMG_PATH=CorpusMind_${VER}_x64.dmg" >> "$GITHUB_ENV"
+
+      - name: Re-verify the seal inside the shipped DMG
+        run: |
+          MNT="$RUNNER_TEMP/dmg-mount"
+          mkdir -p "$MNT"
+          hdiutil attach "$DMG_PATH" -mountpoint "$MNT" -nobrowse -readonly
+          codesign --verify --deep --strict "$MNT/CorpusMind.app"
+          test -f "$MNT/CorpusMind.app/Contents/_CodeSignature/CodeResources"
+          echo "DMG-internal seal OK"
+          hdiutil detach "$MNT"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-intel-sealed
+          path: CorpusMind_*_x64.dmg
+          if-no-files-found: error
+
+  # ──────────────────────────────────────────────────────────────────────
+  # Replace the .dmg assets on the EXISTING release + refresh SHA256SUMS
+  # ──────────────────────────────────────────────────────────────────────
+  attach:
+    name: Replace DMGs on the release + refresh SHA256SUMS
+    needs: [macos-arm64, macos-intel]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Download sealed DMG artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dmgs
+          merge-multiple: true
+
+      - name: Remove the unsigned DMG assets from the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ inputs.tag }}"
+          REPO="${{ github.repository }}"
+          echo "Sealed DMGs to attach:"; ls -lh dmgs
+          N=$(ls dmgs/*.dmg | wc -l)
+          if [ "$N" -ne 2 ]; then echo "ERROR: expected exactly 2 DMGs, got $N"; exit 1; fi
+          gh api "repos/$REPO/releases/tags/$TAG" --jq '.assets[] | select(.name | endswith(".dmg")) | "\(.id) \(.name)"' | tee /tmp/old-dmgs.txt
+          OLDCOUNT=$(wc -l < /tmp/old-dmgs.txt)
+          if [ "$OLDCOUNT" -ne 2 ]; then echo "ERROR: expected exactly 2 old DMG assets, got $OLDCOUNT"; exit 1; fi
+          while read -r id name; do
+            echo "Deleting unsigned asset: $name (id $id)"
+            gh api -X DELETE "repos/$REPO/releases/assets/$id"
+          done < /tmp/old-dmgs.txt
+          echo "Old DMG assets removed."
+
+      - name: Upload sealed DMGs and regenerate SHA256SUMS
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ inputs.tag }}"
+          REPO="${{ github.repository }}"
+          gh release upload "$TAG" dmgs/*.dmg --clobber
+          echo "Sealed DMGs uploaded to release $TAG (same release page)."
+          # Regenerate the manifest from the CURRENT release assets — same
+          # convention as the release workflow (exclude the manifest itself
+          # and the User Guide PDF, which is attached after the manifest).
+          mkdir assets
+          gh release download "$TAG" -D assets
+          cd assets
+          rm -f SHA256SUMS.txt CorpusMind_User_Guide_*.pdf
+          sha256sum * > SHA256SUMS.txt
+          echo "New manifest:"; cat SHA256SUMS.txt
+          gh release upload "$TAG" SHA256SUMS.txt --clobber
+          echo "SHA256SUMS.txt refreshed."
