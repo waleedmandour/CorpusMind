@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
-## [1.2.14-rc1] — 2026-10-15 — Regression sweep + security hardening (pre-release)
+## [1.2.14-1] — 2026-10-15 — Regression sweep + security hardening (pre-release)
 
 > Pre-release of v1.2.14. Resolves three user-reported regressions and
 > closes four P0 security findings ahead of the next public release.
@@ -146,10 +146,10 @@ once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
 ### Tests
 
-- Engine suite at the v1.2.14-rc1 tag: **773 passed / 15 skipped / 0
+- Engine suite at the v1.2.14-1 tag: **773 passed / 15 skipped / 0
   failed** (92.5s). The 15 skips are pre-existing optional-data skips
   (USAS lexicons, Arabic CAMeL morphology, reference corpora).
-- Web suite at the v1.2.14-rc1 tag: **34 passed / 0 failed** (15.3s);
+- Web suite at the v1.2.14-1 tag: **34 passed / 0 failed** (15.3s);
   `tsc --noEmit` clean; `vite build` produces the PWA bundle with the
   new `graph-vendor` chunk (169 KB minified / 41 KB gzip).
 
