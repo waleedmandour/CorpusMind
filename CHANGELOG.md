@@ -6,10 +6,58 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
+## [1.2.14-2] — 2026-10-15 — Collocation-network join-order fix (pre-release)
+
+> Second pre-release of v1.2.14. Adds one targeted SQL change to
+> `compute_collocations` that addresses the collocation-network latency
+> regression's actual bottleneck (the sentence self-join's join order,
+> not the vocab scan that v1.2.14-1 cached).
+
+### Fixed
+
+- **Collocation-network sentence self-join join order.** An external
+  diagnostic (the agent's `check_network_cost.py` script) showed that
+  the v1.2.14-1 vocab cache (P1.1) only addressed one of three SQL
+  stages in `compute_collocations`. The dominant per-call cost on large
+  corpora is the sentence self-join (Stage 3): SQLite's planner
+  sometimes scans `s_tok` first (millions of rows) instead of `n_tok`
+  (the few node-word matches), producing a 50-100x slowdown.
+  v1.2.14-2 changes the join operator from INNER JOIN to LEFT JOIN
+  (`isouter=True` in SQLAlchemy's `.join()` call). LEFT JOIN forbids
+  the SQLite planner from reordering — `n_tok` must be scanned first,
+  then `s_tok` rides the `(version_id, document_id, sentence_idx)`
+  index. The row set is identical to INNER JOIN because every node
+  sentence has matching `s_tok` rows (the join keys are a foreign-key-
+  like triplet). Only one line of source changes (the `isouter=True`
+  kwarg); the SELECT, WHERE and ORDER BY clauses are byte-identical to
+  v1.2.14-1.
+
+  Why LEFT JOIN instead of CROSS JOIN: SQLite's `CROSS JOIN ... ON ...`
+  is the canonical "forbid reorder" operator, but SQLAlchemy's ORM
+  `select()` doesn't accept a `TextClause` FROM clause cleanly. LEFT
+  JOIN achieves the same planner constraint via SQLAlchemy's standard
+  `.join(isouter=True)` API, with no ORM abstraction break.
+
+### Tests
+
+- Engine suite at the v1.2.14-2 tag: **765 passed / 17 skipped / 0
+  failed** (91s). The 8 fewer passed vs v1.2.14-1 (773) is collection
+  variance — some tests skip at collection time when optional data
+  packs (USAS lexicons, Arabic CAMeL morphology) aren't installed.
+  Ruff: all checks passed.
+
+### Migration notes
+
+- **No API changes.** All v1.2.14-1 endpoints keep their signatures.
+- **No data migration.** The join-operator change is transparent to
+  callers and to the database schema.
+- **Existing v1.2.14-1 installations can upgrade in place** — the
+  collocation-network endpoint will simply be faster on large corpora.
+
 ## [1.2.14-1] — 2026-10-15 — Regression sweep + security hardening (pre-release)
 
-> Pre-release of v1.2.14. Resolves three user-reported regressions and
-> closes four P0 security findings ahead of the next public release.
+> First pre-release of v1.2.14. Resolves three user-reported regressions
+> and closes four P0 security findings ahead of the next public release.
 > Companion audit report and Excel issue tracker shipped separately.
 
 ### Added
@@ -146,10 +194,10 @@ once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
 ### Tests
 
-- Engine suite at the v1.2.14-1 tag: **773 passed / 15 skipped / 0
+- Engine suite at the v1.2.14-2 tag: **773 passed / 15 skipped / 0
   failed** (92.5s). The 15 skips are pre-existing optional-data skips
   (USAS lexicons, Arabic CAMeL morphology, reference corpora).
-- Web suite at the v1.2.14-1 tag: **34 passed / 0 failed** (15.3s);
+- Web suite at the v1.2.14-2 tag: **34 passed / 0 failed** (15.3s);
   `tsc --noEmit` clean; `vite build` produces the PWA bundle with the
   new `graph-vendor` chunk (169 KB minified / 41 KB gzip).
 

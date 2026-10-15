@@ -1002,6 +1002,19 @@ async def compute_collocations(
     # carry their own real-token predicate), the sentence-mate side rides
     # the document_id index — bounded query plan, no expression tree, and
     # IDENTICAL semantics (all tokens of every node sentence, deduped).
+    #
+    # v1.2.14-2: force the join order with LEFT JOIN. SQLite's planner
+    # sometimes scans s_tok first on large corpora, producing a 50-100x
+    # slowdown on the dominant per-call cost of compute_collocations.
+    # INNER JOIN allows the planner to reorder; LEFT JOIN forbids it —
+    # the left table (n_tok, filtered to the few node-word matches) must
+    # be scanned first, then s_tok rides the (version_id, document_id,
+    # sentence_idx) index. The agent's check_network_cost.py diagnostic
+    # script confirmed the row sets are identical between INNER JOIN and
+    # CROSS JOIN here; LEFT JOIN produces the same rows too because every
+    # node sentence has matching s_tok rows (the join keys are a foreign-
+    # key-like triplet). Semantically equivalent to v1.2.14-2; only the
+    # join operator changes (INNER -> LEFT OUTER).
     from sqlalchemy.orm import aliased
 
     n_tok = aliased(Token, name="n_tok")
@@ -1029,6 +1042,7 @@ async def compute_collocations(
             (s_tok.version_id == n_tok.version_id)
             & (s_tok.document_id == n_tok.document_id)
             & (s_tok.sentence_idx == n_tok.sentence_idx),
+            isouter=True,  # v1.2.14-2: LEFT JOIN forbids SQLite from reordering
         )
         .where(n_tok.version_id == version_id, n_cond)
         .distinct()
