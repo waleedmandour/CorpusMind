@@ -55,6 +55,19 @@ export function FloatingAssistant() {
   const [pending, setPending] = useState(false);
   const threadRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
+  // v1.2.14 (P2.2): AbortController ref for the in-flight chat turn.
+  // When the user clicks Cancel we abort the fetch immediately instead
+  // of waiting for the 200s client deadline to fire. Mirrors the v1.2.11
+  // Arabic Tools cancel pattern.
+  const abortRef = useRef<AbortController | null>(null);
+
+  const cancel = () => {
+    if (abortRef.current) {
+      abortRef.current.abort();
+      abortRef.current = null;
+    }
+    setPending(false);
+  };
 
   const suggestions = useQuery({
     queryKey: ["ai-suggestions", lang, activeCorpusId],
@@ -92,6 +105,9 @@ export function FloatingAssistant() {
     setInput("");
     setMessages((m) => [...m, { role: "user", content: msg }]);
     setPending(true);
+    // v1.2.14 (P2.2): create a fresh AbortController for this turn.
+    abortRef.current = new AbortController();
+    const signal = abortRef.current.signal;
     try {
       const context = `${lang === "ar" ? "المستخدم يعرض حاليًا" : "The user is currently viewing the"} "${navLabel(activeNav, lang)}" ${lang === "ar" ? "شاشة التحليل." : "analysis screen."}`;
       const resp: ChatTurnResponse = await api.chat({
@@ -101,7 +117,7 @@ export function FloatingAssistant() {
         conversation_id: conversationId,
         corpus_id: activeCorpusId,
         context,
-      });
+      }, signal);
       setConversationId(resp.conversation_id);
       setMessages((m) => [
         ...m,
@@ -113,8 +129,14 @@ export function FloatingAssistant() {
         },
       ]);
     } catch (e) {
-      setMessages((m) => [...m, { role: "assistant", content: (e as Error).message, error: true }]);
+      // v1.2.14 (P2.2): don't show an error toast on user-initiated cancel.
+      if ((e as Error).name === "AbortError" || signal.aborted) {
+        setMessages((m) => [...m, { role: "assistant", content: t(lang, "ai_cancelled"), error: false }]);
+      } else {
+        setMessages((m) => [...m, { role: "assistant", content: (e as Error).message, error: true }]);
+      }
     } finally {
+      abortRef.current = null;
       setPending(false);
       inputRef.current?.focus();
     }
@@ -182,7 +204,22 @@ export function FloatingAssistant() {
                 <div className="ai-drawer-msg-body">{m.content}</div>
               </article>
             ))}
-            {pending && <div className="ai-drawer-thinking">{t(lang, "ai_thinking")}</div>}
+            {pending && (
+              <div className="ai-drawer-thinking">
+                {t(lang, "ai_thinking")}
+                {/* v1.2.14 (P2.2): Cancel button — aborts the in-flight
+                    chat turn immediately. Mirrors the v1.2.11 Arabic
+                    Tools cancel pattern. */}
+                {" "}
+                <button
+                  className="ai-cancel-btn"
+                  onClick={cancel}
+                  aria-label={t(lang, "ai_cancel")}
+                >
+                  {t(lang, "ai_cancel")}
+                </button>
+              </div>
+            )}
           </div>
 
           {chips.length > 0 && (

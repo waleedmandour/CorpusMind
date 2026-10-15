@@ -17,12 +17,94 @@
 //! without first building the PyInstaller bundle.
 
 use std::process::{Child, Command, Stdio};
+use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Mutex;
-use std::time::{Duration, Instant};
+use std::sync::{Mutex, OnceLock};
+use std::time::{Duration, Instant, SystemTime};
 
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
+
+// v1.2.14 (F0-1): recent-picks registry — a (path, picked_at) tuple per
+// entry. `pick_corpus_files` populates it; `upload_corpus_files` validates
+// each path against it before reading. Entries expire after 10 minutes
+// so a stale pick cannot be reused after the user has navigated away.
+// Defeats the XSS exfiltration vector where a webview compromise feeds
+// `~/.ssh/id_rsa` or `/etc/passwd` into the corpus DB.
+#[derive(Clone)]
+struct PickedEntry {
+    path: PathBuf,
+    picked_at: SystemTime,
+}
+static PICKED_PATHS: OnceLock<Mutex<Vec<PickedEntry>>> = OnceLock::new();
+const PICK_TTL: Duration = Duration::from_secs(600); // 10 minutes
+
+fn picked_paths() -> &'static Mutex<Vec<PickedEntry>> {
+    PICKED_PATHS.get_or_init(|| Mutex::new(Vec::new()))
+}
+
+fn register_picked(paths: &[String]) {
+    let now = SystemTime::now();
+    let mut lock = picked_paths().lock().expect("PICKED_PATHS mutex poisoned");
+    // Garbage-collect expired entries on every write.
+    lock.retain(|e| now.duration_since(e.picked_at).map(|d| d < PICK_TTL).unwrap_or(false));
+    for p in paths {
+        lock.push(PickedEntry { path: PathBuf::from(p), picked_at: now });
+    }
+}
+
+fn is_path_picked(path: &std::path::Path) -> bool {
+    let now = SystemTime::now();
+    let mut lock = picked_paths().lock().expect("PICKED_PATHS mutex poisoned");
+    // Garbage-collect expired entries on every read.
+    lock.retain(|e| now.duration_since(e.picked_at).map(|d| d < PICK_TTL).unwrap_or(false));
+    lock.iter().any(|e| e.path == path)
+}
+
+/// v1.2.14 (F0-1): denylist of sensitive paths the registry must NEVER
+/// accept even if a (compromised) dialog somehow produced them. Belt-and-
+/// braces on top of the registry check.
+fn is_sensitive_path(path: &std::path::Path) -> bool {
+    // Reject any path containing a .ssh, .aws, .gnupg, .config/corpusmind
+    // component, anything under /etc, /proc, /sys, /dev, or a Windows
+    // equivalent. Resolve .. before checking.
+    let normalized = path.to_path_buf();
+    for comp in normalized.components() {
+        let s = comp.as_os_str().to_string_lossy();
+        if matches!(s.as_ref(), ".ssh" | ".aws" | ".gnupg" | "credentials" | "id_rsa" | "id_ecdsa" | "id_ed25519") {
+            return true;
+        }
+    }
+    let starts = |prefix: &str| -> bool {
+        let p = normalized.to_string_lossy().to_lowercase();
+        p.starts_with(prefix) || p == prefix
+    };
+    starts("/etc/") || starts("/proc/") || starts("/sys/") || starts("/dev/")
+        || starts("/var/log/")
+}
+
+/// Resolve a path against the recent-picks registry and the sensitive-path
+/// denylist. Returns Ok(path) if safe to read, Err(reason) if not.
+fn validate_upload_path(path_str: &str) -> Result<std::path::PathBuf, String> {
+    let path = std::path::Path::new(path_str);
+    let canonical = match path.canonicalize() {
+        Ok(c) => c,
+        // If canonicalize fails (file gone, perms), still check the raw
+        // path against the registry — the registry may have the original
+        // pick even if we can't canonicalize now.
+        Err(_) => path.to_path_buf(),
+    };
+    if is_sensitive_path(&canonical) {
+        return Err(format!("Path '{}' is in a sensitive location and cannot be uploaded", path_str));
+    }
+    if !is_path_picked(&canonical) && !is_path_picked(path) {
+        return Err(format!(
+            "Path '{}' was not recently picked via the file dialog. Use the Pick Files button to select corpus files.",
+            path_str
+        ));
+    }
+    Ok(canonical)
+}
 
 /// Windows: spawn children WITHOUT allocating a console window (v1.2.10).
 /// `ollama serve` and `where.exe` are console-subsystem programs; spawned
@@ -1324,6 +1406,10 @@ async fn pick_corpus_files(app: tauri::AppHandle) -> String {
         Some(paths) => {
             let path_strs: Vec<String> = paths.iter().map(|p| p.to_string()).collect();
             info!(target: "dialog", "picked {} corpus files", path_strs.len());
+            // v1.2.14 (F0-1): register the picks so upload_corpus_files
+            // can validate them against this set. Entries expire after
+            // 10 minutes (see PICK_TTL above).
+            register_picked(&path_strs);
             serde_json::json!({
                 "ok": true,
                 "paths": path_strs,
@@ -1383,7 +1469,19 @@ async fn upload_corpus_files(cid: String, paths: Vec<String>, language: Option<S
     let mut errors: Vec<String> = Vec::new();
 
     for path_str in &paths {
-        let path = std::path::Path::new(path_str);
+        // v1.2.14 (F0-1): validate every path against the recent-picks
+        // registry before reading. Rejects arbitrary path reads that
+        // could exfiltrate ~/.ssh/id_rsa or /etc/passwd into the corpus
+        // DB via a webview-compromised caller.
+        let validated = match validate_upload_path(path_str) {
+            Ok(p) => p,
+            Err(reason) => {
+                warn!(target: "upload", "rejected path: {}", reason);
+                errors.push(reason);
+                continue;
+            }
+        };
+        let path = validated.as_path();
         let filename = path.file_name()
             .map(|n| n.to_string_lossy().into_owned())
             .unwrap_or_else(|| "file".to_string());

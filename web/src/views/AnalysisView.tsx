@@ -259,6 +259,10 @@ function CollocationPanel({ cid }: { cid: string }) {
   const [window, setWindow] = useState(5);
   const [spanLeft, setSpanLeft] = useState<number | null>(null);
   const [spanRight, setSpanRight] = useState<number | null>(null);
+  // v1.2.14 (P1.4): the collocation-network fetch loading state, fed
+  // by CollocationNetwork's onNetworkLoading callback so we can mount a
+  // SlowQueryNote below the network panel.
+  const [networkLoading, setNetworkLoading] = useState(false);
   const [posExclude, setPosExclude] = useState<string>("");
   const [stopwordListId, setStopwordListId] = useState<string | null>(null);
   const [minFreq, setMinFreq] = useState(3);
@@ -333,7 +337,7 @@ function CollocationPanel({ cid }: { cid: string }) {
           while the query sits idle before the first search, which showed a
           false "queued under load" note. Same bug class as ArabicView;
           see scripts/check_query_pending.mjs. */}
-      <SlowQueryNote pending={result.isLoading} lang={lang} />
+      <SlowQueryNote pending={result.isLoading} lang={lang} delayMs={15000} />
       <div className="toolbar">
         <input
           type="text"
@@ -425,7 +429,13 @@ function CollocationPanel({ cid }: { cid: string }) {
                 window={submitted!.w}
                 minFreq={submitted!.mf}
                 onSetCenter={(word) => { setNode(word); setSubmitted({ n: word, l: level, w: window, mf: minFreq, sl: spanLeft, sr: spanRight, pe: posExclude.split(/[\s,]+/).map((s) => s.trim().toUpperCase()).filter(Boolean), sw: stopwordListId, nm: normalizeArabic }); }}
+                onNetworkLoading={setNetworkLoading}
               />
+              {/* v1.2.14 (P1.4): SlowQueryNote for the network fetch.
+                  Mirrors the flat-collocations note but with delayMs=5000
+                  since the network has its own progress feedback (the
+                  spinner is visible while the IIFE is in flight). */}
+              <SlowQueryNote pending={networkLoading} lang={lang} delayMs={5000} />
             </>
           )}
         </>

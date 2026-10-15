@@ -8,7 +8,7 @@
  * Citations are clickable: clicking a `concordance_line` evidence reference
  * scrolls to / opens the concordancer view filtered to that line.
  */
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
 
@@ -73,15 +73,30 @@ export function AssistantView() {
     }
   }, [provider, storeModel, localModel, ollamaModels.data]);
 
+  // v1.2.14 (P2.2): AbortController ref for the in-flight chat turn.
+  // Mirrors the FloatingAssistant pattern; used by the Cancel button.
+  const abortRef = useRef<AbortController | null>(null);
+  const cancel = () => {
+    if (abortRef.current) {
+      abortRef.current.abort();
+      abortRef.current = null;
+    }
+    // Reset the mutation state so the "Thinking…" indicator clears.
+    chat.reset();
+  };
+
   const chat = useMutation({
-    mutationFn: (text: string) =>
-      api.chat({
+    mutationFn: (text: string) => {
+      // v1.2.14 (P2.2): fresh AbortController per turn.
+      abortRef.current = new AbortController();
+      return api.chat({
         message: text,
         provider,
         model: selectedModel || null,
         conversation_id: conversationId,
         corpus_id: cid,
-      }),
+      }, abortRef.current.signal);
+    },
     onSuccess: (turn: ChatTurnResponse) => {
       setConversationId(turn.conversation_id);
       setMessages((prev) => [
@@ -105,10 +120,21 @@ export function AssistantView() {
       ]);
     },
     onError: (err: Error) => {
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: `[error] ${err.message}`, grounded: false },
-      ]);
+      // v1.2.14 (P2.2): don't show an error toast on user-initiated cancel.
+      if (err.name === "AbortError") {
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: t(lang, "ai_cancelled"), grounded: false },
+        ]);
+      } else {
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: `[error] ${err.message}`, grounded: false },
+        ]);
+      }
+    },
+    onSettled: () => {
+      abortRef.current = null;
     },
   });
 
@@ -499,7 +525,21 @@ export function AssistantView() {
             </article>
           ))}
 
-          {chat.isPending && <div className="msg msg-assistant pending">Thinking…</div>}
+          {chat.isPending && (
+            <div className="msg msg-assistant pending">
+              Thinking…
+              {/* v1.2.14 (P2.2): Cancel button — aborts the in-flight chat
+                  turn immediately. Mirrors the FloatingAssistant pattern. */}
+              {" "}
+              <button
+                className="ai-cancel-btn"
+                onClick={cancel}
+                aria-label={t(lang, "ai_cancel")}
+              >
+                {t(lang, "ai_cancel")}
+              </button>
+            </div>
+          )}
         </div>
 
         {/* v1.2.10 (classroom consent): students must know the teacher sees

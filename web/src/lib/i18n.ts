@@ -199,6 +199,10 @@ export const translations = {
     ai_corpus_none: "no corpus selected",
     ai_drawer_empty: "Ask about your corpus or the analysis you are looking at.",
     ai_thinking: "Thinking…",
+    // v1.2.14 (P2.2): Cancel button label + the message shown when the
+    // user aborts an in-flight chat turn.
+    ai_cancel: "Cancel",
+    ai_cancelled: "(cancelled)",
     ai_grounded: "grounded",
     ai_ungrounded: "ungrounded",
     // v1.2.6: Discourse page multi-taxonomy selector
@@ -1079,6 +1083,10 @@ export const translations = {
     sm_rechecking: "Checking…",
     // v1.2.10 (soak follow-up): shown after ~3 s of pending heavy analysis.
     analysis_class_busy: "Your class is busy — please wait. When the whole classroom queries at once, requests queue and results can take up to a minute.",
+    // v1.2.14: classroom-neutral copy for solo users. SlowQueryNote picks
+    // this when phase !== "live" so a user running analysis with the
+    // classroom server OFF no longer sees the misleading queue message.
+    analysis_slow_neutral: "This analysis is taking longer than usual — still working. You can keep waiting, or Cancel and try a narrower query.",
     sm_audit_empty: "No classroom activity recorded yet.",
     sm_audit_privacy: "Anonymous by design: students appear as S-1, S-2 … — no names, no device addresses, no tokens are ever stored. Student questions and the model's answers are logged in full so you can review the lesson afterwards. Stored locally under:",
     sm_audit_toggle: "Keep audit log",
@@ -1279,6 +1287,10 @@ export const translations = {
     ai_corpus_none: "لا توجد دخيرة محددة",
     ai_drawer_empty: "اسأل عن دخيرتك أو عن التحليل الذي تعرضه.",
     ai_thinking: "يفكّر…",
+    // v1.2.14 (P2.2): زر الإلغاء + الرسالة المعروضة عندما يلغي المستخدم
+    // استجابة الذكاء الاصطناعي الجارية.
+    ai_cancel: "إلغاء",
+    ai_cancelled: "(أُلغي)",
     ai_grounded: "موثّق",
     ai_ungrounded: "غير موثّق",
     // v1.2.6: منتقي التصنيفات في صفحة الخطاب
@@ -2150,6 +2162,10 @@ export const translations = {
     sm_rechecking: "جارٍ التحقق…",
     // v1.2.10 (soak follow-up): تظهر بعد ~3 ثوانٍ من الانتظار في التحليلات الثقيلة.
     analysis_class_busy: "صفّك مشغول — يُرجى الانتظار. عندما يستعلم الصف كله في وقت واحد، تُصطف الطلبات وقد يستغرق الناتج حتى دقيقة.",
+    // v1.2.14: نسخة محايدة عن الفصل للمستخدم الفردي. SlowQueryNote تختار
+    // هذه عندما لا يكون phase === "live" حتى لا يرى المستخدم الذي يُجري
+    // تحليلاً والخادم الصفي مغلقاً رسالة الانتظار المضللة.
+    analysis_slow_neutral: "هذا التحليل يستغرق وقتاً أطول من المعتاد — لا يزال قيد التنفيذ. يمكنك الانتظار، أو الإلغاء ومحاولة استعلام أضيق.",
     sm_audit_empty: "لا يوجد نشاط صفّي مسجل بعد.",
     sm_audit_privacy: "مجهول الهوية بالتصميم: يظهر الطلاب كـ S-1 وS-2 … — لا أسماء ولا عناوين أجهزة ولا مفاتيح تُخزّن أبداً. تُسجَّل أسئلة الطلاب وإجابات النموذج كاملة لتتمكن من مراجعة الدرس لاحقاً. يُحفظ محلياً تحت:",
     sm_audit_toggle: "الاحتفاظ بسجل التدقيق",

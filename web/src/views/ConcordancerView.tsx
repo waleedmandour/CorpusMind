@@ -359,7 +359,7 @@ export function ConcordancerView() {
 
       {result.isLoading && <div className="empty-state">Searching...</div>}
       {/* v1.2.10: queued-under-load feedback instead of a silent spinner. */}
-      <SlowQueryNote pending={result.isLoading} lang={lang} />
+      <SlowQueryNote pending={result.isLoading} lang={lang} delayMs={10000} />
       {/* v1.2.13-1: CQL syntax errors surface the engine's position-annotated
           detail ("Invalid CQL query: …") instead of a raw HTTP/JSON dump.
           v1.2.13-2: the caret position is rendered by CqlQueryHelper. */}

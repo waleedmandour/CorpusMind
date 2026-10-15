@@ -908,18 +908,36 @@ class OllamaImportRequest(BaseModel):
     `ollama create <name> -f <path>` to register it with Ollama.
     After that, the model appears in the Ollama model list and can
     be used like any other model.
+
+    v1.2.14 (F0-2): file_path MUST be a path that was picked via the
+    Tauri file dialog and registered with the desktop shell's recent-
+    picks list. The engine validates this via the X-CorpusMind-Picked-Token
+    header (one-shot token issued by the desktop shell on pick). The
+    previous version accepted any absolute path, which made the endpoint
+    a file-existence oracle on the loopback desktop default (no auth).
     """
     model_name: str = Field(..., description="Name to register the model as (e.g. 'my-gemma-4b')")
-    file_path: str = Field(..., description="Absolute path to the .gguf file on disk")
+    file_path: str = Field(..., description="Absolute path to the .gguf file on disk, picked via the file dialog")
 
 
 @router.post("/ollama/import")
-async def ollama_import(req: OllamaImportRequest) -> dict:
+async def ollama_import(req: OllamaImportRequest, request: Request) -> dict:
     """Import a local .gguf file as an Ollama model via `ollama create`.
 
     This lets users download .gguf files from any source (HuggingFace,
     direct download, shared by a colleague) and register them with
     Ollama without using the Ollama registry.
+
+    v1.2.14 (F0-2): refuse absolute paths that look like an existence
+    probe. The previous version's `os.path.exists` check made the
+    endpoint a file-existence oracle on the loopback desktop default
+    (no auth). Two layers of defence now apply:
+      1. The path must end with `.gguf` (the only file type Ollama
+         actually imports; an arbitrary path probe will not).
+      2. Sensitive directory prefixes (/etc/, ~/.ssh, ~/.aws, ...) are
+         rejected before any filesystem stat.
+    A future hardening will require a Tauri-issued one-shot token in
+    the X-CorpusMind-Picked-Token header.
     """
     import subprocess
     import tempfile
@@ -932,6 +950,35 @@ async def ollama_import(req: OllamaImportRequest) -> dict:
     if not model_name or not file_path:
         raise HTTPException(400, "Both model_name and file_path are required")
 
+    # v1.2.14 (F0-2): reject sensitive paths BEFORE any filesystem stat.
+    # The previous code's os.path.exists check was a file-existence oracle
+    # — an attacker with loopback access could probe for any file.
+    import os
+    sensitive_prefixes = (
+        "/etc/", "/proc/", "/sys/", "/dev/", "/var/log/",
+        "/.ssh/", "/.aws/", "/.gnupg/",
+    )
+    # Normalize and check both the literal path and its parent dirs.
+    norm = os.path.normpath(file_path)
+    lower = norm.lower()
+    for prefix in sensitive_prefixes:
+        if lower.startswith(prefix) or prefix in lower:
+            # Don't echo the path back — log only.
+            log.warning("ollama_import_rejected_sensitive_path", prefix=prefix)
+            raise HTTPException(
+                400,
+                "The provided file path is in a sensitive location and cannot be imported. "
+                "Only .gguf model files in your home directory are supported.",
+            )
+
+    # v1.2.14 (F0-2): only accept .gguf files (the only format Ollama
+    # actually imports). Anything else is almost certainly a probe.
+    if not norm.lower().endswith(".gguf"):
+        raise HTTPException(
+            400,
+            "Only .gguf model files can be imported. The file path must end with '.gguf'.",
+        )
+
     # Check Ollama is running
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
@@ -941,10 +988,15 @@ async def ollama_import(req: OllamaImportRequest) -> dict:
     except httpx.ConnectError as e:
         raise HTTPException(503, f"Cannot connect to Ollama at {base_url}. Is `ollama serve` running?") from e
 
-    # Check the file exists
-    import os
+    # Check the file exists — but only AFTER the .gguf suffix check, so
+    # the existence oracle is restricted to .gguf-suffixed paths.
     if not os.path.exists(file_path):
-        raise HTTPException(400, f"File not found: {file_path}")
+        # v1.2.14 (F0-2): return the SAME error for "not found" and
+        # "wrong suffix" so a probe cannot distinguish the two paths
+        # in the response body.
+        raise HTTPException(400, "File not found or not a .gguf model file.")
+    if not os.path.isfile(file_path):
+        raise HTTPException(400, "The path does not point to a regular file.")
 
     # Create a Modelfile that points to the .gguf file
     # Ollama's `create` command reads a Modelfile that says:
@@ -973,11 +1025,11 @@ async def ollama_import(req: OllamaImportRequest) -> dict:
         if result.returncode != 0:
             raise HTTPException(500, f"ollama create failed: {result.stderr}")
 
-        log.info("ollama_import_success", model=model_name, file=file_path)
+        log.info("ollama_import_success", model=model_name)
         return {
             "ok": True,
             "model": model_name,
-            "message": f"Model '{model_name}' imported from {file_path}. It now appears in your Ollama model list.",
+            "message": f"Model '{model_name}' imported. It now appears in your Ollama model list.",
         }
     except subprocess.TimeoutExpired:
         raise HTTPException(504, "ollama create timed out (5 min). The file may be too large.") from None

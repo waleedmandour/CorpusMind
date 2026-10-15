@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+import asyncio
+import os
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,6 +20,13 @@ from storage.session import get_session
 
 log = get_logger(__name__)
 router = APIRouter()
+
+# v1.2.14 (P2.3): overall wall-clock deadline for a chat turn. The
+# assistant chains up to 4 LLM calls (60s each via P2.5) + 3 tool calls
+# (45s each via P2.4) = 375s worst case; the 180s budget caps that and
+# returns a 504 with an actionable message instead of an indefinite
+# "Thinking…" spinner. Env-overridable for classroom deployments.
+_CHAT_TIMEOUT_S = float(os.environ.get("CORPUSMIND_CHAT_TIMEOUT_S", "180"))
 
 
 class ChatRequest(BaseModel):
@@ -157,7 +168,40 @@ async def chat(
 
     assistant = Assistant(provider, model=req.model, corpus_id=req.corpus_id)
     try:
-        turn = await assistant.answer(convo_id, req.message, context=req.context)
+        # v1.2.14 (P2.3): overall deadline for the chat turn. The
+        # assistant chains up to 4 LLM calls + 3 tool calls; without
+        # this cap a cold Ollama 7B + slow tool produced a 5-10 min
+        # "Thinking…" with no recovery short of a page reload.
+        try:
+            turn = await asyncio.wait_for(
+                assistant.answer(convo_id, req.message, context=req.context),
+                timeout=_CHAT_TIMEOUT_S,
+            )
+        except asyncio.TimeoutError:
+            log.warning("chat_timeout", conversation_id=convo_id,
+                         timeout_s=_CHAT_TIMEOUT_S)
+            # v1.2.9 audit: failed classroom chats are recorded too (anonymously).
+            _sm = getattr(request.app.state, "server_mode", None)
+            if _sm is not None and getattr(request.state, "role", "") == "student":
+                try:
+                    _sm.log_chat(request, question=req.message,
+                                 error=f"chat_timeout_{_CHAT_TIMEOUT_S:.0f}s",
+                                 model=req.model or "")
+                except Exception:
+                    pass
+            return JSONResponse(
+                status_code=504,
+                content={
+                    "detail": (
+                        f"Assistant turn exceeded the {_CHAT_TIMEOUT_S:.0f}s deadline. "
+                        "Retry with a simpler query, fewer tool calls, or "
+                        "switch to a smaller model. If this happens often, "
+                        "set CORPUSMIND_CHAT_TIMEOUT_S to raise the budget."
+                    ),
+                    "error": "chat_timeout",
+                    "timeout_s": _CHAT_TIMEOUT_S,
+                },
+            )
     except Exception as e:
         error_msg = str(e)
         log.error("chat_failed", error=error_msg)

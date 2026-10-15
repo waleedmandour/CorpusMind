@@ -1,4 +1,7 @@
-"""Generate the CorpusMind Arabic User Guide PDF with green theme and Amiri font."""
+"""Generate the CorpusMind Arabic User Guide PDF with green theme and Amiri font.
+
+v1.2.14-rc1: bumped alongside the engine version lockstep.
+"""
 import re
 from pathlib import Path
 from reportlab.lib.pagesizes import A4

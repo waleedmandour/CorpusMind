@@ -9,6 +9,7 @@ true whenever at least one tool was invoked.
 from __future__ import annotations
 
 import asyncio
+import os
 import time
 from typing import Any
 
@@ -1244,41 +1245,72 @@ async def execute_tool(name: str, args: dict) -> Any:
 
     Corpus-backed tools (Phase 1+2) are async and take an AsyncSession.
     Stateless tools (Phase 3 Arabic, ping) are sync and don't need a session.
+
+    v1.2.14 (P2.4): every tool call is now wrapped in asyncio.wait_for
+    with a 45-second budget (CORPUSMIND_AI_TOOL_TIMEOUT_S env-overridable).
+    A slow tool — e.g. compute_collocations on a 100K-token corpus, or
+    get_corpus_overview when the DB is cold — surfaces as a ToolTimeoutError
+    that the assistant's tool loop records as a failed tool call
+    ("Tool X timed out after 45s") instead of propagating the wait to the
+    whole chat turn. Mirrors the v1.2.11 Arabic-tools pattern.
     """
     impl = TOOL_IMPLS.get(name)
     if impl is None:
         raise KeyError(f"Unknown tool: {name}")
 
-    if name in _STATELESS_TOOLS:
-        # v1.2.11 (Arabic Tools hang fix): the Arabic stateless tools are
-        # CPU-bound CAMeL calls. They used to run inline on the event loop,
-        # freezing the whole engine for the duration (and forever when the
-        # morphology data was missing). Async impls are awaited; sync impls
-        # run in a worker thread so the loop never blocks.
-        import inspect
+    # v1.2.14 (P2.4): per-tool deadline.
+    _TOOL_TIMEOUT_S = float(os.environ.get("CORPUSMIND_AI_TOOL_TIMEOUT_S", "45"))
 
-        # v1.2.11 follow-up: Arabic tools honour the shared concurrency cap.
-        # ArabicBusyError propagates to the assistant's tool loop, which
-        # records it as a failed tool call (ok: False) the model can relay
-        # to the user — the chat itself stays alive.
-        if name in _ARABIC_TOOLS:
-            if not gate.acquire():
-                log.warning("arabic_tool_busy", tool=name, cap=gate.cap)
-                raise ArabicBusyError()
-            try:
-                if inspect.iscoroutinefunction(impl):
-                    return await impl(**args)
-                return await asyncio.to_thread(impl, **args)
-            finally:
-                gate.release()
+    async def _run() -> Any:
+        if name in _STATELESS_TOOLS:
+            # v1.2.11 (Arabic Tools hang fix): the Arabic stateless tools are
+            # CPU-bound CAMeL calls. They used to run inline on the event loop,
+            # freezing the whole engine for the duration (and forever when the
+            # morphology data was missing). Async impls are awaited; sync impls
+            # run in a worker thread so the loop never blocks.
+            import inspect
 
-        if inspect.iscoroutinefunction(impl):
-            return await impl(**args)
-        return await asyncio.to_thread(impl, **args)
+            # v1.2.11 follow-up: Arabic tools honour the shared concurrency cap.
+            # ArabicBusyError propagates to the assistant's tool loop, which
+            # records it as a failed tool call (ok: False) the model can relay
+            # to the user — the chat itself stays alive.
+            if name in _ARABIC_TOOLS:
+                if not gate.acquire():
+                    log.warning("arabic_tool_busy", tool=name, cap=gate.cap)
+                    raise ArabicBusyError()
+                try:
+                    if inspect.iscoroutinefunction(impl):
+                        return await impl(**args)
+                    return await asyncio.to_thread(impl, **args)
+                finally:
+                    gate.release()
 
-    # Corpus-backed async tool — open a fresh session
-    async with session_scope() as session:
-        return await impl(session, **args)
+            if inspect.iscoroutinefunction(impl):
+                return await impl(**args)
+            return await asyncio.to_thread(impl, **args)
+
+        # Corpus-backed async tool — open a fresh session
+        async with session_scope() as session:
+            return await impl(session, **args)
+
+    try:
+        return await asyncio.wait_for(_run(), timeout=_TOOL_TIMEOUT_S)
+    except asyncio.TimeoutError as e:
+        log.warning("tool_timeout", tool=name, timeout_s=_TOOL_TIMEOUT_S)
+        raise ToolTimeoutError(name, _TOOL_TIMEOUT_S) from e
+
+
+class ToolTimeoutError(Exception):
+    """Raised when a tool call exceeds the per-tool budget.
+
+    The assistant's tool loop catches this and surfaces it to the model as
+    a failed tool call so the chat continues with an honest "Tool X timed
+    out" message instead of an infinite spinner.
+    """
+    def __init__(self, tool: str, timeout_s: float):
+        self.tool = tool
+        self.timeout_s = timeout_s
+        super().__init__(f"Tool '{tool}' timed out after {timeout_s:.0f}s")
 
 
 def schemas_for_llm() -> list[dict]:

@@ -813,6 +813,81 @@ class CollocationResult:
     warnings: list[str]
 
 
+# v1.2.14 (P1.1): process-level memoised vocabulary aggregation.
+# A single network request fires 15+1 compute_collocations() calls with
+# the SAME (version_id, level, fold_signature, document_ids) — the vocab
+# scan was repeated 15 times for a result that does not change. The cache
+# is keyed on those four values; the Counter it returns is the same
+# object every call. Bounded by a 256-entry LRU to prevent unbounded
+# growth across corpora.
+import collections as _collections
+import threading as _threading
+_VOCAB_CACHE: "OrderedDict[tuple, tuple[Counter, int]]" = _collections.OrderedDict()
+_VOCAB_CACHE_LOCK = _threading.Lock()
+_VOCAB_CACHE_MAX = 256
+
+
+def _vocab_cache_key(version_id: str, level: str, norm, document_ids) -> tuple:
+    """Build a hashable cache key. `norm` is the resolved normalizer."""
+    norm_sig = (getattr(norm, "lang", ""), bool(getattr(norm, "enabled", False)))
+    if document_ids is None:
+        doc_sig: tuple = ()
+    else:
+        doc_sig = tuple(sorted(document_ids))
+    return (version_id, level, norm_sig, doc_sig)
+
+
+async def _get_folded_vocab(session: AsyncSession, version_id: str,
+                            level: str, norm, document_ids) -> tuple[Counter, int]:
+    """Return (folded Counter, N) for the corpus, memoised per call signature.
+
+    The whole-corpus GROUP BY aggregation is the dominant cost of every
+    collocation scan; for a single network request, it produces the same
+    Counter 15 times. This helper caches it so the cost is paid once.
+    """
+    key = _vocab_cache_key(version_id, level, norm, document_ids)
+    with _VOCAB_CACHE_LOCK:
+        cached = _VOCAB_CACHE.get(key)
+        if cached is not None:
+            _VOCAB_CACHE.move_to_end(key)
+            return cached
+    # Cache miss — compute.
+    col = {"word": Token.text, "lemma": Token.lemma}[level]
+    _is_real_token_v1 = _is_real_token()
+    vocab_stmt = (
+        select(col, func.count(Token.id))
+        .where(Token.version_id == version_id, _is_real_token_v1)
+        .group_by(col)
+    )
+    if document_ids is not None:
+        vocab_stmt = vocab_stmt.where(Token.document_id.in_(document_ids))
+    # Fold under the same rule as the node so 'The'/'the' / كِتَاب/كتاب
+    # collapse into one row.
+    if norm.enabled and norm.lang != "ar":
+        def fold(t: str) -> str:
+            return norm.norm_py(_fold(t))
+    else:
+        fold = _ar_fold if norm.enabled else _fold
+    folded_counts: Counter = Counter()
+    for text, cnt in (await session.execute(vocab_stmt)).all():
+        if text and not text.isspace():
+            folded_counts[fold(text)] += cnt
+    N = sum(folded_counts.values())
+    out = (folded_counts, N)
+    with _VOCAB_CACHE_LOCK:
+        _VOCAB_CACHE[key] = out
+        _VOCAB_CACHE.move_to_end(key)
+        while len(_VOCAB_CACHE) > _VOCAB_CACHE_MAX:
+            _VOCAB_CACHE.popitem(last=False)
+    return out
+
+
+def clear_vocab_cache() -> None:
+    """Drop the vocab cache. Tests call this to assert cache behaviour."""
+    with _VOCAB_CACHE_LOCK:
+        _VOCAB_CACHE.clear()
+
+
 async def compute_collocations(
     session: AsyncSession,
     corpus_id: str,
@@ -906,18 +981,11 @@ async def compute_collocations(
                                  min_freq=min_freq, measures=measures, rows=[], warnings=warnings)
 
     # --- 2. whole-corpus vocabulary (folded) for marginals ---------------- #
-    vocab_stmt = (
-        select(col, func.count(Token.id))
-        .where(Token.version_id == version_id, _is_real_token())
-        .group_by(col)
-    )
-    if document_ids is not None:
-        vocab_stmt = vocab_stmt.where(Token.document_id.in_(document_ids))
-    folded_counts: Counter = Counter()
-    for text, cnt in (await session.execute(vocab_stmt)).all():
-        if text and not text.isspace():
-            folded_counts[fold(text)] += cnt
-    N = sum(folded_counts.values())
+    # v1.2.14 (P1.1): memoised — a single network request fires 15+1
+    # compute_collocations() calls with the same (version_id, level, norm,
+    # document_ids). The vocab scan was repeated 15 times; the cache makes
+    # it once. See _get_folded_vocab() above.
+    folded_counts, N = await _get_folded_vocab(session, version_id, level, norm, document_ids)
     fx = folded_counts.get(node_folded, 0)
     if fx == 0:
         return CollocationResult(node=node, window=window, span_left=sl, span_right=sr,

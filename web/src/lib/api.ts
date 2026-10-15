@@ -1562,6 +1562,12 @@ const ARABIC_TIMEOUT_MS = 150_000;
 // matcher wall-clock deadline (504 arrives from the engine first in the
 // normal case; the client deadline only guards a hung connection).
 const CQL_TIMEOUT_MS = 60_000;
+// v1.2.14 (P2.1): AI chat client deadline — comfortably above the
+// engine's 180 s overall deadline (CORPUSMIND_CHAT_TIMEOUT_S — 4 LLM
+// calls × 60 s + 3 tool calls × 45 s = 375 s worst case, capped at 180 s
+// by the server). The client backstop fires only if the engine itself
+// is hung. Mirrors the ARABIC_TIMEOUT_MS pattern from v1.2.11.
+const AI_CHAT_TIMEOUT_MS = 200_000;
 
 /**
  * Unified fetch that picks the Tauri plugin inside the desktop webview and
@@ -2748,11 +2754,15 @@ export const api = {
 
   // --- AI ---
   listTools: () => jsonFetch<ToolsResponse>("/api/v1/ai/tools"),
-  chat: (req: ChatRequest) =>
+  // v1.2.14 (P2.1): accept an optional AbortSignal so callers can wire a
+  // Cancel button. Default to AI_CHAT_TIMEOUT_MS (200s, comfortably above
+  // the engine's 180s overall deadline so the server's 504 surfaces first).
+  chat: (req: ChatRequest, signal?: AbortSignal) =>
     jsonFetch<ChatTurnResponse>("/api/v1/ai/chat", {
       method: "POST",
       body: JSON.stringify(req),
-    }),
+      signal,
+    }, AI_CHAT_TIMEOUT_MS),
   listConversations: () => jsonFetch<Array<Record<string, unknown>>>("/api/v1/ai/conversations"),
   getConversation: (cid: string) => jsonFetch<Record<string, unknown>>(`/api/v1/ai/conversations/${cid}`),
   // v0.1.16 Issue 2: pre-fabricated + dynamic query suggestions

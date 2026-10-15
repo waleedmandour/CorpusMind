@@ -6,6 +6,168 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
+## [1.2.14-rc1] — 2026-10-15 — Regression sweep + security hardening (pre-release)
+
+> Pre-release of v1.2.14. Resolves three user-reported regressions and
+> closes four P0 security findings ahead of the next public release.
+> Companion audit report and Excel issue tracker shipped separately.
+
+### Added
+
+- **AI chat Cancel button + AbortController.** Both the FloatingAssistant
+  drawer and the full AssistantView now expose a Cancel button next to the
+  "Thinking…" indicator. Cancel calls `AbortController.abort()` on the
+  in-flight chat fetch, which immediately returns control to the user
+  instead of waiting for the 200s client deadline to fire. Mirrors the
+  v1.2.11 Arabic-Tools cancel pattern. The cancelled turn surfaces as
+  "(cancelled)" in the thread instead of an error toast.
+  - `web/src/lib/api.ts: AI_CHAT_TIMEOUT_MS = 200_000` (backstop above
+    the 180s server deadline; the server's 504 surfaces first).
+  - `web/src/components/FloatingAssistant.tsx` + `AssistantView.tsx`
+    own the AbortController ref.
+- **Network SlowQueryNote.** The collocation-network panel now mounts its
+  own `<SlowQueryNote delayMs={5000} />` next to the flat-collocations
+  one, so a slow network fetch no longer renders a blank box with no
+  progress feedback. The new `onNetworkLoading` prop on
+  `CollocationNetwork` feeds the loading state up to the parent view.
+- **Classroom-aware slow-query banner.** `SlowQueryNote` now subscribes
+  to the shared `["server-mode-status"]` query (zero added engine
+  traffic — `enabled: false`, the query is owned by
+  ClassroomStatusChip). Renders the classroom-specific copy ONLY when
+  `phase === "live"`; otherwise renders a new classroom-neutral
+  `analysis_slow_neutral` key ("This analysis is taking longer than
+  usual — still working. You can keep waiting, or Cancel and try a
+  narrower query."). Solo users no longer see "Your class is busy" when
+  the classroom server is off.
+- **Per-tool timeout (45s) + overall chat deadline (180s).**
+  - `engine/ai/tools.py:execute_tool` wraps every tool call in
+    `asyncio.wait_for(..., timeout=CORPUSMIND_AI_TOOL_TIMEOUT_S=45)`.
+    A slow tool surfaces as a `ToolTimeoutError` that the assistant
+    records as a failed tool call ("Tool X timed out after 45s") instead
+    of propagating the wait to the whole chat turn.
+  - `engine/api/ai.py:chat` wraps `assistant.answer(...)` in
+    `asyncio.wait_for(..., timeout=CORPUSMIND_CHAT_TIMEOUT_S=180)`. Over-
+    budget turns return 504 with an actionable message ("Retry with a
+    simpler query, fewer tool calls, or switch to a smaller model").
+- **Ollama keep_alive for chat.** The Ollama chat `options` dict now
+  includes `keep_alive` (default 5m, env-overridable via
+  `CORPUSMIND_OLLAMA_KEEP_ALIVE`), parity with the embed path. Removes
+  the cold-start stall on the second turn of a session.
+
+### Fixed
+
+- **Collocational-network latency regression (P1).** The v1.2.13
+  collocation-network endpoint (`engine/api/network.py`) ran 15+1
+  serial DB scans per render with no memoisation above the vocab
+  aggregation. The cache (`_VOCAB_CACHE` in `engine/stats/service.py`)
+  keys on `(version_id, level, norm_signature, document_ids)` so the
+  whole-corpus `GROUP BY` is paid once per network request instead of
+  15 times. The per-pivot mesh is parallelised with `asyncio.gather`
+  under a bounded fan-out of 8. Both endpoints now wrap in the shared
+  `_analysis_semaphore` (parity with /collocations and /keyness) and
+  carry a 30s overall deadline (504 on overrun).
+- **CollocationNetwork client-side cache (P1).** The fetch was a
+  hand-rolled `useEffect` IIFE that bypassed React Query entirely
+  (the `qc` was even commented `void qc; // reserved for caching
+  expansions later`). It now routes through `qc.fetchQuery` with a
+  60-second staleTime so a re-click on the same node + params is
+  served from cache. The expand path is similarly cached (key includes
+  the known_nodes set so a different graph state produces a different
+  fetch).
+- **forceAtlas2 main-thread blocking (P2).** Reduced FA2 iterations
+  on the initial-load path from 140 → 80, and on the expand path from
+  60 → 40. Cuts main-thread blocking ~35-40% without affecting layout
+  quality at the shipped default sizes (top_n ≤ 14).
+- **Vite manualChunks for the graph stack (P2).** Sigma + graphology
+  + graphology-layout-forceatlas2 now ship in a `graph-vendor` chunk
+  that lazy-loads on first AnalysisView open. Cuts first paint of
+  every other view by ~150ms. (Verified: the new chunk is ~169 KB
+  minified / ~41 KB gzip, and the main bundle drops accordingly.)
+- **SlowQueryNote default delayMs 3000 → 8000.** The previous 3s
+  threshold tripped the banner for any solo query that legitimately
+  exceeded 3 seconds (cold cache, non-trivial corpus — completely
+  normal). The new 8s default plus 10s/15s overrides on the heaviest
+  callers (ConcordancerView / AnalysisView) eliminate the false
+  trigger for the common 3-7s range.
+- **Tauri upload_corpus_files path validation (P0 security).**
+  Arbitrary file paths supplied to the IPC command were read with
+  `tokio::fs::read` and POSTed to the engine as corpus text — a
+  webview-compromised caller could exfiltrate `~/.ssh/id_rsa` or
+  `/etc/passwd` into the corpus DB and read them back as tokenized
+  text via `/concordance`. The new
+  `validate_upload_path()` walks the recent-picks registry populated
+  by `pick_corpus_files` (entries expire after 10 minutes) and
+  rejects any path not in the registry. A sensitive-path denylist
+  (`.ssh`, `.aws`, `.gnupg`, `/etc/`, `/proc/`, `/sys/`, `/dev/`,
+  `/var/log/`) is applied as a belt-and-braces backstop.
+- **`POST /api/v1/ollama/import` file-existence oracle (P0 security).**
+  The endpoint accepted any absolute `file_path` and ran
+  `os.path.exists()` on it, making it a file-existence oracle on the
+  loopback desktop default (no auth). The path is now checked against
+  a sensitive-prefix denylist BEFORE any filesystem stat, and only
+  `.gguf`-suffixed paths are accepted (the only format Ollama actually
+  imports). "Not found" and "wrong suffix" return the same error so a
+  probe cannot distinguish the two paths in the response body. The
+  response no longer echoes the supplied path back.
+- **Encryption silent plaintext fallback (P0 security).** At-rest
+  encryption silently fell back to plaintext when the `cryptography`
+  package was missing — while `get_encryption_status()` reported
+  "enabled: true". The status check now also verifies the import
+  succeeds (`_cryptography_available` probes AESGCM + Scrypt at module
+  load). If `CORPUSMIND_ENCRYPTION_KEY` is set but `cryptography` is
+  missing, the engine raises `ImportError` with an actionable message
+  at startup; `get_encryption_status()` honestly reports
+  `enabled: false` + the missing-dep notice.
+- **At-rest encryption status honesty (P0 security).**
+  `get_encryption_status()` now exposes `db_encrypted: false` and
+  `image_encrypted` / `transcript_encrypted` as separate fields.
+  The previous version reported a single "ENABLED" badge that did
+  not distinguish the two — the SQLite DB itself has never been
+  encrypted (Phase 7+ will integrate SQLCipher); the new fields let
+  the UI say "Transcripts encrypted; corpus text at rest in DB not
+  encrypted" honestly.
+- **Encryption KDF upgrade (P1).** Passphrase derivation switched
+  from single-pass SHA-256 to scrypt (N=2^14, r=8, p=1, OWASP 2023
+  interactive minimum) with a per-install random salt stored at
+  `~/.corpusmind/encryption.salt`. The salt file is `chmod 600`.
+  Backwards-compatible: old SHA-256 hashes are detected and re-derived
+  on first unlock (the engine reads the env var, derives the new key,
+  and the user re-encrypts transcripts on next write).
+- **Ollama chat per-call timeout 120s → 60s (P1).** Combined with the
+  per-tool 45s budget and the 180s overall turn deadline, worst-case
+  chat time is now bounded at 180s instead of 4*120 + 3*45 = 615s.
+
+### Changed
+
+- **Web build chunking.** `web/vite.config.ts:build.rollupOptions.output
+  .manualChunks` now splits `sigma` + `graphology` +
+  `graphology-layout-forceatlas2` into a `graph-vendor` chunk. The
+  AnalysisView imports it lazily via the existing dynamic boundary.
+
+### Tests
+
+- Engine suite at the v1.2.14-rc1 tag: **773 passed / 15 skipped / 0
+  failed** (92.5s). The 15 skips are pre-existing optional-data skips
+  (USAS lexicons, Arabic CAMeL morphology, reference corpora).
+- Web suite at the v1.2.14-rc1 tag: **34 passed / 0 failed** (15.3s);
+  `tsc --noEmit` clean; `vite build` produces the PWA bundle with the
+  new `graph-vendor` chunk (169 KB minified / 41 KB gzip).
+
+### Migration notes
+
+- **Operators using at-rest encryption** must ensure `cryptography`
+  is installed (`pip install cryptography`). The engine now fails
+  loud if `CORPUSMIND_ENCRYPTION_KEY` is set but the package is
+  missing — the previous silent plaintext fallback is gone.
+- **Existing encrypted transcripts** are NOT auto-re-encrypted under
+  the new scrypt key. The first write after upgrade re-encrypts each
+  file. Old reads continue to work because the encryption key is
+  read from the env var, not stored — the user keeps the same
+  passphrase and the per-install salt makes the derived key stronger.
+- **No breaking API changes.** All v1.2.13 endpoints keep their
+  signatures; the v1.2.14 patches are additive (new env flags, new
+  i18n keys, new Tauri IPC validation).
+
 ## [1.2.13] — 2026-10-14 — CQL-lite concordance query language (Phase 1 + hardening) + Arabic Tools export
 
 > Shipped first as pre-releases `v1.2.13-1` (Phase 1) and `v1.2.13-2` (the
