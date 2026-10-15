@@ -195,7 +195,7 @@ async def collocation_network(
                 _collocation_network_impl(cid, req, session),
                 timeout=_NETWORK_DEADLINE_S,
             )
-    except asyncio.TimeoutError:
+    except TimeoutError:
         log.warning("collocation_network_timeout", corpus_id=cid, node=req.node,
                      deadline_s=_NETWORK_DEADLINE_S)
         raise HTTPException(
@@ -204,7 +204,7 @@ async def collocation_network(
                 f"Collocation network exceeded the {_NETWORK_DEADLINE_S:.0f}s deadline. "
                 "Try a smaller top_n, a narrower window, or a more frequent node word."
             ),
-        )
+        ) from None
 
 
 async def _collocation_network_impl(
@@ -271,7 +271,7 @@ async def _collocation_network_impl(
         for i in range(0, len(pivots), _FANOUT):
             batch = pivots[i: i + _FANOUT]
             results = await asyncio.gather(*(_mesh_one(p) for p in batch))
-            for pivot, rows in zip(batch, results):
+            for pivot, rows in zip(batch, results, strict=False):
                 for prow in rows:
                     other = prow["collocate"]
                     if other == pivot or other not in G.nodes:
@@ -332,7 +332,7 @@ async def collocation_network_expand(
                 _collocation_network_expand_impl(cid, req, session),
                 timeout=_NETWORK_DEADLINE_S,
             )
-    except asyncio.TimeoutError:
+    except TimeoutError:
         log.warning("collocation_network_expand_timeout", corpus_id=cid, node=req.node,
                      deadline_s=_NETWORK_DEADLINE_S)
         raise HTTPException(
@@ -341,7 +341,7 @@ async def collocation_network_expand(
                 f"Network expansion exceeded the {_NETWORK_DEADLINE_S:.0f}s deadline. "
                 "Try a smaller top_n or a more frequent node word."
             ),
-        )
+        ) from None
 
 
 async def _collocation_network_expand_impl(
@@ -395,7 +395,7 @@ async def _collocation_network_expand_impl(
         for i in range(0, len(pivots), _FANOUT):
             batch = pivots[i: i + _FANOUT]
             results = await asyncio.gather(*(_mesh_one(p) for p in batch))
-            for pivot, rows in zip(batch, results):
+            for pivot, rows in zip(batch, results, strict=False):
                 for prow in rows:
                     other = prow["collocate"]
                     if other == pivot or other not in G.nodes:

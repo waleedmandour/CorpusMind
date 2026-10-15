@@ -9,7 +9,7 @@ statistic) includes that ID so the AI Assistant can cite it (§11.1).
 from __future__ import annotations
 
 import re
-from collections import Counter, defaultdict
+from collections import Counter, OrderedDict, defaultdict
 from dataclasses import dataclass
 from typing import Literal
 
@@ -820,9 +820,10 @@ class CollocationResult:
 # is keyed on those four values; the Counter it returns is the same
 # object every call. Bounded by a 256-entry LRU to prevent unbounded
 # growth across corpora.
-import collections as _collections
-import threading as _threading
-_VOCAB_CACHE: "OrderedDict[tuple, tuple[Counter, int]]" = _collections.OrderedDict()
+import collections as _collections  # noqa: E402
+import threading as _threading  # noqa: E402
+
+_VOCAB_CACHE: OrderedDict[tuple, tuple[Counter, int]] = _collections.OrderedDict()
 _VOCAB_CACHE_LOCK = _threading.Lock()
 _VOCAB_CACHE_MAX = 256
 

@@ -1295,7 +1295,7 @@ async def execute_tool(name: str, args: dict) -> Any:
 
     try:
         return await asyncio.wait_for(_run(), timeout=_TOOL_TIMEOUT_S)
-    except asyncio.TimeoutError as e:
+    except TimeoutError as e:
         log.warning("tool_timeout", tool=name, timeout_s=_TOOL_TIMEOUT_S)
         raise ToolTimeoutError(name, _TOOL_TIMEOUT_S) from e
 

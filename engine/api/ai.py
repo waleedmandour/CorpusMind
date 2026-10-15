@@ -177,7 +177,7 @@ async def chat(
                 assistant.answer(convo_id, req.message, context=req.context),
                 timeout=_CHAT_TIMEOUT_S,
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             log.warning("chat_timeout", conversation_id=convo_id,
                          timeout_s=_CHAT_TIMEOUT_S)
             # v1.2.9 audit: failed classroom chats are recorded too (anonymously).
