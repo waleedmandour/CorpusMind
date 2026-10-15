@@ -6246,6 +6246,59 @@ a.ollama-model-url:hover {
 
 
 /* =========================================================================
+   v1.2.14-2 (PWA): local-AI availability notice.
+   Shown in browser/PWA mode only when the engine is unreachable — Ollama,
+   LM Studio and the opt-in cloud provider are all engine-proxied, so no AI
+   model can run until the engine is back (a web page can never reach local
+   AI runtimes directly: mixed content + Local Network Access permissions +
+   WebKit loopback blocking). Amber warning tone, distinct from the red
+   engine-offline banner. Text colors reuse the audited AA pairs (--text /
+   --text-muted on near-—bg tones); only borders/icon use --warning.
+   ========================================================================= */
+.pwa-ai-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: rgba(232, 179, 57, 0.08);
+  border: 1px solid var(--warning);
+  border-radius: var(--radius-md);
+  margin-block-end: var(--space-4);
+}
+.pwa-ai-notice-icon {
+  font-size: 24px;
+  color: var(--warning);
+  flex-shrink: 0;
+  line-height: 1.4;
+}
+.pwa-ai-notice-content {
+  flex: 1;
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.5;
+  min-width: 0;
+}
+.pwa-ai-notice-content strong {
+  display: block;
+  margin-block-end: var(--space-1);
+}
+.pwa-ai-notice-content p {
+  margin: 0 0 var(--space-2);
+  color: var(--text-muted);
+}
+.pwa-ai-notice-content p:last-child {
+  margin-block-end: 0;
+}
+.pwa-ai-notice-content .pwa-ai-notice-safari {
+  font-style: italic;
+}
+.pwa-ai-notice.compact {
+  margin-block-end: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+}
+
+
+/* =========================================================================
    Issue 4: Dark-mode accessibility fixes (WCAG 2.1 AA)
    =========================================================================
    Audited against https://www.w3.org/WAI/WCAG21/quickref/ (Success Criterion

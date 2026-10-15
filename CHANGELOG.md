@@ -54,6 +54,47 @@ once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 - **Existing v1.2.14-1 installations can upgrade in place** — the
   collocation-network endpoint will simply be faster on large corpora.
 
+### Changed (PWA build refresh, 2026-10-15)
+
+- **Local-AI availability gating in the browser/PWA build.** Ollama and
+  LM Studio are machine-local runtimes, and browser security means a
+  web page (and therefore the PWA) can only ever reach them THROUGH the
+  CorpusMind engine proxy — never directly (mixed-content rules,
+  Chrome 142+/Firefox 153+ Local Network Access permission prompts, and
+  WebKit's outright loopback blocking in Safari/iOS). While the engine
+  is unreachable in browser mode, no AI model can run; the PWA now says
+  so honestly instead of leaving silent failures:
+  - HomeView (main page): a prominent amber notice explains that AI
+    models are unavailable without the engine, how to start it, and —
+    detected via the WebKit user-agent signature — that Safari/iOS
+    cannot reach a local engine at all (use Chrome, Edge, Firefox, or
+    the desktop app). The Ollama/LM Studio status chips read
+    "Unavailable — engine offline" instead of the misleading
+    "Not detected".
+  - AssistantView + FloatingAssistant: the composer (and suggestion
+    chips) are deactivated and replaced by the same notice while the
+    engine is down; a 10s background re-probe restores the composer
+    automatically once the engine returns. Message history stays
+    visible.
+  - SettingsView: the Model Providers card shows the notice and swaps
+    the Ollama/LM Studio/Cloud card copy to the engine-first
+    explanation while the engine is down.
+  - All gating is browser-mode-only (`!isTauriRuntime()`), never fires
+    in Student-client mode (the classroom server owns the AI path
+    there), and is inert inside the desktop shell — desktop builds are
+    unaffected.
+  - i18n: new `pwa_ai_*` + `home_provider_engine_offline` keys in both
+    English and Arabic.
+- **Verification performed for the refreshed PWA zip:** web typecheck
+  clean; web suite 34/34 passed; engine suite 773 passed / 15 skipped /
+  0 failed; live engine boot on 127.0.0.1:8765 answered `/api/v1/health`
+  (`status: ok`, version 1.2.14-2), CORS preflight, document upload,
+  frequency (17 tokens / 5 types), concordance (3 hits) and
+  collocations (all 7 measures). The refreshed
+  `corpusmind-web-v1.2.14-2.zip` was attached to the v1.2.14-2
+  pre-release; all other release assets (Windows / macOS / Linux
+  installers) are untouched.
+
 ## [1.2.14-1] — 2026-10-15 — Regression sweep + security hardening (pre-release)
 
 > First pre-release of v1.2.14. Resolves three user-reported regressions

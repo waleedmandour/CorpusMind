@@ -107,7 +107,20 @@ export const translations = {
     home_lmstudio: "LM Studio",
     home_connected: "Connected",
     home_not_running: "Not detected",
+    // v1.2.14-2 (PWA): when the engine is unreachable in browser/PWA mode the
+    // local-AI chips must not read as "the runtime is missing" — nothing can
+    // run because the AI path (the engine proxy) is down. See HomeView.
+    home_provider_engine_offline: "Unavailable — engine offline",
     home_active_corpus: "Corpus loaded",
+    // v1.2.14-2 (PWA): main-page notice for local AI availability. Ollama and
+    // LM Studio are machine-local runtimes; browsers (and therefore PWAs) can
+    // only reach them through the CorpusMind engine proxy, never directly.
+    // When the engine is offline in browser mode, no AI model can run — this
+    // notice says so plainly instead of leaving silent failures elsewhere.
+    pwa_ai_title: "AI models unavailable — the engine is offline",
+    pwa_ai_body: "Ollama and LM Studio run on your own computer, and browser security means this app (PWA) can only reach them through the CorpusMind engine. With the engine offline, no AI model can run — including the opt-in cloud providers. Everything else that needs the engine is paused too.",
+    pwa_ai_fix: "Start the engine on this machine, then reload this page:",
+    pwa_ai_safari_note: "You appear to be using Safari (or an iOS browser), which blocks page-to-local-program connections entirely. For local AI, open CorpusMind in Chrome, Edge, or Firefox — or install the desktop app.",
     home_get_started: "Get Started",
     home_no_project: "You have not selected a project yet. Click Projects in the sidebar to create one and upload your text files.",
     home_create_project: "Create a Project",
@@ -1195,7 +1208,14 @@ export const translations = {
     home_lmstudio: "LM Studio",
     home_connected: "متصل",
     home_not_running: "غير مكتشف",
+    // v1.2.14-2 (PWA): راجع التعليق المقابل في القسم الإنجليزي.
+    home_provider_engine_offline: "غير متاح — المحرك متوقف",
     home_active_corpus: "الذخيرة اللغوية محمّلة",
+    // v1.2.14-2 (PWA): إشعار توفر نماذج الذكاء الاصطناعي المحلية في وضع المتصفح.
+    pwa_ai_title: "نماذج الذكاء الاصطناعي غير متاحة — المحرك متوقف",
+    pwa_ai_body: "يعمل كلٌّ من Ollama و LM Studio على جهازك المحلي، ولأسباب أمنية لا تستطيع صفحة الويب (بما في ذلك هذا التطبيق) الوصول إليهما إلا عبر محرك CorpusMind. ولمّا كان المحرك متوقفًا، لا يمكن تشغيل أي نموذج ذكاء اصطناعي — بما في ذلك مزوّدو الخدمات السحابية الاختياريون. وقد توقفت بقية الأدوات المعتمدة على المحرك أيضًا.",
+    pwa_ai_fix: "شغِّل المحرك على هذا الجهاز ثم أعد تحميل هذه الصفحة:",
+    pwa_ai_safari_note: "يبدو أنك تستخدم Safari (أو متصفح iOS)، الذي يحظر الاتصال بالبرامج المحلية كليًا. للذكاء الاصطناعي المحلي، افتح CorpusMind عبر Chrome أو Edge أو Firefox — أو ثبِّت تطبيق سطح المكتب.",
     home_get_started: "ابدأ الآن",
     home_no_project: "لم تقم بتحديد مشروع بعد. انقر على المشاريع في الشريط الجانبي لإنشاء واحد وتحميل ملفاتك النصية إلى الذخيرة اللغوية.",
     home_create_project: "إنشاء مشروع",
