@@ -26,6 +26,15 @@ export function HomeView() {
 
   const isTauri = isTauriRuntime();
 
+  // v1.2.14-2 (PWA): Safari/WebKit (including every iOS browser) refuses
+  // page-to-localhost connections outright, so even a running local engine is
+  // unreachable from this PWA. Detect the WebKit-only signature (no Chrome /
+  // Chromium / Firefox tokens) so the AI notice can point Safari users at a
+  // browser that works instead of leaving them with a generic failure.
+  const isWebKitLike =
+    typeof navigator !== "undefined" &&
+    /^((?!chrome|chromium|crios|fxios|android).)*safari/i.test(navigator.userAgent);
+
   // Native (Rust-side) provider health — the authoritative source of truth
   // inside the Tauri desktop app. Polled every 5s.
   const nativeHealth = useQuery({
@@ -44,6 +53,11 @@ export function HomeView() {
   const engineOk = isTauri
     ? (nativeHealth.data?.engine.healthy ?? false)
     : (health.data?.status === "ok");
+  // v1.2.14-2 (PWA): true only after the health query has actually settled
+  // (isFetched) so the notice never flashes during the initial load, and
+  // never renders inside the desktop shell (isTauri), where the sidecar
+  // engine + native provider health make the whole question moot.
+  const pwaEngineOffline = !isTauri && health.isFetched && !engineOk;
   const ollamaOk = isTauri
     ? (nativeHealth.data?.ollama.healthy ?? false)
     : (providers.data?.providers.find((p) => p.name === "ollama")?.healthy ?? false);
@@ -101,6 +115,31 @@ export function HomeView() {
         </div>
       )}
 
+      {/* v1.2.14-2 (PWA): local-AI availability notice. Ollama and LM Studio
+          are machine-local runtimes; browser security (mixed content, local
+          network access permissions, WebKit loopback blocking) means this
+          PWA can only use them THROUGH the engine. With the engine offline
+          no AI model can run — say so here, on the main page, instead of
+          leaving three grey chips and a silent Assistant to guess at.
+          Desktop builds (Tauri) bundle the engine, so the notice never
+          renders there. */}
+      {pwaEngineOffline && (
+        <div className="pwa-ai-notice" role="note" aria-live="polite">
+          <div className="pwa-ai-notice-icon" aria-hidden>{"\u2728"}</div>
+          <div className="pwa-ai-notice-content">
+            <strong>{t(lang, "pwa_ai_title")}</strong>
+            <p>{t(lang, "pwa_ai_body")}</p>
+            <p>{t(lang, "pwa_ai_fix")}</p>
+            <div className="engine-offline-cmd">
+              <code>cd engine && source .venv/bin/activate && corpusmind-engine</code>
+            </div>
+            {isWebKitLike && (
+              <p className="pwa-ai-notice-safari">{t(lang, "pwa_ai_safari_note")}</p>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="home-status-bar">
         <div className={`status-chip ${engineOk ? "ok" : "bad"}`}>
           <span className="status-dot" />
@@ -108,12 +147,19 @@ export function HomeView() {
         </div>
         <div className={`status-chip ${ollamaOk ? "ok" : "bad"}`}>
           <span className="status-dot" />
-          {t(lang, "home_ollama")}: {ollamaOk ? t(lang, "home_connected") : t(lang, "home_not_running")}
+          {/* v1.2.14-2 (PWA): with the engine down in browser mode the Ollama
+              chip cannot know whether the runtime is installed — relabel from
+              "Not detected" to the honest "Unavailable — engine offline". */}
+          {t(lang, "home_ollama")}: {ollamaOk
+            ? t(lang, "home_connected")
+            : (pwaEngineOffline ? t(lang, "home_provider_engine_offline") : t(lang, "home_not_running"))}
         </div>
         {/* v1.2.10: LM Studio detected / not detected — right next to Ollama. */}
         <div className={`status-chip ${lmstudioOk ? "ok" : "bad"}`}>
           <span className="status-dot" />
-          {t(lang, "home_lmstudio")}: {lmstudioOk ? t(lang, "home_connected") : t(lang, "home_not_running")}
+          {t(lang, "home_lmstudio")}: {lmstudioOk
+            ? t(lang, "home_connected")
+            : (pwaEngineOffline ? t(lang, "home_provider_engine_offline") : t(lang, "home_not_running"))}
         </div>
         {activeCorpusId && (
           <div className="status-chip ok">

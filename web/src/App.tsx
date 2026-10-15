@@ -247,7 +247,11 @@ export default function App() {
 function QueryStatusIndicator() {
   const qc = useQueryClient();
   const queries = qc.getQueryCache().getAll();
-  const fetching = queries.filter((q) => q.state.status === "pending");
+  // v1.2.12 (rc7): "active request" means a fetch in flight — fetchStatus
+  // "fetching". status "pending" also covers enabled-gated queries that
+  // have never run (idle), which pinned the spinner at "N processing..."
+  // permanently (same TanStack-Query-v5 bug class as ArabicView).
+  const fetching = queries.filter((q) => q.state.fetchStatus === "fetching");
   const errors = queries.filter((q) => q.state.status === "error");
 
   if (errors.length > 0) {

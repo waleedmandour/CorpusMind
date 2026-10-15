@@ -49,17 +49,20 @@ router = APIRouter()
 
 # Hard ceiling for one Arabic Tools request (worker-thread time). Env-
 # overridable so tests can exercise the 504 path without waiting.
-# 30s comfortably covers a cold calima-msa-r13 load (~2s on the dev
-# reference machine, tens of seconds with cold disk + antivirus) plus a
-# full-sentence analysis; a genuinely stuck load must not pin a worker
-# thread (and the user's patience) forever.
-ARABIC_TIMEOUT_S = float(os.environ.get("CORPUSMIND_ARABIC_TIMEOUT_S", "30"))
+# v1.2.12 (field report): 30s assumed a cold calima-msa-r13 load in "tens of
+# seconds with cold disk + antivirus" — real Windows machines with real-time
+# Defender scanning exceeded that EVERY first run, so the sample sentence
+# failed with 504 even though the pack was correctly installed. 120s covers
+# measured slow-disk loads (the loader thread also finishes in the
+# background after a 504, so the retry hits the warm cache); a genuinely
+# stuck load must still not pin the request forever.
+ARABIC_TIMEOUT_S = float(os.environ.get("CORPUSMIND_ARABIC_TIMEOUT_S", "120"))
 
 # v1.2.11 follow-up: measured ceiling for the INTERACTIVE analyze route.
 # scripts/benchmark_arabic_corpus.py measured ~3,950 tokens/s on the dev
 # reference machine (calima-msa-r13, warm cache): 100K tokens ≈ 25s, 500K ≈
-# 126s, 1M ≈ 253s. A 50k-token cap keeps the default 30s deadline
-# comfortably reachable on slower machines too; anything larger answers 413
+# 126s, 1M ≈ 253s. A 50k-token cap keeps even the 30s class of machines
+# comfortably inside the default 120s deadline; anything larger answers 413
 # and points at the chunked bulk job (POST /arabic/analyze/job) which
 # streams progress instead of holding one HTTP request for minutes.
 ARABIC_INLINE_MAX_TOKENS = int(os.environ.get("CORPUSMIND_ARABIC_INLINE_MAX_TOKENS", "50000"))

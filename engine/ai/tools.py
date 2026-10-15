@@ -9,6 +9,7 @@ true whenever at least one tool was invoked.
 from __future__ import annotations
 
 import asyncio
+import os
 import time
 from typing import Any
 
@@ -50,6 +51,41 @@ log = get_logger(__name__)
 # --------------------------------------------------------------------------- #
 # Each is an async function taking a session and the tool's args.
 # They return JSON-serializable dicts that get fed back to the LLM.
+
+
+async def _search_cql(session: AsyncSession, *, corpus_id: str, query: str,
+                      window: int = 5, limit: int = 20) -> dict:
+    """v1.2.13-2 AI tool: CQL-lite concordance with grounded line_ids.
+
+    Runs under the SAME matcher guards as the HTTP route (work budget,
+    deadline, thread offloading); returns KWIC lines the model can cite by
+    line_id (grounded evidence, kind: concordance_line).
+    """
+    from stats.cql import search_concordance_cql
+
+    r = await search_concordance_cql(
+        session, corpus_id, query, window=window, limit=max(1, min(limit, 50)),
+    )
+    return {
+        "mode": "cql",
+        "query": query,
+        "parsed": r.query.get("parsed"),
+        "within": r.query.get("within"),
+        "total": r.total,
+        "total_capped": bool(r.query.get("total_capped")),
+        "lines": [
+            {
+                "line_id": l.line_id,
+                "document": l.document_filename,
+                "left": l.left,
+                "node": l.node,
+                "right": l.right,
+                "pos": l.pos,
+                "lemma": l.lemma,
+            }
+            for l in r.lines
+        ],
+    }
 
 
 async def _search_concordance(session: AsyncSession, *, corpus_id: str, query: str,
@@ -628,6 +664,34 @@ TOOL_SCHEMAS: list[dict] = [
     {
         "type": "function",
         "function": {
+            "name": "search_cql",
+            "description": (
+                "Run a CQL-lite corpus query (token sequences with attributes, "
+                "gaps, quantifiers, alternation) and return KWIC lines with "
+                "stable line_ids. Cite the line_id in your answer. Use this "
+                "instead of search_concordance when the user describes a "
+                "PATTERN rather than a single word, e.g. [lemma=\"take\"] "
+                "[]{0,3} \"risk\" or [pos=\"ADJ\"] \"dog\". Syntax: \"literal\" "
+                "(wildcards * ?), [attr=\"value\"] over word/lemma/pos/xpos/rel/"
+                "morph/root/pattern, [] any token, []{m,n} gap, (a|b) groups, "
+                "? * + quantifiers, %c ignore case, %d fold diacritics, "
+                "within sentence|document."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "corpus_id": {"type": "string", "description": "The active corpus ID"},
+                    "query": {"type": "string", "description": 'CQL-lite pattern, e.g. [lemma="take"] []{0,3} "risk"'},
+                    "window": {"type": "integer", "default": 5, "minimum": 1, "maximum": 20},
+                    "limit": {"type": "integer", "default": 20, "minimum": 1, "maximum": 50},
+                },
+                "required": ["corpus_id", "query"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "get_frequency",
             "description": (
                 "Get frequency statistics (top items, total tokens/types, STTR) for a corpus. "
@@ -1123,6 +1187,7 @@ TOOL_SCHEMAS: list[dict] = [
 TOOL_IMPLS = {
     # Phase 1 — corpus-backed
     "search_concordance": _search_concordance,
+    "search_cql": _search_cql,
     "get_frequency": _get_frequency,
     "compute_collocations": _compute_collocations,
     "compute_keyness": _compute_keyness,
@@ -1180,41 +1245,72 @@ async def execute_tool(name: str, args: dict) -> Any:
 
     Corpus-backed tools (Phase 1+2) are async and take an AsyncSession.
     Stateless tools (Phase 3 Arabic, ping) are sync and don't need a session.
+
+    v1.2.14 (P2.4): every tool call is now wrapped in asyncio.wait_for
+    with a 45-second budget (CORPUSMIND_AI_TOOL_TIMEOUT_S env-overridable).
+    A slow tool — e.g. compute_collocations on a 100K-token corpus, or
+    get_corpus_overview when the DB is cold — surfaces as a ToolTimeoutError
+    that the assistant's tool loop records as a failed tool call
+    ("Tool X timed out after 45s") instead of propagating the wait to the
+    whole chat turn. Mirrors the v1.2.11 Arabic-tools pattern.
     """
     impl = TOOL_IMPLS.get(name)
     if impl is None:
         raise KeyError(f"Unknown tool: {name}")
 
-    if name in _STATELESS_TOOLS:
-        # v1.2.11 (Arabic Tools hang fix): the Arabic stateless tools are
-        # CPU-bound CAMeL calls. They used to run inline on the event loop,
-        # freezing the whole engine for the duration (and forever when the
-        # morphology data was missing). Async impls are awaited; sync impls
-        # run in a worker thread so the loop never blocks.
-        import inspect
+    # v1.2.14 (P2.4): per-tool deadline.
+    _TOOL_TIMEOUT_S = float(os.environ.get("CORPUSMIND_AI_TOOL_TIMEOUT_S", "45"))
 
-        # v1.2.11 follow-up: Arabic tools honour the shared concurrency cap.
-        # ArabicBusyError propagates to the assistant's tool loop, which
-        # records it as a failed tool call (ok: False) the model can relay
-        # to the user — the chat itself stays alive.
-        if name in _ARABIC_TOOLS:
-            if not gate.acquire():
-                log.warning("arabic_tool_busy", tool=name, cap=gate.cap)
-                raise ArabicBusyError()
-            try:
-                if inspect.iscoroutinefunction(impl):
-                    return await impl(**args)
-                return await asyncio.to_thread(impl, **args)
-            finally:
-                gate.release()
+    async def _run() -> Any:
+        if name in _STATELESS_TOOLS:
+            # v1.2.11 (Arabic Tools hang fix): the Arabic stateless tools are
+            # CPU-bound CAMeL calls. They used to run inline on the event loop,
+            # freezing the whole engine for the duration (and forever when the
+            # morphology data was missing). Async impls are awaited; sync impls
+            # run in a worker thread so the loop never blocks.
+            import inspect
 
-        if inspect.iscoroutinefunction(impl):
-            return await impl(**args)
-        return await asyncio.to_thread(impl, **args)
+            # v1.2.11 follow-up: Arabic tools honour the shared concurrency cap.
+            # ArabicBusyError propagates to the assistant's tool loop, which
+            # records it as a failed tool call (ok: False) the model can relay
+            # to the user — the chat itself stays alive.
+            if name in _ARABIC_TOOLS:
+                if not gate.acquire():
+                    log.warning("arabic_tool_busy", tool=name, cap=gate.cap)
+                    raise ArabicBusyError()
+                try:
+                    if inspect.iscoroutinefunction(impl):
+                        return await impl(**args)
+                    return await asyncio.to_thread(impl, **args)
+                finally:
+                    gate.release()
 
-    # Corpus-backed async tool — open a fresh session
-    async with session_scope() as session:
-        return await impl(session, **args)
+            if inspect.iscoroutinefunction(impl):
+                return await impl(**args)
+            return await asyncio.to_thread(impl, **args)
+
+        # Corpus-backed async tool — open a fresh session
+        async with session_scope() as session:
+            return await impl(session, **args)
+
+    try:
+        return await asyncio.wait_for(_run(), timeout=_TOOL_TIMEOUT_S)
+    except TimeoutError as e:
+        log.warning("tool_timeout", tool=name, timeout_s=_TOOL_TIMEOUT_S)
+        raise ToolTimeoutError(name, _TOOL_TIMEOUT_S) from e
+
+
+class ToolTimeoutError(Exception):
+    """Raised when a tool call exceeds the per-tool budget.
+
+    The assistant's tool loop catches this and surfaces it to the model as
+    a failed tool call so the chat continues with an honest "Tool X timed
+    out" message instead of an infinite spinner.
+    """
+    def __init__(self, tool: str, timeout_s: float):
+        self.tool = tool
+        self.timeout_s = timeout_s
+        super().__init__(f"Tool '{tool}' timed out after {timeout_s:.0f}s")
 
 
 def schemas_for_llm() -> list[dict]:

@@ -74,8 +74,19 @@ export const translations = {
     ar_data_settings_title: "Arabic data pack (CAMeL morphology)",
     ar_data_settings_desc: "Required for Arabic morphology, roots and dialect ID. Downloaded from CAMeL Lab's official releases at pinned versions; size and SHA256 verified before install. Stored under: {dir}",
     ar_data_pkg_msa: "MSA morphology DB (calima-msa-r13, GPL-2.0-only)",
+    ar_data_pkg_egy: "Egyptian dialect DB (calima-egy-r13, GPL-2.0-only)",
+    ar_data_pkg_glf: "Gulf dialect DB (calima-glf-01, CC BY 4.0)",
+    ar_data_pkg_lev: "Levantine dialect DB (calima-lev-01, CC BY 4.0)",
     ar_data_pkg_did: "Dialect-ID model (dialectid-model6, MIT)",
     ar_data_busy_conflict: "An Arabic analysis is already running. Please wait a few seconds and try again.",
+    // v1.2.12: partial-install recovery (Re-install button).
+    ar_data_install_missing_btn: "Install missing components ({count})",
+    ar_data_reinstall_btn: "Re-install (repair)",
+    ar_data_missing_badge: "Components missing ({count})",
+    ar_data_missing_components_hint: "{count} of {total} components are missing. Install fetches only the missing ones; Re-install re-downloads the whole pack and replaces what is on disk.",
+    // v1.2.11-rc1 fix: dialect DBs the installer does not provision are
+    // marked (and disabled) in the Dialect DB dropdown instead of 503ing.
+    ar_dialect_db_missing: "(data pack not installed)",
     // v1.2.0: parent-app vision tab removed (Lens companion owns the vision workbench).
     // nav_vision_suite removed; vision_* content keys stay (Lens-mode workbench uses them).
     nav_assistant: "AI Assistant",
@@ -96,7 +107,20 @@ export const translations = {
     home_lmstudio: "LM Studio",
     home_connected: "Connected",
     home_not_running: "Not detected",
+    // v1.2.14-2 (PWA): when the engine is unreachable in browser/PWA mode the
+    // local-AI chips must not read as "the runtime is missing" — nothing can
+    // run because the AI path (the engine proxy) is down. See HomeView.
+    home_provider_engine_offline: "Unavailable — engine offline",
     home_active_corpus: "Corpus loaded",
+    // v1.2.14-2 (PWA): main-page notice for local AI availability. Ollama and
+    // LM Studio are machine-local runtimes; browsers (and therefore PWAs) can
+    // only reach them through the CorpusMind engine proxy, never directly.
+    // When the engine is offline in browser mode, no AI model can run — this
+    // notice says so plainly instead of leaving silent failures elsewhere.
+    pwa_ai_title: "AI models unavailable — the engine is offline",
+    pwa_ai_body: "Ollama and LM Studio run on your own computer, and browser security means this app (PWA) can only reach them through the CorpusMind engine. With the engine offline, no AI model can run — including the opt-in cloud providers. Everything else that needs the engine is paused too.",
+    pwa_ai_fix: "Start the engine on this machine, then reload this page:",
+    pwa_ai_safari_note: "You appear to be using Safari (or an iOS browser), which blocks page-to-local-program connections entirely. For local AI, open CorpusMind in Chrome, Edge, or Firefox — or install the desktop app.",
     home_get_started: "Get Started",
     home_no_project: "You have not selected a project yet. Click Projects in the sidebar to create one and upload your text files.",
     home_create_project: "Create a Project",
@@ -188,6 +212,10 @@ export const translations = {
     ai_corpus_none: "no corpus selected",
     ai_drawer_empty: "Ask about your corpus or the analysis you are looking at.",
     ai_thinking: "Thinking…",
+    // v1.2.14 (P2.2): Cancel button label + the message shown when the
+    // user aborts an in-flight chat turn.
+    ai_cancel: "Cancel",
+    ai_cancelled: "(cancelled)",
     ai_grounded: "grounded",
     ai_ungrounded: "ungrounded",
     // v1.2.6: Discourse page multi-taxonomy selector
@@ -971,6 +999,21 @@ export const translations = {
     arb_normalize: "Arabic normalization",
     arb_normalize_hint: "Unifies أ إ آ → ا, ة → ه, ى → ي and strips diacritics before matching/aggregation.",
 
+    // --- v1.2.13-1: CQL-lite query mode (Concordancer) -----------------------
+    cql_mode_simple: "Simple",
+    cql_mode_simple_hint: "Single-node search: word/lemma/POS (or root/pattern) with wildcards, regex, and whitespace phrases.",
+    cql_placeholder: 'CQL pattern, e.g. [lemma="take"] []{0,3} "risk" within sentence',
+    cql_hint: 'CQL: "literal" · [attr="val"] · [word="book" & pos="NOUN"] · [] any token · []{m,n} gap · (a|b) groups · ? * + {m,n} · %c ignore case · %d fold diacritics · within sentence|document. Attributes: word, lemma, pos, xpos, rel, morph, root, pattern.',
+    // v1.2.13-2: query helper + student gating
+    cql_examples_label: "Examples:",
+    cql_example_insert: "Insert this example into the query box",
+    cql_syntax_show: "Syntax & CQP differences",
+    cql_syntax_hide: "Hide syntax",
+    cql_diffs_title: "Differences from CQP (deliberate):",
+    cql_error_here: "← the query breaks here",
+    cql_cancel_hint: "Cancel the running CQL query (the engine also enforces its own 20 s deadline)",
+    cql_blocked_student: "CQL is not available in Student Mode on this server — using the Simple search instead.",
+
     // --- v1.2.0: User Guide — Companion Apps section --------------------------
     ug_companion_title: "Companion Apps",
     ug_companion_intro: "CorpusMind ships as a family. The main app covers text; the companions extend it to images and audio - all reading the same engine and data directory.",
@@ -1044,11 +1087,19 @@ export const translations = {
     sm_taskbar_starting: "Starting classroom server…",
     sm_taskbar_live: "Classroom live",
     sm_taskbar_failed: "Classroom failed — details",
+    err_boundary_title: "Something went wrong on this screen",
+    err_boundary_body: "The app caught an error instead of going blank. Your data and the engine are untouched. Try again, or reload the app if this keeps happening.",
+    err_boundary_retry: "Try again",
+    err_boundary_reload: "Reload app",
     // v1.2.10: fresh exposure probe on the LAN warning banner.
     sm_recheck: "Check again",
     sm_rechecking: "Checking…",
     // v1.2.10 (soak follow-up): shown after ~3 s of pending heavy analysis.
     analysis_class_busy: "Your class is busy — please wait. When the whole classroom queries at once, requests queue and results can take up to a minute.",
+    // v1.2.14: classroom-neutral copy for solo users. SlowQueryNote picks
+    // this when phase !== "live" so a user running analysis with the
+    // classroom server OFF no longer sees the misleading queue message.
+    analysis_slow_neutral: "This analysis is taking longer than usual — still working. You can keep waiting, or Cancel and try a narrower query.",
     sm_audit_empty: "No classroom activity recorded yet.",
     sm_audit_privacy: "Anonymous by design: students appear as S-1, S-2 … — no names, no device addresses, no tokens are ever stored. Student questions and the model's answers are logged in full so you can review the lesson afterwards. Stored locally under:",
     sm_audit_toggle: "Keep audit log",
@@ -1126,8 +1177,18 @@ export const translations = {
     ar_data_settings_title: "حزمة بيانات العربية (الصرف في CAMeL)",
     ar_data_settings_desc: "مطلوبة للتحليل الصرفي والجذور وتحديد اللهجة. تُنزّل من إصدارات CAMeL Lab الرسمية بإصدارات مثبتة، ويُتحقق من الحجم وبصمة SHA256 قبل التثبيت. تُحفظ تحت: {dir}",
     ar_data_pkg_msa: "قاعدة الصرف الفصحى (calima-msa-r13، GPL-2.0-only)",
+    ar_data_pkg_egy: "قاعدة صرف اللهجة المصرية (calima-egy-r13، GPL-2.0-only)",
+    ar_data_pkg_glf: "قاعدة صرف اللهجة الخليجية (calima-glf-01، CC BY 4.0)",
+    ar_data_pkg_lev: "قاعدة صرف اللهجة الشامية (calima-lev-01، CC BY 4.0)",
     ar_data_pkg_did: "نموذج تحديد اللهجة (dialectid-model6، MIT)",
     ar_data_busy_conflict: "هناك تحليل عربي قيد التشغيل بالفعل. يُرجى الانتظار بضع ثوانٍ والمحاولة مجدداً.",
+    // v1.2.12: استعادة الحزمة المثبتة جزئياً (زر إعادة التثبيت).
+    ar_data_install_missing_btn: "تثبيت المكوّنات الناقصة ({count})",
+    ar_data_reinstall_btn: "إعادة التثبيت (إصلاح)",
+    ar_data_missing_badge: "مكوّنات ناقصة ({count})",
+    ar_data_missing_components_hint: "{count} من إجمالي {total} مكوّنات ناقصة. يُنزّل زر التثبيت المكوّنات الناقصة فقط، بينما تُنزّل إعادة التثبيت الحزمة كاملة وتستبدل ما على القرص.",
+    // v1.2.11-rc1 fix: قواعد اللهجات التي لا يوفرها المثبّت تُعلَّم وتُعطَّل في القائمة
+    ar_dialect_db_missing: "(حزمة البيانات غير مثبتة)",
     // v1.2.0: nav_vision_suite removed (parent-app vision tab is gone); vision_* content keys stay.
     nav_assistant: "المساعد الذكي",
     nav_settings: "الإعدادات",
@@ -1147,7 +1208,14 @@ export const translations = {
     home_lmstudio: "LM Studio",
     home_connected: "متصل",
     home_not_running: "غير مكتشف",
+    // v1.2.14-2 (PWA): راجع التعليق المقابل في القسم الإنجليزي.
+    home_provider_engine_offline: "غير متاح — المحرك متوقف",
     home_active_corpus: "الذخيرة اللغوية محمّلة",
+    // v1.2.14-2 (PWA): إشعار توفر نماذج الذكاء الاصطناعي المحلية في وضع المتصفح.
+    pwa_ai_title: "نماذج الذكاء الاصطناعي غير متاحة — المحرك متوقف",
+    pwa_ai_body: "يعمل كلٌّ من Ollama و LM Studio على جهازك المحلي، ولأسباب أمنية لا تستطيع صفحة الويب (بما في ذلك هذا التطبيق) الوصول إليهما إلا عبر محرك CorpusMind. ولمّا كان المحرك متوقفًا، لا يمكن تشغيل أي نموذج ذكاء اصطناعي — بما في ذلك مزوّدو الخدمات السحابية الاختياريون. وقد توقفت بقية الأدوات المعتمدة على المحرك أيضًا.",
+    pwa_ai_fix: "شغِّل المحرك على هذا الجهاز ثم أعد تحميل هذه الصفحة:",
+    pwa_ai_safari_note: "يبدو أنك تستخدم Safari (أو متصفح iOS)، الذي يحظر الاتصال بالبرامج المحلية كليًا. للذكاء الاصطناعي المحلي، افتح CorpusMind عبر Chrome أو Edge أو Firefox — أو ثبِّت تطبيق سطح المكتب.",
     home_get_started: "ابدأ الآن",
     home_no_project: "لم تقم بتحديد مشروع بعد. انقر على المشاريع في الشريط الجانبي لإنشاء واحد وتحميل ملفاتك النصية إلى الذخيرة اللغوية.",
     home_create_project: "إنشاء مشروع",
@@ -1239,6 +1307,10 @@ export const translations = {
     ai_corpus_none: "لا توجد دخيرة محددة",
     ai_drawer_empty: "اسأل عن دخيرتك أو عن التحليل الذي تعرضه.",
     ai_thinking: "يفكّر…",
+    // v1.2.14 (P2.2): زر الإلغاء + الرسالة المعروضة عندما يلغي المستخدم
+    // استجابة الذكاء الاصطناعي الجارية.
+    ai_cancel: "إلغاء",
+    ai_cancelled: "(أُلغي)",
     ai_grounded: "موثّق",
     ai_ungrounded: "غير موثّق",
     // v1.2.6: منتقي التصنيفات في صفحة الخطاب
@@ -2003,6 +2075,21 @@ export const translations = {
     arb_normalize: "توحيد الرسم العربي",
     arb_normalize_hint: "يوحّد أ إ آ ← ا، ة ← ه، ى ← ي ويزيل الحركات قبل المطابقة/الإحصاء.",
 
+    // --- v1.2.13-1: وضع استعلام CQL (المفردة) ---
+    cql_mode_simple: "بسيط",
+    cql_mode_simple_hint: "بحث بعقدة واحدة: كلمة/ lemma / POS (أو الجذر/الوزن) مع البدائل والتعبيرات النمطية والعبارات.",
+    cql_placeholder: 'نمط CQL، مثال: [lemma="take"] []{0,3} "risk" within sentence',
+    cql_hint: 'CQL: "نص" · [attr="قيمة"] · [word="book" & pos="NOUN"] · [] أي رمز · []{m,n} فجوة · (أ|ب) مجموعات · ? * + {m,n} · %c تجاهل الحالة · %d توحيد الحركات · within sentence|document. الخصائص: word، lemma، pos، xpos، rel، morph، root، pattern.',
+    // v1.2.13-2: مساعد الاستعلام + بوابة وضع الطالب
+    cql_examples_label: "أمثلة:",
+    cql_example_insert: "أدرج هذا المثال في مربع الاستعلام",
+    cql_syntax_show: "الصياغة والفروقات عن CQP",
+    cql_syntax_hide: "إخفاء الصياغة",
+    cql_diffs_title: "فروقات مقصودة عن CQP:",
+    cql_error_here: "← انكسار الاستعلام هنا",
+    cql_cancel_hint: "إلغاء استعلام CQL الجاري (المحرك يفرض أيضاً مهلة 20 ثانية)",
+    cql_blocked_student: "لغة استعلام CQL غير متاحة في وضع الطالب على هذا الخادم — تم التحويل إلى البحث البسيط.",
+
     // --- v1.2.0: دليل المستخدم — قسم التطبيقات الرفيقة ---
     ug_companion_title: "التطبيقات الرفيقة",
     ug_companion_intro: "يأتي CorpusMind كعائلة: التطبيق الرئيسي للنصوص، والرفيقتان توسّعه إلى الصور والصوت - وكلها تقرأ المحرك ومجلد البيانات نفسيهما.",
@@ -2086,11 +2173,19 @@ export const translations = {
     sm_taskbar_starting: "جارٍ بدء خادم الفصل الدراسي…",
     sm_taskbar_live: "الفصل الدراسي يعمل",
     sm_taskbar_failed: "فشل الفصل الدراسي — التفاصيل",
+    err_boundary_title: "حدث خطأ في هذه الشاشة",
+    err_boundary_body: "التقط التطبيق الخطأ بدل أن تصبح الشاشة فارغة. بياناتك والمحرك لم يتأثرا. حاول مرة أخرى، أو أعد تحميل التطبيق إذا تكرر الأمر.",
+    err_boundary_retry: "حاول مرة أخرى",
+    err_boundary_reload: "إعادة تحميل التطبيق",
     // v1.2.10: فحص جديد لتحذير شبكة Ollama.
     sm_recheck: "تحقق مجددًا",
     sm_rechecking: "جارٍ التحقق…",
     // v1.2.10 (soak follow-up): تظهر بعد ~3 ثوانٍ من الانتظار في التحليلات الثقيلة.
     analysis_class_busy: "صفّك مشغول — يُرجى الانتظار. عندما يستعلم الصف كله في وقت واحد، تُصطف الطلبات وقد يستغرق الناتج حتى دقيقة.",
+    // v1.2.14: نسخة محايدة عن الفصل للمستخدم الفردي. SlowQueryNote تختار
+    // هذه عندما لا يكون phase === "live" حتى لا يرى المستخدم الذي يُجري
+    // تحليلاً والخادم الصفي مغلقاً رسالة الانتظار المضللة.
+    analysis_slow_neutral: "هذا التحليل يستغرق وقتاً أطول من المعتاد — لا يزال قيد التنفيذ. يمكنك الانتظار، أو الإلغاء ومحاولة استعلام أضيق.",
     sm_audit_empty: "لا يوجد نشاط صفّي مسجل بعد.",
     sm_audit_privacy: "مجهول الهوية بالتصميم: يظهر الطلاب كـ S-1 وS-2 … — لا أسماء ولا عناوين أجهزة ولا مفاتيح تُخزّن أبداً. تُسجَّل أسئلة الطلاب وإجابات النموذج كاملة لتتمكن من مراجعة الدرس لاحقاً. يُحفظ محلياً تحت:",
     sm_audit_toggle: "الاحتفاظ بسجل التدقيق",

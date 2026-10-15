@@ -44,6 +44,7 @@ import socket
 import subprocess
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
@@ -239,6 +240,12 @@ _STUDENT_ROUTES: list[tuple[set[str], re.Pattern[str]]] = [
     ({"GET"}, re.compile(r"^/api/v1/corpora/[^/]+/subcorpora$")),
     # Core analysis tools.
     ({"POST"}, re.compile(r"^/api/v1/corpora/[^/]+/concordance$")),
+    # v1.2.13-2 (deliberate ON-listing): CQL-lite concordance. Admitted ONLY
+    # because the route enforces the matcher work budget + wall-clock
+    # deadline + max-span bound off the event loop, and students get the
+    # stricter STUDENT_MATCH_LIMITS (see stats/cql.py + api/analysis.py).
+    # It is the same read-only analysis surface as /concordance.
+    ({"POST"}, re.compile(r"^/api/v1/corpora/[^/]+/concordance/cql$")),
     ({"POST"}, re.compile(r"^/api/v1/corpora/[^/]+/concordance/vector$")),
     ({"POST"}, re.compile(r"^/api/v1/corpora/[^/]+/frequency$")),
     ({"POST"}, re.compile(r"^/api/v1/corpora/[^/]+/collocations$")),
@@ -257,6 +264,10 @@ _STUDENT_ROUTES: list[tuple[set[str], re.Pattern[str]]] = [
     # Direct analysis-result downloads (files returned inline; NOT the
     # server-side export queue, which stays teacher-only).
     ({"POST"}, re.compile(r"^/api/v1/corpora/[^/]+/export/(concordance|frequency|collocations|keyness)(\.xlsx)?$")),
+    # v1.2.13-2 (deliberate ON-listing): server-side CQL export — same
+    # inline-file surface as export/concordance; the engine re-runs the
+    # query under the same matcher guards.
+    ({"POST"}, re.compile(r"^/api/v1/corpora/[^/]+/export/concordance/cql$")),
     ({"POST"}, re.compile(r"^/api/v1/corpora/[^/]+/export/collocations\.network\.(svg|png)$")),
     ({"GET"}, re.compile(r"^/api/v1/corpora/[^/]+/methods.pdf$")),
     # Learner Research (analysis).
@@ -283,6 +294,21 @@ _STUDENT_ROUTES: list[tuple[set[str], re.Pattern[str]]] = [
     # Read-only hub catalogue (search/metadata only — downloads stay teacher-only).
     ({"GET"}, re.compile(r"^/api/v1/hub/(search|catalogue)$")),
 ]
+
+# v1.2.13-2 (deliberate OFF-listing — students are DENIED these CQL-adjacent
+# routes with 403, consistent with the existing subcorpus-management and
+# settings exclusions):
+#   * POST /api/v1/corpora/{cid}/subcorpora/from-cql — subcorpus MANAGEMENT
+#     (creating shared named filters) stays teacher-only.
+#   * /api/v1/corpora/{cid}/saved-queries (GET/POST/DELETE) — saved queries
+#     are per-project and shared through the teacher token; student saves
+#     would clutter the class space under the shared student token.
+#   * The CQL statistics consumers (frequency/collocations/dispersion/ngrams
+#     with a cql_query field, vector pre-filter) need NO new rules: they are
+#     new PARAMETERS on already-allowlisted analysis routes, so the existing
+#     entries above admit them deliberately.
+#   * The AI assistant's search_cql tool runs inside POST /ai/chat (already
+#     allowlisted); it inherits chat's gating and adds grounded line_ids only.
 
 
 def student_route_allowed(method: str, path: str) -> bool:
@@ -576,6 +602,19 @@ def generate_caddyfile(
 
 def _caddy_data_dir(settings: Any) -> Path:
     return server_mode_dir(settings) / "caddy-data"
+
+
+# v1.2.12: the thread that spawns Caddy must OUTLIVE the spawn.
+#
+# On Linux, PR_SET_PDEATHSIG (see _posix_close_on_parent_death) is delivered
+# when the *thread* that forked the child exits, not when the process exits
+# (prctl(2): "the 'parent' in this piece of information refers to the thread
+# that created this process"). The v1.2.10 phased start spawned Caddy from a
+# throw-away ``threading.Thread``; the moment that thread finished, the kernel
+# SIGTERMed a perfectly healthy Caddy, leaving ``enabled=True`` with
+# ``caddy_running=False`` and no error text. One long-lived worker thread keeps
+# the death-signal semantics ("die with the engine") without the early kill.
+SPAWN_EXECUTOR = ThreadPoolExecutor(max_workers=1, thread_name_prefix="classroom-spawn")
 
 
 def _posix_close_on_parent_death() -> None:  # pragma: no cover — POSIX only

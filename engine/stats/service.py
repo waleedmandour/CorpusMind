@@ -8,7 +8,8 @@ statistic) includes that ID so the AI Assistant can cite it (§11.1).
 """
 from __future__ import annotations
 
-from collections import Counter, defaultdict
+import re
+from collections import Counter, OrderedDict, defaultdict
 from dataclasses import dataclass
 from typing import Literal
 
@@ -34,6 +35,38 @@ from stats.measures import (
 from storage.models import AnnotationVersion, Corpus, Document, Token
 
 log = get_logger(__name__)
+
+
+# --------------------------------------------------------------------------- #
+# Catastrophic-backtracking screen (v1.2.13-2, shared with stats/cql.py)
+# --------------------------------------------------------------------------- #
+
+# A quantifier applied to a group that itself ends in a quantifier — the
+# classic (a+)+ / (a|a)* bomb family. Heuristic; the screen catches the
+# common cases at query-validation time instead of hanging the engine.
+_REDOSS_NESTED_RE = re.compile(r"\((?:[^()\\]|\\.)*[+*]\)\s*(?:[+*]|\{\d)")
+_MAX_REGEX_LEN = 1000
+
+
+def check_regex_safe(pattern: str) -> None:
+    """Reject obviously catastrophic regexes (ValueError with an actionable message).
+
+    Shared by the CQL-lite parser (stats/cql.py) and the simple concordance's
+    regex level — both evaluate user regexes with Python ``re``, which cannot
+    be preempted mid-call, so the guard runs at validation time.
+    """
+    if len(pattern) > _MAX_REGEX_LEN:
+        raise ValueError(
+            f"regex longer than {_MAX_REGEX_LEN} characters — use a bounded "
+            "wildcard pattern or narrow the alternation"
+        )
+    if _REDOSS_NESTED_RE.search(pattern):
+        raise ValueError(
+            f"regex applies a quantifier to a group that already ends in a "
+            f"quantifier (/{pattern}/) — this can backtrack catastrophically and "
+            "is rejected. Rewrite without the nested quantifier, e.g. /(ab)+/ "
+            "instead of /(a+)+/."
+        )
 
 
 class _Norm:
@@ -298,7 +331,8 @@ async def search_concordance(
 
     v1.0.1 capabilities:
       * levels: word | lemma | pos | root | pattern (root/pattern read the
-        Arabic morph layer: 'root=ك ت ب|stem=…|pattern=…').
+        Arabic morph layer: 'root=ك.ت.ب|stem=…|pattern=…' — CAMeL's real
+        stored format, dotted roots).
       * regex queries (Python re syntax; case flag handled via (?i)).
       * phrase queries: any whitespace in `query` starts multi-word sequence
         matching (word/lemma levels only; each part may carry wildcards).
@@ -313,6 +347,13 @@ async def search_concordance(
     """
     if level not in _CONCORDANCE_LEVELS:
         level = "word"
+    if regex:
+        # v1.2.13-2: same catastrophic-regex screen the CQL parser applies —
+        # a pathological pattern must fail loudly at validation, not hang.
+        try:
+            check_regex_safe(query)
+        except ValueError as e:
+            raise ValueError(f"Invalid regex query: {e}") from e
     version_id = await _latest_version_id(session, corpus_id)
     if not version_id:
         return ConcordanceResult(lines=[], total=0, query={"q": query, "level": level})
@@ -772,6 +813,82 @@ class CollocationResult:
     warnings: list[str]
 
 
+# v1.2.14 (P1.1): process-level memoised vocabulary aggregation.
+# A single network request fires 15+1 compute_collocations() calls with
+# the SAME (version_id, level, fold_signature, document_ids) — the vocab
+# scan was repeated 15 times for a result that does not change. The cache
+# is keyed on those four values; the Counter it returns is the same
+# object every call. Bounded by a 256-entry LRU to prevent unbounded
+# growth across corpora.
+import collections as _collections  # noqa: E402
+import threading as _threading  # noqa: E402
+
+_VOCAB_CACHE: OrderedDict[tuple, tuple[Counter, int]] = _collections.OrderedDict()
+_VOCAB_CACHE_LOCK = _threading.Lock()
+_VOCAB_CACHE_MAX = 256
+
+
+def _vocab_cache_key(version_id: str, level: str, norm, document_ids) -> tuple:
+    """Build a hashable cache key. `norm` is the resolved normalizer."""
+    norm_sig = (getattr(norm, "lang", ""), bool(getattr(norm, "enabled", False)))
+    if document_ids is None:
+        doc_sig: tuple = ()
+    else:
+        doc_sig = tuple(sorted(document_ids))
+    return (version_id, level, norm_sig, doc_sig)
+
+
+async def _get_folded_vocab(session: AsyncSession, version_id: str,
+                            level: str, norm, document_ids) -> tuple[Counter, int]:
+    """Return (folded Counter, N) for the corpus, memoised per call signature.
+
+    The whole-corpus GROUP BY aggregation is the dominant cost of every
+    collocation scan; for a single network request, it produces the same
+    Counter 15 times. This helper caches it so the cost is paid once.
+    """
+    key = _vocab_cache_key(version_id, level, norm, document_ids)
+    with _VOCAB_CACHE_LOCK:
+        cached = _VOCAB_CACHE.get(key)
+        if cached is not None:
+            _VOCAB_CACHE.move_to_end(key)
+            return cached
+    # Cache miss — compute.
+    col = {"word": Token.text, "lemma": Token.lemma}[level]
+    _is_real_token_v1 = _is_real_token()
+    vocab_stmt = (
+        select(col, func.count(Token.id))
+        .where(Token.version_id == version_id, _is_real_token_v1)
+        .group_by(col)
+    )
+    if document_ids is not None:
+        vocab_stmt = vocab_stmt.where(Token.document_id.in_(document_ids))
+    # Fold under the same rule as the node so 'The'/'the' / كِتَاب/كتاب
+    # collapse into one row.
+    if norm.enabled and norm.lang != "ar":
+        def fold(t: str) -> str:
+            return norm.norm_py(_fold(t))
+    else:
+        fold = _ar_fold if norm.enabled else _fold
+    folded_counts: Counter = Counter()
+    for text, cnt in (await session.execute(vocab_stmt)).all():
+        if text and not text.isspace():
+            folded_counts[fold(text)] += cnt
+    N = sum(folded_counts.values())
+    out = (folded_counts, N)
+    with _VOCAB_CACHE_LOCK:
+        _VOCAB_CACHE[key] = out
+        _VOCAB_CACHE.move_to_end(key)
+        while len(_VOCAB_CACHE) > _VOCAB_CACHE_MAX:
+            _VOCAB_CACHE.popitem(last=False)
+    return out
+
+
+def clear_vocab_cache() -> None:
+    """Drop the vocab cache. Tests call this to assert cache behaviour."""
+    with _VOCAB_CACHE_LOCK:
+        _VOCAB_CACHE.clear()
+
+
 async def compute_collocations(
     session: AsyncSession,
     corpus_id: str,
@@ -865,18 +982,11 @@ async def compute_collocations(
                                  min_freq=min_freq, measures=measures, rows=[], warnings=warnings)
 
     # --- 2. whole-corpus vocabulary (folded) for marginals ---------------- #
-    vocab_stmt = (
-        select(col, func.count(Token.id))
-        .where(Token.version_id == version_id, _is_real_token())
-        .group_by(col)
-    )
-    if document_ids is not None:
-        vocab_stmt = vocab_stmt.where(Token.document_id.in_(document_ids))
-    folded_counts: Counter = Counter()
-    for text, cnt in (await session.execute(vocab_stmt)).all():
-        if text and not text.isspace():
-            folded_counts[fold(text)] += cnt
-    N = sum(folded_counts.values())
+    # v1.2.14 (P1.1): memoised — a single network request fires 15+1
+    # compute_collocations() calls with the same (version_id, level, norm,
+    # document_ids). The vocab scan was repeated 15 times; the cache makes
+    # it once. See _get_folded_vocab() above.
+    folded_counts, N = await _get_folded_vocab(session, version_id, level, norm, document_ids)
     fx = folded_counts.get(node_folded, 0)
     if fx == 0:
         return CollocationResult(node=node, window=window, span_left=sl, span_right=sr,
@@ -892,6 +1002,19 @@ async def compute_collocations(
     # carry their own real-token predicate), the sentence-mate side rides
     # the document_id index — bounded query plan, no expression tree, and
     # IDENTICAL semantics (all tokens of every node sentence, deduped).
+    #
+    # v1.2.14-2: force the join order with LEFT JOIN. SQLite's planner
+    # sometimes scans s_tok first on large corpora, producing a 50-100x
+    # slowdown on the dominant per-call cost of compute_collocations.
+    # INNER JOIN allows the planner to reorder; LEFT JOIN forbids it —
+    # the left table (n_tok, filtered to the few node-word matches) must
+    # be scanned first, then s_tok rides the (version_id, document_id,
+    # sentence_idx) index. The agent's check_network_cost.py diagnostic
+    # script confirmed the row sets are identical between INNER JOIN and
+    # CROSS JOIN here; LEFT JOIN produces the same rows too because every
+    # node sentence has matching s_tok rows (the join keys are a foreign-
+    # key-like triplet). Semantically equivalent to v1.2.14-2; only the
+    # join operator changes (INNER -> LEFT OUTER).
     from sqlalchemy.orm import aliased
 
     n_tok = aliased(Token, name="n_tok")
@@ -919,6 +1042,7 @@ async def compute_collocations(
             (s_tok.version_id == n_tok.version_id)
             & (s_tok.document_id == n_tok.document_id)
             & (s_tok.sentence_idx == n_tok.sentence_idx),
+            isouter=True,  # v1.2.14-2: LEFT JOIN forbids SQLite from reordering
         )
         .where(n_tok.version_id == version_id, n_cond)
         .distinct()

@@ -90,6 +90,22 @@ def _get_engine():
             dbapi_connection.create_function("urnorm", 2, _urnorm)
             dbapi_connection.create_function("hinorm", 1, _hinorm)
 
+            # v1.2.13-2: Unicode-aware case-insensitive key for the CQL %c
+            # prefilter. SQLite's lower()/LIKE are ASCII-only, which silently
+            # dropped non-ASCII candidates ('"école" %c' found 1 of 3).
+            # NFC(str.casefold(x)) — MUST stay exactly in sync with
+            # stats/cql.py::_casefold_u (the prefilter/matcher superset
+            # property depends on both layers folding identically).
+            import unicodedata as _unicodedata
+
+            def _unicase(value):
+                if value is None:
+                    return None
+                s = str(value)
+                return _unicodedata.normalize("NFC", s.casefold())
+
+            dbapi_connection.create_function("unicase", 1, _unicase, deterministic=True)
+
         _sessionmaker = async_sessionmaker(_engine, expire_on_commit=False, class_=AsyncSession)
     return _engine
 

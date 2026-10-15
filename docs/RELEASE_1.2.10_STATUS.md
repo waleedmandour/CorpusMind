@@ -135,3 +135,139 @@ carry no license statement; bundling reverses the previously documented "NOT bun
 choice. THIRD_PARTY_LICENSES.md records both facts and the flag. Fallback if the
 maintainer declines: drop the `camel-tools-data` block from the spec (the 503 +
 hint path stays correct either way).
+
+## Session 3 (2026-10-08, `release/1.2.11-prep`): rc1 field report — "cannot analyze after installing the Arabic data pack"
+
+User report on the rc1 build (clean machine, data pack installed from inside the app):
+the Arabic Tools sample text still cannot be analyzed. Two independent defects,
+root-caused in code BEFORE any change and reproduced against the rc1 tree
+(`b14357e`) with a standalone repro + new regression tests:
+
+| # | Defect (verified) | Fix (verified) |
+| --- | --- | --- |
+| 1 | Stale resolver cache: `camel_tools_data_dir()` (`app/resource_paths.py`) is `@lru_cache(1)`. On a clean machine the FIRST Arabic request or `/health/resources` poll runs before any pack exists → the resolver returns `None` and the cache stores that `None` forever. The in-app installer then installs the pack fine (its own `_resolve_target_dir()` never used the cached resolver), but every later analysis in the SAME process still 503s "not installed" until the whole app is restarted. Reproduced deterministically: poison → fabricate pack → `_require_camel_data` still raises → `cache_clear()` → passes. | `refresh_camel_tools_data_dir()` added; the installer job calls it when the on-disk state changes (after the catalogue marker is written, after EACH package lands, after cancelled/failed cleanup). Analysis works immediately after "done", no restart. Regression test runs the REAL installer job against a local fake-zip server in the poisoned-cache sequence. |
+| 2 | Dialect DB trap: the panel's dropdown offered `egy`/`glf`/`lev` DBs that no installer path provisions (installer = `morphology-db-msa-r13` + `dialectid-model6` only). Selecting Egyptian (as in the user's screenshot) can only ever 503 "incomplete: missing calima-egy-r13" with a hint that pointed back at the in-app installer — whose answer ("already installed", 409) could never fix it. | (a) `camel_data_status()` now reports `morphology_dbs: {msa, egy, glf, lev}` on the install-status payload the UI already polls; (b) the ArabicView dropdown disables DBs that are not on disk, labelled "data pack not installed" (EN+AR i18n), and falls back to MSA if the selection becomes unavailable; (c) the 503 message for a missing dialect DB names the exact terminal package (`camel_data -i morphology-db-egy-r13`, `-glf-01`, `-lev-01`); (d) the installer card refreshes the backends badge when an install reaches "done". The installer card no longer dead-ends: the UI never offers a request that cannot succeed. |
+
+Gates this session (Linux sandbox, Python 3.12.14, camel_tools installed but the
+~170 MB data pack NOT downloadable here - GitHub release CDN blackholes past ~3 MB;
+CI provisions it in every job): new regression suite
+`tests/test_v1211_arabic_cache_refresh.py` 6/6 PASS (incl. the full user sequence:
+poison → REAL installer job over local fake zips → pre-flight passes in-process);
+full engine suite chunked: **699 passed / 12 skipped** (the 11 real-DB Arabic tests
+skip here exactly as designed; 1 environment-only failure: Arabic ingestion needs
+the provisioned pack, same failure on the pre-fix tree on this machine);
+`ruff check .` clean; mypy per-package report **PASS (1829 = 1829, +0 everywhere)**
+after typing the new test file; web `tsc --noEmit` PASS; `npm run build` PASS.
+Real-morphology end-to-end (DB load + root extraction through the fixed path) is
+verified by CI's provisioned-pack jobs on push (test-gate + four OS smoke gates).
+CHANGELOG.md gained both fixes under [1.2.11] Fixed.
+
+## Session 4 (2026-10-08, `release/1.2.11-prep`): rc2 field report — radar Export dead + installer learns dialect packs; final v1.2.11
+
+User confirmed rc2 resolved the "cannot analyze after install" report ("Everything
+looks good now"), then filed the pre-final blockers: (1) the Discourse radar
+charts' Export PNG button does nothing (bar-graph export works), and (2) the
+installer must fetch the dialect packs before v1.2.11 is tagged.
+
+| # | Root cause (verified before any change) | Fix (verified) |
+| --- | --- | --- |
+| 1 | Radar Export dead in every framework: `ChartExportButton` located the chart via `targetRef.current.querySelector("svg")` — descendants only. The bar charts pass a `<figure>` wrapper ref (svg inside → works), but `TaxonomyRadar` and `PersuasionRadar` attach the ref directly to the `<svg>` element; querying that svg for a DESCENDANT svg matches nothing and the handler silently returned. The prop type even declared `RefObject<SVGSVGElement>` as supported — the implementation just never handled it. | `ChartExportButton` now matches the ref host itself when it IS an `SVGSVGElement` (`instanceof`), else falls back to the descendant search; a missing svg logs a console warning instead of failing silently. One fix in the shared component covers every framework's radar (Hyland, Halliday & Hasan, Martin & White, Cialdini, SFG, persuasion). |
+| 2 | The installer managed exactly two packages (`morphology-db-msa-r13`, `dialectid-model6`); the UI's egy/glf/lev options relied on the terminal fallback. | `catalog_packages()` grew the three dialect morphology DBs with pins observed against the LIVE release assets on 2026-10-08 (each zip downloaded and hashed: egy 67,255,921 B `eb8a2d3a…`, glf 7,977,135 B `385a29aa…`, lev 10,622,164 B `34f01238…`); all three show the same +214-byte upstream re-upload drift as msa — third independent proof that the observed digest, not the catalogue's stale metadata, is the pin. Zip structure and shipped LICENSE verified (root `morphology.db` + `LICENSE`, same layout as the proven msa pack; egy GPL-2.0-only, glf/lev CC BY 4.0). `start()` gained `include_dialects` (default True — one click must fix every data-driven 503 the UI can produce); install order msa → egy → glf → lev → dialectid. InstallRequest exposes both flags; Settings preview lists all five packages with licences (EN+AR i18n); THIRD_PARTY_LICENSES.md states the five-package download and keeps "never bundled" exact. |
+
+Gates this session (Linux sandbox, Python 3.12.14): full engine suite **688 passed /
+13 skipped, 0 failed** (one env-only failure during bring-up was the reset sandbox's
+missing `en_core_web_sm`, not a regression; passes with the model installed); Arabic
+installer + cache-refresh suites 26/26 (incl. the new `test_installer_dialects_flag`
+and the updated snapshot-integrity test asserting all five pins); `ruff check .`
+clean; mypy strict report **PASS, 1829 → 1820** (baseline re-locked, lower is fine);
+web `tsc --noEmit` PASS; `npm run build` PASS.
+
+## Session 5 (2026-10-08, `release/1.2.12-prep`): classroom toggle white screen — two engine defects, a UI boundary, and a real end-to-end toggle proof
+
+Field report on the v1.2.11 desktop build: toggling the Student Mode classroom
+server (Settings) intermittently white-screens the window. Investigation pinned
+two reproduced engine defects plus one fragile render path; fixes verified by
+four new tests and a real end-to-end toggle run (real engine, real Caddy).
+
+| # | Root cause (verified before any change) | Fix (verified) |
+| --- | --- | --- |
+| 1 | Linux `PR_SET_PDEATHSIG` is delivered when the forking THREAD exits, not the process (prctl(2)); the v1.2.10 phased start spawned Caddy from a throw-away `threading.Thread`, so the kernel SIGTERMed a healthy Caddy the moment the thread returned — `enabled=True`, `caddy_running=False`, empty error text. | The start worker runs on a long-lived single-thread executor (`app.server_mode.SPAWN_EXECUTOR`, prefix `classroom-spawn`). A self-validating Linux test forks a child from a throw-away thread (dies — proves the test can detect the bug) and from the executor (survives). |
+| 2 | `/server-mode/disable` ran `stop_caddy()` (terminate + wait up to 10 s) inline on the event loop; a stalled `/health` exceeds the desktop shell's 3 s probe and `ensure_engine` force-restarts the engine, killing the classroom. All `_status_payload` call sites had the same inline-blocking shape. | `/server-mode/*` handlers offload blocking work (`stop_caddy`, `_status_payload`) via `asyncio.to_thread`; the Ollama `/api/ps` status probe drops 3 s → 1 s. A test polls `/health` at 50 ms during a 1.5 s patched stop and asserts worst-case latency < 0.5 s. |
+| 3 | Render fragility: `StudentModeServerCard` dereferenced `s.urls.app` / `s.urls.root_ca` directly, so a status snapshot taken before Caddy is live could throw during render and unmount the whole tree (white window). | Defensive optional chaining with empty-string guards in the URL memos and QR block; a new top-level `ErrorBoundary` (EN+AR) catches any render error, records it in Smart Troubleshooting, and offers Try again / Reload app. A failed phase now always carries a reason (fallback names `caddy-stdout.log`). |
+
+Also in this change: the classroom control plane (`/server-mode/*`) can no
+longer trigger the shell-level engine restart from the web `jsonFetch` retry
+path — a restart kills the engine AND the Caddy it supervises and leaves
+pending Tauri IPC callbacks ("Couldn't find callback id") after a reload.
+Failed classroom calls now fail fast and report their own error.
+
+Real end-to-end toggle proof (Linux sandbox, real engine + pinned Caddy
+2.10.0, `scripts/toggle_smoke_test.py`): **11/11** — enable → live and still
+live after 8 s of polling (the old bug killed Caddy here), disable right
+after enable (0.02 s response), status off, no orphan Caddy, re-enable live,
+and `kill -9` of the engine takes Caddy down with it ("die with the engine"
+preserved).
+
+Deferred, stated honestly: the Rust-side hardening of `ensure_engine`
+(wait ≈ 15 s, restart only if the engine process is actually dead) is NOT in
+this build — this sandbox has no Rust toolchain or webkit2gtk headers to
+compile-verify a bootstrap change. The web-side classroom guard and the
+engine-side event-loop fixes remove the two reproduced triggers; the Rust
+change remains recommended belt-and-suspenders for a machine with the Tauri
+toolchain.
+
+Known order-dependence, separate look: `test_batch_describe_run_completes`
+and `test_batch_describe_skips_cached` (vision batch) fail in the reporter's
+full-suite run but pass alone, pass in the author's full run (692 passed /
+13 skipped, 0 failed), pass with `--ignore=tests/test_phase3_arabic.py`
+(681 / 2 skipped), and CI's Test gate is green. Suspected mechanism: ~10
+test modules mutate `CORPUSMIND_DB_URL` at import time and share the global
+provider registry (`app.state.providers._instances`), so failure depends on
+machine-specific import/state order. Not fixed here — no repro, and a
+speculative fix would violate the root-cause-first rule. Needs the
+reporter's full-suite `--tb=short` output; a conftest-level isolation pass
+(env + registry snapshot/restore) is the likely shape.
+
+Gates this session (Linux sandbox, Python 3.12.14): the four new tests pass
+(`test_student_mode.py` 36/36); full suite in one process **692 passed /
+13 skipped / 0 failed**; `ruff check` clean on changed files; mypy strict
+report **PASS 1820 = 1820** (the 9 new test-side errors were annotated away,
+baseline untouched); web `tsc --noEmit` PASS; `npm run build` PASS; contrast
+regression check **86/86 PASS**.
+
+## Session 6 (2026-10-08, `release/1.2.12-prep`): field report — "POS in KWIC finds nothing" — degraded (blank) tagging is now recorded, surfaced, and repairable
+
+Repro first: with `en_core_web_sm` present, upload → `concordance level=pos`
+returns rows (5 hits for `NOUN` on a two-sentence fixture). With the model
+UNRESOLVABLE, `SpaCyPipeline._load()` strategy 4 silently degraded to
+`spacy.blank()` — every token stored with `pos='X'`, lemmas = surface forms —
+and **nothing recorded it**: `PipelineInfo` still reported the requested
+model name, so the AnnotationVersion row claimed a tagger that never ran.
+The user's corpora ingested under that condition can never be detected or
+repaired, and POS-based analyses are empty forever. (Arabic is separately
+guarded: ingestion without the MSA morphology DB fails loudly via the 503
+install-hint flow, so the silent path is the spaCy/blank one.)
+
+Fix (honest degradation + repair path):
+- `PipelineInfo.degraded: bool` — set by strategy 4; `get_pipeline`
+  docstring updated.
+- `ingestion/service.py` + `api/corpora.py::recompile_corpus` record it:
+  version row `model_name="spacy:<model>:degraded-blank"`,
+  `pipeline_recipe["degraded"]`, loud `ingest_degraded_pipeline` /
+  `recompile_degraded_pipeline` warnings.
+- `CorpusOut.tagging_degraded` (create/list/get) drives the UI: the corpus
+  list shows a "⚠ POS missing" chip and the Documents view shows a
+  persistent alert banner ("tagged WITHOUT the NLP model … Recompile").
+  Recompile's response carries `degraded`; when the model is STILL absent
+  the UI says so plainly instead of claiming success (and a real recompile
+  clears the flag — the POS banner disappears and POS-KWIC works again).
+
+Tests: new `tests/test_degraded_tagging.py` (4) — blank-fallback visibility,
+degraded upload → API surfacing, recompile-with-model clears the flag and
+re-tags (POS-KWIC then returns rows), recompile-still-missing stays honest.
+Full suite one process: **696 passed / 13 skipped / 0 failed**; `ruff`
+clean; web `tsc` + build PASS; contrast 86/86 PASS. mypy: the diff adds
+**zero** new errors (A/B diff of api error sets is byte-identical modulo
+line numbers); the rebuilt sandbox venv (mypy 2.3.1) reads HEAD itself at
+1822–1825 vs the 1820 baseline — environmental stub drift, baseline left
+untouched (CI env is pinned and still 1820).

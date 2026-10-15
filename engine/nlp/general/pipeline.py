@@ -60,6 +60,14 @@ class PipelineInfo:
     model_version: str
     spacy_version: str
     language: str
+    # v1.2.12: True when the real model could not be loaded and the pipeline
+    # degraded to spacy.blank() (tokenization only — no POS/lemma/parse).
+    # Callers MUST record this on the AnnotationVersion / pipeline_recipe so
+    # a degraded corpus is detectable and re-taggable later. Without this
+    # flag the version row claimed the requested model name even though the
+    # blank pipeline ran — silent POS-less ingestion (field report: POS-KWIC
+    # returns nothing for every uploaded corpus).
+    degraded: bool = False
 
 
 class Pipeline(Protocol):
@@ -139,6 +147,7 @@ class SpaCyPipeline:
                 log.info("spacy_strategy3_failed", error=str(e))
 
         # Strategy 4: degraded fallback — blank model with tokenizer only
+        degraded = False
         if nlp is None:
             log.warning(
                 "spacy_model_not_found_fallback_blank",
@@ -150,6 +159,7 @@ class SpaCyPipeline:
             # Add a sentencizer (with the language's own terminators, e.g.
             # danda for Hindi / ۔ for Urdu) so we at least get sentences.
             _add_lang_sentencizer(nlp, self._language)
+            degraded = True
 
         self._nlp = nlp
 
@@ -170,6 +180,7 @@ class SpaCyPipeline:
             model_version=model_meta.get("version", ""),
             spacy_version=spacy_version,
             language=self._language,
+            degraded=degraded,
         )
         log.info("spacy_loaded", model=self._model_name, version=self._info.model_version, spacy=spacy_version)
 

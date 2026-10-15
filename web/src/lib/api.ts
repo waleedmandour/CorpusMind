@@ -504,6 +504,8 @@ export interface Corpus {
   document_count: number;
   /** v1.1.0 (issue #8): image sets attached to this corpus — Lens list badge. */
   image_set_count: number;
+  /** v1.2.12: tagged by a degraded pipeline (no POS/lemma model) — needs recompile. */
+  tagging_degraded?: boolean;
 }
 
 export interface Document {
@@ -1069,6 +1071,16 @@ export interface ArabicDataInstallStatus {
     data_dir: string | null;
     morphology_db_msa: boolean;
     dialectid_model6: boolean;
+    // Per-dialect morphology DB availability, keyed by the UI's dialect
+    // codes. Drives the Arabic Tools dialect dropdown (v1.2.11-rc1 fix:
+    // a DB that is not on disk is disabled instead of offering a request
+    // that can only ever end in 503).
+    morphology_dbs?: {
+      msa: boolean;
+      egy: boolean;
+      glf: boolean;
+      lev: boolean;
+    };
   };
 }
 
@@ -1539,11 +1551,23 @@ async function getTauriFetch(): Promise<(input: string, init?: RequestInit) => P
 
 /**
  * v1.2.11 (Arabic Tools hang fix): client-side deadline for the Arabic Tools
- * calls. Deliberately LONGER than the engine's per-route 30s deadline
- * (CORPUSMIND_ARABIC_TIMEOUT_S) so the server's specific 504 hint normally
- * arrives first; this backstop only fires when the engine itself is stuck.
+ * calls. Deliberately LONGER than the engine's per-route deadline
+ * (CORPUSMIND_ARABIC_TIMEOUT_S — 120s since v1.2.12, sized for cold
+ * ~400MB morphology-DB loads on slow/antivirus-scanned disks) so the
+ * server's specific 504 hint normally arrives first; this backstop only
+ * fires when the engine itself is stuck.
  */
-const ARABIC_TIMEOUT_MS = 45_000;
+const ARABIC_TIMEOUT_MS = 150_000;
+// v1.2.13-2: CQL client deadline — comfortably above the engine's 20 s
+// matcher wall-clock deadline (504 arrives from the engine first in the
+// normal case; the client deadline only guards a hung connection).
+const CQL_TIMEOUT_MS = 60_000;
+// v1.2.14 (P2.1): AI chat client deadline — comfortably above the
+// engine's 180 s overall deadline (CORPUSMIND_CHAT_TIMEOUT_S — 4 LLM
+// calls × 60 s + 3 tool calls × 45 s = 375 s worst case, capped at 180 s
+// by the server). The client backstop fires only if the engine itself
+// is hung. Mirrors the ARABIC_TIMEOUT_MS pattern from v1.2.11.
+const AI_CHAT_TIMEOUT_MS = 200_000;
 
 /**
  * Unified fetch that picks the Tauri plugin inside the desktop webview and
@@ -1621,15 +1645,57 @@ export async function waitForEngine(maxAttempts = 30): Promise<boolean> {
  * classification treats any error message WITHOUT it as a connection error
  * and would otherwise silently re-issue the whole request.
  */
-function withDeadline<T>(p: Promise<T>, timeoutMs?: number): Promise<T> {
-  if (!timeoutMs || timeoutMs <= 0) return p;
+function makeAbortError(): Error {
+  // The name is the contract: jsonFetch classifies `name === "AbortError"`
+  // as a user Cancel (never a connection failure), so it is neither retried
+  // nor routed into the shell's probe/restart path.
+  const e = new Error("The request was aborted");
+  e.name = "AbortError";
+  return e;
+}
+
+function withDeadline<T>(p: Promise<T>, timeoutMs?: number, signal?: AbortSignal | null): Promise<T> {
+  // v1.2.12 (rc7): honour the caller's Cancel even when the transport
+  // (Tauri plugin-http) ignores the abort — reject with an AbortError the
+  // moment the signal fires, so a Cancel is always immediate.
+  if ((!timeoutMs || timeoutMs <= 0) && !signal) return p;
   return new Promise<T>((resolve, reject) => {
-    const timer = setTimeout(() => {
-      reject(new Error(`HTTP 504: no response from the engine within ${Math.round(timeoutMs / 1000)}s (client deadline)`));
-    }, timeoutMs);
+    let settled = false;
+    const timer = timeoutMs && timeoutMs > 0
+      ? setTimeout(() => {
+          if (settled) return;
+          settled = true;
+          reject(new Error(`HTTP 504: no response from the engine within ${Math.round(timeoutMs / 1000)}s (client deadline)`));
+        }, timeoutMs)
+      : null;
+    const onAbort = () => {
+      if (settled) return;
+      settled = true;
+      if (timer) clearTimeout(timer);
+      reject(makeAbortError());
+    };
+    if (signal) {
+      if (signal.aborted) {
+        onAbort();
+        return;
+      }
+      signal.addEventListener("abort", onAbort);
+    }
     p.then(
-      (v) => { clearTimeout(timer); resolve(v); },
-      (e) => { clearTimeout(timer); reject(e); },
+      (v) => {
+        if (settled) return;
+        settled = true;
+        if (timer) clearTimeout(timer);
+        signal?.removeEventListener("abort", onAbort);
+        resolve(v);
+      },
+      (e) => {
+        if (settled) return;
+        settled = true;
+        if (timer) clearTimeout(timer);
+        signal?.removeEventListener("abort", onAbort);
+        reject(e);
+      },
     );
   });
 }
@@ -1639,9 +1705,20 @@ async function jsonFetch<T>(path: string, init?: RequestInit, timeoutMs?: number
   // Only retry on /health and /version endpoints — other endpoints
   // should fail fast so the user sees errors, not silent retries.
   const isStartupEndpoint = path.includes("/health") || path.includes("/version");
+  // v1.2.12: the classroom control plane (enable/disable/status/...) must NEVER
+  // cause a shell-level engine restart. A restart kills the engine AND the
+  // Caddy it supervises, and its blocking wait (up to 120 s) leaves pending
+  // Tauri IPC callbacks that surface as "Couldn't find callback id" after the
+  // window is reloaded. A failed classroom call just reports its own error.
+  const isClassroomControl = path.includes("/server-mode/");
   try {
     return await jsonFetchAttempt<T>(path, init, isStartupEndpoint ? 5 : 0, timeoutMs);
   } catch (e: any) {
+    // v1.2.12 (rc7): a user Cancel (AbortController) is not a connection
+    // failure — never classify it as one (that path asks the shell to
+    // probe/restart the engine while an analysis is legitimately still
+    // running) and never retry it.
+    if (e?.name === "AbortError" || init?.signal?.aborted) throw e;
     const isConnError = !!e?.message && !e.message.includes("HTTP ");
     if (!isConnError) throw e;
     // v1.2.5: the engine may have died mid-session or still be starting up
@@ -1650,7 +1727,7 @@ async function jsonFetch<T>(path: string, init?: RequestInit, timeoutMs?: number
     // genuinely down engine — then retry the request once. Startup
     // endpoints keep their own fast retry budget instead (boot polling
     // expects quick answers, not a blocking restart).
-    if (isTauriRuntime() && !isStartupEndpoint) {
+    if (isTauriRuntime() && !isStartupEndpoint && !isClassroomControl) {
       try {
         const st = await ensureEngine();
         if (st.engine_running) {
@@ -1680,7 +1757,7 @@ async function jsonFetchAttempt<T>(
           "Content-Type": "application/json",
           ...(init?.headers ?? {}),
         },
-      }), timeoutMs);
+      }), timeoutMs, init?.signal);
       if (!r.ok) {
         const body = await r.text();
         throw new Error(`HTTP ${r.status}: ${body}`);
@@ -1688,6 +1765,9 @@ async function jsonFetchAttempt<T>(
       return (await r.json()) as T;
     } catch (e: any) {
       lastError = e;
+      // v1.2.12 (rc7): an aborted request must never be retried — rethrow
+      // immediately so the Cancel resolves this attempt for good.
+      if (e?.name === "AbortError" || init?.signal?.aborted) throw e;
       // Only retry on connection errors (engine not ready), not on HTTP errors
       const isConnError = !e.message?.includes("HTTP ");
       if (isConnError && attempt < maxRetries) {
@@ -1745,7 +1825,7 @@ export const api = {
     ),
   // v0.1.17: recompile (re-run NLP pipeline) on all documents in a corpus
   recompileCorpus: (cid: string) =>
-    jsonFetch<{ recompiled: number; total_documents: number; token_count: number; type_count: number; success: boolean; failed: Array<{ document_id: string; filename: string; error: string }> }>(
+    jsonFetch<{ recompiled: number; total_documents: number; token_count: number; type_count: number; success: boolean; degraded?: boolean; failed: Array<{ document_id: string; filename: string; error: string }> }>(
       `/api/v1/corpora/${cid}/recompile`, { method: "POST" }
     ),
   // v0.1.19: update document metadata (genre, register, year, etc.)
@@ -1797,6 +1877,86 @@ export const api = {
         ...(random_sample ? { random_sample, sample_seed } : {}),
         ...(normalize_arabic ? { normalize_arabic: true } : {}),
       }),
+    }),
+
+  // --- v1.2.13-1: CQL-lite concordance (engine: engine/stats/cql.py) ---
+  // Same response shape as `concordance` (ConcordanceResult) so the existing
+  // KWIC table renders the lines; `query.mode === "cql"` in the payload
+  // marks the echo metadata. Invalid queries reject with the engine's
+  // position-annotated 422 detail ("Invalid CQL query: …"); budget
+  // overruns 422 with an actionable message; deadline overruns 504.
+  // v1.2.13-2: accepts an AbortSignal (react-query passes one so Cancel
+  // works) and a client deadline (60 s > the engine's 20 s matcher
+  // deadline, mirroring the Arabic Tools pattern).
+  concordanceCql: (
+    cid: string,
+    req: {
+      query: string;
+      window?: number;
+      limit?: number;
+      offset?: number;
+      subcorpus_id?: string | null;
+      random_sample?: number | null;
+      sample_seed?: number | null;
+      sort?: ConcordanceSortSpec[] | null;
+      normalize?: boolean | null;
+      normalize_arabic?: boolean;
+      zwnj?: "keep" | "space" | "strip";
+      cqp_compat?: boolean;
+    },
+    signal?: AbortSignal,
+  ) =>
+    jsonFetch<ConcordanceResult>(`/api/v1/corpora/${cid}/concordance/cql`, {
+      method: "POST",
+      body: JSON.stringify({
+        query: req.query,
+        window: req.window,
+        limit: req.limit,
+        offset: req.offset,
+        ...(req.subcorpus_id ? { subcorpus_id: req.subcorpus_id } : {}),
+        ...(req.random_sample ? { random_sample: req.random_sample, ...(req.sample_seed != null ? { sample_seed: req.sample_seed } : {}) } : {}),
+        ...(req.sort && req.sort.length ? { sort: req.sort } : {}),
+        ...(req.normalize ? { normalize: true } : {}),
+        ...(req.normalize_arabic ? { normalize_arabic: true } : {}),
+        ...(req.zwnj ? { zwnj: req.zwnj } : {}),
+        ...(req.cqp_compat ? { cqp_compat: true } : {}),
+      }),
+      signal,
+    }, CQL_TIMEOUT_MS),
+
+  // --- v1.2.13-2: server-side CQL export (all 5 formats; the engine
+  // re-runs the query under the matcher guards and streams the file, so
+  // the export covers the FULL match set, not the on-screen page). ---
+  exportConcordanceCql: (
+    cid: string,
+    req: {
+      query: string;
+      window?: number;
+      limit?: number;
+      subcorpus_id?: string | null;
+      normalize?: boolean | null;
+      normalize_arabic?: boolean;
+      zwnj?: "keep" | "space" | "strip";
+      cqp_compat?: boolean;
+    },
+    fmt: ExportFormat = "xlsx",
+  ) =>
+    smartFetch(`/api/v1/corpora/${cid}/export/concordance/cql?fmt=${fmt}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        query: req.query,
+        window: req.window,
+        limit: req.limit,
+        ...(req.subcorpus_id ? { subcorpus_id: req.subcorpus_id } : {}),
+        ...(req.normalize ? { normalize: true } : {}),
+        ...(req.normalize_arabic ? { normalize_arabic: true } : {}),
+        ...(req.zwnj ? { zwnj: req.zwnj } : {}),
+        ...(req.cqp_compat ? { cqp_compat: true } : {}),
+      }),
+    }).then((r) => {
+      if (!r.ok) throw new Error(`HTTP ${r.status}: ${r.statusText}`);
+      return r.blob();
     }),
 
   // --- v1.2.0: Vector KWIC (Anthony 2025) ---
@@ -2119,10 +2279,13 @@ export const api = {
   // The installer is a background job on the engine (start / status / cancel).
   // Status is polled by the UI (1s interval) while a job runs; all calls use
   // the ordinary engine deadline since they never block the engine itself.
-  arabicDataInstall: (includeDialectId = true) =>
+  // force=true (v1.2.12) is the Re-install/repair path: re-download every
+  // package and replace what is on disk even when the pack counts as
+  // installed (partial/corrupted data dir after an app reinstall).
+  arabicDataInstall: (includeDialectId = true, includeDialects = true, force = false) =>
     jsonFetch<ArabicDataInstallStatus>(`/api/v1/arabic/data/install`, {
       method: "POST",
-      body: JSON.stringify({ include_dialect_id: includeDialectId }),
+      body: JSON.stringify({ include_dialect_id: includeDialectId, include_dialects: includeDialects, force }),
     }, ARABIC_TIMEOUT_MS),
 
   arabicDataInstallStatus: (signal?: AbortSignal) =>
@@ -2591,11 +2754,15 @@ export const api = {
 
   // --- AI ---
   listTools: () => jsonFetch<ToolsResponse>("/api/v1/ai/tools"),
-  chat: (req: ChatRequest) =>
+  // v1.2.14 (P2.1): accept an optional AbortSignal so callers can wire a
+  // Cancel button. Default to AI_CHAT_TIMEOUT_MS (200s, comfortably above
+  // the engine's 180s overall deadline so the server's 504 surfaces first).
+  chat: (req: ChatRequest, signal?: AbortSignal) =>
     jsonFetch<ChatTurnResponse>("/api/v1/ai/chat", {
       method: "POST",
       body: JSON.stringify(req),
-    }),
+      signal,
+    }, AI_CHAT_TIMEOUT_MS),
   listConversations: () => jsonFetch<Array<Record<string, unknown>>>("/api/v1/ai/conversations"),
   getConversation: (cid: string) => jsonFetch<Record<string, unknown>>(`/api/v1/ai/conversations/${cid}`),
   // v0.1.16 Issue 2: pre-fabricated + dynamic query suggestions
@@ -2868,6 +3035,9 @@ export interface OllamaModel {
   /** v1.2.0: machine-aware rule-of-thumb fit badge (curated rows too). */
   fit?: "gpu" | "cpu" | "tight" | "too-big" | "unknown" | string;
   fit_note?: string;
+  /** v1.2.12: upstream page for manual download (e.g. the Ollama library
+   * tag page). Optional — in-app Download pulls by name regardless. */
+  url?: string;
 }
 
 // ----------------------------------------------------------------------- //

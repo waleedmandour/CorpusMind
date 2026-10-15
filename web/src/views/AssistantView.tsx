@@ -8,11 +8,11 @@
  * Citations are clickable: clicking a `concordance_line` evidence reference
  * scrolls to / opens the concordancer view filtered to that line.
  */
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
 
-import { api, type ChatTurnResponse, type EvidenceItem, type MCQ, type QuerySuggestion } from "@/lib/api";
+import { api, isTauriRuntime, type ChatTurnResponse, type EvidenceItem, type MCQ, type QuerySuggestion } from "@/lib/api";
 import { useApp } from "@/store/app";
 import { useUI } from "@/store/ui";
 import { t } from "@/lib/i18n";
@@ -44,6 +44,25 @@ export function AssistantView() {
   // would lie — hide them entirely here.
   const studentClient = useUI((s) => s.studentClient);
   const lang = useUI((s) => s.lang);
+
+  // v1.2.14-2 (PWA): local-AI availability gate. In browser/PWA mode every
+  // AI model (Ollama, LM Studio, opt-in cloud) is reached THROUGH the
+  // engine — a web page can never talk to those runtimes directly. When the
+  // engine is unreachable the composer is replaced by an honest notice
+  // instead of letting every turn die in a network error. Never applies to
+  // the desktop shell (isTauri: sidecar engine) or student-client mode
+  // (the classroom server owns the AI path there).
+  const isTauri = isTauriRuntime();
+  const health = useQuery({
+    queryKey: ["health"],
+    queryFn: api.health,
+    retry: 1,
+    enabled: !isTauri,
+    // While the engine is down, re-probe every 10s so the composer returns
+    // on its own once the engine comes back; stop polling once it answers.
+    refetchInterval: (query) => (query.state.status === "error" ? 10_000 : false),
+  });
+  const pwaEngineOffline = !isTauri && !studentClient && health.isFetched && health.data?.status !== "ok";
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [provider, setProvider] = useState<"ollama" | "lmstudio" | "cloud">("ollama");
@@ -73,15 +92,30 @@ export function AssistantView() {
     }
   }, [provider, storeModel, localModel, ollamaModels.data]);
 
+  // v1.2.14 (P2.2): AbortController ref for the in-flight chat turn.
+  // Mirrors the FloatingAssistant pattern; used by the Cancel button.
+  const abortRef = useRef<AbortController | null>(null);
+  const cancel = () => {
+    if (abortRef.current) {
+      abortRef.current.abort();
+      abortRef.current = null;
+    }
+    // Reset the mutation state so the "Thinking…" indicator clears.
+    chat.reset();
+  };
+
   const chat = useMutation({
-    mutationFn: (text: string) =>
-      api.chat({
+    mutationFn: (text: string) => {
+      // v1.2.14 (P2.2): fresh AbortController per turn.
+      abortRef.current = new AbortController();
+      return api.chat({
         message: text,
         provider,
         model: selectedModel || null,
         conversation_id: conversationId,
         corpus_id: cid,
-      }),
+      }, abortRef.current.signal);
+    },
     onSuccess: (turn: ChatTurnResponse) => {
       setConversationId(turn.conversation_id);
       setMessages((prev) => [
@@ -105,16 +139,29 @@ export function AssistantView() {
       ]);
     },
     onError: (err: Error) => {
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: `[error] ${err.message}`, grounded: false },
-      ]);
+      // v1.2.14 (P2.2): don't show an error toast on user-initiated cancel.
+      if (err.name === "AbortError") {
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: t(lang, "ai_cancelled"), grounded: false },
+        ]);
+      } else {
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: `[error] ${err.message}`, grounded: false },
+        ]);
+      }
+    },
+    onSettled: () => {
+      abortRef.current = null;
     },
   });
 
   const send = () => {
     const text = input.trim();
-    if (!text || chat.isPending) return;
+    // v1.2.14-2 (PWA): no engine → no AI model to run; keep the turn local
+    // instead of emitting a doomed request.
+    if (!text || chat.isPending || pwaEngineOffline) return;
     setMessages((prev) => [...prev, { role: "user", content: text }]);
     setInput("");
     chat.mutate(text);
@@ -499,7 +546,21 @@ export function AssistantView() {
             </article>
           ))}
 
-          {chat.isPending && <div className="msg msg-assistant pending">Thinking…</div>}
+          {chat.isPending && (
+            <div className="msg msg-assistant pending">
+              Thinking…
+              {/* v1.2.14 (P2.2): Cancel button — aborts the in-flight chat
+                  turn immediately. Mirrors the FloatingAssistant pattern. */}
+              {" "}
+              <button
+                className="ai-cancel-btn"
+                onClick={cancel}
+                aria-label={t(lang, "ai_cancel")}
+              >
+                {t(lang, "ai_cancel")}
+              </button>
+            </div>
+          )}
         </div>
 
         {/* v1.2.10 (classroom consent): students must know the teacher sees
@@ -510,6 +571,22 @@ export function AssistantView() {
           </div>
         )}
 
+        {/* v1.2.14-2 (PWA): engine unreachable in browser mode → deactivate
+            the composer (no AI model can run without the engine proxy) and
+            say why. Message history stays visible; the panel re-probes in
+            the background and the composer returns automatically. */}
+        {pwaEngineOffline ? (
+          <div className="pwa-ai-notice compact" role="note" aria-live="polite">
+            <div className="pwa-ai-notice-content">
+              <strong>{t(lang, "pwa_ai_title")}</strong>
+              <p>{t(lang, "pwa_ai_body")}</p>
+              <p>{t(lang, "pwa_ai_fix")}</p>
+              <div className="engine-offline-cmd">
+                <code>cd engine && source .venv/bin/activate && corpusmind-engine</code>
+              </div>
+            </div>
+          </div>
+        ) : (
         <div className="composer">
           <textarea
             value={input}
@@ -522,6 +599,7 @@ export function AssistantView() {
             Send
           </button>
         </div>
+        )}
       </section>
     </div>
   );

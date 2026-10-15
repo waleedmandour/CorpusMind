@@ -17,7 +17,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
-import { api, type ChatTurnResponse, type QuerySuggestion } from "@/lib/api";
+import { api, isTauriRuntime, type ChatTurnResponse, type QuerySuggestion } from "@/lib/api";
 import { useApp } from "@/store/app";
 import { useUI } from "@/store/ui";
 import { t } from "@/lib/i18n";
@@ -48,6 +48,9 @@ export function FloatingAssistant() {
   const lang = useUI((s) => s.lang);
   const activeCorpusId = useApp((s) => s.activeCorpusId);
   const model = useApp((s) => s.selectedOllamaModel);
+  // v1.2.14-2 (PWA): student-client mode routes chat to the classroom
+  // server, not the local engine — the offline gate below must not touch it.
+  const studentClient = useUI((s) => s.studentClient);
 
   const [messages, setMessages] = useState<Msg[]>([]);
   const [conversationId, setConversationId] = useState<string | null>(null);
@@ -55,12 +58,39 @@ export function FloatingAssistant() {
   const [pending, setPending] = useState(false);
   const threadRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
+  // v1.2.14 (P2.2): AbortController ref for the in-flight chat turn.
+  // When the user clicks Cancel we abort the fetch immediately instead
+  // of waiting for the 200s client deadline to fire. Mirrors the v1.2.11
+  // Arabic Tools cancel pattern.
+  const abortRef = useRef<AbortController | null>(null);
+
+  const cancel = () => {
+    if (abortRef.current) {
+      abortRef.current.abort();
+      abortRef.current = null;
+    }
+    setPending(false);
+  };
 
   const suggestions = useQuery({
     queryKey: ["ai-suggestions", lang, activeCorpusId],
     queryFn: () => api.getQuerySuggestions(lang, activeCorpusId),
     enabled: open,
   });
+
+  // v1.2.14-2 (PWA): local-AI availability gate (see AssistantView). Browser
+  // mode only; engine re-probed every 10s while it is down so the composer
+  // returns on its own once the engine comes back. isFetched keeps the gate
+  // from flashing during the initial load; student-client mode is exempt.
+  const isTauri = isTauriRuntime();
+  const health = useQuery({
+    queryKey: ["health"],
+    queryFn: api.health,
+    retry: 1,
+    enabled: !isTauri,
+    refetchInterval: (query) => (query.state.status === "error" ? 10_000 : false),
+  });
+  const pwaEngineOffline = !isTauri && !studentClient && health.isFetched && health.data?.status !== "ok";
 
   const dynamicSuggestions = useQuery({
     queryKey: ["ai-dynamic-suggestions", lang, activeCorpusId, model],
@@ -88,10 +118,15 @@ export function FloatingAssistant() {
 
   const send = async (text: string) => {
     const msg = text.trim();
-    if (!msg || pending) return;
+    // v1.2.14-2 (PWA): engine unreachable in browser mode → no AI model can
+    // run (everything is proxied by the engine); keep the turn local.
+    if (!msg || pending || pwaEngineOffline) return;
     setInput("");
     setMessages((m) => [...m, { role: "user", content: msg }]);
     setPending(true);
+    // v1.2.14 (P2.2): create a fresh AbortController for this turn.
+    abortRef.current = new AbortController();
+    const signal = abortRef.current.signal;
     try {
       const context = `${lang === "ar" ? "المستخدم يعرض حاليًا" : "The user is currently viewing the"} "${navLabel(activeNav, lang)}" ${lang === "ar" ? "شاشة التحليل." : "analysis screen."}`;
       const resp: ChatTurnResponse = await api.chat({
@@ -101,7 +136,7 @@ export function FloatingAssistant() {
         conversation_id: conversationId,
         corpus_id: activeCorpusId,
         context,
-      });
+      }, signal);
       setConversationId(resp.conversation_id);
       setMessages((m) => [
         ...m,
@@ -113,8 +148,14 @@ export function FloatingAssistant() {
         },
       ]);
     } catch (e) {
-      setMessages((m) => [...m, { role: "assistant", content: (e as Error).message, error: true }]);
+      // v1.2.14 (P2.2): don't show an error toast on user-initiated cancel.
+      if ((e as Error).name === "AbortError" || signal.aborted) {
+        setMessages((m) => [...m, { role: "assistant", content: t(lang, "ai_cancelled"), error: false }]);
+      } else {
+        setMessages((m) => [...m, { role: "assistant", content: (e as Error).message, error: true }]);
+      }
     } finally {
+      abortRef.current = null;
       setPending(false);
       inputRef.current?.focus();
     }
@@ -182,10 +223,25 @@ export function FloatingAssistant() {
                 <div className="ai-drawer-msg-body">{m.content}</div>
               </article>
             ))}
-            {pending && <div className="ai-drawer-thinking">{t(lang, "ai_thinking")}</div>}
+            {pending && (
+              <div className="ai-drawer-thinking">
+                {t(lang, "ai_thinking")}
+                {/* v1.2.14 (P2.2): Cancel button — aborts the in-flight
+                    chat turn immediately. Mirrors the v1.2.11 Arabic
+                    Tools cancel pattern. */}
+                {" "}
+                <button
+                  className="ai-cancel-btn"
+                  onClick={cancel}
+                  aria-label={t(lang, "ai_cancel")}
+                >
+                  {t(lang, "ai_cancel")}
+                </button>
+              </div>
+            )}
           </div>
 
-          {chips.length > 0 && (
+          {chips.length > 0 && !pwaEngineOffline && (
             <div className="ai-drawer-chips">
               {chips.map((s) => (
                 <button
@@ -200,6 +256,17 @@ export function FloatingAssistant() {
             </div>
           )}
 
+          {/* v1.2.14-2 (PWA): engine unreachable in browser mode → deactivate
+              the composer + suggestion chips (no AI model can run without
+              the engine proxy) and say why. History stays visible. */}
+          {pwaEngineOffline ? (
+            <div className="pwa-ai-notice compact" role="note" aria-live="polite">
+              <div className="pwa-ai-notice-content">
+                <strong>{t(lang, "pwa_ai_title")}</strong>
+                <p>{t(lang, "pwa_ai_body")}</p>
+              </div>
+            </div>
+          ) : (
           <div className="ai-drawer-composer">
             <textarea
               ref={inputRef}
@@ -222,6 +289,7 @@ export function FloatingAssistant() {
               {t(lang, "ai_send")}
             </button>
           </div>
+          )}
         </div>
       )}
     </>

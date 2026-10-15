@@ -25,6 +25,7 @@ from __future__ import annotations
 import abc
 import base64
 import json
+import os
 import time
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
@@ -917,7 +918,11 @@ class OllamaProvider(ModelProvider):
         model: str | None = None,
         temperature: float = 0.2,
         tools: list[dict[str, Any]] | None = None,
-        timeout: float | None = 120.0,
+        # v1.2.14 (P2.5): lowered from 120s to 60s. Combined with the
+        # per-tool 45s budget (P2.4) and the 180s overall turn deadline
+        # (P2.3), worst-case chat time is now bounded at 180s instead of
+        # 4*120 + 3*45 = 615s. Override per-call via the timeout kwarg.
+        timeout: float | None = 60.0,
         json_mode: bool = False,
         max_tokens: int | None = None,
     ) -> ChatResponse:
@@ -937,6 +942,11 @@ class OllamaProvider(ModelProvider):
                 # getting truncated at 512, degrading to the single-claim
                 # fallback in the defensive parser.
                 "num_predict": max_tokens or (1024 if is_qwen3 else 512),
+                # v1.2.14 (P2.6): keep the model loaded between turns so the
+                # second turn of a session doesn't pay the cold-start cost.
+                # Parity with the embed path (_embed_keep_alive at line ~1217).
+                # Default 5m matches Ollama's documented OLLAMA_KEEP_ALIVE.
+                "keep_alive": os.environ.get("CORPUSMIND_OLLAMA_KEEP_ALIVE", "5m"),
             },
         }
 

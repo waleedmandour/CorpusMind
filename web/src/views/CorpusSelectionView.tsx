@@ -258,6 +258,8 @@ function CorpusListPanel({ mode }: { mode: CorpusMode }) {
               <span>{c.stats?.document_count ?? 0} docs</span>
               {" · "}
               <span>{(c.stats?.token_count ?? 0).toLocaleString()} tokens</span>
+              {/* v1.2.12: warn in the list itself — this corpus carries no POS/lemma. */}
+              {c.tagging_degraded && <span className="corpus-item-genre" title="Tagged without the NLP model — POS/lemma missing. Recompile after the model is available.">⚠ POS missing</span>}
               {c.genre && c.genre !== "mixed" && <span className="corpus-item-genre">{c.genre}</span>}
             </div>
             {c.id === activeCorpusId && (
@@ -1366,7 +1368,16 @@ function DocumentList({ cid }: { cid: string }) {
     showStatus("Recompiling corpus (re-running tagger, lemmatizer, parser and compile step)...", "info");
     try {
       const result = await api.recompileCorpus(cid);
-      if (result.success) {
+      if (result.success && result.degraded) {
+        // v1.2.12: the recompile ran, but the NLP model is STILL unavailable —
+        // tokens were stored with pos='X'. Tell the user plainly instead of
+        // claiming success.
+        setLastCompile({
+          ok: false,
+          msg: `Compiled ${result.recompiled}/${result.total_documents} documents, but the NLP model is still unavailable — tokens have NO POS/lemma. Install or repair the model, then recompile again.`,
+        });
+        showStatus("✗ Compiled but DEGRADED — the NLP model is still missing; POS/lemma analyses stay empty.", "error");
+      } else if (result.success) {
         setLastCompile({
           ok: true,
           msg: `Compiled successfully - ${result.recompiled}/${result.total_documents} documents, ${result.token_count.toLocaleString()} tokens, ${result.type_count.toLocaleString()} types. The corpus is ready for analysis.`,
@@ -1388,7 +1399,6 @@ function DocumentList({ cid }: { cid: string }) {
       setRecompiling(false);
     }
   };
-
   // v1.0.7: bulk (all-files) genre/register/year tagging.
   const handleBulkTag = async () => {
     const meta: Record<string, string> = {};
@@ -1480,6 +1490,11 @@ function DocumentList({ cid }: { cid: string }) {
   //   compiled    : token_count > 0 and no pending metadata changes
   const notCompiled = docCount > 0 && compiledTokens === 0 && !lastCompile?.ok;
   const compiled = docCount > 0 && compiledTokens > 0 && !needsRecompile && lastCompile?.ok !== false;
+  // v1.2.12: the corpus was tagged by a DEGRADED pipeline (the NLP model was
+  // unavailable at ingestion) — every token carries pos='X', so POS-based
+  // analyses (KWIC by POS, POS distributions, lemmatized search) return
+  // nothing. Surface it persistently until a real (non-degraded) recompile.
+  const taggingDegraded = corpus.data?.tagging_degraded === true;
 
   return (
     <div className="document-list-section">
@@ -1516,6 +1531,15 @@ function DocumentList({ cid }: { cid: string }) {
           )}
         </div>
       </div>
+
+      {/* v1.2.12: degraded-tagging banner — this corpus has no POS/lemma.
+          Kept visible while tagging_degraded is true (a successful real
+          recompile clears the flag on the server and refetches). */}
+      {docCount > 0 && taggingDegraded && (
+        <div role="alert" className="uploader-status error" style={{ marginBottom: "var(--space-2)" }}>
+          ⚠ This corpus was tagged WITHOUT the NLP model — tokens have no POS or lemma, so POS-based analyses (KWIC by POS, POS distributions) find nothing. Install or repair the model, then click <strong>↻ Recompile</strong> to re-tag every document.
+        </div>
+      )}
 
       {/* v1.0.7: compile gate banner - the corpus must compile successfully
           before the user moves on to analysis. */}

@@ -4,9 +4,9 @@ Why this exists (measured, scripts/benchmark_arabic_corpus.py, 2026-10-07,
 dev reference machine, warm cache): the calima-msa-r13 morphology analyzer
 runs at ~3,950 tokens/s. That puts 100K tokens at ~25s, 500K at ~126s and
 1M tokens at ~253s - far beyond the interactive request deadline
-(CORPUSMIND_ARABIC_TIMEOUT_S, default 30s, sized for panel-sized texts plus
-a cold DB load). Dialect ID is a different beast (1M tokens ≈ 9s) and needs
-none of this.
+(CORPUSMIND_ARABIC_TIMEOUT_S, default 120s since v1.2.12 — sized for
+panel-sized texts plus a cold DB load on slow/antivirus-scanned disks).
+Dialect ID is a different beast (1M tokens ≈ 9s) and needs none of this.
 
 Design:
   - POST /arabic/analyze/job rejects nothing on size: it accepts what the

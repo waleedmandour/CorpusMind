@@ -152,6 +152,18 @@ jobs:
         run: node scripts/check_contrast.mjs
         working-directory: .
 
+      # v1.2.12-rc7: tsc cannot see TanStack-Query-v5 `isPending` misuse (true
+      # before an enabled-gated query ever runs -> permanent "Analyzing…").
+      - name: Query-state guard (isPending on gated queries)
+        run: node scripts/check_query_pending.mjs
+        working-directory: .
+
+      # v1.2.12-rc7: UI regression tests for the Arabic Tools "stuck on a
+      # disabled Analyzing… 0s" bug — vitest + jsdom + testing-library,
+      # against the exact shipped QueryClient defaults (lib/queryClient.ts).
+      - name: Web UI regression tests (vitest)
+        run: npm run test:ui
+
       - name: Build (PWA)
         run: npm run build
 

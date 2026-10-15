@@ -1,7 +1,10 @@
 """FastAPI application factory."""
 from __future__ import annotations
 
+import os
+import threading
 from contextlib import asynccontextmanager
+from typing import Any
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -27,6 +30,7 @@ from api import (
     phase6,
     reference_corpus,
     research,
+    saved_queries,
     system,
     troubleshoot,
     vision,
@@ -40,6 +44,40 @@ from app import __version__, server_mode
 from app.logging import configure_logging, get_logger
 from app.settings import get_settings
 from storage.session import dispose_db, init_db
+
+
+def _start_arabic_warmup(log: Any) -> threading.Thread | None:
+    """v1.2.12 (field report: "sample text fails to analyze even after the
+    data pack install"): pre-load the default MSA morphology backend in a
+    background thread right after startup.
+
+    Why: the first CAMeL analysis on a cold machine reads a ~400MB DB
+    through real-time antivirus, which can take minutes — far past the
+    interactive deadline — so the user's FIRST sample analysis failed with
+    a timeout even though the pack was correctly installed. Loading it
+    during app startup (while the user is still orienting) makes the first
+    click warm. Never blocks startup, never raises: any failure (pack not
+    provisioned, broken install) is logged and skipped — the request-path
+    pre-flight and 503 installer card remain the authoritative UX.
+    Disable with ``CORPUSMIND_ARABIC_WARMUP=0`` (e.g. low-RAM machines
+    where 400MB resident matters more than the first-click latency).
+    """
+    if os.environ.get("CORPUSMIND_ARABIC_WARMUP", "1").strip() == "0":
+        log.info("arabic_warmup_disabled")
+        return None
+
+    def _warm() -> None:
+        try:
+            from nlp.arabic.pipeline import get_arabic_backend
+
+            get_arabic_backend("camel", "msa").info()
+            log.info("arabic_warmup_ready")
+        except Exception as e:  # pragma: no cover — depends on machine state
+            log.info("arabic_warmup_skipped", reason=str(e))
+
+    t = threading.Thread(target=_warm, name="arabic-warmup", daemon=True)
+    t.start()
+    return t
 
 
 @asynccontextmanager
@@ -89,6 +127,18 @@ async def lifespan(app: FastAPI):
 
     registry = ProviderRegistry(settings)
     app.state.providers = registry
+
+    # v1.2.12: warm the Arabic morphology backend in the background so the
+    # user's FIRST analysis is warm (see _start_arabic_warmup). Never during
+    # tests: the suite boots many app instances and relies on simulating an
+    # unprovisioned machine (resolver patches + backend-cache clears) — a
+    # background warm load would pin CAMELTOOLS_DATA via the camel_tools
+    # import and re-populate the backend cache behind the tests' backs
+    # (observed on CI: 503-simulation tests returned 200, the 504 timing
+    # test raced the warm load). _start_arabic_warmup stays directly
+    # testable; only the lifespan call site is guarded.
+    if "PYTEST_CURRENT_TEST" not in os.environ:
+        _start_arabic_warmup(log)
 
     try:
         yield
@@ -291,6 +341,8 @@ def create_app() -> FastAPI:
     app.include_router(reference_corpus.router, prefix="/api/v1", tags=["reference-corpus"])
     app.include_router(open_access.router, prefix="/api/v1", tags=["open-access"])
     app.include_router(wordlists.router, prefix="/api/v1", tags=["wordlists"])
+    # v1.2.13-2: saved queries (teacher-only CRUD, per project).
+    app.include_router(saved_queries.router, prefix="/api/v1", tags=["saved-queries"])
     # v1.2.9 Student Mode — classroom server control plane (teacher-only).
     app.include_router(server_mode_routes.router, prefix="/api/v1", tags=["server-mode"])
     return app

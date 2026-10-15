@@ -1,5 +1,7 @@
 """Generate the CorpusMind User Guide PDF using ReportLab.
 Style adapted from the RDAT Translation Copilot user guide (v0.2.0).
+
+v1.2.14-2: bumped alongside the engine version lockstep.
 """
 import re
 from pathlib import Path
@@ -36,7 +38,7 @@ registerFontFamily("LibMono", normal="LibMono", bold="LibMono-Bold")
 # Arabic font (for the Arabic user guide)
 import os
 
-# v1.2.11: the guide version is read from the engine itself so a guide can
+# v1.2.13-2: the guide version is read from the engine itself so a guide can
 # never be regenerated against a stale number (the release pipeline rejects
 # a version mismatch; this makes the mismatch structurally impossible).
 _REPO = Path(__file__).resolve().parent.parent

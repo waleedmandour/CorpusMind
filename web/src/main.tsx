@@ -3,9 +3,11 @@ import ReactDOM from "react-dom/client";
 import { QueryClient, QueryClientProvider, QueryCache, MutationCache } from "@tanstack/react-query";
 
 import App from "@/App";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import "@/styles/global.css";
 import { useTroubleshoot } from "@/store/troubleshooting";
 import { api, isTauriRuntime, setStudentSession } from "@/lib/api";
+import { queryClientDefaults } from "@/lib/queryClient";
 
 // ----------------------------------------------------------------------- //
 // v1.2.9 Student Mode bootstrap — MUST run before the first render.
@@ -76,13 +78,10 @@ function extractEndpointFromError(_error: unknown): string | null {
 }
 
 const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 1,
-      staleTime: 30_000,
-      refetchOnWindowFocus: false,
-    },
-  },
+  // v1.2.12 (rc7): defaults live in one shared module (lib/queryClient) that
+  // the UI regression tests import too, so tests always run against the same
+  // retry/staleTime behaviour as the shipped app.
+  defaultOptions: queryClientDefaults,
   queryCache: new QueryCache({
     onError: (error, query) => {
       // Don't capture health-check failures here — the dedicated health
@@ -133,8 +132,10 @@ void initTroubleshooting();
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <App />
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <App />
+      </QueryClientProvider>
+    </ErrorBoundary>
   </React.StrictMode>,
 );

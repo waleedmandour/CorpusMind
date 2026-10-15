@@ -393,6 +393,8 @@ async def vector_kwic(
     model: str | None = None,
     case_sensitive: bool = False,
     document_ids: list[str] | None = None,
+    cql_query: str | None = None,
+    cqp_compat: bool = False,
 ) -> VectorKwicResult:
     """Vector KWIC (Anthony 2025): semantic re-ranking / semantic search.
 
@@ -424,13 +426,26 @@ async def vector_kwic(
     # ------------------------------------------------------------------ #
     # Mode A: keyword candidates → embed contexts → re-rank
     # ------------------------------------------------------------------ #
-    if node and node.strip():
-        conc = await search_concordance(
-            session, corpus_id, node.strip(),
-            level=level, case_sensitive=case_sensitive, regex=regex,
-            window=window, limit=EMBED_CAP, offset=0,
-            document_ids=document_ids,
-        )
+    if (node and node.strip()) or (cql_query and cql_query.strip()):
+        # v1.2.13-2 (CQL consumer): a CQL pattern pre-filters the candidate
+        # set — the same Mode A re-ranking then runs on the CQL match lines
+        # (identical ConcordanceLine shape, same embed/cache/re-rank path).
+        if cql_query and cql_query.strip():
+            from stats.cql import search_concordance_cql
+
+            conc = await search_concordance_cql(
+                session, corpus_id, cql_query.strip(),
+                window=window, limit=EMBED_CAP, offset=0,
+                document_ids=document_ids,
+                cqp_compat=cqp_compat,
+            )
+        else:
+            conc = await search_concordance(
+                session, corpus_id, node.strip(),
+                level=level, case_sensitive=case_sensitive, regex=regex,
+                window=window, limit=EMBED_CAP, offset=0,
+                document_ids=document_ids,
+            )
         candidates = conc.lines
         keys = [
             _line_key(l.line_id, window, "kwic") + ("|norm" if normalize_arabic else "")
@@ -502,7 +517,9 @@ async def vector_kwic(
             scanned=len(candidates),
             mode="keyword",
             model=embed_model,
-            query={"query": query, "node": node.strip(), "level": level,
+            query={"query": query, "node": node.strip() if node else None,
+                   "cql_query": cql_query,
+                   "level": level,
                    "window": window, "top_k": top_k, "min_similarity": min_similarity,
                    "normalize_arabic": normalize_arabic,
                    "language": corpus_lang,

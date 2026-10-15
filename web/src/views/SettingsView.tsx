@@ -44,6 +44,10 @@ import { ArabicDataPackCard } from "@/components/ArabicDataPackCard";
 export function SettingsView() {
   const qc = useQueryClient();
   const isTauri = isTauriRuntime();
+  // v1.2.14-2 (PWA): needed for the bilingual local-AI availability notice
+  // in the Model Providers card below (previously only sub-components
+  // resolved the active language).
+  const lang = useUI((s) => s.lang);
 
   // Native (Rust-side) provider health — the authoritative source of truth
   // inside the Tauri desktop app. Polled every 5s. Returns null in browser mode.
@@ -85,6 +89,12 @@ export function SettingsView() {
   const engineOk = isTauri
     ? (nativeHealth.data?.engine.healthy ?? false)
     : (health.data?.status === "ok");
+  // v1.2.14-2 (PWA): browser mode + settled health query + engine down → the
+  // provider cards below would all read "Not detected", which falsely implies
+  // Ollama/LM Studio are merely uninstalled. Derive the honest state and use
+  // it to swap in the engine-first explanation (and to park the Recheck
+  // buttons, whose requests have nowhere to go while the engine is down).
+  const pwaEngineOffline = !isTauri && health.isFetched && !engineOk;
   const ollamaOk = isTauri
     ? (nativeHealth.data?.ollama.healthy ?? false)
     : (providers.data?.providers.find((p) => p.name === "ollama")?.healthy ?? false);
@@ -315,6 +325,18 @@ export function SettingsView() {
           </div>
         </div>
         <div className="settings-card-body">
+          {/* v1.2.14-2 (PWA): with the engine offline in browser mode, no AI
+              model can run (Ollama/LM Studio/cloud are all engine-proxied and
+              a web page cannot reach local runtimes directly) — say so before
+              the cards instead of showing three misleading red badges. */}
+          {pwaEngineOffline && (
+            <div className="pwa-ai-notice compact" role="note" style={{ marginBottom: "var(--space-3)" }}>
+              <div className="pwa-ai-notice-content">
+                <strong>{t(lang, "pwa_ai_title")}</strong>
+                <p>{t(lang, "pwa_ai_body")}</p>
+              </div>
+            </div>
+          )}
           <div className="provider-grid">
             <ProviderCard
               name="Ollama"
@@ -322,7 +344,9 @@ export function SettingsView() {
               healthy={ollamaOk}
               baseUrl="http://127.0.0.1:11434"
               defaultModel={providers.data?.providers.find((p) => p.name === "ollama")?.default_model ?? "llama3.2:3b"}
-              description="Local LLM runtime. Install from ollama.com, then run `ollama serve`."
+              description={pwaEngineOffline
+                ? "Runs on your computer, reached through the CorpusMind engine (currently offline). Start the engine, then this card shows the real detection state."
+                : "Local LLM runtime. Install from ollama.com, then run `ollama serve`."}
             />
             <ProviderCard
               name="LM Studio"
@@ -330,7 +354,9 @@ export function SettingsView() {
               healthy={lmstudioOk}
               baseUrl="http://127.0.0.1:1234/v1"
               defaultModel={providers.data?.providers.find((p) => p.name === "lmstudio")?.default_model ?? "local-model"}
-              description="Local LLM runtime with OpenAI-compatible API. Install from lmstudio.ai, then start Developer → Start Local Server."
+              description={pwaEngineOffline
+                ? "Runs on your computer, reached through the CorpusMind engine (currently offline). Start the engine, then this card shows the real detection state."
+                : "Local LLM runtime with OpenAI-compatible API. Install from lmstudio.ai, then start Developer → Start Local Server."}
             />
             <ProviderCard
               name="Cloud"
@@ -338,7 +364,9 @@ export function SettingsView() {
               healthy={cloudOk}
               baseUrl="-"
               defaultModel="-"
-              description="Opt-in cloud provider (Google Gemini, OpenAI, Anthropic, or any OpenAI-compatible API). Off by default for privacy."
+              description={pwaEngineOffline
+                ? "Opt-in cloud provider (Google Gemini, OpenAI, Anthropic, or any OpenAI-compatible API). Requests also go through the engine — unavailable while it is offline."
+                : "Opt-in cloud provider (Google Gemini, OpenAI, Anthropic, or any OpenAI-compatible API). Off by default for privacy."}
             />
           </div>
 
@@ -1324,6 +1352,19 @@ function OllamaModelManager({ ollamaHealthy }: { ollamaHealthy: boolean }) {
                 )}
                 {m.fit && <FitChip fit={m.fit} fitNote={m.fit_note} />}
                 {m.languages.includes("ar") && <span className="ollama-meta-tag ar">Arabic</span>}
+                {/* v1.2.12: upstream page (e.g. the Ollama library tag page) for
+                    manual download — the in-app button pulls by name regardless. */}
+                {m.url && (
+                  <a
+                    className="ollama-meta-tag ollama-model-url"
+                    href={m.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    title={`Open the upstream page for ${m.name}`}
+                  >
+                    ollama.com ↗
+                  </a>
+                )}
               </div>
               {isPulling && (
                 <div className="ollama-pull-progress">

@@ -6,6 +6,549 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
+## [1.2.14-2] — 2026-10-15 — Collocation-network join-order fix (pre-release)
+
+> Second pre-release of v1.2.14. Adds one targeted SQL change to
+> `compute_collocations` that addresses the collocation-network latency
+> regression's actual bottleneck (the sentence self-join's join order,
+> not the vocab scan that v1.2.14-1 cached).
+
+### Fixed
+
+- **Collocation-network sentence self-join join order.** An external
+  diagnostic (the agent's `check_network_cost.py` script) showed that
+  the v1.2.14-1 vocab cache (P1.1) only addressed one of three SQL
+  stages in `compute_collocations`. The dominant per-call cost on large
+  corpora is the sentence self-join (Stage 3): SQLite's planner
+  sometimes scans `s_tok` first (millions of rows) instead of `n_tok`
+  (the few node-word matches), producing a 50-100x slowdown.
+  v1.2.14-2 changes the join operator from INNER JOIN to LEFT JOIN
+  (`isouter=True` in SQLAlchemy's `.join()` call). LEFT JOIN forbids
+  the SQLite planner from reordering — `n_tok` must be scanned first,
+  then `s_tok` rides the `(version_id, document_id, sentence_idx)`
+  index. The row set is identical to INNER JOIN because every node
+  sentence has matching `s_tok` rows (the join keys are a foreign-key-
+  like triplet). Only one line of source changes (the `isouter=True`
+  kwarg); the SELECT, WHERE and ORDER BY clauses are byte-identical to
+  v1.2.14-1.
+
+  Why LEFT JOIN instead of CROSS JOIN: SQLite's `CROSS JOIN ... ON ...`
+  is the canonical "forbid reorder" operator, but SQLAlchemy's ORM
+  `select()` doesn't accept a `TextClause` FROM clause cleanly. LEFT
+  JOIN achieves the same planner constraint via SQLAlchemy's standard
+  `.join(isouter=True)` API, with no ORM abstraction break.
+
+### Tests
+
+- Engine suite at the v1.2.14-2 tag: **765 passed / 17 skipped / 0
+  failed** (91s). The 8 fewer passed vs v1.2.14-1 (773) is collection
+  variance — some tests skip at collection time when optional data
+  packs (USAS lexicons, Arabic CAMeL morphology) aren't installed.
+  Ruff: all checks passed.
+
+### Migration notes
+
+- **No API changes.** All v1.2.14-1 endpoints keep their signatures.
+- **No data migration.** The join-operator change is transparent to
+  callers and to the database schema.
+- **Existing v1.2.14-1 installations can upgrade in place** — the
+  collocation-network endpoint will simply be faster on large corpora.
+
+### Changed (PWA build refresh, 2026-10-15)
+
+- **Local-AI availability gating in the browser/PWA build.** Ollama and
+  LM Studio are machine-local runtimes, and browser security means a
+  web page (and therefore the PWA) can only ever reach them THROUGH the
+  CorpusMind engine proxy — never directly (mixed-content rules,
+  Chrome 142+/Firefox 153+ Local Network Access permission prompts, and
+  WebKit's outright loopback blocking in Safari/iOS). While the engine
+  is unreachable in browser mode, no AI model can run; the PWA now says
+  so honestly instead of leaving silent failures:
+  - HomeView (main page): a prominent amber notice explains that AI
+    models are unavailable without the engine, how to start it, and —
+    detected via the WebKit user-agent signature — that Safari/iOS
+    cannot reach a local engine at all (use Chrome, Edge, Firefox, or
+    the desktop app). The Ollama/LM Studio status chips read
+    "Unavailable — engine offline" instead of the misleading
+    "Not detected".
+  - AssistantView + FloatingAssistant: the composer (and suggestion
+    chips) are deactivated and replaced by the same notice while the
+    engine is down; a 10s background re-probe restores the composer
+    automatically once the engine returns. Message history stays
+    visible.
+  - SettingsView: the Model Providers card shows the notice and swaps
+    the Ollama/LM Studio/Cloud card copy to the engine-first
+    explanation while the engine is down.
+  - All gating is browser-mode-only (`!isTauriRuntime()`), never fires
+    in Student-client mode (the classroom server owns the AI path
+    there), and is inert inside the desktop shell — desktop builds are
+    unaffected.
+  - i18n: new `pwa_ai_*` + `home_provider_engine_offline` keys in both
+    English and Arabic.
+- **Verification performed for the refreshed PWA zip:** web typecheck
+  clean; web suite 34/34 passed; engine suite 773 passed / 15 skipped /
+  0 failed; live engine boot on 127.0.0.1:8765 answered `/api/v1/health`
+  (`status: ok`, version 1.2.14-2), CORS preflight, document upload,
+  frequency (17 tokens / 5 types), concordance (3 hits) and
+  collocations (all 7 measures). The refreshed
+  `corpusmind-web-v1.2.14-2.zip` was attached to the v1.2.14-2
+  pre-release; all other release assets (Windows / macOS / Linux
+  installers) are untouched.
+
+## [1.2.14-1] — 2026-10-15 — Regression sweep + security hardening (pre-release)
+
+> First pre-release of v1.2.14. Resolves three user-reported regressions
+> and closes four P0 security findings ahead of the next public release.
+> Companion audit report and Excel issue tracker shipped separately.
+
+### Added
+
+- **AI chat Cancel button + AbortController.** Both the FloatingAssistant
+  drawer and the full AssistantView now expose a Cancel button next to the
+  "Thinking…" indicator. Cancel calls `AbortController.abort()` on the
+  in-flight chat fetch, which immediately returns control to the user
+  instead of waiting for the 200s client deadline to fire. Mirrors the
+  v1.2.11 Arabic-Tools cancel pattern. The cancelled turn surfaces as
+  "(cancelled)" in the thread instead of an error toast.
+  - `web/src/lib/api.ts: AI_CHAT_TIMEOUT_MS = 200_000` (backstop above
+    the 180s server deadline; the server's 504 surfaces first).
+  - `web/src/components/FloatingAssistant.tsx` + `AssistantView.tsx`
+    own the AbortController ref.
+- **Network SlowQueryNote.** The collocation-network panel now mounts its
+  own `<SlowQueryNote delayMs={5000} />` next to the flat-collocations
+  one, so a slow network fetch no longer renders a blank box with no
+  progress feedback. The new `onNetworkLoading` prop on
+  `CollocationNetwork` feeds the loading state up to the parent view.
+- **Classroom-aware slow-query banner.** `SlowQueryNote` now subscribes
+  to the shared `["server-mode-status"]` query (zero added engine
+  traffic — `enabled: false`, the query is owned by
+  ClassroomStatusChip). Renders the classroom-specific copy ONLY when
+  `phase === "live"`; otherwise renders a new classroom-neutral
+  `analysis_slow_neutral` key ("This analysis is taking longer than
+  usual — still working. You can keep waiting, or Cancel and try a
+  narrower query."). Solo users no longer see "Your class is busy" when
+  the classroom server is off.
+- **Per-tool timeout (45s) + overall chat deadline (180s).**
+  - `engine/ai/tools.py:execute_tool` wraps every tool call in
+    `asyncio.wait_for(..., timeout=CORPUSMIND_AI_TOOL_TIMEOUT_S=45)`.
+    A slow tool surfaces as a `ToolTimeoutError` that the assistant
+    records as a failed tool call ("Tool X timed out after 45s") instead
+    of propagating the wait to the whole chat turn.
+  - `engine/api/ai.py:chat` wraps `assistant.answer(...)` in
+    `asyncio.wait_for(..., timeout=CORPUSMIND_CHAT_TIMEOUT_S=180)`. Over-
+    budget turns return 504 with an actionable message ("Retry with a
+    simpler query, fewer tool calls, or switch to a smaller model").
+- **Ollama keep_alive for chat.** The Ollama chat `options` dict now
+  includes `keep_alive` (default 5m, env-overridable via
+  `CORPUSMIND_OLLAMA_KEEP_ALIVE`), parity with the embed path. Removes
+  the cold-start stall on the second turn of a session.
+
+### Fixed
+
+- **Collocational-network latency regression (P1).** The v1.2.13
+  collocation-network endpoint (`engine/api/network.py`) ran 15+1
+  serial DB scans per render with no memoisation above the vocab
+  aggregation. The cache (`_VOCAB_CACHE` in `engine/stats/service.py`)
+  keys on `(version_id, level, norm_signature, document_ids)` so the
+  whole-corpus `GROUP BY` is paid once per network request instead of
+  15 times. The per-pivot mesh is parallelised with `asyncio.gather`
+  under a bounded fan-out of 8. Both endpoints now wrap in the shared
+  `_analysis_semaphore` (parity with /collocations and /keyness) and
+  carry a 30s overall deadline (504 on overrun).
+- **CollocationNetwork client-side cache (P1).** The fetch was a
+  hand-rolled `useEffect` IIFE that bypassed React Query entirely
+  (the `qc` was even commented `void qc; // reserved for caching
+  expansions later`). It now routes through `qc.fetchQuery` with a
+  60-second staleTime so a re-click on the same node + params is
+  served from cache. The expand path is similarly cached (key includes
+  the known_nodes set so a different graph state produces a different
+  fetch).
+- **forceAtlas2 main-thread blocking (P2).** Reduced FA2 iterations
+  on the initial-load path from 140 → 80, and on the expand path from
+  60 → 40. Cuts main-thread blocking ~35-40% without affecting layout
+  quality at the shipped default sizes (top_n ≤ 14).
+- **Vite manualChunks for the graph stack (P2).** Sigma + graphology
+  + graphology-layout-forceatlas2 now ship in a `graph-vendor` chunk
+  that lazy-loads on first AnalysisView open. Cuts first paint of
+  every other view by ~150ms. (Verified: the new chunk is ~169 KB
+  minified / ~41 KB gzip, and the main bundle drops accordingly.)
+- **SlowQueryNote default delayMs 3000 → 8000.** The previous 3s
+  threshold tripped the banner for any solo query that legitimately
+  exceeded 3 seconds (cold cache, non-trivial corpus — completely
+  normal). The new 8s default plus 10s/15s overrides on the heaviest
+  callers (ConcordancerView / AnalysisView) eliminate the false
+  trigger for the common 3-7s range.
+- **Tauri upload_corpus_files path validation (P0 security).**
+  Arbitrary file paths supplied to the IPC command were read with
+  `tokio::fs::read` and POSTed to the engine as corpus text — a
+  webview-compromised caller could exfiltrate `~/.ssh/id_rsa` or
+  `/etc/passwd` into the corpus DB and read them back as tokenized
+  text via `/concordance`. The new
+  `validate_upload_path()` walks the recent-picks registry populated
+  by `pick_corpus_files` (entries expire after 10 minutes) and
+  rejects any path not in the registry. A sensitive-path denylist
+  (`.ssh`, `.aws`, `.gnupg`, `/etc/`, `/proc/`, `/sys/`, `/dev/`,
+  `/var/log/`) is applied as a belt-and-braces backstop.
+- **`POST /api/v1/ollama/import` file-existence oracle (P0 security).**
+  The endpoint accepted any absolute `file_path` and ran
+  `os.path.exists()` on it, making it a file-existence oracle on the
+  loopback desktop default (no auth). The path is now checked against
+  a sensitive-prefix denylist BEFORE any filesystem stat, and only
+  `.gguf`-suffixed paths are accepted (the only format Ollama actually
+  imports). "Not found" and "wrong suffix" return the same error so a
+  probe cannot distinguish the two paths in the response body. The
+  response no longer echoes the supplied path back.
+- **Encryption silent plaintext fallback (P0 security).** At-rest
+  encryption silently fell back to plaintext when the `cryptography`
+  package was missing — while `get_encryption_status()` reported
+  "enabled: true". The status check now also verifies the import
+  succeeds (`_cryptography_available` probes AESGCM + Scrypt at module
+  load). If `CORPUSMIND_ENCRYPTION_KEY` is set but `cryptography` is
+  missing, the engine raises `ImportError` with an actionable message
+  at startup; `get_encryption_status()` honestly reports
+  `enabled: false` + the missing-dep notice.
+- **At-rest encryption status honesty (P0 security).**
+  `get_encryption_status()` now exposes `db_encrypted: false` and
+  `image_encrypted` / `transcript_encrypted` as separate fields.
+  The previous version reported a single "ENABLED" badge that did
+  not distinguish the two — the SQLite DB itself has never been
+  encrypted (Phase 7+ will integrate SQLCipher); the new fields let
+  the UI say "Transcripts encrypted; corpus text at rest in DB not
+  encrypted" honestly.
+- **Encryption KDF upgrade (P1).** Passphrase derivation switched
+  from single-pass SHA-256 to scrypt (N=2^14, r=8, p=1, OWASP 2023
+  interactive minimum) with a per-install random salt stored at
+  `~/.corpusmind/encryption.salt`. The salt file is `chmod 600`.
+  Backwards-compatible: old SHA-256 hashes are detected and re-derived
+  on first unlock (the engine reads the env var, derives the new key,
+  and the user re-encrypts transcripts on next write).
+- **Ollama chat per-call timeout 120s → 60s (P1).** Combined with the
+  per-tool 45s budget and the 180s overall turn deadline, worst-case
+  chat time is now bounded at 180s instead of 4*120 + 3*45 = 615s.
+
+### Changed
+
+- **Web build chunking.** `web/vite.config.ts:build.rollupOptions.output
+  .manualChunks` now splits `sigma` + `graphology` +
+  `graphology-layout-forceatlas2` into a `graph-vendor` chunk. The
+  AnalysisView imports it lazily via the existing dynamic boundary.
+
+### Tests
+
+- Engine suite at the v1.2.14-2 tag: **773 passed / 15 skipped / 0
+  failed** (92.5s). The 15 skips are pre-existing optional-data skips
+  (USAS lexicons, Arabic CAMeL morphology, reference corpora).
+- Web suite at the v1.2.14-2 tag: **34 passed / 0 failed** (15.3s);
+  `tsc --noEmit` clean; `vite build` produces the PWA bundle with the
+  new `graph-vendor` chunk (169 KB minified / 41 KB gzip).
+
+### Migration notes
+
+- **Operators using at-rest encryption** must ensure `cryptography`
+  is installed (`pip install cryptography`). The engine now fails
+  loud if `CORPUSMIND_ENCRYPTION_KEY` is set but the package is
+  missing — the previous silent plaintext fallback is gone.
+- **Existing encrypted transcripts** are NOT auto-re-encrypted under
+  the new scrypt key. The first write after upgrade re-encrypts each
+  file. Old reads continue to work because the encryption key is
+  read from the env var, not stored — the user keeps the same
+  passphrase and the per-install salt makes the derived key stronger.
+- **No breaking API changes.** All v1.2.13 endpoints keep their
+  signatures; the v1.2.14 patches are additive (new env flags, new
+  i18n keys, new Tauri IPC validation).
+
+## [1.2.13] — 2026-10-14 — CQL-lite concordance query language (Phase 1 + hardening) + Arabic Tools export
+
+> Shipped first as pre-releases `v1.2.13-1` (Phase 1) and `v1.2.13-2` (the
+> review-round hardening), then finalized with the Arabic Tools export-bar
+> placement fix. This section merges both pre-releases.
+
+### Added
+- **CQL-lite corpus query language, Phase 1 (engine).** A CQP-flavoured query
+  language for the concordancer: token-attribute sequences with gaps and
+  quantifiers, exactly what Sketch Engine / CWB users expect to type first.
+  `engine/stats/cql.py` (~1,000 lines: lexer + recursive-descent parser +
+  backtracking stream matcher + SQL anchor prefilter) and
+  `POST /api/v1/corpora/{cid}/concordance/cql`. Grammar: quoted literals with
+  wildcards (`"risk*"`), token specs over eight attributes (`word`, `lemma`,
+  `pos` (UPOS), `xpos`, `rel`, `morph`, `root`, `pattern`) with `&`/`|`
+  combinations and `/regex/` values, any-token `[]`, quantifiers `? * + {m,n}`,
+  groups with alternation `(cat|dog)*`, `%c` (ignore case) and `%d` (fold
+  diacritics) flags, and `within sentence | document` scoping. Arabic root and
+  pattern are queryable attributes — something CQPweb does not offer out of the
+  box. No schema change; invalid queries return 422 with a position-annotated
+  message; KWIC window, sort, seeded sampling, pagination and the match-set
+  cap integrate unchanged.
+- **Concordancer CQL mode (web).** A Simple|CQL toggle on the concordancer:
+  CQL mode swaps the level/regex/case controls for the pattern box (CQL is
+  case-sensitive by CQP convention; flags are part of the query), shows a
+  one-line syntax crib, renders results through the existing KWIC table,
+  surfaces syntax errors from the engine's detail, and exports the fetched
+  lines client-side (the export endpoint re-runs a *simple* query and cannot
+  represent a CQL pattern).
+- **Arabic Tools export.** The Arabic Tools window can now export every tool
+  result — morphology, roots, clitics, Buckwalter, dediacritized, normalized,
+  dialect ID, register, translate — as xlsx / csv / tsv / txt / json via the
+  same Export dropdown as the analysis panels. Table tools export their
+  on-screen columns; text tools export an original/result pair; distributions
+  export a sorted probability table. CSV/TSV carry a UTF-8 BOM so Arabic opens
+  cleanly in Excel/Sheets.
+- **Release workflow.** A tag containing a pre-release suffix publishes as a
+  GitHub pre-release, and the guide-attachment gate strips any pre-release
+  suffix (not just `-rcN`) when comparing the tag to the committed guide.
+
+- **Wildcard single-source-of-truth.** One `_wildcard_regex` helper now feeds
+  BOTH the SQL prefilter and the Python matcher (fnmatch removed — it treated
+  `[..]` as a character class, diverging from the SQL layer).
+- **Server-side CQL export.** POST /corpora/{cid}/export/concordance/cql
+  re-runs the query under the matcher guards and streams xlsx/csv/tsv/txt/json
+  covering the FULL match set (the v1.2.13-1 client-side export only had the
+  on-screen 200-line page). On the student allowlist (same surface as the
+  simple export). svg/png were never offered for concordance (verified — they
+  are collocation-network diagram formats).
+- **Paging overhaul.** Match spans are computed once and cached per
+  (corpus, query, version, filters); the page is sliced FIRST and sentence
+  context is fetched only for the page's spans. A regression test pins that
+  re-paging never re-runs the matcher and context stays page-bounded.
+- **Cancel + elapsed counter.** concordanceCql accepts react-query's
+  AbortSignal and a 60 s client deadline; a visible Cancel button and an
+  elapsed-seconds ticker in CQL mode mirror the Arabic Tools pattern.
+- **Stale-seed fix.** The sampled search re-used the PREVIOUS click's seed
+  (state read in the same tick); the seed is now computed locally for both
+  Simple and CQL, with a regression test.
+- **Shared KWIC table.** The concordancer's two byte-identical table copies
+  (Simple vs CQL) are extracted into components/KwicTable.tsx + a shared
+  pager so they cannot drift.
+- **CQL across the platform (P2).** `stats/cql.py` now exposes the reusable
+  `find_cql_spans` service (spans + streams under the same guards), and the
+  consumers built on it: CQL frequency/collocations/dispersion/n-grams (same
+  row shapes and measures as the simple endpoints), Vector-KWIC CQL
+  pre-filtering, subcorpus-by-CQL (member set = documents with >= 1 match,
+  re-resolved at analysis time), per-project saved queries (teacher-only
+  CRUD, CQL validated at save time), and the grounded AI tool `search_cql`
+  (line_id-cited evidence; tool-capable models only via the existing
+  supports_tools gate). Every consumer's student-allowlist status is decided
+  and documented in app/server_mode.py.
+- **Query helper in the concordancer.** Example chips, an expandable syntax
+  panel carrying the Differences-from-CQP table, and an error caret drawn
+  under the offending position of the engine's 422 message.
+
+### Fixed
+- **Matcher cost (O(n^2) time and memory).** The v1.2.13-1 matcher enumerated
+  every end position per start and memoized a set per (element, position):
+  `"the" []* "of"` measured 23 s / 1.4 GB at 20K tokens and was OOM-killed at
+  50K. The matching strategy is now DECIDED and documented — one match per
+  start, the earliest-ending span (for literal + gap patterns this is exactly
+  the shortest span, CQP-style) — and implemented efficiently: element ends
+  stream in increasing order and the search stops at the first accept
+  (linear for gaps). `within sentence` now BOUNDS the scan to the sentence
+  instead of post-filtering. Measured on the same 50K-token probe corpus:
+  4.0 s / 110 MB peak (was: OOM kill), and 20K dropped to 1.6 s / 43 MB
+  (was: 23 s / 1.4 GB).
+- **Work budget + wall-clock deadline.** Matching runs in a worker thread
+  (`asyncio.to_thread`) under an explicit budget (steps, max span length,
+  deadline). Over-budget queries raise CqlTooExpensiveError -> HTTP 422 with an
+  actionable message ("Narrow it: add a literal anchor, bound unbounded gaps,
+  'within sentence'"); deadline overruns (CqlDeadlineExceededError) -> HTTP 504. The event loop (and
+  /health) stays responsive during heavy queries — asserted by a test that
+  polls /health (< 0.5 s) while a CQL query runs.
+- **Subcorpus-from-CQL dry-run error mapping.** Creating a named subcorpus
+  from a CQL query validates the query up front; a too-expensive or timed-out
+  validation query now surfaces as 422/504 with the same actionable message
+  as the concordance endpoint (previously only syntax errors were mapped, so
+  an over-budget query would have escaped as a 500).
+- **/regex/ ReDoS exposure.** Catastrophic nested-quantifier regexes
+  (`(a+)+$`) are rejected at parse time with an actionable message; the
+  budget/deadline backstop covers the rest. The SIMPLE concordance's regex
+  level gets the same shared screen (ValueError -> 422 instead of a hang).
+- **%c on non-ASCII.** The SQL prefilter used SQLite lower()/LIKE
+  (ASCII-only), so `"école" %c` found 1 of 3 and `"москва" %c` 1 of 2. A
+  Unicode-aware `unicase()` SQL function (NFC + casefold, kept exactly in
+  sync with the Python matcher) replaces them. Matrix-tested: French é/É,
+  German ß/SS, Greek final sigma ς/Σ/σ, Cyrillic, plus Arabic %d — each also
+  asserting the prefilter-superset property (prefilter ON == prefilter OFF).
+  Turkish İ/ı are documented as not fold-equivalent to i (consistent in both
+  layers).
+- **Student Mode.** POST /concordance/cql joined the student allowlist —
+  only now that the guards above exist — with a deliberately stricter budget
+  (STUDENT_MATCH_LIMITS: fewer steps, shorter spans, 10 s deadline). The web
+  UI hides the CQL toggle and falls back to Simple with a visible notice when
+  the server rejects CQL for the role (403). Allowlist boundary tests added.
+- **Truth in documentation.** (a) The module docstring contradicted the
+  executor (claimed every span is reported; behaviour was shortest-per-start)
+  — rewritten with the explicit matching strategy. (b) morph is a WHOLE-STRING
+  match, not "substring" — documented with the `*…*` wildcard hint and pinned
+  by tests. (c) Arabic root/pattern examples now use the REAL CAMeL format —
+  verified against the actual calima-msa-r13 morphology.db AND the live
+  backend: dotted roots (`root=ك.ت.ب`), template patterns with digit radical
+  slots (`pattern=1ُ2ُ3` for كُتُب); the old hand-seeded `root=ك ت ب` fixtures
+  were wrong and are fixed; tests ingest REAL Arabic text through the real
+  backend (loud skip + reason when the data pack is absent). (d) The
+  "transfer directly from Sketch Engine/CWB" claim is removed everywhere; a
+  "Differences from CQP" table ships in the module docstring, the in-app
+  guide, and both USER_GUIDE files. `within s`/`within doc` aliases accepted;
+  an opt-in CQP-compat mode treats quoted values as anchored regexes
+  (request field `cqp_compat`).
+- **Arabic Tools Export placement.** The Export button above the tool result
+  sat flush on the column edge, glued to the Run analysis button, and its
+  dropdown (right-aligned to the trigger) opened ~100 px past the app-main
+  scroll boundary — clipped labels. The bar is now inset to align with the
+  result card's inner content and, in Arabic Tools only, the menu anchors to
+  the trigger's start so every format row is fully readable.
+
+### Changed
+
+
+### Tests
+- Engine: `tests/test_cql.py` (19 tests) — parser accept/reject, canonical
+  round-trip, matcher semantics, Arabic root/pattern + normalization,
+  fetch-cap metadata, pagination/sort/sampling, endpoint 200/422/404.
+- Engine hardening: `tests/test_cql_hardening.py` (40+ tests) — 50K-token
+  memory-bounded perf regression, budget/deadline/504/422 mapping, /health
+  latency < 0.5 s under heavy CQL, Unicode %c matrix + prefilter-superset
+  property, wildcard-helper consistency, morph semantics, real-CAMeL root
+  format, student allowlist boundary + stricter budget, paging span-cache,
+  server-side CQL export, cqp_compat, all P2 consumers. Full suite at the
+  v1.2.13 tag: 787 passed / 1 skipped / 0 failed.
+- Web: `src/__tests__/result-export.test.tsx` (19 tests) — per-tool Arabic
+  table shaping, BOM/quoting/escaping, export dropdown wiring, CQL mode
+  end-to-end with a mocked engine; `src/__tests__/cql-ui-regression.test.tsx`
+  (10 tests) — mode toggle, 422 caret, budget message, Cancel + abort,
+  elapsed counter, student gating, server-side export, stale-seed. Full web
+  suite at the v1.2.13 tag: 34 passed; tsc clean; PWA build OK.
+
+## [1.2.12] — 2026-10-08 — Classroom server toggle fixes (white-screen field report)
+
+### Fixed
+- **Enabling the classroom server no longer kills Caddy the moment it starts
+  (Linux).** On Linux, `PR_SET_PDEATHSIG` is delivered when the forking
+  *thread* exits, not when the process exits; v1.2.10's phased start spawned
+  Caddy from a throw-away `threading.Thread`, so the kernel SIGTERMed a
+  healthy Caddy as soon as that thread returned. The start worker now runs on
+  a long-lived single-thread executor (`app.server_mode.SPAWN_EXECUTOR`),
+  keeping the "die with the engine" semantics without the early kill. A
+  self-validating test reproduces both the bug (throw-away thread) and the
+  fix (executor) on Linux.
+- **Disabling the classroom server no longer stalls the engine's event
+  loop.** `stop_caddy` can block up to 10 s (terminate + wait); it ran
+  inline on the event loop, so a slow Caddy shutdown stalled `/health`,
+  which the desktop shell treats as a dead engine and force-restarts,
+  killing the classroom with it. All `/server-mode/*` handlers now offload
+  blocking status and stop work to worker threads (`asyncio.to_thread`).
+- **A failed classroom start always carries a reason.** When Caddy dies
+  after a clean start, the status chip showed "failed" with empty error
+  text; the payload now falls back to a message that names the
+  `caddy-stdout.log` path. Empty exception strings get a fallback with the
+  exception type so the card never renders an empty banner.
+- **The classroom control plane can no longer trigger a desktop engine
+  restart.** A failed `/server-mode/*` request (enable/disable/status) used
+  to ask the shell to probe-and-restart the engine; a restart kills the
+  engine AND the Caddy it supervises, and its blocking wait leaves pending
+  Tauri IPC callbacks that surface as "Couldn't find callback id" after a
+  reload. Classroom calls now fail fast and report their own error.
+- **Render errors show a message instead of a blank window.** A new
+  top-level `ErrorBoundary` catches render exceptions, records them in
+  Smart Troubleshooting, and offers "Try again" (re-mount, no page reload)
+  and "Reload app" (EN+AR).
+- **The classroom card tolerates a partially populated status payload.**
+  `urls.app` / `urls.root_ca` are read defensively, so a status snapshot
+  taken before Caddy is live can no longer throw during render (the likely
+  white-screen trigger).
+- **A corpus tagged without the NLP model can no longer go unnoticed.**
+  When the tagger model cannot be loaded, ingestion used to silently
+  degrade to a tokenizer-only pipeline: every token was stored with
+  `pos='X'` and surface-form lemmas, the annotation version still claimed
+  the requested model, and POS-based analyses (KWIC by POS, POS
+  distributions, lemmatized search) returned nothing with no way to detect
+  or repair the corpus. The degraded pipeline is now recorded on the
+  version row and the corpus recipe, the corpora list badges the corpus
+  with "POS missing", the Documents view shows an alert banner, and
+  Recompile re-tags everything once the model is available (its response
+  also reports whether it ran degraded).
+- **The Windows installer no longer fails on a leftover Caddy process.**
+  The NSIS pre-install/pre-uninstall hooks stopped `corpusmind-engine.exe`
+  and `corpusmind-desktop.exe` but never `caddy.exe`; a Caddy that
+  outlived its engine (failed Job-Object assignment, engine hard-killed,
+  older install) held a write-lock on `_internal\caddy\caddy.exe` and the
+  upgrade died with "Error opening file for writing". Both hooks now stop
+  Caddy by image name before any file operation.
+- **A partially installed Arabic data pack is recoverable in-app.** The
+  pack counts as "installed" as soon as its data directory exists, so an
+  app reinstall that kept the MSA DB but lost the dialect DBs (any
+  partial or cancelled install) showed "Arabic data pack installed",
+  disabled the Settings install button, and left no way to fetch the
+  missing components. The card now reports the honest state
+  ("Components missing (N)"), offers "Install missing components (N)"
+  (the engine already provisioned gaps - now pinned by tests), and a new
+  "Re-install (repair)" action re-downloads the whole pack and replaces
+  what is on disk (`POST /arabic/data/install` accepts `force`), which
+  also repairs corrupted destinations. The Arabic Tools 503 card offers
+  the same install path instead of a dead "installed" note.
+- **Arabic Tools no longer opens stuck on a disabled "Analyzing… 0s"
+  (rc7).** The view read `result.isPending` from TanStack Query v5 as the
+  in-flight flag, but v5 reports `isPending === true` for an
+  `enabled`-gated query from its very first render (status "pending",
+  fetchStatus "idle") — before any click. The Run button was therefore
+  disabled and the spinner+Cancel shown the moment the view opened, so no
+  analysis could ever be started; the same flag also gated the elapsed
+  ticker and the 10 s hint, and (because a same-input re-run only bumped
+  state, never the query key) retrying after an error or a Cancel
+  silently did nothing. The view now uses `isFetching` ("a request is
+  actually in flight"), re-clicking Run with identical inputs triggers an
+  explicit refetch, and the Cancel path aborts without being misread as a
+  connection failure: jsonFetch no longer classifies an `AbortError` as a
+  connection error (which asked the shell to probe/restart the engine
+  mid-analysis), and the client deadline now also honours the abort
+  signal, so Cancel is immediate even if the Tauri transport swallows it.
+  Two sibling misuses of the same v5 semantics were fixed: the Analysis
+  collocation panel's "queued under load" note keyed off `isPending`
+  (false note while the query was merely idle — now `isLoading`), and the
+  status-bar "N processing..." counter counted never-run gated queries
+  (now `fetchStatus === "fetching"`). Guarded by a new source-level CI
+  check (`scripts/check_query_pending.mjs`) and jsdom regression tests
+  that render the real view against the shipped QueryClient defaults
+  (`web/src/__tests__/arabic-ui-regression.test.tsx`).
+
+### Changed
+- The classroom status payload's Ollama `/api/ps` probe timeout is 1 s
+  (was 3 s); it runs on a 5 s poll and must never stack up behind a slow
+  probe.
+- **The desktop shell no longer restarts an engine that is merely still
+  starting** (field report: "when restarting the app, I get these two
+  error messages" + the classroom toggle still resetting the engine). The
+  shell's self-heal used to answer a single failed 3 s health probe with a
+  full engine restart, so on machines where the sidecar boots for tens of
+  seconds (PyInstaller extraction + antivirus) every early webview request
+  killed and respawned the booting engine — resetting startup progress,
+  surfacing raw "error sending request for url …" errors, and killing any
+  classroom session a restart had just created. `ensure_engine` is now a
+  small state machine: it waits (60 s) for a live-but-booting engine
+  instead of killing it; an engine that was already healthy this session
+  gets one grace re-probe before any restart; only a genuinely exited
+  process restarts immediately; and concurrent restarts are serialized
+  under a shell-side lock that re-checks health first, so exactly one
+  restart runs no matter how many requests asked for one.
+- **The `gemma3:27b` card in Settings → Model Providers is replaced by
+  `gemma4:12b-it-qat`.** The 27 B model needed 24 GB+ RAM, beyond most
+  classroom and office machines; the Gemma 4 12B QAT card carries
+  workstation quality at a 7.2 GB download / ~8 GB RAM (tag page verified
+  2026-10-09: 11.9B params, QAT Q4_0 + CLIP projector, Apache-2.0). The
+  in-app Download button pulls it natively through Ollama, and the card
+  links its upstream page (`url` field) for manual download.
+- **The first Arabic analysis after an engine start no longer fails with a
+  30 s timeout on slow machines.** The ~400 MB calima morphology DB load
+  (cold disk + real-time antivirus) can take minutes — far past the old
+  30 s per-request deadline — so the sample sentence 504'd on every first
+  run even with a correctly installed pack, and every retry stacked
+  another duplicate loader behind the old exclusive load lock, burning
+  its own deadline while waiting. Three changes: the interactive deadline
+  default is 120 s (`CORPUSMIND_ARABIC_TIMEOUT_S`); concurrent requests
+  now piggyback on the in-flight load — one designated loader, waiters
+  reuse its result, and a failed loader hands the duty to the first
+  waiter (pinned by race tests); and the engine pre-loads the MSA backend
+  in a background thread at startup so the first click is already warm
+  (disable with `CORPUSMIND_ARABIC_WARMUP=0` on low-RAM machines).
+
 ## [1.2.11] — 2026-10-07 — Urdu, Hindi, and Farsi corpus support; Gemma 4 catalogue; language capability registry
 
 ### Added
@@ -108,6 +651,21 @@ once 1.0 ships. Until then, expect breaking changes between 0.x releases.
   Verified live against the frozen desktop bundle: a bare machine goes
   503 -> in-app install (161 MB) -> restart -> real morphology analysis and
   DIDModel6 dialect identification.
+- **Installer fetches the dialect packs** (v1.2.11 final follow-up): the
+  installer now provisions the Egyptian / Gulf / Levantine dialect
+  morphology DBs too (`morphology-db-egy-r13` 0.2.0 GPL-2.0-only,
+  `morphology-db-glf-01` 0.1.0 CC BY 4.0, `morphology-db-lev-01` 0.1.0
+  CC BY 4.0), so the Arabic Tools dialect dropdown is fully provisionable
+  in-app - selecting Egyptian no longer dead-ends in a 503 the installer
+  cannot fix. All five pinned packages are installed by default (MSA ->
+  egy -> glf -> lev -> dialectid model, ~254 MB total); the request body
+  accepts `include_dialects` / `include_dialect_id` to narrow it. Every
+  new pin was verified against the live release assets on 2026-10-08
+  (structure and shipped LICENSE checked), and all three dialect zips
+  show the same +214-byte upstream re-upload drift as the MSA pack -
+  the observed digest, not the stale catalogue metadata, is the pin.
+  Settings preview table lists all five packages with their licences
+  (EN+AR).
 - **Chunked bulk Arabic analysis with progress**
   (`app/arabic_bulk.py`, `POST /api/v1/arabic/analyze/job` + `/status` +
   `/cancel` + `/result`): corpus-sized input (500K-1M+ tokens) runs as a
@@ -166,6 +724,43 @@ once 1.0 ships. Until then, expect breaking changes between 0.x releases.
   THIRD_PARTY_LICENSES.md: Stanza, Gemma 4, wordfreq data, bundled fonts.
 
 ### Fixed
+- **"Even after downloading the Arabic Data Pack, the sample text cannot
+  be analyzed"** (v1.2.11-rc1 field report on a clean first-run machine,
+  with the data pack installed from inside the app): a stale-cache bug.
+  `camel_tools_data_dir()` is `@lru_cache`d, and on a clean machine the
+  first Arabic request (or a `/health/resources` poll) runs before any
+  pack exists, so the resolver cached `None` forever; the in-app installer
+  then installed the pack successfully, but every later analysis in the
+  same process still answered 503 "not installed" until the whole app was
+  restarted. The installer now drops that cached resolution the moment the
+  on-disk state changes (catalogue marker written, each package landed,
+  cancelled/failed cleanup), so analysis works immediately after the
+  install finishes, no restart needed. Regression-tested end to end in one
+  process: resolve (poison) → real installer job → pre-flight passes.
+- The Arabic Tools **Dialect DB dropdown offered Egyptian/Gulf/Levantine
+  morphology DBs that nothing ever installs** (same rc1 field report; the
+  screenshot had Egyptian selected while the in-app installer provisions
+  MSA + dialect-ID only): selecting one could only ever end in 503, and
+  the hint it showed pointed back at the in-app installer, whose answer
+  ("already installed") could never fix it. The dropdown now disables the
+  DBs that are not on disk (labelled "data pack not installed", EN+AR)
+  from the live per-dialect status the engine already reports
+  (`morphology_dbs` in the install-status payload), and the 503 message
+  for a missing dialect DB now names the exact terminal command
+  (`camel_data -i morphology-db-egy-r13`, `-glf-01`, `-lev-01`).
+- **The Discourse radar charts' Export PNG button did nothing** (field
+  report on v1.2.11-rc2, all discourse frameworks): the shared
+  `ChartExportButton` located the chart with
+  `targetRef.current.querySelector("svg")`, which only searches
+  DESCENDANTS of the ref. The bar charts pass a `<figure>` wrapper ref
+  (svg inside, export worked), but both radars attach the ref directly
+  to the `<svg>` element itself, so the query matched nothing and the
+  click silently no-op'ed. The button now accepts both wirings (the ref
+  host itself when it IS the svg, otherwise a descendant search) and
+  warns to the console when a target has no svg, so the next wiring
+  mistake cannot be silent. Fixed in the one shared component, so every
+  framework's radar (Hyland, Halliday & Hasan, Martin & White, Cialdini,
+  SFG, and the persuasion radar) exports correctly.
 - **Arabic Tools "Analysis" spins forever** (field bug, reproduced on
   v1.2.9 as well, so not a v1.2.11 regression): a three-layer defect.
   (1) camel_tools, on a machine without its provisioned data, attempts a

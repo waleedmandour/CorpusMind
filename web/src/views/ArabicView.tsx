@@ -21,6 +21,13 @@ import { api } from "@/lib/api";
 import { t } from "@/lib/i18n";
 import { useUI } from "@/store/ui";
 import { ArabicDataPackCard } from "@/components/ArabicDataPackCard";
+// v1.2.13-1: Arabic Tools Export — the analysis results (morphology table,
+// roots, clitics, transliteration, dialect/register distributions) can now be
+// saved in the same xlsx/csv/tsv/txt/json formats as every other analysis
+// panel. Shaping lives in lib/resultExport so it is unit-testable and shared
+// with the other export paths.
+import { ExportButton } from "@/components/ExportButton";
+import { useExportStatus, downloadTable, arabicResultToTable } from "@/lib/resultExport";
 
 type Tool = "morphology" | "roots" | "clitics" | "buckwalter" | "dediac" | "normalize" | "dialect" | "register" | "translate";
 
@@ -117,6 +124,13 @@ export function ArabicError({ error }: { error: unknown }) {
   );
 }
 
+const DIALECT_DBS: { id: "msa" | "egy" | "glf" | "lev"; label: string }[] = [
+  { id: "msa", label: "MSA (calima-msa-r13)" },
+  { id: "egy", label: "Egyptian (calima-egy-r13)" },
+  { id: "glf", label: "Gulf (calima-glf-01)" },
+  { id: "lev", label: "Levantine (calima-lev-01)" },
+];
+
 export function ArabicView() {
   const [text, setText] = useState(SAMPLE_TEXTS[0]);
   const [tool, setTool] = useState<Tool>("morphology");
@@ -127,8 +141,21 @@ export function ArabicView() {
   const [submitted, setSubmitted] = useState<{ text: string; tool: Tool; dialect: string; tagset: string } | null>(null);
   const lang = useUI((s) => s.lang);
   const queryClient = useQueryClient();
+  // v1.2.13-1: export feedback shared with the other analysis views.
+  const exportStatus = useExportStatus();
 
   const backends = useQuery({ queryKey: ["arabic-backends"], queryFn: ({ signal }) => api.arabicBackends(signal) });
+
+  // v1.2.11-rc1 fix: which dialect DBs are actually on disk. Shared cache
+  // with the installer card (same queryKey), so it also refreshes right
+  // after an in-app install finishes. Drives the Dialect DB dropdown: a DB
+  // the installer never provisions is disabled with a plain-language suffix
+  // instead of offering a request that can only ever end in 503.
+  const installStatus = useQuery({
+    queryKey: ["arabic-data-install"],
+    queryFn: ({ signal }) => api.arabicDataInstallStatus(signal),
+  });
+  const morphDbs = installStatus.data?.camel_tools?.morphology_dbs;
 
   const result = useQuery({
     queryKey: ["arabic", submitted],
@@ -166,11 +193,22 @@ export function ArabicView() {
     gcTime: 0,
   });
 
+  // v1.2.12 (field report: Arabic Tools stuck on a disabled "Analyzing… 0s"):
+  // in TanStack Query v5 a query that has not run yet — `enabled: false`, i.e.
+  // before the first click — reports `isPending === true` (status "pending",
+  // fetchStatus "idle"). Using isPending as the in-flight flag therefore
+  // rendered "Analyzing… 0s" + Cancel and DISABLED the Run button from the
+  // moment the view opened, so no analysis could ever be started. "A request
+  // is actually in flight" is `isFetching` (true only while fetchStatus is
+  // "fetching"). Never use `isPending` for enabled-gated queries; see
+  // scripts/check_query_pending.mjs (CI guard).
+  const busy = result.isFetching;
+
   // v1.2.11 (Arabic Tools hang fix): elapsed-seconds ticker while a request
   // is in flight, so "Analyzing…" never looks like a silent freeze again.
   const [elapsed, setElapsed] = useState(0);
   useEffect(() => {
-    if (!result.isPending || !submitted) {
+    if (!busy || !submitted) {
       setElapsed(0);
       return;
     }
@@ -179,16 +217,33 @@ export function ArabicView() {
       setElapsed(Math.floor((Date.now() - startedAt) / 1000));
     }, 1000);
     return () => window.clearInterval(id);
-  }, [result.isPending, submitted]);
+  }, [busy, submitted]);
 
   const onCancel = () => {
     void queryClient.cancelQueries({ queryKey: ["arabic", submitted] });
   };
 
   const onRun = () => {
-    if (!text.trim()) return;
-    setSubmitted({ text: text.trim(), tool, dialect, tagset });
+    if (!text.trim() || busy) return;
+    const next = { text: text.trim(), tool, dialect, tagset };
+    // v1.2.12: same inputs => same query key => setSubmitted would be a no-op
+    // and the click would silently do nothing (e.g. retrying after an error
+    // or after a Cancel). Ask for a fresh fetch explicitly in that case.
+    if (submitted && JSON.stringify(submitted) === JSON.stringify(next)) {
+      void result.refetch();
+    } else {
+      setSubmitted(next);
+    }
   };
+
+  // v1.2.11-rc1 fix: if the selected dialect DB turns out to be missing
+  // (e.g. the dropdown state predates the status load, or the pack was
+  // removed), fall back to MSA instead of sending a guaranteed-503 request.
+  useEffect(() => {
+    if (morphDbs && dialect !== "msa" && morphDbs[dialect] === false) {
+      setDialect("msa");
+    }
+  }, [morphDbs, dialect]);
 
   return (
     <div className="arabic-view">
@@ -231,10 +286,15 @@ export function ArabicView() {
             <label className="dialect-picker">
               Dialect DB:
               <select value={dialect} onChange={(e) => setDialect(e.target.value as typeof dialect)}>
-                <option value="msa">MSA (calima-msa-r13)</option>
-                <option value="egy">Egyptian (calima-egy-r13)</option>
-                <option value="glf">Gulf (calima-glf-01)</option>
-                <option value="lev">Levantine (calima-lev-01)</option>
+                {DIALECT_DBS.map((d) => {
+                  const missing = morphDbs ? morphDbs[d.id] === false : false;
+                  return (
+                    <option key={d.id} value={d.id} disabled={missing}>
+                      {d.label}
+                      {missing ? ` ${t(lang, "ar_dialect_db_missing")}` : ""}
+                    </option>
+                  );
+                })}
               </select>
             </label>
             <label className="dialect-picker">
@@ -267,20 +327,37 @@ export function ArabicView() {
             </button>
           ))}
         </div>
-        <button onClick={onRun} disabled={!text.trim() || result.isPending} className="run-btn">
-          {result.isPending ? t(lang, "ar_analyzing_elapsed").replace("{n}", String(elapsed)) : "Run analysis"}
+        <button onClick={onRun} disabled={!text.trim() || busy} className="run-btn">
+          {busy ? t(lang, "ar_analyzing_elapsed").replace("{n}", String(elapsed)) : "Run analysis"}
         </button>
-        {result.isPending && (
+        {busy && (
           <button onClick={onCancel} className="run-btn run-btn-cancel" type="button">
             {t(lang, "ar_cancel")}
           </button>
         )}
-        {result.isPending && elapsed >= 10 && (
+        {busy && elapsed >= 10 && (
           <div className="error" role="status">{t(lang, "ar_still_working_hint")}</div>
         )}
       </div>
 
       {/* Result */}
+      {/* v1.2.13-1: Export above every tool result — the table tools export
+          their on-screen columns, the text tools a two-column original/result
+          pair, the distribution tools a probability table. */}
+      {result.data && (
+        <div className="result-export-bar arabic-export-bar">
+          <ExportButton
+            label={t(lang, "analysis_export")}
+            formats={["xlsx", "csv", "tsv", "txt", "json"]}
+            onExport={(fmt) => {
+              if (!result.data) return;
+              const { headers, rows } = arabicResultToTable(result.data);
+              void downloadTable(headers, rows, `arabic_${submitted?.tool ?? "tools"}.${fmt}`, exportStatus.set);
+            }}
+          />
+          {exportStatus.el}
+        </div>
+      )}
       {result.data && <ArabicResult result={result.data} />}
 
       {result.isError && <ArabicError error={result.error} />}

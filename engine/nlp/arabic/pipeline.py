@@ -59,23 +59,39 @@ class ArabicDataMissingError(RuntimeError):
 
 # v1.2.11 follow-up: one shared, actionable hint for every missing-data
 # error. Leads with the IN-APP installer (zero terminal knowledge needed),
-# keeps the explicit camel_data command for headless/SSH machines, and ends
-# with the contract line the 503 regression test asserts on.
+# states plainly which packs the installer provisions - since the v1.2.11
+# dialect-pack follow-up that is the MSA morphology DB, the
+# Egyptian/Gulf/Levantine dialect DBs, AND the dialect-ID model (before
+# that, a user who selected the Egyptian DB got a 503 whose in-app "fix"
+# could never fix it) - and ends with the contract lines the 503 regression
+# test asserts on ("camel_data -i" and "never downloads data at request
+# time"; the terminal command remains the alternative for any other
+# catalogue pack, e.g. morphology-db-msa-s31).
 INSTALL_HINT = (
     "Install the Arabic data pack from inside the app: Settings > Arabic "
-    "data pack > Install (it downloads the pinned pack from CAMeL Lab's "
-    "official releases and verifies its size and SHA256 before installing). "
-    "On a terminal: camel_data -i morphology-db-msa-r13 (and: camel_data -i "
-    "dialectid-model6 for dialect detection). The engine never downloads "
-    "data at request time."
+    "data pack > Install (it downloads the pinned packs from CAMeL Lab's "
+    "official releases and verifies their size and SHA256 before installing; "
+    "it provisions the MSA morphology DB, the Egyptian/Gulf/Levantine "
+    "dialect DBs, and the dialect-ID model). Any other pack needs a "
+    "terminal: camel_data -i morphology-db-msa-s31. The engine never "
+    "downloads data at request time."
 )
 
 
 _CAMEL_DATA_ENV_LOCK = threading.RLock()
-# Separate from the env lock: _load holds this while _require_camel_data
-# re-enters the env path. RLock keeps _ensure_camel_data_env safe if a future
-# caller nests it; the load lock must stay exclusive (a ~400MB single load).
-_CAMEL_ANALYZER_LOAD_LOCK = threading.Lock()
+
+# v1.2.12 (field report: "sample text fails to analyze even after the data
+# pack install"): the v1.2.11 plain Lock made the DB single-loaded but every
+# queued request still burned its OWN deadline waiting on that lock. On a
+# slow disk with real-time antivirus the first load takes minutes, so every
+# retry stacked ANOTHER waiting thread and 504'd while the original loader
+# was still working. The Condition below makes the first thread THE loader
+# and every concurrent caller a waitER that reuses the in-flight load's
+# result: when the loader finishes (or fails), all waiters wake, see the
+# warm cache, and return instantly — one ~400MB load per process, no matter
+# how many requests race it.
+_CAMEL_LOAD_COND = threading.Condition()
+_CAMEL_LOADING = False
 
 
 def _ensure_camel_data_env() -> Path | None:
@@ -110,6 +126,12 @@ def camel_data_status() -> dict:
     Used by ``GET /api/v1/health/resources`` (v1.2.11): every check here is
     a filesystem existence test, so the health endpoint can never trigger
     the download-at-first-use hang this release fixes.
+
+    v1.2.11-rc1 bug fix: also reports ``morphology_dbs`` keyed by the UI's
+    dialect codes (msa/egy/glf/lev) so the Arabic Tools dialect dropdown can
+    disable the DBs that are genuinely not on disk instead of offering a
+    request that can only ever end in 503 (the in-app installer provisions
+    MSA + dialect-ID only).
     """
     from app.resource_paths import camel_tools_data_dir
 
@@ -119,14 +141,19 @@ def camel_data_status() -> dict:
         "data_dir": None,
         "morphology_db_msa": False,
         "dialectid_model6": False,
+        "morphology_dbs": {"msa": False, "egy": False, "glf": False, "lev": False},
     }
     if data_dir is None:
         return out
     out["installed"] = True
     out["data_dir"] = str(data_dir)
-    msa_pkg, msa_dir = _camel_dataset_dir("calima-msa-r13")
+    for code, dataset in (("msa", "calima-msa-r13"), ("egy", "calima-egy-r13"),
+                          ("glf", "calima-glf-01"), ("lev", "calima-lev-01")):
+        pkg, sub = _camel_dataset_dir(dataset)
+        present = (data_dir / "data" / pkg / sub).is_dir()
+        out["morphology_dbs"][code] = present
+    out["morphology_db_msa"] = out["morphology_dbs"]["msa"]
     did_pkg, did_dir = _camel_dataset_dir("dialectid-model6")
-    out["morphology_db_msa"] = (data_dir / "data" / msa_pkg / msa_dir).is_dir()
     out["dialectid_model6"] = (data_dir / "data" / did_pkg / did_dir).is_dir()
     return out
 
@@ -154,10 +181,17 @@ def _require_camel_data(db_names: tuple[str, ...]) -> Path:
         ).is_dir()
     ]
     if missing:
+        # v1.2.11-rc1 bug fix: name the EXACT terminal package per missing
+        # dataset. The old message told every missing-data case to run the
+        # in-app installer, which provisions the MSA pack only - so a user
+        # who selected the Egyptian DB got a 503 whose "fix" could never
+        # fix it (install -> "already installed" 409 -> same 503).
+        per_dataset = ", ".join(
+            f"{name} (terminal: camel_data -i {_camel_package_hint(name)})"
+            for name in missing
+        )
         raise ArabicDataMissingError(
-            "Arabic morphology data is incomplete: missing "
-            + ", ".join(missing)
-            + ". "
+            "Arabic morphology data is incomplete: missing " + per_dataset + ". "
             + INSTALL_HINT
         )
     # Validation passed: pin the env so the import below binds CT_DATA_DIR
@@ -270,17 +304,42 @@ class CamelBackend:
         self._info: ArabicBackendInfo | None = None
 
     def _load(self) -> None:
+        global _CAMEL_LOADING
         if self._analyzers:
             return
         # v1.2.11: the routes now run analysis in worker threads, so first
-        # load can race. The lock keeps the DB single-loaded (it is ~400MB
-        # resident); double-checked so the hot path stays lock-free.
-        with _CAMEL_ANALYZER_LOAD_LOCK:
-            if self._analyzers:
-                return
+        # load can race. v1.2.12: one designated loader + piggybacking
+        # waiters (see _CAMEL_LOAD_COND above) — concurrent requests share
+        # the single ~400MB load instead of each burning their own request
+        # deadline queued behind an exclusive lock.
+        is_loader = False
+        with _CAMEL_LOAD_COND:
+            while not self._analyzers:
+                if _CAMEL_LOADING:
+                    # Another thread is loading right now: wait for its
+                    # outcome and reuse it. The bounded wait re-checks both
+                    # the warm cache and the loader flag each wakeup, so a
+                    # failed loader hands the duty to the first waiter.
+                    _CAMEL_LOAD_COND.wait(timeout=2.0)
+                    continue
+                _CAMEL_LOADING = True
+                is_loader = True
+                break
+        if not is_loader:
+            # Woke up because the shared load landed: the cache is warm and
+            # this thread's own deadline was spent waiting, not re-loading.
+            return
+        try:
             self._load_locked()
+        finally:
+            with _CAMEL_LOAD_COND:
+                _CAMEL_LOADING = False
+                _CAMEL_LOAD_COND.notify_all()
 
     def _load_locked(self) -> None:
+        """The actual load. Must run only as the designated loader (the
+        ``_CAMEL_LOADING`` flag guarantees exclusivity; no lock is held while
+        the heavy work runs)."""
         # Pre-flight BEFORE importing camel_tools: pins CAMELTOOLS_DATA to
         # the resolved pack (frozen bundle or dev home) and refuses fast
         # with an actionable error when nothing is provisioned. This is the

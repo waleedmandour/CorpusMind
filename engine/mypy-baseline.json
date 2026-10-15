@@ -1,6 +1,6 @@
 {
   "ai": 64,
-  "api": 351,
+  "api": 349,
   "app": 19,
   "discourse": 87,
   "export_queue": 42,
@@ -14,6 +14,6 @@
   "sentiment": 30,
   "stats": 67,
   "storage": 28,
-  "tests": 988,
+  "tests": 981,
   "vision": 46
 }

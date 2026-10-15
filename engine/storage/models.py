@@ -376,6 +376,26 @@ class StopwordList(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
 
+class SavedQuery(Base):
+    """A saved analysis query, per project (v1.2.13-2).
+
+    Stores CQL (and simple) queries so researchers and teachers can reuse
+    and share them within a project. Teacher-only CRUD (deliberately OFF the
+    student allowlist: saves are shared through the teacher token and would
+    clutter the class space under the shared student token).
+    """
+    __tablename__ = "saved_queries"
+
+    id: Mapped[str] = mapped_column(String(16), primary_key=True, default=_uuid)
+    project_id: Mapped[str] = mapped_column(ForeignKey("projects.id", ondelete="CASCADE"), index=True)
+    corpus_id: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    name: Mapped[str] = mapped_column(String(128), nullable=False)
+    query: Mapped[str] = mapped_column(Text, nullable=False)
+    mode: Mapped[str] = mapped_column(String(16), default="cql")  # cql | simple
+    note: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
 class KwicVectorCache(Base):
     """Sentence-embedding cache for Vector KWIC (v1.2.0).
 

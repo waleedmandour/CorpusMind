@@ -185,6 +185,40 @@ camel_data -i morphology-db-msa-r13`}</pre>
           <code>(a|b)</code> = alternation, <code>{"{n,m}"}</code> = repeat, <code>(?i)</code> =
           case-insensitive flag. Full Python <code>re</code> syntax is supported.
         </p>
+
+        <h4>CQL mode: corpus query language (v1.2.13)</h4>
+        <p>
+          Switch the search box from <strong>Simple</strong> to <strong>CQL</strong> to query whole
+          <em> patterns</em> — token sequences with attributes, gaps, and scoping — instead of a
+          single node. The syntax is <strong>CQP-flavoured but not CQP</strong>: quoted values are
+          wildcard patterns (not regexes), regex only via <code>/re/</code> (unanchored), and scoping
+          is <code>within sentence</code> or <code>within document</code> only. Results render in the
+          same KWIC table with sort, sampling, pagination, and server-side export (the engine re-runs
+          the query, so exports cover the full match set). Heavy patterns run in a worker thread under
+          a work budget and a wall-clock deadline: an over-expensive pattern returns an actionable
+          message instead of freezing the app, and a running CQL query can be cancelled.
+        </p>
+        <table className="ug-table">
+          <thead><tr><th>CQL pattern</th><th>What it matches</th></tr></thead>
+          <tbody>
+            <tr><td><code>[lemma="take"] []{"{0,3}"} "risk"</code></td><td>any form of <em>take</em>, a gap of 0–3 tokens, then <em>risk</em></td></tr>
+            <tr><td><code>[word="book" & pos="NOUN"]</code></td><td><em>book</em> tagged as a noun (attributes combine with &amp; / |)</td></tr>
+            <tr><td><code>"colou?r" %c</code></td><td>colour/color, Unicode-aware case folding (<code>%c</code>; <code>%d</code> folds Arabic diacritics)</td></tr>
+            <tr><td><code>(cat|dog) [pos="VERB"]</code></td><td><em>cat</em> or <em>dog</em> followed by a verb (groups + alternation)</td></tr>
+            <tr><td><code>[root="ك.ت.ب"]</code></td><td>Arabic tokens whose CAMeL root is <em>ك.ت.ب</em> — the real stored format is DOTTED (k.t.b), as produced by calima-msa-r13</td></tr>
+            <tr><td><code>[pattern="1ُ2ُ3"]</code></td><td>calima template patterns use digit radical slots (here <em>كُتُب</em>-type nouns); combine with wildcards, e.g. <code>[pattern="*1ُ2ُ3*"]</code></td></tr>
+            <tr><td><code>[morph="*Animacy=Anim*"]</code></td><td><code>morph</code> matches the WHOLE features string — use <code>*…*</code> wildcards for a substring search</td></tr>
+            <tr><td><code>"the" []* "of" within sentence</code></td><td><em>the</em> … <em>of</em> inside one sentence (default scope is the document)</td></tr>
+          </tbody>
+        </table>
+        <p className="hint">
+          Attributes: <code>word</code>, <code>lemma</code>, <code>pos</code> (UPOS), <code>xpos</code>,
+          <code> rel</code> (UD dependency), <code>morph</code> (features) — and, uniquely for Arabic,
+          <code> root</code> and <code>pattern</code>. CQL is case-sensitive by default (CQP convention);
+          append <code>within sentence</code> (or <code>within s</code>) or <code>within document</code> to
+          scope the match. An invalid pattern reports the exact position of the error, shown with a caret
+          under the query. Students get the same CQL surface with a stricter work budget.
+        </p>
       </>
     ),
   },
@@ -602,6 +636,14 @@ camel_data -i morphology-db-msa-r13`}</pre>
         <p>
           Aligns Arabic and English sentence pairs in a parallel corpus, then runs parallel
           concordance searches across both sides.
+        </p>
+        <h4>Export</h4>
+        <p>
+          Every tool result can be saved in the same formats as the analysis panels — xlsx, csv,
+          tsv, txt, or json — via the <strong>Export</strong> dropdown above the result. Morphology,
+          roots, and clitics export their on-screen columns; Buckwalter, dediacritized, and
+          normalized export an original/result pair; dialect and register export a probability
+          table. CSV/TSV files carry a UTF-8 BOM so Arabic text opens cleanly in Excel/Sheets.
         </p>
         <p className="hint">
           Arabic support requires the optional <code>camel-tools</code> package. Run

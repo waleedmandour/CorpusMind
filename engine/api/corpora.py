@@ -150,6 +150,11 @@ class CorpusOut(BaseModel):
     # v1.2.0 learner facets
     l1: str = ""
     proficiency: str = ""
+    # v1.2.12: True when the corpus was tagged by a degraded pipeline (the
+    # real NLP model was unavailable, so tokens carry pos='X' and surface
+    # lemmas). The UI badges such corpora and offers a recompile, which
+    # re-tags everything once the model is present.
+    tagging_degraded: bool = False
 
 
 @router.post("/projects/{pid}/corpora", response_model=CorpusOut)
@@ -179,6 +184,7 @@ async def create_corpus(
         image_set_count=0,
         l1=c.l1,
         proficiency=c.proficiency,
+        tagging_degraded=bool((c.pipeline_recipe or {}).get("degraded", False)),
     )
 
 
@@ -224,6 +230,7 @@ async def list_corpora(pid: str, session: AsyncSession = Depends(get_session)) -
             image_set_count=set_counts.get(c.id, 0),
             l1=getattr(c, "l1", "") or "",
             proficiency=getattr(c, "proficiency", "") or "",
+            tagging_degraded=bool((c.pipeline_recipe or {}).get("degraded", False)),
         )
         for c in corpora
     ]
@@ -252,6 +259,7 @@ async def get_corpus(cid: str, session: AsyncSession = Depends(get_session)) -> 
         image_set_count=n_sets,
         l1=getattr(c, "l1", "") or "",
         proficiency=getattr(c, "proficiency", "") or "",
+        tagging_degraded=bool((c.pipeline_recipe or {}).get("degraded", False)),
     )
 
 
@@ -503,6 +511,17 @@ async def recompile_corpus(cid: str, session: AsyncSession = Depends(get_session
 
     pipeline = get_pipeline(backend="spacy", language=corpus.language or "en")
     info = pipeline.info()
+    # v1.2.12: same honest degraded recording as ingestion/service.py — a
+    # recompile under a missing model must be detectable too.
+    if info.degraded:
+        log.warning(
+            "recompile_degraded_pipeline",
+            cid=cid,
+            model=info.model_name,
+            hint="Recompiled tokens will carry pos='X'; re-run once the model "
+                 "is available.",
+        )
+    model_label = f"{info.backend}:{info.model_name}" + (":degraded-blank" if info.degraded else "")
 
     existing = await session.scalar(
         select(AnnotationVersion)
@@ -521,7 +540,7 @@ async def recompile_corpus(cid: str, session: AsyncSession = Depends(get_session
         corpus_id=cid,
         version_label=f"v{version_n}",
         # Mirror ingestion/service.py's column mapping exactly.
-        model_name=f"{info.backend}:{info.model_name}",
+        model_name=model_label,
         model_version=info.model_version,
         tokenizer=info.backend,
         tagger=info.backend,
@@ -594,6 +613,7 @@ async def recompile_corpus(cid: str, session: AsyncSession = Depends(get_session
             "model_name": info.model_name,
             "model_version": info.model_version,
             "spacy_version": info.spacy_version,
+            "degraded": info.degraded,
         }
     )
     corpus.pipeline_recipe = new_recipe  # reassign triggers SQLAlchemy change detection
@@ -607,6 +627,9 @@ async def recompile_corpus(cid: str, session: AsyncSession = Depends(get_session
         "success": recompiled == len(docs),
         "token_count": latest.token_count if latest else 0,
         "type_count": latest.type_count if latest else 0,
+        # v1.2.12: lets the UI tell a degraded recompile (model still absent)
+        # apart from a real one.
+        "degraded": info.degraded,
     }
 
 
@@ -676,6 +699,19 @@ class SubcorpusCreate(BaseModel):
     filter_criteria: dict = Field(default_factory=dict)
 
 
+class SubcorpusFromCql(BaseModel):
+    """v1.2.13-2: create a subcorpus from a CQL query.
+
+    Members are the documents containing at least one match. The query is
+    stored (kind="cql") and re-resolved at analysis time, so the member set
+    follows re-annotation.
+    """
+
+    name: str = Field(..., min_length=1, max_length=128)
+    query: str = Field(..., min_length=1)
+    description: str = ""
+
+
 class SubcorpusOut(BaseModel):
     id: str
     corpus_id: str
@@ -704,6 +740,54 @@ async def create_subcorpus(
         name=body.name,
         description=body.description,
         filter_criteria=body.filter_criteria,
+    )
+    session.add(sc)
+    await session.flush()
+    return SubcorpusOut(
+        id=sc.id,
+        corpus_id=sc.corpus_id,
+        name=sc.name,
+        description=sc.description,
+        filter_criteria=sc.filter_criteria,
+        created_at=sc.created_at,
+    )
+
+
+@router.post("/corpora/{cid}/subcorpora/from-cql", response_model=SubcorpusOut)
+async def create_subcorpus_from_cql(
+    cid: str, body: SubcorpusFromCql, session: AsyncSession = Depends(get_session)
+) -> SubcorpusOut:
+    """v1.2.13-2: create a named subcorpus from a CQL query (teacher-only).
+
+    OFF the student allowlist on purpose — this is subcorpus management.
+    The query is validated up front (CqlSyntaxError → 422); membership is
+    re-resolved at analysis time so re-annotation keeps the filter honest.
+    """
+    if not await session.get(Corpus, cid):
+        raise HTTPException(404, "Corpus not found")
+    from stats.cql import (
+        CqlDeadlineExceededError,
+        CqlSyntaxError,
+        CqlTooExpensiveError,
+        find_cql_spans,
+    )
+
+    # Dry-run validation only — membership is re-resolved at analysis time so
+    # re-annotation keeps the filter honest. The match set itself is discarded.
+    try:
+        await find_cql_spans(session, cid, body.query)
+    except CqlSyntaxError as exc:
+        raise HTTPException(422, detail=f"Invalid CQL query: {exc}") from exc
+    except CqlTooExpensiveError as exc:
+        raise HTTPException(422, detail=f"CQL query too expensive: {exc}") from exc
+    except CqlDeadlineExceededError as exc:
+        raise HTTPException(504, detail=f"CQL query timed out: {exc}") from exc
+    criteria = {"kind": "cql", "query": body.query}
+    sc = Subcorpus(
+        corpus_id=cid,
+        name=body.name,
+        description=body.description or f"CQL: {body.query}",
+        filter_criteria=criteria,
     )
     session.add(sc)
     await session.flush()
@@ -760,6 +844,12 @@ async def resolve_subcorpus_document_ids(session: AsyncSession, subcorpus_id: st
     keyness) now accept an optional ``subcorpus_id``, resolve it through this
     function, and restrict their token queries to the returned documents.
 
+    v1.2.13-2: a subcorpus created by-CQL stores
+    ``filter_criteria = {"kind": "cql", "query": …}`` and resolves to the
+    documents containing at least one match (the CQL pattern is re-run at
+    resolution time under the standard matcher guards, so the member set
+    always reflects the current annotation version).
+
     Raises HTTPException(404) if the subcorpus does not exist. Returns the
     (possibly empty) list of matching document IDs.
     """
@@ -768,6 +858,25 @@ async def resolve_subcorpus_document_ids(session: AsyncSession, subcorpus_id: st
         raise HTTPException(404, "Subcorpus not found")
     if not sc.filter_criteria:
         return []
+    # v1.2.13-2: CQL-defined subcorpus — documents with ≥1 match.
+    if sc.filter_criteria.get("kind") == "cql":
+        from stats.cql import (
+            CqlDeadlineExceededError,
+            CqlSyntaxError,
+            CqlTooExpensiveError,
+            find_cql_spans,
+        )
+
+        query = str(sc.filter_criteria.get("query", ""))
+        if not query:
+            return []
+        try:
+            match_set = await find_cql_spans(session, sc.corpus_id, query)
+        except (CqlSyntaxError, CqlTooExpensiveError) as exc:
+            raise HTTPException(422, detail=f"Subcorpus CQL query failed: {exc}") from exc
+        except CqlDeadlineExceededError as exc:
+            raise HTTPException(504, detail=f"Subcorpus CQL query timed out: {exc}") from exc
+        return sorted(match_set.per_document().keys())
     # Find documents whose meta matches the filter criteria
     doc_stmt = select(Document.id).where(Document.corpus_id == sc.corpus_id)
     # Apply each filter criterion as a JSON match

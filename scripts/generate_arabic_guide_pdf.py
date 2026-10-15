@@ -1,4 +1,7 @@
-"""Generate the CorpusMind Arabic User Guide PDF with green theme and Amiri font."""
+"""Generate the CorpusMind Arabic User Guide PDF with green theme and Amiri font.
+
+v1.2.14-2: bumped alongside the engine version lockstep.
+"""
 import re
 from pathlib import Path
 from reportlab.lib.pagesizes import A4
@@ -18,7 +21,7 @@ from reportlab.pdfbase.pdfmetrics import registerFontFamily
 import arabic_reshaper
 from bidi.algorithm import get_display
 
-# v1.2.11: the guide version is read from the engine itself so a guide can
+# v1.2.13-2: the guide version is read from the engine itself so a guide can
 # never be regenerated against a stale number (the release pipeline rejects
 # a version mismatch; this makes the mismatch structurally impossible).
 _REPO = Path(__file__).resolve().parent.parent
