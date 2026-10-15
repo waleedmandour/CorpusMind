@@ -17,7 +17,7 @@
  */
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { api, type InterpretErrorResponse } from "@/lib/api";
+import { api, engineAttached, type InterpretErrorResponse } from "@/lib/api";
 
 export type IssueSeverity = "info" | "warning" | "error";
 
@@ -317,6 +317,15 @@ export const useTroubleshoot = create<TroubleshootState>()(
 
   startHealthPolling: () => {
     if (pollInterval) return; // Already polling
+    // v1.2.14-2 (PWA hotfix): static browser builds with no engine URL
+    // (e.g. the Vercel demo) have no engine to poll — probing our own
+    // origin can only mint guaranteed-404 "issues". Report unreachable
+    // immediately (the Home banner explains WHY) and skip the timer.
+    if (!engineAttached()) {
+      pollFailureCount = 2;
+      set({ backendReachable: false, polling: false });
+      return;
+    }
     set({ polling: true });
 
     const poll = async () => {

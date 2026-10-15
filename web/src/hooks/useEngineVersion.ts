@@ -27,7 +27,11 @@ export function useEngineVersion(): string {
     retry: 5,           // Task 1: retry on startup when engine isn't ready
     retryDelay: (attempt) => 500 * (attempt + 1),  // 500ms, 1s, 1.5s, 2s, 2.5s
   });
-  return query.data?.version ?? FALLBACK_VERSION;
+  // v1.2.14-2 (PWA hotfix): coalesce on falsy (not just nullish) — in
+  // unattached builds api.version() resolves to version:"" without a
+  // network call, and an empty string must fall through to the web
+  // build's own version constant, not render as "v".
+  return query.data?.version || FALLBACK_VERSION;
 }
 
 /** Returns the version with a leading "v" (e.g. "v0.1.15") for display. */

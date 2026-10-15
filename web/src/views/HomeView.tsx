@@ -13,7 +13,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useUI } from "@/store/ui";
 import { useApp } from "@/store/app";
-import { api, isTauriRuntime, nativeProvidersHealth } from "@/lib/api";
+import { api, engineAttached, isTauriRuntime, nativeProvidersHealth } from "@/lib/api";
 import { useEngineVersionDisplay } from "@/hooks/useEngineVersion";
 import { t } from "@/lib/i18n";
 
@@ -25,6 +25,10 @@ export function HomeView() {
   const activeCorpusId = useApp((s) => s.activeCorpusId);
 
   const isTauri = isTauriRuntime();
+  // v1.2.14-2 (PWA hotfix): static hosted builds with no VITE_ENGINE_URL
+  // have no engine attached at all — the red banner must explain that
+  // instead of telling users to run a local command that cannot help.
+  const attached = engineAttached();
 
   // v1.2.14-2 (PWA): Safari/WebKit (including every iOS browser) refuses
   // page-to-localhost connections outright, so even a running local engine is
@@ -99,10 +103,11 @@ export function HomeView() {
             {lang === "ar"
               ? "الواجهة الخلفية بلغة Python لا تعمل."
               : "The Python backend is not running."}
-            {!isTauri && <span> {lang === "ar" ? "في تطبيق سطح المكتب، يبدأ المحرك تلقائياً. في وضع المتصفح، ابدأه يدوياً:" : "In the desktop app, the engine starts automatically. In browser mode, start it manually:"}</span>}
+            {!isTauri && attached && <span> {lang === "ar" ? "في تطبيق سطح المكتب، يبدأ المحرك تلقائياً. في وضع المتصفح، ابدأه يدوياً:" : "In the desktop app, the engine starts automatically. In browser mode, start it manually:"}</span>}
+            {!isTauri && !attached && <span> {t(lang, "engine_not_attached_body")}</span>}
             {isTauri && <span> {lang === "ar" ? "كان من المفترض أن يبدأ المحرك تلقائياً. اذهب إلى " : "The engine should have started automatically. Go to "}<strong>{lang === "ar" ? "الإعدادات" : "Settings"}</strong>{lang === "ar" ? " وانقر " : " and click "}<strong>{lang === "ar" ? "إعادة فحص المحرك" : "Recheck Engine"}</strong>{lang === "ar" ? " للتشخيص." : " to diagnose."}</span>}
           </div>
-          {!isTauri && (
+          {!isTauri && attached && (
             <div className="engine-offline-cmd">
               <code>cd engine && source .venv/bin/activate && corpusmind-engine</code>
             </div>
@@ -129,10 +134,15 @@ export function HomeView() {
           <div className="pwa-ai-notice-content">
             <strong>{t(lang, "pwa_ai_title")}</strong>
             <p>{t(lang, "pwa_ai_body")}</p>
-            <p>{t(lang, "pwa_ai_fix")}</p>
-            <div className="engine-offline-cmd">
-              <code>cd engine && source .venv/bin/activate && corpusmind-engine</code>
-            </div>
+            {attached && (
+              <>
+                <p>{t(lang, "pwa_ai_fix")}</p>
+                <div className="engine-offline-cmd">
+                  <code>cd engine && source .venv/bin/activate && corpusmind-engine</code>
+                </div>
+              </>
+            )}
+            {!attached && <p>{t(lang, "pwa_ai_fix_hosted")}</p>}
             {isWebKitLike && (
               <p className="pwa-ai-notice-safari">{t(lang, "pwa_ai_safari_note")}</p>
             )}

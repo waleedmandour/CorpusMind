@@ -120,6 +120,11 @@ export const translations = {
     pwa_ai_title: "AI models unavailable — the engine is offline",
     pwa_ai_body: "Ollama and LM Studio run on your own computer, and browser security means this app (PWA) can only reach them through the CorpusMind engine. With the engine offline, no AI model can run — including the opt-in cloud providers. Everything else that needs the engine is paused too.",
     pwa_ai_fix: "Start the engine on this machine, then reload this page:",
+    // v1.2.14-2 (PWA hotfix): hosted static builds with no engine attached —
+    // a local "start it manually" command cannot help there, so say what
+    // will: deploy an engine + rebuild with VITE_ENGINE_URL, or go desktop.
+    engine_not_attached_body: "This hosted web app has no analysis engine attached. The engine is a separate Python backend that runs all the statistics and AI tooling — it ships inside the desktop app, and static web hosts cannot run it. To unlock everything here, deploy the engine on your own server and rebuild this PWA with VITE_ENGINE_URL pointing to it (see docs/BUILD_GUIDE.md), or use the desktop app.",
+    pwa_ai_fix_hosted: "To enable AI models in this hosted app, attach an engine: deploy it with a public URL and rebuild the PWA with VITE_ENGINE_URL set. On your own machine, the desktop app includes the engine and reaches local models directly.",
     pwa_ai_safari_note: "You appear to be using Safari (or an iOS browser), which blocks page-to-local-program connections entirely. For local AI, open CorpusMind in Chrome, Edge, or Firefox — or install the desktop app.",
     home_get_started: "Get Started",
     home_no_project: "You have not selected a project yet. Click Projects in the sidebar to create one and upload your text files.",
@@ -1215,6 +1220,9 @@ export const translations = {
     pwa_ai_title: "نماذج الذكاء الاصطناعي غير متاحة — المحرك متوقف",
     pwa_ai_body: "يعمل كلٌّ من Ollama و LM Studio على جهازك المحلي، ولأسباب أمنية لا تستطيع صفحة الويب (بما في ذلك هذا التطبيق) الوصول إليهما إلا عبر محرك CorpusMind. ولمّا كان المحرك متوقفًا، لا يمكن تشغيل أي نموذج ذكاء اصطناعي — بما في ذلك مزوّدو الخدمات السحابية الاختياريون. وقد توقفت بقية الأدوات المعتمدة على المحرك أيضًا.",
     pwa_ai_fix: "شغِّل المحرك على هذا الجهاز ثم أعد تحميل هذه الصفحة:",
+    // v1.2.14-2 (PWA hotfix): النسخ المخصصة للتطبيقات المستضافة بلا محرك مرفق.
+    engine_not_attached_body: "لا يوجد محرك تحليل مرفق بهذا التطبيق المستضاف. المحرك خلفية بايثون منفصلة تشغّل كل الإحصاءات وأدوات الذكاء الاصطناعي — وهي مضمّنة في تطبيق سطح المكتب، ولا تستطيع الاستضافات الساكنة تشغيلها. للاستفادة من كل شيء هنا، انشر المحرك على خادمك الخاص ثم أعد بناء هذا التطبيق مع ضبط VITE_ENGINE_URL للإشارة إليه (راجع docs/BUILD_GUIDE.md)، أو استخدم تطبيق سطح المكتب.",
+    pwa_ai_fix_hosted: "لتفعيل نماذج الذكاء الاصطناعي في هذا التطبيق المستضاف، أرفق محركًا: انشره عبر رابط عام ثم أعد بناء التطبيق مع ضبط VITE_ENGINE_URL. وعلى جهازك الخاص، يتضمّن تطبيق سطح المكتب المحرك ويتصل بالنماذج المحلية مباشرةً.",
     pwa_ai_safari_note: "يبدو أنك تستخدم Safari (أو متصفح iOS)، الذي يحظر الاتصال بالبرامج المحلية كليًا. للذكاء الاصطناعي المحلي، افتح CorpusMind عبر Chrome أو Edge أو Firefox — أو ثبِّت تطبيق سطح المكتب.",
     home_get_started: "ابدأ الآن",
     home_no_project: "لم تقم بتحديد مشروع بعد. انقر على المشاريع في الشريط الجانبي لإنشاء واحد وتحميل ملفاتك النصية إلى الذخيرة اللغوية.",

@@ -134,6 +134,82 @@ export function getEngineBase(): string {
 }
 
 // ----------------------------------------------------------------------- //
+// v1.2.14-2 (PWA hotfix): "is there an engine this build can talk to?"
+//
+// A production browser build served from a STATIC host (e.g. the Vercel
+// demo) with no VITE_ENGINE_URL baked in has NO engine: ENGINE_BASE is ""
+// (same-origin) and the static host has no /api/v1 routes, so every probe
+// is a guaranteed 404. Probing anyway produced exactly that — the deploy's
+// own 404 page, captured by Smart Troubleshooting as a phantom "HTTP 404:
+// NOT_FOUND" issue (reported 2026-10-15).
+//
+// engineAttached() is false exactly in that case, and every always-on
+// health/version/provider probe short-circuits to a synthetic offline
+// response instead of hitting the network. Callers keep their existing
+// logic (status !== "ok" → offline UI) with zero per-view changes.
+//
+// True (probe as before) when:
+//   - Tauri desktop  → sidecar at 127.0.0.1:8765 (fixed address),
+//   - vite dev       → same-origin + dev-server proxy (vite.config.ts),
+//   - VITE_ENGINE_URL configured → hosted PWA with a real engine URL.
+// ----------------------------------------------------------------------- //
+export function engineAttached(): boolean {
+  if (isTauriRuntime()) return true;
+  if (configuredEngineUrl) return true;
+  if (import.meta.env.DEV) return true;
+  return false;
+}
+
+/** Synthetic offline HealthResponse for unattached builds. */
+const UNATTACHED_HEALTH: HealthResponse = {
+  status: "offline",
+  engine: "none",
+  version: "not-attached",
+};
+
+/** Synthetic ProvidersResponse for unattached builds — mirrors what the
+ * engine would answer when every provider is unreachable, so all existing
+ * chip/notice logic keeps working untouched. */
+const UNATTACHED_PROVIDERS: ProvidersResponse = {
+  providers: [
+    { name: "ollama", healthy: false, error: "No engine attached to this deployment" },
+    { name: "lmstudio", healthy: false, error: "No engine attached to this deployment" },
+    { name: "cloud", healthy: false, error: "No engine attached to this deployment" },
+  ],
+};
+
+/** Synthetic classroom status for unattached builds — phase "off" makes the
+ * taskbar chip hide itself; every field the Settings card reads has a
+ * neutral value. */
+const SERVER_MODE_OFF: ServerModeStatus = {
+  enabled: false,
+  phase: "off",
+  mode: "simple",
+  https_port: 0,
+  http_port: 0,
+  caddy_running: false,
+  caddy_binary_found: false,
+  caddy_version: null,
+  caddy_error: "",
+  web_dist_bundled: false,
+  lan_ips: [],
+  urls: { app: "", server: "" },
+  student_model: "",
+  num_parallel: 0,
+  students_active: 0,
+  max_students: null,
+  students_max: null,
+  students_cap_source: "unknown",
+  students_joined_total: 0,
+  chats_total: 0,
+  audit_enabled: false,
+  audit_dir: "",
+  ollama_queue_depth: null,
+  ollama_running_models: null,
+  config_path: "",
+};
+
+// ----------------------------------------------------------------------- //
 // Types
 // ----------------------------------------------------------------------- //
 
@@ -1614,6 +1690,11 @@ let _engineReady: boolean | null = null;
 /** Check if the engine is accepting connections. Cached after first success. */
 export async function isEngineReady(): Promise<boolean> {
   if (_engineReady) return true;
+  // v1.2.14-2 (PWA hotfix): unattached static builds have no engine to
+  // probe — waitForEngine() would otherwise poll this every 500ms for up
+  // to 60s, minting ~120 guaranteed-404 requests against our own origin
+  // (the "phantom 404" reported from the Vercel demo).
+  if (!engineAttached()) return false;
   try {
     const r = await smartFetch("/api/v1/health");
     if (r.ok) {
@@ -1786,10 +1867,28 @@ async function jsonFetchAttempt<T>(
 
 export const api = {
   // --- Health & system ---
-  health: () => jsonFetch<HealthResponse>("/api/v1/health"),
-  ready: () => jsonFetch<{ status: string; providers: Record<string, boolean> }>("/api/v1/health/ready"),
-  version: () => jsonFetch<{ version: string; name: string }>("/api/v1/version"),
-  providers: () => jsonFetch<ProvidersResponse>("/api/v1/providers"),
+  // v1.2.14-2 (PWA hotfix): on static hosts with no engine URL these
+  // resolve to synthetic offline responses WITHOUT a network call — the
+  // same-origin probes were guaranteed 404s (phantom Smart Troubleshooting
+  // issues). See engineAttached() above.
+  health: () =>
+    engineAttached()
+      ? jsonFetch<HealthResponse>("/api/v1/health")
+      : Promise.resolve(UNATTACHED_HEALTH),
+  ready: () =>
+    engineAttached()
+      ? jsonFetch<{ status: string; providers: Record<string, boolean> }>("/api/v1/health/ready")
+      : Promise.resolve({ status: "offline", providers: {} as Record<string, boolean> }),
+  // Empty version string → useEngineVersion falls back to the web build's
+  // own version constant (the hook coalesces on falsy, not just nullish).
+  version: () =>
+    engineAttached()
+      ? jsonFetch<{ version: string; name: string }>("/api/v1/version")
+      : Promise.resolve({ version: "", name: "CorpusMind (web)" }),
+  providers: () =>
+    engineAttached()
+      ? jsonFetch<ProvidersResponse>("/api/v1/providers")
+      : Promise.resolve(UNATTACHED_PROVIDERS),
   listModels: (provider: string) =>
     jsonFetch<{ provider: string; models: string[] }>(`/api/v1/providers/${provider}/models`),
 
@@ -2153,7 +2252,12 @@ export const api = {
   // These are called from the Settings card; every route is teacher-gated
   // server-side, so in a student client they'd 403 (and the UI hides them).
   // --------------------------------------------------------------------- //
-  serverModeStatus: () => jsonFetch<ServerModeStatus>(`/api/v1/server-mode/status`),
+  // v1.2.14-2 (PWA hotfix): unattached builds report classroom mode off
+  // without a network call (the chip hides itself on phase === "off").
+  serverModeStatus: () =>
+    engineAttached()
+      ? jsonFetch<ServerModeStatus>(`/api/v1/server-mode/status`)
+      : Promise.resolve(SERVER_MODE_OFF),
   serverModeEnable: (req: ServerModeEnableRequest) =>
     jsonFetch<ServerModeStatus>(`/api/v1/server-mode/enable`, {
       method: "POST",

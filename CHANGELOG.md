@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
+
+### Fixed (PWA hotfix, 2026-10-16 — phantom 404 + honest "no engine attached" state)
+
+<!-- pwa-hotfix-2026-10-16 -->
+- **Hosted static builds (e.g. the Vercel PWA) no longer probe themselves for an engine.** With no `VITE_ENGINE_URL` baked in, the app previously assumed a same-origin engine and fired guaranteed-404 requests at its own origin: `waitForEngine` polled `/api/v1/health` every 500 ms for up to 60 s on every load, and the boot-time `providers`/`version`/`server-mode` queries 404'd too — Smart Troubleshooting then surfaced the deploy's own "HTTP 404: NOT_FOUND" page as a phantom issue. All always-on probes (`health`, `health/ready`, `version`, `providers`, `server-mode/status`, `isEngineReady`) now short-circuit to synthetic offline responses without touching the network when no engine is attached (new `engineAttached()` in `web/src/lib/api.ts`); the Smart Troubleshooting health poller does not start and its query-error hook stays quiet in that state.
+- **Honest "no engine attached" messaging (EN/AR).** The red Home banner and the AI-availability notice now distinguish a static hosted build (no engine URL) from a machine where the engine is merely stopped: hosted builds explain that the engine is a separate Python backend that ships inside the desktop app and cannot run on static web hosts, and drop the local `corpusmind-engine` start command that could never help there. Dev server, desktop (Tauri), and `VITE_ENGINE_URL` builds probe exactly as before.
+- No engine, no changes elsewhere: desktop shells (Windows/macOS/Linux), the engine, and release assets are untouched.
+
 ## [1.2.14-2] — 2026-10-15 — Collocation-network join-order fix (pre-release)
 
 > Second pre-release of v1.2.14. Adds one targeted SQL change to

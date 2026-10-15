@@ -6,7 +6,7 @@ import App from "@/App";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import "@/styles/global.css";
 import { useTroubleshoot } from "@/store/troubleshooting";
-import { api, isTauriRuntime, setStudentSession } from "@/lib/api";
+import { api, engineAttached, isTauriRuntime, setStudentSession } from "@/lib/api";
 import { queryClientDefaults } from "@/lib/queryClient";
 
 // ----------------------------------------------------------------------- //
@@ -88,6 +88,11 @@ const queryClient = new QueryClient({
       // poller in the troubleshooting store handles those, and we don't
       // want to double-report them.
       if (query.queryKey[0] === "health") return;
+      // v1.2.14-2 (PWA hotfix): in unattached builds (static host, no
+      // VITE_ENGINE_URL) EVERY query would 404 against our own origin —
+      // that noise is not a per-feature bug, it's the deployment shape,
+      // and the Home banner already explains it. Don't mint issues.
+      if (!engineAttached()) return;
 
       const message = error instanceof Error ? error.message : String(error);
       const endpoint = typeof query.queryKey[1] === "string"
@@ -117,14 +122,18 @@ const queryClient = new QueryClient({
 // ----------------------------------------------------------------------- //
 
 async function initTroubleshooting() {
-  // Check if Gemini interpretation is available (key configured in engine)
-  try {
-    const status = await api.troubleshootStatus();
-    useTroubleshoot.getState().setGeminiAvailable(status.available);
-  } catch {
-    // Engine not reachable yet — that's fine, the health poller will catch it
+  // Check if Gemini interpretation is available (key configured in engine).
+  // v1.2.14-2: skipped in unattached builds — probing a static origin for
+  // it is another guaranteed 404.
+  if (engineAttached()) {
+    try {
+      const status = await api.troubleshootStatus();
+      useTroubleshoot.getState().setGeminiAvailable(status.available);
+    } catch {
+      // Engine not reachable yet — that's fine, the health poller will catch it
+    }
   }
-  // Start the background health poller
+  // Start the background health poller (self-guards in unattached builds).
   useTroubleshoot.getState().startHealthPolling();
 }
 
