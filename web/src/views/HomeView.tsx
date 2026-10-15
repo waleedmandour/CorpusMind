@@ -117,6 +117,13 @@ export function HomeView() {
               {lang === "ar" ? "اذهب إلى الإعدادات" : "Go to Settings"}
             </button>
           )}
+          {/* v1.2.15 (PWA): hosted build with no engine — the fix is one
+              click away, not a rebuild: attach any engine at runtime. */}
+          {!isTauri && !attached && (
+            <button className="btn-primary" onClick={() => setActiveNav("settings")}>
+              {t(lang, "engine_attach_open_settings")}
+            </button>
+          )}
         </div>
       )}
 

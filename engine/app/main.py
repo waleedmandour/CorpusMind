@@ -226,6 +226,15 @@ def create_app() -> FastAPI:
     # header, so enabling Student Mode changes nothing locally.
     @app.middleware("http")
     async def enforce_shared_token(request: Request, call_next):
+        # v1.2.15: CORS preflights never carry custom headers (the Fetch spec
+        # forbids it), so a token-protected remote engine would reject its
+        # own preflight with 401 before CORSMiddleware (inner) can answer it
+        # — the browser then blocks the real request with a confusing CORS
+        # error and the hosted PWA can never attach. Let OPTIONS through:
+        # preflight responses carry no data; the ACTUAL request below is
+        # still fully token-checked.
+        if request.method == "OPTIONS":
+            return await call_next(request)
         # Read the (lru-cached) settings per request — tests and runtime
         # re-configuration must be able to change auth without a re-import.
         current = get_settings()

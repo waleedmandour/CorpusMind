@@ -40,6 +40,7 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { OllamaLanWarning } from "@/components/OllamaLanWarning";
 import { StudentModeServerCard } from "@/components/StudentModeServerCard";
 import { ArabicDataPackCard } from "@/components/ArabicDataPackCard";
+import { EngineAttachCard } from "@/components/EngineAttachCard";
 
 export function SettingsView() {
   const qc = useQueryClient();
@@ -219,6 +220,11 @@ export function SettingsView() {
           Engine status, model providers, and system configuration for CorpusMind.
         </p>
       </div>
+
+      {/* v1.2.15 (PWA): runtime engine attachment — attach the desktop
+          sidecar or a self-hosted engine to this hosted build without a
+          rebuild. Hidden inside Tauri (the sidecar is auto-attached there). */}
+      <EngineAttachCard />
 
       {/* Engine status card */}
       <section className="settings-card">

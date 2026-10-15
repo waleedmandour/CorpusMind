@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
 
+### Added (PWA, 2026-10-16 — runtime engine attachment)
+
+<!-- pwa-attach-2026-10-16 -->
+- **Attach an engine to the hosted PWA at runtime — no rebuild.** A static hosted build (e.g. the Vercel demo) previously had to stay a disconnected showcase unless the deployer rebuilt it with `VITE_ENGINE_URL`. The new **Settings → Engine Connection** card (`EngineAttachCard`) lets any user attach an engine from the running app — the desktop app's sidecar on `http://127.0.0.1:8765` (loopback targets are mixed-content-exempt in Chromium/Firefox) or any self-hosted engine — and the SAME hosted PWA becomes a full analysis client. URL + optional `CORPUSMIND_AUTH_TOKEN` bearer persist in localStorage; attach/detach reloads so every boot-time gate re-evaluates; a classroom (Student Mode) session keeps precedence; the card hides inside Tauri where the sidecar is auto-attached. Home-banner copy (EN/AR) now offers a one-click "Attach an engine" action instead of rebuild-only guidance.
+- **Engine-side support for browser attachment.** The hosted PWA's origin (`https://corpus-mind-web.vercel.app`) ships in the engine's default CORS allow-list; `CORPUSMIND_CORS_ORIGINS` now also accepts a comma-separated list (not just a JSON array); and CORS preflights (`OPTIONS`) pass through the shared-bearer-token middleware, so a token-protected remote engine no longer rejects its own preflight with a confusing 401 (the actual request is still token-checked). Docs: `docs/BUILD_GUIDE.md` §5.6 + new §5.8.
+- Desktop shells (Windows/macOS/Linux), release assets, and the engine's analysis behaviour are untouched.
+
 ### Fixed (PWA hotfix, 2026-10-16 — phantom 404 + honest "no engine attached" state)
 
 <!-- pwa-hotfix-2026-10-16 -->

@@ -10,10 +10,10 @@ from __future__ import annotations
 
 from functools import lru_cache
 from pathlib import Path
-from typing import Literal
+from typing import Annotated, Any, Literal
 
-from pydantic import Field
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import Field, field_validator
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -127,7 +127,11 @@ class Settings(BaseSettings):
     #   - Windows (if useHttpsScheme=true is ever enabled): https://tauri.localhost
     # Omitting the Windows origin silently breaks Engine/Ollama detection (and
     # every other API call) ONLY on Windows desktop builds.
-    cors_origins: list[str] = Field(
+    # v1.2.15: Annotated[..., NoDecode] — pydantic-settings would otherwise
+    # JSON-decode the env string BEFORE any validator runs and raise
+    # SettingsError for the friendlier comma-separated form. With NoDecode
+    # the raw string reaches _parse_cors_origins, which accepts both forms.
+    cors_origins: Annotated[list[str], NoDecode] = Field(
         default_factory=lambda: [
             "http://localhost:5173",
             "http://127.0.0.1:5173",
@@ -135,8 +139,38 @@ class Settings(BaseSettings):
             "http://tauri.localhost",
             "https://tauri.localhost",
             "https://localhost",
+            # v1.2.15: the project's own hosted PWA. Runtime engine attachment
+            # (web Settings → Engine Connection) points the hosted app at an
+            # engine the user controls — most commonly the desktop sidecar on
+            # 127.0.0.1:8765. Without this origin the browser rejects every
+            # response before the app can read it. CORS is an allow-list, not
+            # authentication: non-loopback deployments still require
+            # CORPUSMIND_AUTH_TOKEN (enforced in app/main.py).
+            "https://corpus-mind-web.vercel.app",
         ]
     )
+
+    @field_validator("cors_origins", mode="before")
+    @classmethod
+    def _parse_cors_origins(cls, v: Any) -> Any:
+        # pydantic-settings hands env vars over as raw strings (NoDecode).
+        # Accept BOTH documented forms:
+        #   CORPUSMIND_CORS_ORIGINS=["https://a.example"]          (JSON)
+        #   CORPUSMIND_CORS_ORIGINS=https://a.example,https://b.example
+        # A plain list (default_factory / init kwargs) passes through.
+        if isinstance(v, str):
+            text = v.strip()
+            if text.startswith("["):
+                import json
+
+                try:
+                    parsed = json.loads(text)
+                except json.JSONDecodeError:
+                    parsed = None
+                if isinstance(parsed, list):
+                    return [str(o).strip() for o in parsed if str(o).strip()]
+            return [origin.strip() for origin in text.split(",") if origin.strip()]
+        return v
 
     @property
     def sqlite_url(self) -> str:

@@ -613,6 +613,15 @@ Or set it as an environment variable:
 export CORPUSMIND_CORS_ORIGINS='["https://your-app.vercel.app"]'
 ```
 
+> **v1.2.15 — friendlier env syntax + the hosted PWA is pre-allowed.**
+> A comma-separated list now works too (handy for compose/systemd):
+> `CORPUSMIND_CORS_ORIGINS=https://your-app.vercel.app,https://corpus-mind-web.vercel.app`.
+> The project's own hosted PWA origin (`https://corpus-mind-web.vercel.app`)
+> ships in the engine's default CORS list, so the runtime attachment in
+> §5.8 works against a stock engine with no configuration. CORS is an
+> allow-list, not authentication — non-loopback deployments still require
+> `CORPUSMIND_AUTH_TOKEN`.
+
 ### 5.7 Cloud Provider Configuration
 
 If you want to use a cloud LLM provider (Anthropic, OpenAI) with the Vercel-hosted PWA:
@@ -624,6 +633,38 @@ export CORPUSMIND_CLOUD_DEFAULT_MODEL=gpt-4o-mini
 ```
 
 The cloud indicator will be visible in the PWA whenever a cloud request is in flight.
+
+### 5.8 Attaching an engine at runtime (no rebuild)
+
+Since v1.2.15 the hosted PWA does NOT need `VITE_ENGINE_URL` baked in at
+build time. Anyone can attach an engine from the running app:
+
+**Settings → Engine Connection** → enter the engine URL → **Test
+connection** → **Attach & reload**. The URL (and an optional bearer token)
+are stored in the browser's localStorage and survive reloads. From then on
+the hosted PWA is a full client of that engine — frequency, collocation,
+keyness, concordance, Arabic tools, AI assistant — while the data lives
+wherever the engine runs.
+
+Two typical engines to attach:
+
+- **The engine on this machine** (recommended; local-first). Keep the
+  desktop app running — or start the engine from source
+  (`cd engine && corpusmind-engine`) — and attach `http://127.0.0.1:8765`.
+  Chromium and Firefox exempt loopback targets from mixed-content
+  blocking, so the https app can talk to the local engine, and the hosted
+  PWA's origin is already in the engine's default CORS list (§5.6).
+  Safari (and all iOS browsers) block page-to-localhost connections
+  entirely — use Chrome, Edge, or Firefox.
+
+- **A self-hosted engine** (Option A/B/C above). Attach its
+  browser-reachable URL (https, or localhost), add the PWA's origin to
+  `CORPUSMIND_CORS_ORIGINS` (§5.6), and paste the engine's
+  `CORPUSMIND_AUTH_TOKEN` into the access-token field if the server sets
+  one.
+
+`VITE_ENGINE_URL` still works exactly as before: builds with it baked in
+attach automatically, with no per-user setup.
 
 ---
 

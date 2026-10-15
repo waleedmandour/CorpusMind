@@ -57,6 +57,83 @@ export const ENGINE_BASE =
 // empty string ("") → same-origin, relies on the Vite dev proxy in `vite dev`.
 
 // ----------------------------------------------------------------------- //
+// Runtime engine attachment (Settings → Engine Connection).
+//
+// A static hosted build (e.g. the Vercel PWA) ships with NO engine URL —
+// but it does not have to stay a disconnected showcase. Any user can attach
+// an engine at runtime, straight from the UI, and the SAME hosted PWA
+// becomes a full analysis client for:
+//   - the engine inside the running desktop app (http://127.0.0.1:8765).
+//     Loopback targets are exempt from mixed-content blocking in Chromium
+//     and Firefox, so an https page may talk to a local engine; the engine
+//     answers Private-Network-Access preflights (app/main.py) and ships
+//     the hosted PWA origin in its default CORS list.
+//   - any self-hosted engine (docs/BUILD_GUIDE.md §5): needs a
+//     browser-reachable URL (https, or localhost), its URL in the engine's
+//     CORPUSMIND_CORS_ORIGINS allow-list, and its CORPUSMIND_AUTH_TOKEN if
+//     it binds a non-loopback host.
+// The URL (+ optional bearer token) persists in localStorage so the
+// attachment survives reloads. Resolution precedence mirrors the classroom
+// session: student session (teacher-administered) > runtime attachment >
+// build-time VITE_ENGINE_URL / same-origin default.
+// ----------------------------------------------------------------------- //
+
+const ATTACHED_ENGINE_KEY = "corpusmind-engine-url";
+const ATTACHED_ENGINE_TOKEN_KEY = "corpusmind-engine-token";
+
+/** Normalize a user-provided engine URL: trim + strip trailing slashes.
+ * Deliberately NO scheme guessing: "127.0.0.1:8765" alone is not a valid
+ * fetch URL, so the UI placeholder and hints always show the full
+ * "http://127.0.0.1:8765" form. */
+function normalizeEngineUrl(raw: string): string {
+  return raw.trim().replace(/\/+$/, "");
+}
+
+/** The runtime-attached engine URL, or "" when none was attached. */
+export function getAttachedEngineUrl(): string {
+  try {
+    return normalizeEngineUrl(localStorage.getItem(ATTACHED_ENGINE_KEY) ?? "");
+  } catch {
+    return "";
+  }
+}
+
+/** Optional bearer token for the attached engine (remote engines that set
+ * CORPUSMIND_AUTH_TOKEN require it; loopback engines never do). */
+export function getAttachedEngineToken(): string {
+  try {
+    return localStorage.getItem(ATTACHED_ENGINE_TOKEN_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+/** Persist a runtime attachment. The caller (EngineAttachCard) reloads the
+ * page afterwards so every boot-time gate (main.tsx, HomeView, Smart
+ * Troubleshooting) re-evaluates against the now-attached engine. */
+export function setAttachedEngine(url: string, token = ""): void {
+  try {
+    const normalized = normalizeEngineUrl(url);
+    if (normalized) localStorage.setItem(ATTACHED_ENGINE_KEY, normalized);
+    else localStorage.removeItem(ATTACHED_ENGINE_KEY);
+    if (normalized && token.trim()) localStorage.setItem(ATTACHED_ENGINE_TOKEN_KEY, token.trim());
+    else localStorage.removeItem(ATTACHED_ENGINE_TOKEN_KEY);
+  } catch {
+    /* private mode — attachment lives for this page load only */
+  }
+}
+
+/** Drop the runtime attachment (back to the build-time configuration). */
+export function clearAttachedEngine(): void {
+  try {
+    localStorage.removeItem(ATTACHED_ENGINE_KEY);
+    localStorage.removeItem(ATTACHED_ENGINE_TOKEN_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+// ----------------------------------------------------------------------- //
 // v1.2.9 Student Mode (classroom client)
 //
 // When the PWA is opened in student mode (?mode=student served by the
@@ -126,10 +203,13 @@ function classroomSessionId(): string {
 }
 
 /** Resolve the API base per request: the classroom server in student
- * mode, otherwise the classic localhost/VITE_ENGINE_URL base. */
+ * mode, the runtime-attached engine (Settings → Engine Connection), or the
+ * classic localhost/VITE_ENGINE_URL base. */
 export function getEngineBase(): string {
   const student = getStudentServer();
   if (student) return student;
+  const attached = getAttachedEngineUrl();
+  if (attached) return attached;
   return ENGINE_BASE;
 }
 
@@ -150,11 +230,14 @@ export function getEngineBase(): string {
 //
 // True (probe as before) when:
 //   - Tauri desktop  → sidecar at 127.0.0.1:8765 (fixed address),
+//   - runtime attachment → user attached an engine in Settings
+//     (EngineAttachCard); probes go to that URL via getEngineBase(),
 //   - vite dev       → same-origin + dev-server proxy (vite.config.ts),
 //   - VITE_ENGINE_URL configured → hosted PWA with a real engine URL.
 // ----------------------------------------------------------------------- //
 export function engineAttached(): boolean {
   if (isTauriRuntime()) return true;
+  if (getAttachedEngineUrl()) return true;
   if (configuredEngineUrl) return true;
   if (import.meta.env.DEV) return true;
   return false;
@@ -1655,7 +1738,11 @@ async function smartFetch(path: string, init?: RequestInit): Promise<Response> {
   const url = `${getEngineBase()}${path}`;
   // v1.2.9 Student Mode: classroom servers require the student (or teacher)
   // bearer token on every call. The desktop/loopback flow stays unauthenticated.
-  const token = getStudentToken();
+  // Runtime attachment: a self-hosted engine that sets CORPUSMIND_AUTH_TOKEN
+  // gets its token from the attach card instead (student session wins when
+  // one is active — the classroom URL is administered by the teacher).
+  const studentToken = getStudentToken();
+  const token = studentToken || getAttachedEngineToken();
   const headers: Record<string, string> = {
     ...((init?.headers as Record<string, string>) ?? {}),
   };
@@ -1664,7 +1751,9 @@ async function smartFetch(path: string, init?: RequestInit): Promise<Response> {
   }
   // Classroom clients also announce an anonymous per-session ID so the
   // teacher's audit log shows a stable S-alias per device (never an IP).
-  if (token && !headers["X-CorpusMind-Session"]) {
+  // Sent for classroom sessions only — a plain attached engine is not a
+  // classroom and its audit middleware never sees that header.
+  if (studentToken && !headers["X-CorpusMind-Session"]) {
     const sid = classroomSessionId();
     if (sid) headers["X-CorpusMind-Session"] = sid;
   }
