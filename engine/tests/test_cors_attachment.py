@@ -60,11 +60,8 @@ async def test_preflight_passes_token_middleware(monkeypatch: pytest.MonkeyPatch
     from app.settings import get_settings
 
     get_settings.cache_clear()
-    from storage.session import _engine, dispose_db
-
-    _engine.clear() if hasattr(_engine, "clear") else None
-
     from app.main import app
+    from storage.session import dispose_db
 
     try:
         async with AsyncClient(
