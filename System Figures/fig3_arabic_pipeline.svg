@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1268" height="346" viewBox="0 0 1268 346">
+<rect x="0" y="0" width="1268" height="346" fill="#FFFFFF"/>
+<rect x="44.0" y="40.0" width="219.2" height="167.1" rx="10.0" fill="rgb(255, 255, 255)" />
+<rect x="44.0" y="40.0" width="219.2" height="167.1" rx="10.0" fill="none" stroke="rgb(100, 116, 139)" stroke-width="2" />
+<rect x="59.0" y="54.0" width="24.0" height="24.0" rx="50.0" fill="rgb(100, 116, 139)" />
+<rect x="284.2" y="40.0" width="219.2" height="167.1" rx="10.0" fill="rgb(255, 255, 255)" />
+<rect x="284.2" y="40.0" width="219.2" height="167.1" rx="10.0" fill="none" stroke="rgb(0, 114, 178)" stroke-width="2" />
+<rect x="299.2" y="54.0" width="24.0" height="24.0" rx="50.0" fill="rgb(0, 114, 178)" />
+<rect x="524.4" y="40.0" width="219.2" height="167.1" rx="10.0" fill="rgb(255, 255, 255)" />
+<rect x="524.4" y="40.0" width="219.2" height="167.1" rx="10.0" fill="none" stroke="rgb(0, 114, 178)" stroke-width="2" />
+<rect x="539.4" y="54.0" width="24.0" height="24.0" rx="50.0" fill="rgb(0, 114, 178)" />
+<rect x="764.6" y="40.0" width="219.2" height="167.1" rx="10.0" fill="rgb(255, 255, 255)" />
+<rect x="764.6" y="40.0" width="219.2" height="167.1" rx="10.0" fill="none" stroke="rgb(0, 114, 178)" stroke-width="2" />
+<rect x="779.6" y="54.0" width="24.0" height="24.0" rx="50.0" fill="rgb(0, 114, 178)" />
+<rect x="1004.8" y="40.0" width="219.2" height="167.1" rx="10.0" fill="rgb(255, 255, 255)" />
+<rect x="1004.8" y="40.0" width="219.2" height="167.1" rx="10.0" fill="none" stroke="rgb(0, 114, 178)" stroke-width="2" />
+<rect x="1019.8" y="54.0" width="24.0" height="24.0" rx="50.0" fill="rgb(0, 114, 178)" />
+<rect x="44.0" y="246.1" width="1180.0" height="59.9" rx="10.0" fill="rgb(231, 245, 240)" />
+<rect x="44.0" y="246.1" width="1180.0" height="59.9" rx="10.0" fill="none" stroke="rgb(0, 158, 115)" stroke-width="2" />
+<text x="71.0" y="66.0" text-anchor="middle" font-family="Arial, Liberation Sans" font-size="12.0" font-weight="700" font-style="normal" letter-spacing="0.00" fill="rgb(255, 255, 255)" dominant-baseline="central">1</text>
+<text x="91.0" y="65.6" text-anchor="start" font-family="Arial, Liberation Sans" font-size="14.0" font-weight="700" font-style="normal" letter-spacing="0.00" fill="rgb(31, 41, 55)" dominant-baseline="central">Arabic input</text>
+<text x="59.0" y="95.0" text-anchor="start" font-family="Arial, Liberation Sans" font-size="11.8" font-weight="400" font-style="normal" letter-spacing="0.00" fill="rgb(100, 116, 139)" dominant-baseline="central">Pasted text in the Arabic Tools</text>
+<text x="59.0" y="112.7" text-anchor="start" font-family="Arial, Liberation Sans" font-size="11.8" font-weight="400" font-style="normal" letter-spacing="0.00" fill="rgb(100, 116, 139)" dominant-baseline="central">panel,</text>
+<text x="59.0" y="130.4" text-anchor="start" font-family="Arial, Liberation Sans" font-size="11.8" font-weight="400" font-style="normal" letter-spacing="0.00" fill="rgb(100, 116, 139)" dominant-baseline="central">a corpus previously uploaded in</text>
+<text x="59.0" y="148.1" text-anchor="start" font-family="Arial, Liberation Sans" font-size="11.8" font-weight="400" font-style="normal" letter-spacing="0.00" fill="rgb(100, 116, 139)" dominant-baseline="central">'Your Corpus'</text>
+<text x="59.0" y="165.8" text-anchor="start" font-family="Arial, Liberation Sans" font-size="11.8" font-weight="400" font-style="normal" letter-spacing="0.00" fill="rgb(100, 116, 139)" dominant-baseline="central">selected for corpus-wide analysis</text>
+<text x="94.4" y="112.7" text-anchor="start" font-family="Arial, Liberation Sans" font-size="11.8" font-weight="700" font-style="normal" letter-spacing="0.00" fill="rgb(100, 116, 139)" dominant-baseline="central">or</text>
+<text x="267.2" y="123.6" text-anchor="start" font-family="Arial, Liberation Sans" font-size="17.0" font-weight="400" font-style="normal" letter-spacing="0.00" fill="rgb(148, 163, 184)" dominant-baseline="central">▶</text>
+<text x="311.2" y="66.0" text-anchor="middle" font-family="Arial, Liberation Sans" font-size="12.0" font-weight="700" font-style="normal" letter-spacing="0.00" fill="rgb(255, 255, 255)" dominant-baseline="central">2</text>
+<text x="331.2" y="65.6" text-anchor="start" font-family="Arial, Liberation Sans" font-size="14.0" font-weight="700" font-style="normal" letter-spacing="0.00" fill="rgb(31, 41, 55)" dominant-baseline="central">Normalization</text>
+<text x="299.2" y="95.0" text-anchor="start" font-family="Arial, Liberation Sans" font-size="11.8" font-weight="400" font-style="normal" letter-spacing="0.00" fill="rgb(100, 116, 139)" dominant-baseline="central">Orthographic unification (alef, taa</text>
+<text x="299.2" y="112.7" text-anchor="start" font-family="Arial, Liberation Sans" font-size="11.8" font-weight="400" font-style="normal" letter-spacing="0.00" fill="rgb(100, 116, 139)" dominant-baseline="central">marbuta)</text>
+<text x="299.2" y="130.4" text-anchor="start" font-family="Arial, Liberation Sans" font-size="11.8" font-weight="400" font-style="normal" letter-spacing="0.00" fill="rgb(100, 116, 139)" dominant-baseline="central">Diacritic stripping (dediac)</text>
+<text x="299.2" y="148.1" text-anchor="start" font-family="Arial, Liberation Sans" font-size="11.8" font-weight="400" font-style="normal" letter-spacing="0.00" fill="rgb(100, 116, 139)" dominant-baseline="central">Buckwalter transliteration for</text>
+<text x="299.2" y="165.8" text-anchor="start" font-family="Arial, Liberation Sans" font-size="11.8" font-weight="400" font-style="normal" letter-spacing="0.00" fill="rgb(100, 116, 139)" dominant-baseline="central">romanized search</text>
+<text x="507.4" y="123.6" text-anchor="start" font-family="Arial, Liberation Sans" font-size="17.0" font-weight="400" font-style="normal" letter-spacing="0.00" fill="rgb(148, 163, 184)" dominant-baseline="central">▶</text>
+<text x="551.4" y="66.0" text-anchor="middle" font-family="Arial, Liberation Sans" font-size="12.0" font-weight="700" font-style="normal" letter-spacing="0.00" fill="rgb(255, 255, 255)" dominant-baseline="central">3</text>
+<text x="571.4" y="65.6" text-anchor="start" font-family="Arial, Liberation Sans" font-size="14.0" font-weight="700" font-style="normal" letter-spacing="0.00" fill="rgb(31, 41, 55)" dominant-baseline="central">Morphology</text>
+<text x="539.4" y="95.0" text-anchor="start" font-family="Arial, Liberation Sans" font-size="11.8" font-weight="400" font-style="normal" letter-spacing="0.00" fill="rgb(100, 116, 139)" dominant-baseline="central">CAMeL Tools analysis of every</text>
+<text x="539.4" y="112.7" text-anchor="start" font-family="Arial, Liberation Sans" font-size="11.8" font-weight="400" font-style="normal" letter-spacing="0.00" fill="rgb(100, 116, 139)" dominant-baseline="central">token:</text>
+<text x="539.4" y="130.4" text-anchor="start" font-family="Arial, Liberation Sans" font-size="11.8" font-weight="400" font-style="normal" letter-spacing="0.00" fill="rgb(100, 116, 139)" dominant-baseline="central">root · pattern · lemma · stem · POS</text>
+<text x="539.4" y="148.1" text-anchor="start" font-family="Arial, Liberation Sans" font-size="11.8" font-weight="400" font-style="normal" letter-spacing="0.00" fill="rgb(100, 116, 139)" dominant-baseline="central">Aggregated frequency tables</text>
+<text x="747.6" y="123.6" text-anchor="start" font-family="Arial, Liberation Sans" font-size="17.0" font-weight="400" font-style="normal" letter-spacing="0.00" fill="rgb(148, 163, 184)" dominant-baseline="central">▶</text>
+<text x="791.6" y="66.0" text-anchor="middle" font-family="Arial, Liberation Sans" font-size="12.0" font-weight="700" font-style="normal" letter-spacing="0.00" fill="rgb(255, 255, 255)" dominant-baseline="central">4</text>
+<text x="811.6" y="65.6" text-anchor="start" font-family="Arial, Liberation Sans" font-size="14.0" font-weight="700" font-style="normal" letter-spacing="0.00" fill="rgb(31, 41, 55)" dominant-baseline="central">Variety identification</text>
+<text x="779.6" y="95.0" text-anchor="start" font-family="Arial, Liberation Sans" font-size="11.8" font-weight="400" font-style="normal" letter-spacing="0.00" fill="rgb(100, 116, 139)" dominant-baseline="central">Dialect: MSA, Egyptian, Gulf,</text>
+<text x="779.6" y="112.7" text-anchor="start" font-family="Arial, Liberation Sans" font-size="11.8" font-weight="400" font-style="normal" letter-spacing="0.00" fill="rgb(100, 116, 139)" dominant-baseline="central">Levantine</text>
+<text x="779.6" y="130.4" text-anchor="start" font-family="Arial, Liberation Sans" font-size="11.8" font-weight="400" font-style="normal" letter-spacing="0.00" fill="rgb(100, 116, 139)" dominant-baseline="central">Register classification</text>
+<text x="779.6" y="148.1" text-anchor="start" font-family="Arial, Liberation Sans" font-size="11.8" font-weight="400" font-style="normal" letter-spacing="0.00" fill="rgb(100, 116, 139)" dominant-baseline="central">Honest capability labels in the UI</text>
+<text x="987.8" y="123.6" text-anchor="start" font-family="Arial, Liberation Sans" font-size="17.0" font-weight="400" font-style="normal" letter-spacing="0.00" fill="rgb(148, 163, 184)" dominant-baseline="central">▶</text>
+<text x="1031.8" y="66.0" text-anchor="middle" font-family="Arial, Liberation Sans" font-size="12.0" font-weight="700" font-style="normal" letter-spacing="0.00" fill="rgb(255, 255, 255)" dominant-baseline="central">5</text>
+<text x="1051.8" y="65.6" text-anchor="start" font-family="Arial, Liberation Sans" font-size="14.0" font-weight="700" font-style="normal" letter-spacing="0.00" fill="rgb(31, 41, 55)" dominant-baseline="central">Analysis surfaces</text>
+<text x="1019.8" y="95.0" text-anchor="start" font-family="Arial, Liberation Sans" font-size="11.8" font-weight="400" font-style="normal" letter-spacing="0.00" fill="rgb(100, 116, 139)" dominant-baseline="central">Arabic concordance · collocation ·</text>
+<text x="1019.8" y="112.7" text-anchor="start" font-family="Arial, Liberation Sans" font-size="11.8" font-weight="400" font-style="normal" letter-spacing="0.00" fill="rgb(100, 116, 139)" dominant-baseline="central">sentiment</text>
+<text x="1019.8" y="130.4" text-anchor="start" font-family="Arial, Liberation Sans" font-size="11.8" font-weight="400" font-style="normal" letter-spacing="0.00" fill="rgb(100, 116, 139)" dominant-baseline="central">Parallel EN↔AR concordance</text>
+<text x="1019.8" y="148.1" text-anchor="start" font-family="Arial, Liberation Sans" font-size="11.8" font-weight="400" font-style="normal" letter-spacing="0.00" fill="rgb(100, 116, 139)" dominant-baseline="central">Corpus-wide bulk job (r4): chunked,</text>
+<text x="1019.8" y="165.8" text-anchor="start" font-family="Arial, Liberation Sans" font-size="11.8" font-weight="400" font-style="normal" letter-spacing="0.00" fill="rgb(100, 116, 139)" dominant-baseline="central">cancellable, token/chunk/ETA</text>
+<text x="1019.8" y="183.4" text-anchor="start" font-family="Arial, Liberation Sans" font-size="11.8" font-weight="400" font-style="normal" letter-spacing="0.00" fill="rgb(100, 116, 139)" dominant-baseline="central">progress</text>
+<text x="634.0" y="217.6" text-anchor="middle" font-family="Arial, Liberation Sans" font-size="15.0" font-weight="400" font-style="normal" letter-spacing="0.00" fill="rgb(148, 163, 184)" dominant-baseline="central">▼</text>
+<text x="62.0" y="266.6" text-anchor="start" font-family="Arial, Liberation Sans" font-size="13.5" font-weight="700" font-style="normal" letter-spacing="0.00" fill="rgb(31, 41, 55)" dominant-baseline="central">Aggregated report &amp; exports</text>
+<text x="62.0" y="283.3" text-anchor="start" font-family="Arial, Liberation Sans" font-size="11.8" font-weight="400" font-style="normal" letter-spacing="0.00" fill="rgb(100, 116, 139)" dominant-baseline="central">Top roots (juthur), patterns (awzan), lemmas and tokens with POS distribution — exportable as Excel / CSV / TSV / TXT / JSON, plus the engine's full-depth JSON report.</text>
+</svg>
