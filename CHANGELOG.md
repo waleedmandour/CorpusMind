@@ -7,6 +7,82 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
 
+## [1.2.14-3] — 2026-10-17 — PWA removal, Persuasion-Index resource fixes, collocates-per-level slider (pre-release)
+
+> Third pre-release of v1.2.14. Three user-facing corrections and one
+> feature: the web app ships as a plain Vite SPA (the PWA layer is removed —
+> the engine and its models cannot run inside a browser-installed shell, so
+> installability and offline caching were redundant), every Persuasion-Index
+> resource link now leads to a page/download that actually serves the right
+> data file (content-checked installs, corrected lens citation), and the
+> Collocation Network gains a "Collocates" slider that grows BOTH levels of
+> the graph while keeping it fitted to its window.
+
+### Added
+
+- **Collocates-per-level slider in the Collocation Network.** One control
+  (6–40, default 14 = the shipped look) drives BOTH levels: the node word's
+  collocates on the initial fetch and each expanded collocate's own
+  collocates (previously hardcoded 14/8). The value commits on release
+  (pointer-up / keyboard / blur) so dragging cannot storm the engine;
+  level-2 expansion is clamped to the remaining 120-node budget; the
+  engine's `top_n` cap rises 30 → 40 with a validation test. The graph
+  keeps adhering to the size of its window: node sizes rescale with graph
+  order (0.55 floor at the cap) and the camera re-fits after every load,
+  re-query and expansion on both the WebGL and 2D-fallback renderers.
+  Full detail in the dated section below.
+
+### Removed
+
+- **The PWA layer is gone; the web app is a plain Vite SPA.** The service
+  worker, `vite-plugin-pwa`, the web manifest and its icon, and the
+  `virtual:pwa-register` registration block were removed — the analysis
+  engine and its models cannot run inside a browser-installed shell, so
+  installability and offline caching were redundant surface area (a PWA
+  install yielded a shell that could never analyze anything). Also updated
+  for consistency: the About panel's stack list and the "(PWA)" i18n
+  string, README, docs (ARCHITECTURE, USER_GUIDE EN/AR, Zenodo guide,
+  methodology framework), CITATION.cff, THIRD_PARTY_LICENSES.md, and the
+  CI / release / macOS-rebuild workflows (the web artifact gate now
+  verifies the bare `index.html` build). Historical internal identifiers
+  (`pwa_ai_*` i18n keys, CHANGELOG history) are intentionally untouched.
+  The hosted web app itself, Settings → Engine Connection, and runtime
+  engine attachment are unaffected — only installability/offline caching
+  went away.
+
+### Fixed
+
+- **Persuasion-Index resource links, installer content gates, and the
+  lens citation.** The single-word concreteness link now points at the
+  publisher-hosted Brysbaert, Warriner & Kuperman (2014) supplemental xlsx
+  and the multiword link at the dataset's own OSF page (GUID `he4dv`);
+  `scripts/install_pi_resources.py` validates content (zip magic / CSV
+  header) and falls back to the author's GitHub mirror; the lens citation
+  now matches the package's own CITATION.cff (Gong, Wang, Xu &
+  Mendelsohn 2026). Full detail in the dated section below.
+
+### Tests
+
+- Engine suite at the release commit: **770 passed / 17 skipped / 0
+  failed** (90s, `en_core_web_sm` installed; the 17 skips are the optional
+  USAS/Arabic packs absent locally — the CI test-gate installs them).
+  Ruff runs in the release test-gate.
+- Web: `tsc --noEmit` clean; UI regression suite **39/39**; `vite build`
+  clean (dist contains no `sw.js` / `manifest.webmanifest`).
+- Version lockstep: **9/9** (engine `__version__`, pyproject, three
+  package.jsons, both npm locks, Cargo.toml, tauri.conf.json, CITATION.cff,
+  frontend fallback version, docker image tag, both guide generators).
+
+### Migration notes
+
+- **No API changes.** The network endpoint's `top_n` ceiling widened
+  30 → 40 (backward compatible); all other endpoints keep their
+  signatures. **No data migration.**
+- **Hosted web app:** an already-installed PWA keeps its cached shell
+  until the site is refreshed; new visitors get the plain SPA with nothing
+  to install. Existing v1.2.14-2 installations can upgrade in place.
+
+
 ### Added (Collocation Network, 2026-10-17 — user-controlled collocates per level)
 
 <!-- collocates-slider-2026-10-17 -->
