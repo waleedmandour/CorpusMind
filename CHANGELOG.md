@@ -65,6 +65,79 @@ once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 <!-- windows-signing-2026-10-17 -->
 - **The release pipeline can now sign the Windows installers, removing the Microsoft Defender SmartScreen "Windows protected your PC" screen once a signing identity is configured.** Two secrets-driven paths in the Windows job (`.github/workflows/release.yml`): **Azure Trusted Signing** (recommended — Microsoft-operated CA, fastest reputation; secrets `CM_AZURE_TENANT_ID`/`CM_AZURE_CLIENT_ID`/`CM_AZURE_CLIENT_SECRET` + variables `CM_TS_ENDPOINT`/`CM_TS_ACCOUNT`/`CM_TS_PROFILE`, signed via Tauri `signCommand` + `artifact-signing-cli`) and a **classic PFX certificate** (`CM_WINDOWS_CERTIFICATE` + `CM_WINDOWS_CERTIFICATE_PASSWORD`, imported into `CurrentUser\My`, signed via `certificateThumbprint` + SHA-256 + RFC 3161 timestamp). The NSIS `.exe`, the `.msi`, and the NSIS uninstaller are all covered; a new "Verify installer signatures" step asserts the artifacts really carry a signature. With neither path configured the build stays unsigned exactly as before — but the job summary now says so loudly. Config is generated per-run by `scripts/ci_windows_signing_config.py` into a git-ignored `signing-override.json` (never committed). Docs: `docs/BUILD_GUIDE.md` §5.9, including the 2026 reputation reality (even EV certificates no longer guarantee an instantly clean screen) and the peer comparison: #LancsBox documents a SmartScreen click-through ("agree to security warnings") rather than eliminating it, while the CorpusMind download page now carries the same interim click-through note (EN/AR) for the unsigned interim period.
 
+## [1.2.14-4] — 2026-10-17 — Arabic-corpus analysis in Arabic Tools, Windows signing pipeline, SmartScreen guidance (pre-release)
+
+> Fourth pre-release of v1.2.14, and the first of the line with a
+> headline feature: the Arabic Tools panel can now run its extensive
+> morphological analysis directly on an Arabic corpus already uploaded
+> in 'Your Corpus' — no copy-pasting megabytes of text. The release also
+> carries the secrets-driven Windows code-signing pipeline (dormant
+> until a signing identity is configured, no rebuild needed) and the
+> User Guide documentation of the SmartScreen click-through decision
+> that shipped after v1.2.14-3.
+
+### Added
+
+- **Arabic Tools: analyze a pre-loaded corpus.** A segmented toggle —
+  *Enter text / Pre-loaded corpus* — keeps the classic paste-text
+  workflow untouched and adds a corpus mode: the panel lists the active
+  project's Arabic-language corpora and hands the chosen corpus to the
+  engine's chunked bulk-analysis job, which loads the stored text
+  server-side (the browser never round-trips megabytes) and reports
+  progress (tokens, chunks, ETA) with cancellation between chunks. The
+  aggregated report — POS distribution plus top roots (الجذور), patterns
+  (الأوزان), lemmas (الأصول) and tokens — exports through the standard
+  xlsx/csv/tsv/txt/json path or as the engine's full-depth JSON report.
+  Projects with no Arabic corpus get an actionable hint with a one-click
+  jump to 'Your Corpus'. Full detail in the dated section below.
+- **Windows code-signing pipeline (dormant until configured).** The
+  release workflow's Windows job can sign the NSIS `.exe`, the `.msi`
+  and the NSIS uninstaller via Azure Trusted Signing or a classic PFX
+  certificate, driven entirely by repository secrets/variables
+  (`docs/BUILD_GUIDE.md` §5.9). With no identity configured the build
+  stays unsigned exactly as before. Full detail in the dated section
+  below.
+
+### Changed
+
+- **The User Guide tells Windows users to accept the SmartScreen
+  warning.** CorpusMind ships unsigned by decision (no monthly signing
+  subscription for a free academic tool), so the guide (EN §2, AR §11.2)
+  now walks through Microsoft Defender SmartScreen's reputation warning:
+  More info → Run anyway, the browser's `.msi` "not commonly downloaded"
+  Keep flow, and verification against the release's `SHA256SUMS.txt`.
+  Both guide PDFs were regenerated, and the copy bundled inside the
+  desktop app — stale since the v1.2.11 era — was replaced with the
+  current one. Full detail in the dated section below.
+
+### Tests
+
+- Engine suite at the release commit: **783 passed / 15 skipped / 0
+  failed** locally (the 15 skips are the optional CAMeL/USAS packs the
+  CI test-gate installs). Five new tests cover the corpus-start bulk
+  path end-to-end with a stubbed analyzer: routing, the exactly-one-of
+  validation (both/neither → 422), unknown-corpus 404, blank-document
+  skipping, busy 409 with source labeling. The mypy strict baseline for
+  the tests package was re-locked 1075 → 1093 per repo convention
+  ("count, don't chase zero") after the r2/r3 test additions; the new
+  test file is fully annotated and holds the advisory gate green.
+- Web: `tsc --noEmit` clean; UI regression suite **44/44** (5 new
+  Arabic-corpus-mode tests: default text mode, Arabic-only picker,
+  empty-state navigation, run → progress → report, cancel); `vite
+  build` clean.
+- Version lockstep: **9/9**.
+
+### Migration notes
+
+- **One API addition, no breaking changes.** `POST
+  /api/v1/arabic/analyze/job` accepts an optional `corpus_id` alongside
+  the existing raw-text `text` body — exactly one of the two (both or
+  neither → 422); an unknown `corpus_id` → 404; a corpus with no stored
+  text → 422. The interactive per-tool endpoints and their 30s/120s
+  deadlines are unchanged. **No data migration.** Existing v1.2.14-3
+  installations can upgrade in place; the desktop bundle now carries the
+  current User Guide PDF.
+
 ## [1.2.14-3] — 2026-10-17 — PWA removal, Persuasion-Index resource fixes, collocates-per-level slider (pre-release)
 
 > Third pre-release of v1.2.14. Three user-facing corrections and one
