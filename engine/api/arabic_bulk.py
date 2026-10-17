@@ -23,10 +23,12 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.arabic_bulk import BulkBusyError, get_bulk_job
 from app.logging import get_logger
+from nlp.arabic.pipeline import ArabicDataMissingError
 from storage.models import Corpus, Document
 from storage.session import get_session
 
@@ -74,18 +76,60 @@ async def start_bulk(
 ) -> dict[str, Any]:
     if bool(body.text) == bool(body.corpus_id):
         raise HTTPException(422, "Provide exactly one of `text` or `corpus_id`.")
-    source: str | None = None
-    if body.corpus_id is not None:
-        source, text = await _corpus_text(session, body.corpus_id)
-    else:
-        text = body.text or ""
+    # r5: nothing below may escape as a BARE 500. The corpus read and the job
+    # start touch the local DB, the filesystem and the analyzer stack — on a
+    # real desktop machine any of these can fail for environment reasons
+    # (antivirus holding the DB file, disk pressure, a lock from a long
+    # ingestion commit). Every failure class gets an actionable detail and a
+    # server-side traceback in the log, mirroring the interactive route's
+    # contract (api/arabic.py): known-recoverable -> 503, unknown -> a LABELED
+    # 500 ("<ErrClass>: <msg>"), never a detail-less Internal Server Error.
     job = get_bulk_job()
     try:
+        source: str | None = None
+        if body.corpus_id is not None:
+            source, text = await _corpus_text(session, body.corpus_id)
+        else:
+            text = body.text or ""
         return job.start(text, source=source)
+    except HTTPException:
+        raise
     except BulkBusyError as e:
         raise HTTPException(status_code=409, detail=str(e)) from e
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e)) from e
+    except ArabicDataMissingError as e:
+        # Same contract as the interactive route; the current start path is
+        # data-free, but the chunking stack must be allowed to adopt the
+        # pre-flight without silently changing the wire behavior.
+        raise HTTPException(status_code=503, detail=str(e)) from e
+    except SQLAlchemyError as e:
+        log.exception("arabic_bulk_start_db_error", corpus_id=body.corpus_id)
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "The corpus could not be read from the local database "
+                f"({type(e).__name__}). Another long operation (for example a "
+                "large upload still processing) may be holding it — wait a "
+                "moment and start the analysis again."
+            ),
+        ) from e
+    except (MemoryError, OSError) as e:
+        log.exception("arabic_bulk_start_load_error", corpus_id=body.corpus_id)
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "The corpus text could not be loaded for analysis "
+                f"({type(e).__name__}: {e}). Free some memory/disk space and "
+                "try again; if it persists, analyze the corpus in parts."
+            ),
+        ) from e
+    except Exception as e:
+        log.exception("arabic_bulk_start_unexpected", corpus_id=body.corpus_id)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Bulk Arabic analysis could not be started: {type(e).__name__}: {e}",
+        ) from e
 
 
 @router.get("/arabic/analyze/job/status")

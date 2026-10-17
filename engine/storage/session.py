@@ -148,6 +148,35 @@ async def init_db() -> None:
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
         await _migrate_sqlite(conn)
+    await _enable_wal_mode(engine)
+
+
+async def _enable_wal_mode(engine) -> None:
+    """r5: convert the data-directory DB to WAL journal mode (best-effort).
+
+    In the default DELETE journal mode a reader blocks behind any in-flight
+    write commit — on slow/antivirus-scanned Windows disks a large ingestion
+    commit could hold the corpus-mode bulk start (and every other reader) up
+    to the 30s busy timeout, surfacing as an opaque error. WAL lets readers
+    proceed while a write commits. The mode is stored in the DB file header:
+    this is a one-time conversion per data directory; :memory: test DBs
+    report "memory" and are untouched. Best-effort by design — a filesystem
+    that refuses WAL (some network shares) keeps DELETE mode instead of
+    failing engine boot.
+    """
+    from app.logging import get_logger
+
+    _log = get_logger(__name__)
+    try:
+        async with engine.connect() as conn:
+            row = await conn.exec_driver_sql("PRAGMA journal_mode=WAL")
+            mode = row.scalar()
+        if mode and str(mode).lower() == "wal":
+            _log.info("sqlite_journal_mode", mode="wal")
+        else:
+            _log.debug("sqlite_journal_mode", mode=str(mode))
+    except Exception as e:
+        _log.warning("sqlite_wal_unavailable", error=str(e))
 
 
 async def dispose_db() -> None:

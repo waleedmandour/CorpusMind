@@ -208,3 +208,72 @@ async def test_corpus_start_busy_409_and_status_has_source(client: AsyncClient, 
     c = await client.post("/api/v1/arabic/analyze/job/cancel")
     assert c.status_code == 200
     _wait_for_state(bulk_mod.get_bulk_job(), {"cancelled", "done"}, timeout=10.0)
+
+
+# --------------------------------------------------------------------------- #
+# r5: the start route must NEVER surface a bare 500. Environment-level
+# failures (a locked/busy local DB, disk pressure, anything unexpected) get
+# actionable details + a server-side traceback; a bare "Internal Server
+# Error" with no cause is exactly the field report this pin exists for.
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.asyncio
+async def test_corpus_start_db_error_returns_actionable_503(
+    client: AsyncClient, monkeypatch: MonkeyPatch
+) -> None:
+    """A busy/locked local DB (e.g. a large ingestion commit still flushing)
+    is a 503 with an actionable message — not a bare 500."""
+    from sqlalchemy.exc import OperationalError
+
+    import api.arabic_bulk as api_bulk
+
+    async def _locked(_session: Any, _cid: str) -> tuple[str, str]:
+        raise OperationalError(
+            "SELECT ...", {}, Exception("database is locked")
+        )
+
+    monkeypatch.setattr(api_bulk, "_corpus_text", _locked)
+    r = await client.post("/api/v1/arabic/analyze/job", json={"corpus_id": "whatever"})
+    assert r.status_code == 503
+    detail = r.json()["detail"]
+    assert "local database" in detail
+    assert "OperationalError" in detail
+    assert "wait a moment" in detail
+
+
+@pytest.mark.asyncio
+async def test_corpus_start_load_error_returns_503(
+    client: AsyncClient, monkeypatch: MonkeyPatch
+) -> None:
+    """Disk/memory pressure while loading the corpus text is a 503 that names
+    the underlying OS error."""
+    import api.arabic_bulk as api_bulk
+
+    async def _no_space(_session: Any, _cid: str) -> tuple[str, str]:
+        raise OSError(28, "No space left on device")
+
+    monkeypatch.setattr(api_bulk, "_corpus_text", _no_space)
+    r = await client.post("/api/v1/arabic/analyze/job", json={"corpus_id": "whatever"})
+    assert r.status_code == 503
+    detail = r.json()["detail"]
+    assert "could not be loaded" in detail
+    assert "No space left on device" in detail
+
+
+@pytest.mark.asyncio
+async def test_corpus_start_unexpected_error_is_labeled_500(
+    client: AsyncClient, monkeypatch: MonkeyPatch
+) -> None:
+    """An unknown failure is a LABELED 500 ('<ErrClass>: <msg>', same
+    convention as the interactive route) — never a detail-less Internal
+    Server Error, and the traceback is logged server-side."""
+    import api.arabic_bulk as api_bulk
+
+    async def _boom(_session: Any, _cid: str) -> tuple[str, str]:
+        raise RuntimeError("disk exploding")
+
+    monkeypatch.setattr(api_bulk, "_corpus_text", _boom)
+    r = await client.post("/api/v1/arabic/analyze/job", json={"corpus_id": "whatever"})
+    assert r.status_code == 500
+    assert "RuntimeError: disk exploding" in r.json()["detail"]
