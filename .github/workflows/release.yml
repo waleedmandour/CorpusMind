@@ -576,7 +576,12 @@ jobs:
     name: macOS (Intel)
     needs: test-gate
     runs-on: macos-15-intel
-    timeout-minutes: 45
+    # v1.2.14-3: the Intel runners are markedly slower than arm64 — with a
+    # warm cargo cache the full chain (deps + PyInstaller sidecar + web build
+    # + smoke tests + Tauri x86_64 build) measured >45 min at v1.2.14-3 and
+    # the 45-min cap killed the job mid-Tauri-build. 60 covers the observed
+    # need with headroom.
+    timeout-minutes: 60
     env:
       # Neutral CM_* names — see the identical comment in the macos-arm64 job:
       # an empty-but-set APPLE_CERTIFICATE makes tauri-bundler import an empty
