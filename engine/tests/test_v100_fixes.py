@@ -322,6 +322,22 @@ def test_network_empty_result_shape(monkeypatch):
     assert out["stats"]["nodes"] == 0
 
 
+def test_network_top_n_cap_matches_ui_slider():
+    """v1.2.15: the UI's "Collocates per level" slider tops out at 40 (both
+    levels of the network) — the request model must accept that value while
+    still rejecting out-of-range requests."""
+    from pydantic import ValidationError
+
+    from api.network import NetworkRequest
+
+    assert NetworkRequest(node="w").top_n == 14
+    assert NetworkRequest(node="w", top_n=40).top_n == 40
+    with pytest.raises(ValidationError):
+        NetworkRequest(node="w", top_n=41)
+    with pytest.raises(ValidationError):
+        NetworkRequest(node="w", top_n=2)
+
+
 # --------------------------------------------------------------------------- #
 # 3. Cloud provider config (Gemini + custom)
 # --------------------------------------------------------------------------- #

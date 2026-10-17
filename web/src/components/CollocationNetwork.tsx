@@ -10,6 +10,10 @@
  *     measure (all measures ship per edge, so switching measure never
  *     refetches — the reducer just re-reads precomputed normalized scores).
  *   - 7 measures: MI, T-score, log-likelihood, Dice, Log-Dice, χ², ΔP.
+ *   - "Collocates" slider (v1.2.15): grow BOTH levels — the node word's
+ *     collocates and each expanded collocate's own — committing on release;
+ *     node sizes rescale with graph size and the camera re-fits so the
+ *     network always stays inside its window.
  *   - Click a collocate → its collocates are fetched server-side and merged
  *     in (progressive second-order expansion, no page refresh).
  *   - Click an expanded collocate again → collapse its branch.
@@ -53,8 +57,13 @@ const MEASURES: Array<{ key: CollocationMeasure; label: string }> = [
 ];
 
 const MAX_NODES = 120;
-const INITIAL_TOP_N = 14;
-const EXPAND_TOP_N = 8;
+// v1.2.15: the collocate count is user-controlled. DEFAULT keeps the shipped
+// look; MIN/MAX bracket the "Collocates" slider. The SAME value drives BOTH
+// levels of the network: the node word's collocates (initial fetch) and each
+// expanded collocate's own collocates (server clamps to the node budget).
+const DEFAULT_TOP_N = 14;
+const MIN_TOP_N = 6;
+const MAX_TOP_N = 40; // must stay ≤ api.NetworkRequest.top_n's le= cap
 
 /**
  * Sigma v3 is WebGL2-only. Some desktop webviews (WebKitGTK on Linux without
@@ -145,6 +154,30 @@ function seedPositions(graph: Graph) {
   });
 }
 
+/**
+ * v1.2.15: (re)scale EVERY node's size from its corpus frequency AND the
+ * current graph order. As the user grows the network (slider or expansion)
+ * the fixed graph window must keep fitting the whole graph: node radii shrink
+ * steadily from the shipped sizes at 30 nodes down to ~55% at MAX_NODES so
+ * labels stay legible and ForceAtlas2's adjustSizes can pack clusters without
+ * a hairball. Called after the initial build and after every expansion.
+ */
+function applyNodeSizes(graph: Graph) {
+  let maxFreq = 1;
+  graph.forEachNode((_n, a) => {
+    maxFreq = Math.max(maxFreq, Number(a.freq ?? 0));
+  });
+  const k = Math.max(Math.min(1, Math.sqrt(30 / Math.max(graph.order, 1))), 0.55);
+  graph.forEachNode((n, a) => {
+    const base = Number(a.freq ?? 0) / maxFreq;
+    graph.setNodeAttribute(
+      n,
+      "size",
+      a.isCenter ? 16 * k : (5 + 9 * Math.sqrt(Math.max(base, 0))) * k,
+    );
+  });
+}
+
 function runLayout(graph: Graph, iterations: number) {
   if (graph.order < 3) return;
   forceAtlas2.assign(graph, {
@@ -176,6 +209,12 @@ export function CollocationNetwork({
   const measureRef = useRef<CollocationMeasure>("mi");
 
   const [measure, setMeasure] = useState<CollocationMeasure>("mi");
+  // v1.2.15: "Collocates" slider — `topN` is the live slider position (cheap,
+  // no server traffic); `appliedTopN` is the committed value the server was
+  // last queried with. Committing happens on release (pointerup / keyup /
+  // blur) so dragging the slider cannot storm the engine with fetches.
+  const [topN, setTopN] = useState(DEFAULT_TOP_N);
+  const [appliedTopN, setAppliedTopN] = useState(DEFAULT_TOP_N);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [stats, setStats] = useState({ nodes: 0, edges: 0, density: 0 });
   const [tooltip, setTooltip] = useState<{ x: number; y: number; text: string } | null>(null);
@@ -213,6 +252,19 @@ export function CollocationNetwork({
 
   const qc = useQueryClient();
 
+  // v1.2.15: fit the WHOLE graph inside the fixed graph window. WebGL path:
+  // Sigma normalizes coordinates, so the default camera (ratio 1) shows every
+  // node — animatedReset glides there. 2D path: bump `fitTick` so the canvas
+  // renderer recomputes its fit-to-view. Called after every (re)build and
+  // expansion so growth never pushes nodes outside the window.
+  const fitCamera = useCallback(() => {
+    if (modeRef.current === "webgl") {
+      sigmaRef.current?.getCamera().animatedReset({ duration: 250 });
+    } else {
+      setFitTick((t) => t + 1);
+    }
+  }, []);
+
   const flashMsg = useCallback((msg: string) => {
     setFlash(msg);
     setTimeout(() => setFlash(""), 2600);
@@ -242,6 +294,8 @@ export function CollocationNetwork({
         norms: normalizeEdge(edge, res.edges),
       });
     }
+    // v1.2.15: sizes derive from frequency AND graph order (slider growth).
+    applyNodeSizes(graph);
     seedPositions(graph);
     // v1.2.14 (P1.5): reduce FA2 iterations from 140 -> 80 for medium
     // graphs (top_n <= 14). Cuts main-thread blocking time by ~40%
@@ -257,8 +311,8 @@ export function CollocationNetwork({
   // untouched — only the data fetch is memoised.
   const networkQueryKey = useCallback(
     (node: string) =>
-      ["collocation-network", cid, node, level, win, minFreq] as const,
-    [cid, level, win, minFreq],
+      ["collocation-network", cid, node, level, win, minFreq, appliedTopN] as const,
+    [cid, level, win, minFreq, appliedTopN],
   );
 
   // v1.2.14 (P1.4): expose the network loading state for the parent view
@@ -285,7 +339,7 @@ export function CollocationNetwork({
             window: win,
             min_freq: minFreq,
             measure: "mi",
-            top_n: INITIAL_TOP_N,
+            top_n: appliedTopN,
             depth: 2,
             max_nodes: MAX_NODES,
           }),
@@ -306,6 +360,9 @@ export function CollocationNetwork({
         setExpanded(new Set());
         sigmaRef.current?.setGraph(graphRef.current);
         refreshAll();
+        // v1.2.15: keep the whole graph inside the window after a rebuild
+        // (the camera may have been left zoomed/panned from the last query).
+        fitCamera();
       } catch (e) {
         if (!cancelled) {
           setLoadError(`Network failed: ${(e as Error).message}`);
@@ -320,7 +377,7 @@ export function CollocationNetwork({
       cancelled = true;
       setNetworkLoading(false);
     };
-  }, [cid, centerNode, level, win, minFreq, buildGraph, flashMsg, refreshAll, qc, networkQueryKey]);
+  }, [cid, centerNode, level, win, minFreq, appliedTopN, buildGraph, flashMsg, refreshAll, fitCamera, qc, networkQueryKey]);
 
   // ── Sigma lifecycle (WebGL path; created once per mount) ────────────────
   useEffect(() => {
@@ -504,6 +561,14 @@ export function CollocationNetwork({
         flashMsg(`Node budget reached (${MAX_NODES}). Right-click a word to re-center instead.`);
         return;
       }
+      // v1.2.15: level-2 growth obeys the SAME "Collocates" value as the
+      // node word's level-1 fetch, clamped to the remaining node budget so
+      // a high slider setting cannot silently overflow MAX_NODES.
+      const budget = Math.min(appliedTopN, MAX_NODES - graph.order);
+      if (budget <= 0) {
+        flashMsg(`Node budget reached (${MAX_NODES}). Right-click a word to re-center instead.`);
+        return;
+      }
       try {
         // v1.2.14 (P1.3): route the expand fetch through React Query too
         // so a re-click on an already-expanded node is served from cache
@@ -511,32 +576,33 @@ export function CollocationNetwork({
         // a different graph state produces a different fetch.
         const res = await qc.fetchQuery({
           queryKey: ["collocation-network-expand", cid, node, level, win, minFreq,
-                      graph.nodes().slice().sort().join("|")] as const,
+                      appliedTopN, graph.nodes().slice().sort().join("|")] as const,
           queryFn: () => api.collocationNetworkExpand(cid, {
             node,
             level,
             window: win,
             min_freq: minFreq,
             measure: "mi",
-            top_n: EXPAND_TOP_N,
+            top_n: budget,
             depth: 2,
             known_nodes: graph.nodes(),
           }),
           staleTime: 60_000,
         });
         const added: string[] = [];
-        const maxFreq = Math.max(...res.nodes.map((n) => n.freq), 1);
         const px = graph.getNodeAttribute(node, "x");
         const py = graph.getNodeAttribute(node, "y");
         res.nodes.forEach((n, i) => {
           if (graph.hasNode(n.id) || n.id === node) return;
           const angle = (2 * Math.PI * i) / Math.max(res.nodes.length, 3);
+          // Provisional size — applyNodeSizes() rescales the whole graph
+          // (frequency + graph order) once every node is in.
           graph.addNode(n.id, {
             freq: n.freq,
             degree: n.degree,
             strength: n.strength,
             isCenter: false,
-            size: 5 + 9 * Math.sqrt(n.freq / maxFreq),
+            size: 6,
             label: n.id,
             parent: node,
             x: px + Math.cos(angle) * 0.35,
@@ -552,12 +618,12 @@ export function CollocationNetwork({
             norms: normalizeEdge(edge, res.edges),
           });
         }
-        // v1.2.14 (P1.5): reduce FA2 iterations from 60 -> 40 for the
-        // expand path. The new node cluster is small (top_n <= 8) and
-        // settles in ~25 iterations; 40 is a safe upper bound that cuts
-        // main-thread blocking time by ~33%.
+        // v1.2.15: rescale sizes for the larger graph, re-run the layout,
+        // then fit the whole network back inside the graph window.
+        applyNodeSizes(graph);
         runLayout(graph, 40);
         refreshAll();
+        fitCamera();
         setExpanded((prev) => new Set(prev).add(node));
         setStats((s) => ({ ...s, nodes: graph.order, edges: graph.size }));
         if (added.length === 0) flashMsg(`“${node}” has no new collocates to add.`);
@@ -565,7 +631,7 @@ export function CollocationNetwork({
         flashMsg(`Expansion failed: ${(e as Error).message}`);
       }
     },
-    [cid, level, win, minFreq, flashMsg, qc, refreshAll],
+    [cid, level, win, minFreq, appliedTopN, flashMsg, refreshAll, fitCamera, qc],
   );
 
   const collapseNode = useCallback(
@@ -647,12 +713,13 @@ export function CollocationNetwork({
   };
 
   const recenterView = () => {
-    if (modeRef.current === "webgl") {
-      sigmaRef.current?.getCamera().animatedReset({ duration: 300 });
-    } else {
-      setFitTick((t) => t + 1);
-    }
+    fitCamera();
   };
+
+  /** v1.2.15: commit the "Collocates" slider on release (pointer/keys/blur). */
+  const commitTopN = useCallback(() => {
+    if (topN !== appliedTopN) setAppliedTopN(topN);
+  }, [topN, appliedTopN]);
 
   const exportPng = () => {
     const container = containerRef.current;
@@ -711,6 +778,31 @@ export function CollocationNetwork({
                 </option>
               ))}
             </select>
+          </label>
+          {/* v1.2.15: user-controlled collocate count for BOTH levels of the
+              network — the node word's collocates and each expanded
+              collocate's own collocates. Commits on release; node sizes and
+              the camera re-fit so the graph stays inside its window. */}
+          <label
+            className="network-measure-label network-slider-label"
+            title="How many collocates to show per node — applies to the node word and to every collocate you expand. Release the slider to apply."
+          >
+            Collocates
+            <input
+              type="range"
+              className="network-slider"
+              min={MIN_TOP_N}
+              max={MAX_TOP_N}
+              step={1}
+              value={topN}
+              aria-label="Collocates per level"
+              aria-valuetext={`${topN} collocates per level`}
+              onChange={(e) => setTopN(Number(e.target.value))}
+              onPointerUp={commitTopN}
+              onKeyUp={commitTopN}
+              onBlur={commitTopN}
+            />
+            <span className="network-slider-value">{topN}</span>
           </label>
           <span className={total.nodes >= MAX_NODES ? "network-stats warn" : "network-stats"}>
             {total.nodes} nodes · {total.edges} edges · density {total.density.toFixed(3)}
@@ -779,9 +871,11 @@ export function CollocationNetwork({
 
       <p className="network-hint">
         Click a collocate to expand its collocates · click again to collapse · right-click to set
-        as center · drag nodes to rearrange · scroll to zoom. Edge thickness = the selected measure;
-        node size = corpus frequency. Switching the measure re-weights every edge instantly (no
-        refetch, ±{win} words, min freq {minFreq}).
+        as center · drag nodes to rearrange · scroll to zoom. “Collocates” grows BOTH levels —
+        the node word's collocates and each expanded collocate's own — and the graph re-fits
+        inside its window. Edge thickness = the selected measure; node size = corpus frequency.
+        Switching the measure re-weights every edge instantly (no refetch, ±{win} words, min freq{" "}
+        {minFreq}).
         {mode === "canvas2d"
           ? " Rendered with the built-in 2D engine (no WebGL2 available) - all interactions are identical."
           : ""}

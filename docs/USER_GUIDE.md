@@ -234,7 +234,11 @@ the top.
 
 **Collocation**: node word + window size; all 7 measures (MI, T-score,
 log-likelihood, Dice, LogDice, chi-square, Delta P) plus the interactive
-collocation network graph (exportable as SVG/PNG/JSON).
+collocation network graph. A "Collocates" slider (6–40) in the network
+toolbar sets how many collocates to show per node — it grows BOTH levels,
+the node word's collocates and each expanded collocate's own, and applies on
+release; node sizes rescale with graph size and the view re-fits so the
+network always stays inside its window (exportable as SVG/PNG/JSON).
 
 **Keyness**: target vs reference corpus; significance (log-likelihood,
 chi-square) beside effect size (Log Ratio, %DIFF, Simple Maths, Odds

@@ -910,6 +910,65 @@ code, pre { font-family: var(--font-mono); }
   background: var(--bg-elevated);
   color: var(--text);
 }
+/* v1.2.15: "Collocates" slider — grows both levels of the network. */
+.network-slider-label {
+  gap: 8px;
+}
+.network-slider {
+  appearance: none;
+  -webkit-appearance: none;
+  inline-size: 130px;
+  block-size: 18px;
+  background: transparent;
+  cursor: pointer;
+  accent-color: var(--brand, #1b4d3e);
+}
+.network-slider::-webkit-slider-runnable-track {
+  block-size: 4px;
+  border-radius: 2px;
+  background: var(--border);
+}
+.network-slider::-moz-range-track {
+  block-size: 4px;
+  border-radius: 2px;
+  background: var(--border);
+}
+.network-slider::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  inline-size: 14px;
+  block-size: 14px;
+  margin-block-start: -5px;
+  border-radius: 50%;
+  background: var(--brand, #1b4d3e);
+  border: 2px solid #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+.network-slider::-moz-range-thumb {
+  inline-size: 12px;
+  block-size: 12px;
+  border-radius: 50%;
+  background: var(--brand, #1b4d3e);
+  border: 2px solid #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+.network-slider:focus-visible {
+  outline: 2px solid var(--brand, #1b4d3e);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+.network-slider-value {
+  min-inline-size: 2.2em;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 1px 4px;
+}
 .network-stats {
   font-size: 12px;
   font-family: var(--font-mono);

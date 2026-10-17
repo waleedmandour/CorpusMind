@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
 
+### Added (Collocation Network, 2026-10-17 — user-controlled collocates per level)
+
+<!-- collocates-slider-2026-10-17 -->
+- **A "Collocates" slider in the network toolbar lets the user grow the number of collocations of the node word across BOTH levels of the graph** — level 1 (the node word's collocates on the initial fetch) and level 2 (each expanded collocate's own collocates) now obey the same user-chosen count (6–40, default 14 = the shipped look) instead of hardcoded 14/8. The value commits on release (pointer-up / keyboard / blur) so dragging the slider cannot storm the engine; level-2 expansion is clamped to the remaining node budget so a high setting cannot silently overflow the 120-node cap. The engine's `top_n` validation cap rises 30 → 40 to honor the slider (`engine/api/network.py`); the depth-2 mesh stays bounded per pivot, so the extra width costs linear, not quadratic, work.
+- **The graph keeps adhering to the size of its window.** Node sizes now rescale with graph size (frequency-scaled radii shrink from the shipped sizes at 30 nodes to ~55% at the 120-node cap, applied uniformly after every build/expansion so the whole graph stays consistent), and the camera re-fits after every initial load, re-query, and expansion — animated camera reset on the Sigma/WebGL renderer, re-fit-to-view on the 2D-canvas fallback — so growing the network never pushes nodes outside the visible window.
+
 ### Fixed (Persuasion Index resources, 2026-10-17 — download links that actually serve the data)
 
 <!-- pi-resource-links-2026-10-17 -->

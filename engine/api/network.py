@@ -120,7 +120,12 @@ class NetworkRequest(BaseModel):
     window: int = Field(5, ge=1, le=20)
     min_freq: int = Field(3, ge=1)
     measure: MEASURES = "mi"
-    top_n: int = Field(14, ge=3, le=30, description="Max collocates of the pivot")
+    # v1.2.15: cap raised 30 -> 40 so the UI's "collocates per level" slider
+    # can grow BOTH levels of the network (the pivot's collocates and each
+    # expanded collocate's own collocates). The depth-2 mesh scan is bounded
+    # per pivot (limit=top_n*3) and fanned out in batches of _FANOUT, so the
+    # extra width costs linear, not quadratic, work.
+    top_n: int = Field(14, ge=3, le=40, description="Max collocates of the pivot")
     depth: int = Field(2, ge=1, le=2, description="2 = mesh collocates against each other")
     max_nodes: int = Field(60, ge=5, le=150, description="Safety cap on returned nodes")
 
