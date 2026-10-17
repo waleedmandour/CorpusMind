@@ -1,6 +1,6 @@
 # CorpusMind User Guide
 
-> Version 1.2.11 | AGPL-3.0-only
+> Version 1.2.14-3 | AGPL-3.0-only
 >
 > Authors: Dr. Waleed Mandour (Sultan Qaboos University, ORCID: 0000-0002-9262-5993)
 > and Prof. Wesam Ibrahim (Princess Nourah Bint Abdulrahman University, ORCID: 0000-0003-0710-6038)
@@ -13,7 +13,7 @@ If you use CorpusMind in your research, please cite it as:
 
 > Mandour, W., & Ibrahim, W. (2026). *CorpusMind: A local-first, AI-native
 > research environment for corpus linguistics and multimodal discourse
-> analysis* (Version 1.2.11) [Computer software]. Zenodo.
+> analysis* (Version 1.2.14-3) [Computer software]. Zenodo.
 > https://doi.org/10.5281/zenodo.21226650
 
 ---
@@ -51,6 +51,20 @@ Windows (EXE/MSI), macOS Apple Silicon and Intel (DMG), Linux (AppImage/deb).
 Install [Ollama](https://ollama.com) as well — the app starts it
 automatically and downloads recommended models with one click from
 **Settings → Model Providers**.
+
+### Windows SmartScreen note
+
+CorpusMind is a free, independently published academic tool, and its
+installers are not code-signed with a paid certificate. The first time
+you launch the Windows installer, Microsoft Defender SmartScreen may
+therefore show **"Windows protected your PC"** and stop the setup. This
+is expected for unsigned installers — it is a reputation warning, not a
+virus detection. Windows users should simply accept the note: click
+**More info**, then **Run anyway**, and the installation will continue
+normally. If your browser flags the `.msi` file as "not commonly
+downloaded", choose **Keep** / **Keep anyway** rather than discarding
+it, and if you want to double-check the download first, compare its
+SHA-256 checksum against `SHA256SUMS.txt` attached to the same release.
 
 The desktop app automatically:
 - Starts the Python engine in the background (and waits until it is healthy)

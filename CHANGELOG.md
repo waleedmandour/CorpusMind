@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
 
+### Changed (Documentation, 2026-10-17 — Windows SmartScreen guidance in the User Guide)
+
+<!-- smartscreen-guide-2026-10-17 -->
+- **The User Guide now tells Windows users to accept the SmartScreen
+  warning rather than the project paying monthly for code signing.**
+  Decision: CorpusMind is a free, independently published academic tool
+  for public use, so a monthly signing subscription is not justified —
+  the installers stay unsigned and the documentation covers the
+  click-through. `docs/USER_GUIDE.md` §2 gains a **"Windows SmartScreen
+  note"**: Microsoft Defender SmartScreen's "Windows protected your PC"
+  is a reputation warning on unsigned installers, not a virus detection
+  — click **More info → Run anyway**; browsers flagging the `.msi` as
+  "not commonly downloaded" → **Keep / Keep anyway**; verify the file
+  against the release's `SHA256SUMS.txt`. The Arabic guide
+  (`docs/USER_GUIDE_AR.md`) carries the same note in its
+  desktop-application section (§11.2). Both guide PDFs (EN/AR) were
+  regenerated for v1.2.14-3, and the PDF bundled into the desktop app
+  (`desktop/src-tauri/resources/CorpusMind_User_Guide.pdf`) — stale
+  since the v1.2.11 era — was replaced with the current one. While
+  editing, the stale version headers on both guide markdowns (EN said
+  1.2.11, AR citation still said 0.1.0) now read 1.2.14-3, and the
+  download page's interim SmartScreen note was reworded to match the
+  no-signing decision (Homepage repo). The secrets-driven signing
+  pipeline shipped earlier today remains in place and dormant should
+  that decision ever change (see BUILD_GUIDE §5.9).
+
 ### Added (Release engineering, 2026-10-17 — Windows code signing pipeline)
 
 <!-- windows-signing-2026-10-17 -->
