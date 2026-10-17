@@ -16,11 +16,10 @@ pattern: test_batch_view.py, test_learner.py).
 """
 from __future__ import annotations
 
-from collections.abc import AsyncIterator, Iterator
-from typing import TYPE_CHECKING, Any
-
 import os
 import time
+from collections.abc import AsyncIterator, Iterator
+from typing import TYPE_CHECKING, Any
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -32,9 +31,10 @@ from app.settings import get_settings
 get_settings.cache_clear()
 
 if TYPE_CHECKING:
+    from pytest import MonkeyPatch
+
     from app.arabic_bulk import ArabicBulkJob
     from nlp.arabic.pipeline import ArabicAnalysis
-    from pytest import MonkeyPatch
 
 
 @pytest.fixture
@@ -62,7 +62,7 @@ def _reset_gates() -> Iterator[None]:
     arabic_bulk.reset_bulk_job_for_tests()
 
 
-def _fake_analysis(text: str) -> "ArabicAnalysis":
+def _fake_analysis(text: str) -> ArabicAnalysis:
     """Real ArabicToken objects — the aggregator's actual input type."""
     from nlp.arabic.pipeline import ArabicAnalysis, ArabicToken
 
@@ -76,7 +76,7 @@ def _fake_analysis(text: str) -> "ArabicAnalysis":
     return ArabicAnalysis(text=text, tokens=tokens, detected_dialect="msa", backend="camel")
 
 
-def _wait_for_state(job: "ArabicBulkJob", want: set[str], timeout: float = 30.0) -> dict[str, Any]:
+def _wait_for_state(job: ArabicBulkJob, want: set[str], timeout: float = 30.0) -> dict[str, Any]:
     deadline = time.time() + timeout
     while time.time() < deadline:
         s = job.status()
@@ -112,7 +112,7 @@ async def _seed_corpus(texts: list[str], name: str = "Arabic news corpus") -> st
 
 
 @pytest.mark.asyncio
-async def test_corpus_start_runs_and_aggregates(client: AsyncClient, monkeypatch: "MonkeyPatch") -> None:
+async def test_corpus_start_runs_and_aggregates(client: AsyncClient, monkeypatch: MonkeyPatch) -> None:
     """corpus_id start: engine loads the stored cleaned text, the job runs to
     done, and the aggregated result is downloadable with the corpus name as
     the job source."""
@@ -143,7 +143,7 @@ async def test_corpus_start_runs_and_aggregates(client: AsyncClient, monkeypatch
 
 
 @pytest.mark.asyncio
-async def test_corpus_start_skips_blank_documents(client: AsyncClient, monkeypatch: "MonkeyPatch") -> None:
+async def test_corpus_start_skips_blank_documents(client: AsyncClient, monkeypatch: MonkeyPatch) -> None:
     """Blank documents contribute nothing; a corpus with ONLY blank documents
     is a 422, not a doomed job."""
     import app.arabic_bulk as bulk_mod
@@ -183,12 +183,12 @@ async def test_start_rejects_both_and_neither_sources(client: AsyncClient) -> No
 
 
 @pytest.mark.asyncio
-async def test_corpus_start_busy_409_and_status_has_source(client: AsyncClient, monkeypatch: "MonkeyPatch") -> None:
+async def test_corpus_start_busy_409_and_status_has_source(client: AsyncClient, monkeypatch: MonkeyPatch) -> None:
     """While a job runs, a corpus start answers 409 like a text start; the
     running status carries the source label for the UI."""
     import app.arabic_bulk as bulk_mod
 
-    def _slow(text: str, **kw: Any) -> "ArabicAnalysis":
+    def _slow(text: str, **kw: Any) -> ArabicAnalysis:
         time.sleep(1.2)
         return _fake_analysis(text)
 
