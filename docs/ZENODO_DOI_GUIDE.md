@@ -201,7 +201,7 @@ you will receive an email from Zenodo with a link to the new record.
    > without losing the methodological transparency that peer review demands.
    >
    > The desktop application bundles a FastAPI engine, a Tauri 2 shell, and
-   > an installable PWA, supporting English and Arabic text analysis, vision
+   > a web app, supporting English and Arabic text analysis, vision
    > pipelines for multimodal discourse, and a pluggable AI assistant that
    > can connect to local (Ollama, LM Studio) or remote (OpenAI, Anthropic)
    > model providers.

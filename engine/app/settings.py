@@ -117,7 +117,7 @@ class Settings(BaseSettings):
     # Belt-and-suspenders alongside the UI's cloud indicator (§7.5).
     cloud_disabled_hard: bool = False
 
-    # --- CORS (for PWA running in browser pointed at a non-localhost engine) ---
+    # --- CORS (for the web app running in a browser pointed at a non-localhost engine) ---
     # NOTE: the Tauri desktop webview sends a real `Origin` header and this
     # CORSMiddleware enforces it like for any other client — Tauri does NOT
     # bypass CORS for plain window.fetch() calls made from the frontend (only
@@ -139,7 +139,7 @@ class Settings(BaseSettings):
             "http://tauri.localhost",
             "https://tauri.localhost",
             "https://localhost",
-            # v1.2.15: the project's own hosted PWA. Runtime engine attachment
+            # v1.2.15: the project's own hosted web app. Runtime engine attachment
             # (web Settings → Engine Connection) points the hosted app at an
             # engine the user controls — most commonly the desktop sidecar on
             # 127.0.0.1:8765. Without this origin the browser rejects every

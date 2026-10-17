@@ -7,7 +7,7 @@ CorpusMind is a three-tier local-first research environment for corpus
 linguistics and multimodal discourse analysis. The system comprises:
   1. A FastAPI engine (Python 3.12) that performs all computation
   2. A Tauri 2 desktop shell (Rust) that supervises the engine lifecycle
-  3. A React 18 PWA that provides the analyst interface
+  3. A React 18 web app that provides the analyst interface
 
 All three components run on the researcher's own machine. No data leaves
 the device unless the user explicitly configures a remote AI provider.
@@ -19,13 +19,13 @@ the device unless the user explicitly configures a remote AI provider.
 ### Layout: stacked tiers, top to bottom
 
 ```
-TIER 1: USER INTERFACE (React 18 PWA + Vite + TypeScript)
+TIER 1: USER INTERFACE (React 18 web app + Vite + TypeScript)
 ├── Ribbon navigation (8 analytical suites)
 ├── Command palette (Ctrl/Cmd+K)
 ├── Views: Home, Concordancer, Analysis, Arabic, Vision, Assistant, Corpus Manager, Settings, About
 ├── State: Zustand (app + UI stores)
 ├── Data fetching: native fetch to localhost:8765
-└── PWA: installable, offline-capable, RTL Arabic support
+└── Web: RTL Arabic support (browser page, no install)
         │
         │  HTTP (localhost:8765/api/v1/*)
         ▼
@@ -364,7 +364,6 @@ CREATION         INGESTION        PROCESSING       TOOLS
 ┌─────────────────────────────────────────────────────────────┐
 │  USER INTERFACE LAYER                                       │
 │  React 18 · Vite 5 · TypeScript 5.6 · Zustand             │
-│  vite-plugin-pwa (installable, offline)                     │
 │  TanStack Query · full RTL Arabic support                   │
 ├─────────────────────────────────────────────────────────────┤
 │  DESKTOP SHELL LAYER                                        │

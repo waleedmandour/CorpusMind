@@ -1,9 +1,9 @@
 """v1.2.15 — runtime engine attachment: CORS + preflight behaviour.
 
-Covers the engine-side changes that let a hosted PWA attach an engine at
+Covers the engine-side changes that let a hosted web app attach an engine at
 runtime (docs/BUILD_GUIDE.md §5.8):
 
-  1. the hosted PWA origin ships in the default CORS allow-list;
+  1. the hosted web app origin ships in the default CORS allow-list;
   2. CORPUSMIND_CORS_ORIGINS accepts a comma-separated list (not only JSON);
   3. CORS preflights (OPTIONS) pass through the shared-bearer-token
      middleware instead of being rejected with 401 — while the actual
@@ -14,7 +14,7 @@ from __future__ import annotations
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-HOSTED_PWA_ORIGIN = "https://corpus-mind-web.vercel.app"
+HOSTED_WEB_APP_ORIGIN = "https://corpus-mind-web.vercel.app"
 
 
 def _fresh_cors_origins() -> list[str]:
@@ -28,9 +28,9 @@ def _fresh_cors_origins() -> list[str]:
         get_settings.cache_clear()
 
 
-def test_default_cors_includes_hosted_pwa(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_default_cors_includes_hosted_web_app(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("CORPUSMIND_CORS_ORIGINS", raising=False)
-    assert HOSTED_PWA_ORIGIN in _fresh_cors_origins()
+    assert HOSTED_WEB_APP_ORIGIN in _fresh_cors_origins()
 
 
 def test_cors_env_comma_separated(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -73,12 +73,12 @@ async def test_preflight_passes_token_middleware(monkeypatch: pytest.MonkeyPatch
                 r = await ac.options(
                     "/api/v1/health",
                     headers={
-                        "Origin": HOSTED_PWA_ORIGIN,
+                        "Origin": HOSTED_WEB_APP_ORIGIN,
                         "Access-Control-Request-Method": "GET",
                     },
                 )
                 assert r.status_code == 200
-                assert r.headers.get("access-control-allow-origin") == HOSTED_PWA_ORIGIN
+                assert r.headers.get("access-control-allow-origin") == HOSTED_WEB_APP_ORIGIN
 
                 # The ACTUAL request is still token-checked: without the
                 # bearer → 401; with it → through.

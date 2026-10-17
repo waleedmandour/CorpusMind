@@ -25,7 +25,7 @@
  * green/red (--bar-positive/--bar-negative). All theme-aware.
  *
  * Pure inline SVG, no chart dependency — consistent with the repo's
- * offline-first PWA stance and the PersuasionRadar approach.
+ * self-contained-export stance and the PersuasionRadar approach.
  */
 import { useRef } from "react";
 

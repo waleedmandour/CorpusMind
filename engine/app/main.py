@@ -230,7 +230,7 @@ def create_app() -> FastAPI:
         # forbids it), so a token-protected remote engine would reject its
         # own preflight with 401 before CORSMiddleware (inner) can answer it
         # — the browser then blocks the real request with a confusing CORS
-        # error and the hosted PWA can never attach. Let OPTIONS through:
+        # error and the hosted web app can never attach. Let OPTIONS through:
         # preflight responses carry no data; the ACTUAL request below is
         # still fully token-checked.
         if request.method == "OPTIONS":

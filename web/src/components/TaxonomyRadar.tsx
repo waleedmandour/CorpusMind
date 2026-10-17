@@ -15,7 +15,7 @@
  * is unreadable and the bar chart carries the view alone).
  *
  * Pure inline SVG, no chart dependency — consistent with the repo's
- * offline-first PWA stance and the PersuasionRadar conventions.
+ * self-contained-export stance and the PersuasionRadar conventions.
  */
 import { useRef } from "react";
 

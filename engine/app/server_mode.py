@@ -9,7 +9,7 @@ ARCHITECTURE (one paragraph)
 ----------------------------
 The engine stays bound to ``127.0.0.1`` exactly as today. A bundled
 Caddy sidecar (same PyInstaller onedir as the engine) terminates the
-classroom TLS/HTTP port, serves the bundled PWA, and reverse-proxies
+classroom TLS/HTTP port, serves the bundled web build, and reverse-proxies
 ``/api/*`` to the loopback engine, stamping every proxied request with
 an ``X-CorpusMind-Classroom: 1`` header. The engine's auth middleware
 treats proxy-stamped requests as untrusted: they must present either
@@ -50,7 +50,7 @@ from pathlib import Path
 from typing import Any
 
 STUDENT_PROXY_HEADER = "X-CorpusMind-Classroom"
-# v1.2.9 audit: the student PWA sends a random per-browser-session ID so the
+# v1.2.9 audit: the student web client sends a random per-browser-session ID so the
 # anonymous audit alias (S-1, S-2, …) stays stable across WiFi roaming and
 # distinct even when many devices share one NAT address.
 STUDENT_SESSION_HEADER = "X-CorpusMind-Session"
@@ -359,7 +359,7 @@ def find_caddy_binary(settings: Any) -> Path | None:
 
 
 def find_web_dist(settings: Any) -> Path | None:
-    """The PWA build Caddy serves to student browsers.
+    """The web build Caddy serves to student browsers.
 
     The PyInstaller spec collects the repo's web/dist as ``web-dist`` when
     present; dev checkouts fall back to the repo's web/dist.
@@ -536,7 +536,7 @@ def generate_caddyfile(
       serves the CA root for the one-time student trust step.
     - simple: plain HTTP only, for closed/trusted classroom networks.
     Both modes proxy /api/* to the loopback engine with the classroom
-    header stamped, and serve the PWA from disk with SPA fallback.
+    header stamped, and serve the web build from disk with SPA fallback.
     """
     engine = f"127.0.0.1:{settings.port}"
     log_path = server_mode_dir(settings) / "caddy.log"
@@ -801,7 +801,7 @@ def spawn_caddy(settings: Any, state: ServerModeState) -> dict[str, Any]:
     if sys.platform.startswith("win"):
         _windows_kill_on_engine_exit(proc)  # pragma: no cover — Windows only
 
-    # Wait for readiness: Caddy must serve the bundled PWA. We deliberately
+    # Wait for readiness: Caddy must serve the bundled web build. We deliberately
     # probe the STATIC file (no engine round-trip): probing /api/v1/health
     # would deadlock a single-worker engine — the proxy forwards that request
     # back to the very event loop this synchronous probe is blocking.

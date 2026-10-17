@@ -8,7 +8,7 @@
  * analysis-facing interpretation, stated in the UI citation.
  *
  * Pure inline SVG, no chart dependency — consistent with the repo's
- * offline-first PWA stance. Axis order is fixed (logos → ethos → pathos,
+ * self-contained-export stance. Axis order is fixed (logos → ethos → pathos,
  * alphabetical within family) so the polygon shape is deterministic.
  */
 import { useRef } from "react";

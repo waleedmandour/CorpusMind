@@ -118,7 +118,7 @@ export const translations = {
     // When the engine is offline in browser mode, no AI model can run — this
     // notice says so plainly instead of leaving silent failures elsewhere.
     pwa_ai_title: "AI models unavailable — the engine is offline",
-    pwa_ai_body: "Ollama and LM Studio run on your own computer, and browser security means this app (PWA) can only reach them through the CorpusMind engine. With the engine offline, no AI model can run — including the opt-in cloud providers. Everything else that needs the engine is paused too.",
+    pwa_ai_body: "Ollama and LM Studio run on your own computer, and browser security means this web app can only reach them through the CorpusMind engine. With the engine offline, no AI model can run — including the opt-in cloud providers. Everything else that needs the engine is paused too.",
     pwa_ai_fix: "Start the engine on this machine, then reload this page:",
     // v1.2.14-2 (PWA hotfix): hosted static builds with no engine attached —
     // a local "start it manually" command cannot help there, so say what

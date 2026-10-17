@@ -58,7 +58,7 @@ export function AboutView() {
           built on the GLM model by Z.ai) which served as a full-stack
           engineering collaborator across all six phases of the build:
           scaffolding the monorepo, implementing the FastAPI engine, the React
-          PWA, the Tauri 2 desktop shell, the grounded-AI tool surface, the
+          web app, the Tauri 2 desktop shell, the grounded-AI tool surface, the
           Arabic NLP pipeline (CAMeL Tools integration), the vision suite
           (image analysis, Visual Grammar, multimodal alignment), the
           multimodal discourse analyses, and the collaboration/accessibility/
@@ -76,7 +76,7 @@ export function AboutView() {
           </div>
           <div className="about-tech-card">
             <h3>Web Frontend</h3>
-            <p>React 18, Vite, TypeScript, TanStack Query, Zustand, vite-plugin-pwa</p>
+            <p>React 18, Vite, TypeScript, TanStack Query, Zustand</p>
           </div>
           <div className="about-tech-card">
             <h3>Desktop Shell</h3>
@@ -136,7 +136,7 @@ export function AboutView() {
         <h2>Links</h2>
         <div className="about-links">
           <a href="https://github.com/waleedmandour/CorpusMind" className="about-link">GitHub Repository</a>
-          <a href="https://corpus-mind-web.vercel.app/" className="about-link">Web Version (PWA)</a>
+          <a href="https://corpus-mind-web.vercel.app/" className="about-link">Web Version</a>
           <a href="https://github.com/waleedmandour/CorpusMind/releases" className="about-link">Releases</a>
           <a href="https://doi.org/10.5281/zenodo.21226650" className="about-link">Zenodo DOI</a>
           <a href="https://github.com/waleedmandour/CorpusMind/blob/main/docs/USER_GUIDE.md" className="about-link">User Guide</a>

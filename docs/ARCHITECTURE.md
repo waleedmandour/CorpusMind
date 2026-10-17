@@ -14,9 +14,9 @@ in three shells.
 │                        Shells (UI only)                            │
 │                                                                    │
 │  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐  │
-│  │  PWA             │  │  Tauri desktop   │  │  Self-hosted     │  │
-│  │  (installable,   │  │  (Win/Linux/mac) │  │  (lab server)    │  │
-│  │   offline-ready) │  │  sidecar engine  │  │  multi-user      │  │
+│  │  Web app         │  │  Tauri desktop   │  │  Self-hosted     │  │
+│  │  (browser,       │  │  (Win/Linux/mac) │  │  (lab server)    │  │
+│  │   no install)    │  │  sidecar engine  │  │  multi-user      │  │
 │  └────────┬─────────┘  └────────┬─────────┘  └────────┬─────────┘  │
 │           │  HTTP/WS            │  HTTP/WS            │  HTTP/WS    │
 └───────────┼─────────────────────┼─────────────────────┼────────────┘
@@ -54,9 +54,9 @@ in three shells.
 
 ### Why this shape
 
-The tension this resolves (§6 of the build prompt): a **PWA** is sandboxed
-browser code — it cannot itself run spaCy / Stanza / CAMeL Tools pipelines or
-a local LLM. A **Tauri desktop app** can, via sidecar processes. So "PWA for
+The tension this resolves (§6 of the build prompt): a **browser app** is sandboxed
+code — it cannot itself run spaCy / Stanza / CAMeL Tools pipelines or
+a local LLM. A **Tauri desktop app** can, via sidecar processes. So "web for
 seamless access" and "Ollama/LM Studio for local LLMs" pull in different
 directions unless you design for it explicitly.
 
@@ -92,7 +92,7 @@ detachment on app exit to avoid orphaned "zombie" Ollama processes.
 | `engine/vision/` | OCR, object/scene detection, composition/color | 4 |
 | `engine/multimodal/` | Image-text alignment, cross-modal meaning, visual grammar scoring | 4 |
 | `engine/storage/` | Corpus index, project DB, annotation store, versioning | 1 |
-| `web/src/` | React + Vite + TS PWA | 0 ✅ (shell) |
+| `web/src/` | React + Vite + TS web app | 0 ✅ (shell) |
 | `desktop/src-tauri/` | Tauri 2 shell + Rust sidecar supervisor | 0 ✅ |
 | `shared/` | OpenAPI-generated TS client (scaffold) | 0 ✅ |
 | `reference-data/frameworks/` | Theoretical-lens prompt templates (§11.3) | 0 ✅ (one) |

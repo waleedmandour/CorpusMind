@@ -216,7 +216,7 @@ jobs:
       - name: Fetch Caddy binary (Student Mode sidecar)
         run: python scripts/fetch_caddy.py
 
-      - name: Build web PWA
+      - name: Build web app
         working-directory: web
         env:
           # Bake the engine sidecar's fixed address into the bundle so the
@@ -461,7 +461,7 @@ jobs:
       - name: Fetch Caddy binary (Student Mode sidecar)
         run: python scripts/fetch_caddy.py
 
-      - name: Build web PWA
+      - name: Build web app
         working-directory: web
         env:
           # Bake the engine sidecar's fixed address into the bundle so the
@@ -664,7 +664,7 @@ jobs:
       - name: Fetch Caddy binary (Student Mode sidecar)
         run: python scripts/fetch_caddy.py
 
-      - name: Build web PWA
+      - name: Build web app
         working-directory: web
         env:
           # Bake the engine sidecar's fixed address into the bundle so the
@@ -852,7 +852,7 @@ jobs:
       - name: Fetch Caddy binary (Student Mode sidecar)
         run: python scripts/fetch_caddy.py
 
-      - name: Build web PWA
+      - name: Build web app
         working-directory: web
         env:
           # Bake the engine sidecar's fixed address into the bundle so the
@@ -915,10 +915,10 @@ jobs:
           APPIMAGE_EXTRACT_AND_RUN: "1"
         run: cargo tauri build
 
-      - name: Package web PWA zip
+      - name: Package web app zip
         working-directory: web
         run: |
-          # Ship the installable PWA as a release asset (v1.0.0 carried a
+          # Ship the web build as a release asset (v1.0.0 carried a
           # manually-uploaded copy; it is now produced by CI for every tag).
           cd dist
           zip -rq ../corpusmind-web-${GITHUB_REF_NAME}.zip .

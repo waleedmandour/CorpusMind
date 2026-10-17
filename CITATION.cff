@@ -12,7 +12,7 @@ abstract: >
   to a third-party server unless they explicitly choose to, and without
   losing the methodological transparency that peer review demands. The
   desktop application bundles a FastAPI engine, a Tauri 2 shell, and an
-  installable PWA, supporting English and Arabic text analysis, vision
+  web app, supporting English and Arabic text analysis, vision
   pipelines for multimodal discourse, and a pluggable AI assistant that can
   connect to local (Ollama, LM Studio) or remote (OpenAI, Anthropic) model
   providers.
@@ -79,6 +79,6 @@ preferred-citation:
   notes: >-
     CorpusMind was developed at Sultan Qaboos University. The desktop
     application bundles a FastAPI engine, a Tauri 2 shell, and an installable
-    PWA, supporting English and Arabic text analysis, vision pipelines for
+    web app, supporting English and Arabic text analysis, vision pipelines for
     multimodal discourse, and a pluggable AI assistant that can connect to
     local (Ollama, LM Studio) or remote (OpenAI, Anthropic) model providers.

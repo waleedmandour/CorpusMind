@@ -62,7 +62,7 @@ function inlineComputedStyles(source: Element, clone: Element): void {
 
 /** Rasterize a live inline SVG to a PNG download at `scale`× resolution.
  * Uses the app-wide downloadBlob (native save dialog under Tauri, browser
- * download in the PWA). Returns the generated filename. */
+ * download in the browser). Returns the generated filename. */
 export async function exportSvgAsPng(
   svg: SVGSVGElement,
   filename: string,

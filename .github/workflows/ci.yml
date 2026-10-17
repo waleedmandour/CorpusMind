@@ -164,14 +164,12 @@ jobs:
       - name: Web UI regression tests (vitest)
         run: npm run test:ui
 
-      - name: Build (PWA)
+      - name: Build web app
         run: npm run build
 
-      - name: Verify PWA artifacts
+      - name: Verify web build artifacts
         run: |
           test -f dist/index.html
-          test -f dist/manifest.webmanifest
-          test -f dist/sw.js
 
   # -----------------------------------------------------------------------
   # Desktop: Rust check (only if system deps available)

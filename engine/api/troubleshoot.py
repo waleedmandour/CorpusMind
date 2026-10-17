@@ -64,7 +64,7 @@ SYSTEM_INSTRUCTION = """You are CorpusMind's Smart Troubleshooting assistant.
 CorpusMind is a local-first, AI-native research environment for corpus
 linguistics and multimodal discourse analysis. It has three layers:
   1. A Python FastAPI engine (corpusmind-engine) on 127.0.0.1:8765
-  2. A React + Vite PWA frontend
+  2. A React + Vite web frontend
   3. A Tauri 2 desktop shell (Rust) that supervises the engine as a sidecar
 
 The user is a linguistics researcher, NOT a developer. Your job is to

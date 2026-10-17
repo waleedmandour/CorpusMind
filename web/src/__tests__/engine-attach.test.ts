@@ -1,7 +1,7 @@
 /**
  * engine-attach.test.ts — v1.2.15 runtime engine attachment.
  *
- * The hosted PWA must be able to attach an engine at runtime (Settings →
+ * The hosted web app must be able to attach an engine at runtime (Settings →
  * Engine Connection) and route EVERY api call there. These tests pin the
  * resolution precedence implemented in lib/api.ts:
  *

@@ -24,8 +24,8 @@ one design language:
   Functional Linguistics, Critical Discourse Analysis, Multimodal CDA, Social
   Semiotics, and Cognitive Linguistics.
 
-Both suites are reachable from a **Progressive Web App** (installable,
-offline-capable, deployed at [corpus-mind-web.vercel.app](https://corpus-mind-web.vercel.app/))
+Both suites are reachable from a **web app** (deployed at
+[corpus-mind-web.vercel.app](https://corpus-mind-web.vercel.app/))
 and from **native desktop apps** for Windows, Linux, and macOS (built with Tauri 2).
 Local LLM inference via **Ollama** and/or **LM Studio** lets the AI Assistant
 run entirely on the researcher's own machine.
@@ -68,7 +68,7 @@ maintained as **CorpusMind Lens** at
 [waleedmandour/CorpusMind-Lens](https://github.com/waleedmandour/CorpusMind-Lens);
 this repository ships only the CorpusMind text-analysis app.
 
-**Both apps:** installable PWA + a Tauri 2 desktop shell (CorpusMind here,
+**Both apps:** a web app + a Tauri 2 desktop shell (CorpusMind here,
 CorpusMind Lens in its own repo), 645 backend tests, ruff-clean,
 self-hosted Docker image. The two apps connect via the versioned
 Companion-Mode API when both are installed.
@@ -148,7 +148,7 @@ curl http://127.0.0.1:8765/api/v1/health
 # {"status":"ok","engine":"corpusmind-engine","version":"1.2.11"}
 ```
 
-### 2. Run the web frontend (PWA)
+### 2. Run the web frontend
 
 ```bash
 cd web
@@ -157,11 +157,10 @@ npm run dev                  # serves on http://localhost:5173
 ```
 
 Open http://localhost:5173 — the app talks to the engine on :8765 by default.
-To install as a PWA, use your browser's "Install app" menu item.
 
-**Live demo:** The PWA is also deployed at
+**Live demo:** The web app is also deployed at
 [corpus-mind-web.vercel.app](https://corpus-mind-web.vercel.app/).
-Note: the demo PWA needs a running engine instance to function. Point it at
+Note: the demo needs a running engine instance to function. Point it at
 your engine by setting `VITE_ENGINE_URL` during build or in the Vercel
 environment variables. See [docs/BUILD_GUIDE.md](docs/BUILD_GUIDE.md) for
 Vercel deployment instructions.
@@ -286,10 +285,9 @@ corpusmind/
 │   ├── ai/            # ModelProvider abstraction, RAG index, tool-calling layer, prompt templates
 │   ├── storage/       # corpus index, project DB, annotation store, versioning
 │   └── api/           # REST + WebSocket routes, OpenAPI schema
-├── web/               # corpusmind-web — single frontend (PWA + embedded in Tauri)
+├── web/               # corpusmind-web — single frontend (web + embedded in Tauri)
 │   ├── src/
-│   ├── public/manifest.webmanifest
-│   └── service-worker.ts
+│   └── public/
 ├── desktop/           # corpusmind-desktop — Tauri 2 project
 │   ├── src-tauri/
 │   │   ├── tauri.conf.json   # sidecar + capability config
@@ -302,11 +300,11 @@ corpusmind/
 ```
 
 The single most important architectural call: **a headless engine, multiple shells.**
-A PWA is sandboxed browser code — it cannot itself run spaCy / Stanza / CAMeL
+A browser app is sandboxed code — it cannot itself run spaCy / Stanza / CAMeL
 Tools pipelines or a local LLM. A Tauri desktop app can. So we build one backend
 service (`corpusmind-engine`) that does all heavy lifting, one frontend
 (`corpusmind-web`) that talks only to its HTTP/WebSocket API, and ship that
-frontend three ways: as a PWA, embedded in Tauri, and as a self-hosted
+frontend three ways: as a web app, embedded in Tauri, and as a self-hosted
 multi-user engine for labs.
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the living diagram.
@@ -463,7 +461,7 @@ Kilgarriff, Church & Hanks, Dunning, Rychlý, Gries, and Juilland.
 The development of CorpusMind was assisted by an AI agent (Super Z, built on
 the GLM model by Z.ai) which served as a full-stack engineering collaborator
 across all six phases of the build: scaffolding the monorepo, implementing the
-FastAPI engine, the React PWA, the Tauri 2 desktop shell, the grounded-AI tool
+FastAPI engine, the React web app, the Tauri 2 desktop shell, the grounded-AI tool
 surface, the Arabic NLP pipeline (CAMeL Tools integration), the vision suite
 (image analysis, Visual Grammar, multimodal alignment), the multimodal discourse
 analyses (CDA, persuasion, framing, narrative, metaphor, emotion, cultural),

@@ -555,23 +555,23 @@ explicit acknowledgment. **Report to developer** opens a pre-filled email.
 
 ---
 
-## 12. PWA versus Desktop Application
+## 12. Web App versus Desktop Application
 
-Both forms share the same UI, project format, and engine. The **PWA**
-(hosted at https://corpus-mind-web.vercel.app/) runs in the browser —
-installable, offline-capable after first visit, with the engine started
+Both forms share the same UI, project format, and engine. The **web app**
+(hosted at https://corpus-mind-web.vercel.app/) runs in the browser — no
+installation, with the engine started
 by you or on a lab server. The **desktop application** (Tauri 2, Windows/
 macOS/Linux) bundles UI + supervisor + engine sidecar: the supervisor
 spawns and health-waits the engine, auto-starts Ollama, self-heals
 backends, and writes `engine.stdout.log` / `engine.stderr.log` to the OS
 log directory.
 
-| Capability | PWA | Desktop |
+| Capability | Web app | Desktop |
 |---|---|---|
 | Analytical tools & Vision Suite | Identical | Identical |
 | Engine delivery | Manual start / lab server | Automatic (supervised, self-healing) |
 | Ollama | Run locally yourself | Auto-spawned if on PATH |
-| Offline | Shell cached; engine needed for analysis | Fully offline |
+| Offline | Browser page only; engine needed for analysis | Fully offline |
 | File access | Browser dialog uploads | Native dialogs + data dir |
 | Logs | Managed by you | Managed for you |
 | Data residency | Local or lab server | Always local |
@@ -612,7 +612,7 @@ The engine cannot reach Ollama on `127.0.0.1:11434`. Start Ollama (the
 desktop app tries to start it automatically), verify with
 `curl http://127.0.0.1:11434/api/tags`, and make sure at least one chat
 model is pulled (Settings → Model Providers offers one-click downloads).
-In browser/PWA mode you must start both the engine (`corpusmind-engine`)
+In browser mode you must start both the engine (`corpusmind-engine`)
 and Ollama yourself.
 
 ### 13.3 "Model not found — run ollama pull" (409)
@@ -635,7 +635,7 @@ the engine reports `502 embedding_unreachable`, the Ollama connection
 dropped mid-request — check §13.1/§13.2 and retry; the desktop app will
 also offer to restart the backend (v1.2.6).
 
-### 13.5 The engine is not reachable (PWA / manual mode)
+### 13.5 The engine is not reachable (web / manual mode)
 
 Start it with `corpusmind-engine` and check
 `http://127.0.0.1:8765/api/v1/health`. If the port is busy, set
@@ -704,7 +704,7 @@ annotation, formal statistics, and reproducibility.
 | Feature | CorpusMind | AntConc | Sketch Engine | #LancsBox | Voyant |
 |---|---|---|---|---|---|
 | Licence | AGPL-3.0 (free) | Freeware | Subscription | Free (academic) | Open source |
-| Deployment | Desktop + PWA (local-first) | Desktop | Cloud | Desktop | Web |
+| Deployment | Desktop + Web (local-first) | Desktop | Cloud | Desktop | Web |
 | Collocation measures | 7 | 1 | Multiple (Word Sketch) | Several | 1 (raw) |
 | Keyness (LL + effect sizes) | Yes | LL, chi-square | Yes | Yes | No |
 | Dispersion | D, DP, ARF, AWT | No | Yes | Visual | No |
@@ -824,7 +824,7 @@ tokens between groups. On untrusted networks, prefer Secure mode.
 ## Getting Help
 
 - GitHub: https://github.com/waleedmandour/CorpusMind/issues
-- Live PWA: https://corpus-mind-web.vercel.app/
+- Live web app: https://corpus-mind-web.vercel.app/
 - Build Guide: docs/BUILD_GUIDE.md
 - Methodology Reference: docs/METHODOLOGY.md
 - Zenodo DOI: https://doi.org/10.5281/zenodo.21226650

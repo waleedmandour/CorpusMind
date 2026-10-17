@@ -6,7 +6,7 @@ import App from "@/App";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import "@/styles/global.css";
 import { useTroubleshoot } from "@/store/troubleshooting";
-import { api, engineAttached, isTauriRuntime, setStudentSession } from "@/lib/api";
+import { api, engineAttached, setStudentSession } from "@/lib/api";
 import { queryClientDefaults } from "@/lib/queryClient";
 
 // ----------------------------------------------------------------------- //
@@ -40,31 +40,6 @@ try {
 }
 
 // ----------------------------------------------------------------------- //
-// PWA service worker registration.
-//
-// The service worker is ONLY for the browser PWA (offline support). It must
-// NOT run inside the Tauri desktop webview — inside WebView2 (Windows), the
-// service worker intercepts every fetch to http://127.0.0.1:8765 and fails
-// with net::ERR_FAILED, breaking all engine API calls. This is the root cause
-// of the "Detected (API unreachable)" amber state on Windows desktop builds.
-//
-// v1.2.9 Student Mode: a service worker also requires a secure context.
-// Over the classroom's plain-HTTP "Simple" mode the page is NOT secure,
-// so registration is skipped (the app still works as a regular page; the
-// secure mode's local-CA HTTPS gets full PWA installability).
-// ----------------------------------------------------------------------- //
-if (!isTauriRuntime() && typeof window !== "undefined" && window.isSecureContext) {
-  // vite-plugin-pwa provides the virtual module; the import is tree-shaken
-  // out of the Tauri build because isTauriRuntime() is false at runtime, but
-  // the module is still bundled (the SW file is generated regardless).
-  import("virtual:pwa-register").then(({ registerSW }) => {
-    registerSW({ immediate: true });
-  }).catch(() => {
-    // Non-fatal: the SW is optional (offline PWA support only).
-  });
-}
-
-// ----------------------------------------------------------------------- //
 // React Query setup with global error handler that feeds Smart Troubleshooting.
 // ----------------------------------------------------------------------- //
 
@@ -88,7 +63,7 @@ const queryClient = new QueryClient({
       // poller in the troubleshooting store handles those, and we don't
       // want to double-report them.
       if (query.queryKey[0] === "health") return;
-      // v1.2.14-2 (PWA hotfix): in unattached builds (static host, no
+      // v1.2.14-2 (hotfix): in unattached builds (static host, no
       // VITE_ENGINE_URL) EVERY query would 404 against our own origin —
       // that noise is not a per-feature bug, it's the deployment shape,
       // and the Home banner already explains it. Don't mint issues.

@@ -122,7 +122,7 @@ jobs:
       - name: Fetch Caddy binary (Student Mode sidecar)
         run: python scripts/fetch_caddy.py
 
-      - name: Build web PWA
+      - name: Build web app
         working-directory: web
         env:
           VITE_ENGINE_URL: http://127.0.0.1:8765
@@ -319,7 +319,7 @@ jobs:
       - name: Fetch Caddy binary (Student Mode sidecar)
         run: python scripts/fetch_caddy.py
 
-      - name: Build web PWA
+      - name: Build web app
         working-directory: web
         env:
           VITE_ENGINE_URL: http://127.0.0.1:8765

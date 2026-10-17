@@ -15,7 +15,7 @@ of what happened in the classroom session:
 ANONYMITY CONTRACT (deliberate, enforced by construction)
 ---------------------------------------------------------
 Students appear as rotating aliases ``S-1, S-2, …`` assigned in first-seen
-order per classroom session. The alias key is the student PWA's random
+order per classroom session. The alias key is the student web client's random
 per-browser-session ID (``X-CorpusMind-Session`` header) when present, or a
 per-session-salted hash of the LAN IP otherwise. NEITHER the raw IP, NOR the
 session header value, NOR the bearer tokens is ever written to the audit
@@ -82,7 +82,7 @@ class ClassroomAudit:
     def alias_key(self, session_header: str, client_ip: str) -> str:
         """Stable-within-session, anonymity-preserving alias key.
 
-        Prefers the PWA's random session ID (stable across WiFi roaming,
+        Prefers the web client's random session ID (stable across WiFi roaming,
         distinct even behind a NAT); falls back to a salted hash of the LAN
         IP. The key is used ONLY to look up the alias in memory — it is not
         written anywhere.
