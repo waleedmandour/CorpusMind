@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
 
+### Added (Arabic Tools, 2026-10-17 — analyze a pre-loaded Arabic corpus from 'Your Corpus')
+
+<!-- arabic-corpus-mode-2026-10-17 -->
+- **The Arabic Tools panel now offers a second input source: the Arabic
+  corpora already uploaded in the 'Your Corpus' tab.** A segmented
+  toggle — *Enter text / Pre-loaded corpus* — keeps the classic
+  paste-text workflow untouched and adds a corpus mode: the panel lists
+  the active project's corpora whose language is Arabic, preselects the
+  currently active corpus when it qualifies, and hands it to the engine's
+  chunked bulk-analysis job (`POST /api/v1/arabic/analyze/job` now
+  accepts `corpus_id` alongside the raw-text `text` body, exactly one of
+  the two). The engine loads the corpus's stored cleaned text
+  server-side in ingestion order — the browser never round-trips
+  megabytes — and reports progress (tokens, chunks, ETA) with the corpus
+  name as the job's `source`. The UI polls status only while the job is
+  busy, offers Cancel between chunks, and renders the aggregated report:
+  POS distribution plus top roots (الجذور), patterns (الأوزان), lemmas
+  (الأصول) and tokens, each exportable through the standard
+  xlsx/csv/tsv/txt/json path (long-format table) or as the engine's
+  full-depth JSON report (up to 10,000 entries per table). Projects with
+  no Arabic corpus get an actionable hint with a one-click jump to
+  'Your Corpus'. The aggregated bulk job keeps running on the same
+  infrastructure as v1.2.11's benchmark pipeline (one job at a time,
+  cooperative cancel, hourly safety ceiling); the interactive per-tool
+  endpoints and their 30s/120s deadlines are unchanged. Docs: User
+  Guide §8 (EN) / §7 (AR).
+
 ### Changed (Documentation, 2026-10-17 — Windows SmartScreen guidance in the User Guide)
 
 <!-- smartscreen-guide-2026-10-17 -->

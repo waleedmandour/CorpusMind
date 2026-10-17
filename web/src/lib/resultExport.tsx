@@ -251,6 +251,24 @@ export function arabicResultToTable(result: { kind: string; data: any }): { head
           ? (result.data.equivalents as string[]).map((eq) => [s(result.data?.word), s(result.data?.direction), eq])
           : [[s(result.data?.word), s(result.data?.direction), MISS]]),
       };
+    case "arabic_bulk_analysis": {
+      // r4: the corpus-mode bulk report — every aggregated frequency table
+      // flattened into one long-format table (Table | Item | Frequency) so
+      // the standard xlsx/csv/tsv/txt/json export paths work unchanged. The
+      // full-depth report (up to 10k rows per table) stays available as the
+      // engine's JSON download.
+      const d = result.data ?? {};
+      const rows: string[][] = [];
+      const push = (label: string, pairs: [string, number][]) => {
+        for (const [item, count] of pairs) rows.push([label, s(item), String(count)]);
+      };
+      push("POS", Object.entries(d.pos_distribution ?? {}));
+      push("Root (الجذر)", d.top_roots ?? []);
+      push("Pattern (الوزن)", d.top_patterns ?? []);
+      push("Lemma (الأصل)", d.top_lemmas ?? []);
+      push("Token (الكلمة)", d.top_tokens ?? []);
+      return { headers: ["Table", "Item", "Frequency"], rows };
+    }
     default:
       return flattenDataToTable(result?.data ?? result);
   }

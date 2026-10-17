@@ -16,6 +16,9 @@ Design:
     is analyzed through the SAME analyze_arabic entry point the interactive
     route uses, so results are identical modulo aggregation.
   - Progress: tokens_done / tokens_total, chunks_done / chunks_total, ETA.
+  - Source label (r4): start() may carry a human-readable label (e.g. the
+    corpus name when the job was started from a 'Your Corpus' corpus); it
+    is echoed in /status so the UI can show WHAT is being analyzed.
   - Cancel: cooperative, checked between chunks.
   - Result: aggregated (frequency tables), NOT a 1M-row token dump. Written
     to a temp file; GET /arabic/analyze/job/result streams it.
@@ -169,7 +172,7 @@ class ArabicBulkJob:
         with self._lock:
             self._status.update(fields)
 
-    def start(self, text: str) -> dict[str, Any]:
+    def start(self, text: str, source: str | None = None) -> dict[str, Any]:
         with self._lock:
             if self._status.get("state") == "running" and self._thread and self._thread.is_alive():
                 raise BulkBusyError(
@@ -187,6 +190,7 @@ class ArabicBulkJob:
             self._status = {
                 "state": "running",
                 "stage": "chunking",
+                "source": source,
                 "chunks_total": len(chunks),
                 "chunks_done": 0,
                 "tokens_total": total_tokens,

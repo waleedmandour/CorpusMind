@@ -14,12 +14,16 @@
  * The view auto-detects Arabic input and flips to RTL layout.
  */
 import { useState, useEffect } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
 
-import { api } from "@/lib/api";
+// r4: downloadBlob + ArabicBulkResult — the corpus-mode report panel
+// downloads the engine's full-depth JSON report next to the standard table
+// export.
+import { api, downloadBlob, type ArabicBulkResult, type ArabicBulkStatus } from "@/lib/api";
 import { t } from "@/lib/i18n";
 import { useUI } from "@/store/ui";
+import { useApp } from "@/store/app";
 import { ArabicDataPackCard } from "@/components/ArabicDataPackCard";
 // v1.2.13-1: Arabic Tools Export — the analysis results (morphology table,
 // roots, clitics, transliteration, dialect/register distributions) can now be
@@ -131,6 +135,13 @@ const DIALECT_DBS: { id: "msa" | "egy" | "glf" | "lev"; label: string }[] = [
   { id: "lev", label: "Levantine (calima-lev-01)" },
 ];
 
+/** i18n placeholder fill ({name} -> value), same convention as ArabicDataPackCard. */
+function fillVars(s: string, vars: Record<string, string>): string {
+  let out = s;
+  for (const [k, v] of Object.entries(vars)) out = out.replaceAll(`{${k}}`, v);
+  return out;
+}
+
 export function ArabicView() {
   const [text, setText] = useState(SAMPLE_TEXTS[0]);
   const [tool, setTool] = useState<Tool>("morphology");
@@ -143,6 +154,89 @@ export function ArabicView() {
   const queryClient = useQueryClient();
   // v1.2.13-1: export feedback shared with the other analysis views.
   const exportStatus = useExportStatus();
+
+  // --- r4: corpus mode — analyze a corpus uploaded in 'Your Corpus' ---
+  // Two input sources, one panel: paste text (the per-tool endpoints), or
+  // pick a pre-loaded Arabic corpus and let the engine run the chunked bulk
+  // job over its STORED text (server-side load, progress, cancel, aggregated
+  // report). The corpus workflow needs no copy-paste of megabytes.
+  const [source, setSource] = useState<"text" | "corpus">("text");
+  const [corpusId, setCorpusId] = useState("");
+  // Bumped on every corpus run: fresh query keys mean the status/result
+  // queries can never serve a previous job's payload.
+  const [bulkRunId, setBulkRunId] = useState(0);
+  const activeProjectId = useApp((s) => s.activeProjectId);
+  const activeCorpusId = useApp((s) => s.activeCorpusId);
+  const setActiveNav = useUI((s) => s.setActiveNav);
+
+  const corporaQ = useQuery({
+    queryKey: ["corpora", activeProjectId],
+    queryFn: () => (activeProjectId ? api.listCorpora(activeProjectId) : Promise.resolve([])),
+    enabled: source === "corpus" && !!activeProjectId,
+  });
+  // Only corpora whose language is Arabic — this is the Arabic Tools panel;
+  // English corpora are irrelevant here (same filter the rest of the app
+  // applies via the corpus language field).
+  const arabicCorpora = (corporaQ.data ?? []).filter((c) => c.language === "ar");
+
+  // Preselect the active corpus when it qualifies (the user just came from
+  // Your Corpus with it loaded); otherwise the first Arabic corpus. Never
+  // fight an explicit selection.
+  useEffect(() => {
+    if (source !== "corpus" || !corporaQ.data) return;
+    if (arabicCorpora.some((c) => c.id === corpusId)) return;
+    setCorpusId(
+      activeCorpusId && arabicCorpora.some((c) => c.id === activeCorpusId)
+        ? activeCorpusId
+        : (arabicCorpora[0]?.id ?? ""),
+    );
+  }, [source, corporaQ.data, arabicCorpora, corpusId, activeCorpusId]);
+
+  const bulkStatus = useQuery({
+    queryKey: ["arabic-bulk-status", bulkRunId],
+    queryFn: ({ signal }) => api.arabicBulkStatus(signal),
+    enabled: bulkRunId > 0,
+    // Poll ONLY while a job is running (same pattern as the data-pack
+    // installer card). An idle job never schedules a fetch.
+    refetchInterval: (q) => ((q.state.data as ArabicBulkStatus | undefined)?.busy ? 1_000 : false),
+  });
+  const bulkResult = useQuery({
+    queryKey: ["arabic-bulk-result", bulkRunId],
+    queryFn: ({ signal }) => api.arabicBulkResult(signal),
+    enabled: bulkStatus.data?.state === "done",
+    retry: false,
+    gcTime: 0,
+  });
+
+  const startBulk = useMutation({
+    mutationFn: (cid: string) => api.arabicBulkStartCorpus(cid),
+    onSuccess: () => {
+      // Race guard: the status query for the new runId key can fire BEFORE
+      // the POST resolves and read the engine while it still reports idle —
+      // after which nothing would ever schedule a poll (refetchInterval only
+      // continues while busy). The engine answers start() only once the job
+      // IS running, so refetching here always lands on "running".
+      void queryClient.invalidateQueries({ queryKey: ["arabic-bulk-status"] });
+    },
+  });
+  const cancelBulk = useMutation({ mutationFn: () => api.arabicBulkCancel() });
+
+  // In flight = start request pending, a status fetch in flight, or the job
+  // itself reporting busy. (Never read isPending off an enabled-gated
+  // useQuery — scripts/check_query_pending.mjs guards exactly that.)
+  const bulkBusy =
+    startBulk.isPending || bulkStatus.isFetching || bulkStatus.data?.busy === true;
+  const bulkSt = bulkStatus.data;
+  const bulkPct =
+    bulkSt && bulkSt.tokens_total
+      ? Math.min(100, Math.round(((bulkSt.tokens_done ?? 0) / bulkSt.tokens_total) * 100))
+      : 0;
+
+  const onRunCorpus = () => {
+    if (!corpusId || bulkBusy) return;
+    setBulkRunId((n) => n + 1);
+    startBulk.mutate(corpusId);
+  };
 
   const backends = useQuery({ queryKey: ["arabic-backends"], queryFn: ({ signal }) => api.arabicBackends(signal) });
 
@@ -265,8 +359,118 @@ export function ArabicView() {
         </div>
       )}
 
-      {/* Tool selector */}
-      <div className="arabic-toolbar">
+      {/* r4: input source — paste text, or analyze a corpus uploaded in
+          'Your Corpus' without leaving the panel. */}
+      <div className="ar-source-toggle" role="tablist" aria-label={t(lang, "ar_source_label")}>
+        <button
+          role="tab"
+          aria-selected={source === "text"}
+          type="button"
+          className={clsx("ar-source-btn", { active: source === "text" })}
+          onClick={() => setSource("text")}
+        >
+          {t(lang, "ar_source_text")}
+        </button>
+        <button
+          role="tab"
+          aria-selected={source === "corpus"}
+          type="button"
+          className={clsx("ar-source-btn", { active: source === "corpus" })}
+          onClick={() => setSource("corpus")}
+        >
+          {t(lang, "ar_source_corpus")}
+        </button>
+      </div>
+
+      {source === "corpus" ? (
+        <div className="ar-corpus-panel">
+          <div className="grounding-notice">{t(lang, "ar_corpus_note")}</div>
+
+          {arabicCorpora.length > 0 ? (
+            <label className="dialect-picker ar-corpus-picker">
+              {t(lang, "ar_corpus_pick")}:
+              <select
+                value={corpusId}
+                onChange={(e) => setCorpusId(e.target.value)}
+                disabled={bulkBusy}
+              >
+                {arabicCorpora.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} · {(c.stats?.token_count ?? 0).toLocaleString()} {t(lang, "ar_corpus_tokens")}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : (
+            <div className="ar-corpus-empty">
+              <div>{t(lang, "ar_corpus_none_hint")}</div>
+              <button
+                className="run-btn"
+                type="button"
+                onClick={() => setActiveNav("corpus-target")}
+              >
+                {t(lang, "ar_corpus_goto")}
+              </button>
+            </div>
+          )}
+
+          {arabicCorpora.length > 0 && (
+            <div className="ar-bulk-controls">
+              <button onClick={onRunCorpus} disabled={!corpusId || bulkBusy} className="run-btn">
+                {bulkBusy
+                  ? t(lang, "ar_corpus_analyzing").replace("{n}", String(bulkSt?.elapsed_s ?? 0))
+                  : t(lang, "ar_corpus_run")}
+              </button>
+              {bulkBusy && (
+                <button
+                  onClick={() => cancelBulk.mutate()}
+                  className="run-btn run-btn-cancel"
+                  type="button"
+                >
+                  {t(lang, "ar_cancel")}
+                </button>
+              )}
+            </div>
+          )}
+
+          {bulkBusy && bulkSt && (
+            <div className="ar-bulk-progress-wrap" role="status">
+              <progress className="ar-bulk-progress" value={bulkPct} max={100} />
+              <div className="ar-bulk-progress-text">
+                {fillVars(t(lang, "ar_corpus_progress"), {
+                  done: (bulkSt.tokens_done ?? 0).toLocaleString(),
+                  total: (bulkSt.tokens_total ?? 0).toLocaleString(),
+                  c: String(bulkSt.chunks_done ?? 0),
+                  n: String(bulkSt.chunks_total ?? 0),
+                })}
+                {bulkSt.eta_s != null
+                  ? ` · ${fillVars(t(lang, "ar_corpus_eta"), { n: String(Math.round(bulkSt.eta_s)) })}`
+                  : ""}
+              </div>
+            </div>
+          )}
+
+          {startBulk.isError && <ArabicError error={startBulk.error} />}
+          {bulkSt?.state === "error" && (
+            <div className="error" role="alert">Error: {bulkSt.error}</div>
+          )}
+          {bulkSt?.state === "cancelled" && (
+            <div className="result-meta">{t(lang, "ar_corpus_cancelled")}</div>
+          )}
+
+          {bulkSt?.state === "done" && bulkResult.data && (
+            <ArabicBulkResultPanel
+              result={bulkResult.data}
+              source={bulkSt.source ?? null}
+              lang={lang}
+              exportStatus={exportStatus}
+            />
+          )}
+        </div>
+      ) : (
+        <>
+          {/* Tool selector */}
+          <div className="arabic-toolbar">
         <div className="tool-tabs">
           {TOOLS.map((t) => (
             <button
@@ -360,7 +564,9 @@ export function ArabicView() {
       )}
       {result.data && <ArabicResult result={result.data} />}
 
-      {result.isError && <ArabicError error={result.error} />}
+          {result.isError && <ArabicError error={result.error} />}
+        </>
+      )}
     </div>
   );
 }
@@ -547,4 +753,134 @@ function ArabicResult({ result }: { result: any }) {
     default:
       return null;
   }
+}
+
+// --------------------------------------------------------------------------- //
+// r4: corpus mode — aggregated full-corpus report (kind: arabic_bulk_analysis)
+// --------------------------------------------------------------------------- //
+
+/**
+ * The bulk job's aggregated report: summary + POS distribution + top-50
+ * tables for roots / patterns / lemmas / tokens. The standard export bar
+ * (long-format table, shared with every other Arabic tool) sits above the
+ * result; a second button downloads the engine's full-depth JSON report
+ * (up to 10k entries per table) for archival analysis.
+ */
+function ArabicBulkResultPanel({
+  result,
+  source,
+  lang,
+  exportStatus,
+}: {
+  result: ArabicBulkResult;
+  source: string | null;
+  lang: "en" | "ar";
+  exportStatus: ReturnType<typeof useExportStatus>;
+}) {
+  const TOP_N = 50;
+  const num = (n: number) => n.toLocaleString();
+
+  const onDownloadJson = async () => {
+    try {
+      const blob = await api.arabicBulkResultFile();
+      const dl = await downloadBlob(blob, "corpusmind-arabic-bulk-analysis.json");
+      exportStatus.set(
+        dl.ok ? t(lang, "ar_corpus_download_done") : dl.message,
+        dl.ok ? "success" : "error",
+      );
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      exportStatus.set(fillVars(t(lang, "ar_corpus_download_failed"), { error: msg }), "error");
+    }
+  };
+
+  const totalTokens = result.token_count || 1;
+  const tables: { title: string; itemHeader: string; rows: [string, number][] }[] = [
+    { title: t(lang, "ar_corpus_top_roots"), itemHeader: "Root (الجذر)", rows: result.top_roots ?? [] },
+    { title: t(lang, "ar_corpus_top_patterns"), itemHeader: "Pattern (الوزن)", rows: result.top_patterns ?? [] },
+    { title: t(lang, "ar_corpus_top_lemmas"), itemHeader: "Lemma", rows: result.top_lemmas ?? [] },
+    { title: t(lang, "ar_corpus_top_tokens"), itemHeader: "Token", rows: result.top_tokens ?? [] },
+  ];
+
+  return (
+    <>
+      <div className="result-export-bar arabic-export-bar">
+        <ExportButton
+          label={t(lang, "analysis_export")}
+          formats={["xlsx", "csv", "tsv", "txt", "json"]}
+          onExport={(fmt) => {
+            const { headers, rows } = arabicResultToTable({ kind: "arabic_bulk_analysis", data: result });
+            void downloadTable(headers, rows, `arabic_corpus_bulk.${fmt}`, exportStatus.set);
+          }}
+        />
+        <button className="run-btn ar-json-btn" type="button" onClick={() => void onDownloadJson()}>
+          {t(lang, "ar_corpus_download_json")}
+        </button>
+        {exportStatus.el}
+      </div>
+
+      <div className="result-block">
+        <h3>{t(lang, "ar_corpus_done")}</h3>
+        <div className="result-meta">
+          {source && (
+            <span>
+              Source: <strong>{source}</strong> ·{" "}
+            </span>
+          )}
+          {fillVars(t(lang, "ar_corpus_summary"), {
+            tokens: num(result.token_count),
+            unique: num(result.unique_tokens),
+            plurals: num(result.broken_plural_count),
+            chunks: num(result.chunks),
+          })}
+        </div>
+      </div>
+
+      <div className="result-block">
+        <h3>{t(lang, "ar_corpus_pos")}</h3>
+        <div className="distribution-bars">
+          {Object.entries(result.pos_distribution ?? {})
+            .sort(([, a], [, b]) => b - a)
+            .map(([pos, n]) => (
+              <div key={pos} className="bar-row">
+                <span className="bar-label">{pos}</span>
+                <div className="bar-track">
+                  <div
+                    className="bar-fill"
+                    style={{ width: `${(n / totalTokens) * 100}%`, background: "var(--bar-brand)" }}
+                  />
+                </div>
+                <span className="bar-value">{num(n)}</span>
+              </div>
+            ))}
+        </div>
+      </div>
+
+      {tables.map((tb) => (
+        <div className="result-block" key={tb.title}>
+          <h3>{tb.title}</h3>
+          <table className="data-table arabic-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>{tb.itemHeader}</th>
+                <th>Frequency</th>
+              </tr>
+            </thead>
+            <tbody>
+              {tb.rows.slice(0, TOP_N).map(([item, count], i) => (
+                <tr key={`${item}-${i}`}>
+                  <td>{i + 1}</td>
+                  <td dir="rtl" lang="ar" className="arabic-cell">
+                    {item}
+                  </td>
+                  <td>{num(count)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ))}
+    </>
+  );
 }

@@ -1243,6 +1243,46 @@ export interface ArabicDataInstallStatus {
   };
 }
 
+// r4: corpus-driven bulk Arabic analysis (Arabic Tools -> 'Your Corpus').
+// POST /arabic/analyze/job accepts corpus_id; the engine loads the corpus's
+// stored cleaned text server-side (the browser never round-trips megabytes)
+// and the job reports progress through /status with the corpus name as
+// `source`. The result is an AGGREGATE (frequency tables, not a token dump).
+export interface ArabicBulkStatus {
+  state: "idle" | "running" | "done" | "cancelled" | "error";
+  busy: boolean;
+  stage?: string;
+  /** r4: human label of what is being analyzed (corpus name for corpus starts). */
+  source?: string | null;
+  chunks_total?: number;
+  chunks_done?: number;
+  tokens_total?: number;
+  tokens_done?: number;
+  elapsed_s?: number;
+  eta_s?: number | null;
+  error?: string | null;
+  started_at?: number | null;
+  finished_at?: number | null;
+  result_available?: boolean;
+  result_path?: string;
+  result_bytes?: number;
+  unique_tokens?: number;
+}
+
+export interface ArabicBulkResult {
+  kind: "arabic_bulk_analysis";
+  chunks: number;
+  token_count: number;
+  unique_tokens: number;
+  broken_plural_count: number;
+  pos_distribution: Record<string, number>;
+  top_roots: [string, number][];
+  top_patterns: [string, number][];
+  top_lemmas: [string, number][];
+  top_tokens: [string, number][];
+  generated_at: number;
+}
+
 // Phase 3 polish — bilingual (8.22)
 export interface AlignedPair {
   ar_sentence: string;
@@ -2486,6 +2526,36 @@ export const api = {
 
   arabicDataInstallCancel: () =>
     jsonFetch<ArabicDataInstallStatus>(`/api/v1/arabic/data/install/cancel`, { method: "POST" }, ARABIC_TIMEOUT_MS),
+
+  // --- r4: corpus-driven bulk analysis (Arabic Tools reads 'Your Corpus') ---
+  // Start by corpus: the engine loads the corpus's stored cleaned text
+  // server-side and runs the chunked bulk job (409 when one is running).
+  // Status is polled ONLY while busy (refetchInterval pattern shared with
+  // the data-pack installer). The result is the aggregated JSON report.
+  arabicBulkStartCorpus: (corpusId: string) =>
+    jsonFetch<ArabicBulkStatus>(`/api/v1/arabic/analyze/job`, {
+      method: "POST",
+      body: JSON.stringify({ corpus_id: corpusId }),
+    }, ARABIC_TIMEOUT_MS),
+
+  arabicBulkStatus: (signal?: AbortSignal) =>
+    jsonFetch<ArabicBulkStatus>(`/api/v1/arabic/analyze/job/status`, { signal }),
+
+  arabicBulkCancel: () =>
+    jsonFetch<ArabicBulkStatus>(`/api/v1/arabic/analyze/job/cancel`, { method: "POST" }, ARABIC_TIMEOUT_MS),
+
+  arabicBulkResult: (signal?: AbortSignal) =>
+    jsonFetch<ArabicBulkResult>(`/api/v1/arabic/analyze/job/result`, { signal }),
+
+  /** Full aggregated report as a file blob (up to 10k entries per table). */
+  arabicBulkResultFile: async (): Promise<Blob> => {
+    const r = await smartFetch(`/api/v1/arabic/analyze/job/result`);
+    if (!r.ok) {
+      const body = await r.text();
+      throw new Error(`HTTP ${r.status}: ${body}`);
+    }
+    return await r.blob();
+  },
 
   // --- Phase 3 polish — bilingual (8.22) ---
   bilingualAlign: (ar_corpus_id: string, en_corpus_id: string) =>

@@ -419,6 +419,27 @@ Purpose-built for learner-corpus studies (Granger 1998; Housen & Kuiken
   an original/result pair; dialect and register export a probability table.
   CSV/TSV files carry a UTF-8 BOM so Arabic opens cleanly in Excel/Sheets.
 
+**Analyze a pre-loaded corpus (v1.2.14 series):** the panel's input-source
+toggle — *Enter text / Pre-loaded corpus* — adds a corpus mode alongside the
+paste-text tools. In corpus mode, Arabic Tools lists the active project's
+corpora whose language is Arabic and runs the engine's chunked bulk
+morphology analysis over the corpus you uploaded in **Your Corpus** — no
+copy-paste needed, and the text never leaves your machine. The engine splits
+the corpus into sentence chunks, analyzes them through the same CAMeL
+calima-msa-r13 analyzer as the interactive tools, and aggregates the result
+into one report: POS distribution plus the top roots (الجذور), patterns
+(الأوزان), lemmas (الأصول), and tokens (الكلمات). Large corpora (500K–1M+
+tokens) run in the background with live progress (tokens processed, chunk
+count, ETA) and a Cancel button; results can be exported in the standard
+xlsx/csv/tsv/txt/json formats or downloaded as the full-depth JSON report
+(up to 10,000 entries per frequency table). If the project has no Arabic
+corpus yet, the panel shows a hint with a one-click jump to Your Corpus —
+upload a corpus there, set its language to Arabic, and it appears in the
+dropdown. Two notes: the bulk job analyzes one corpus at a time (a second
+start answers "busy"), and dialect/register identification remain
+paste-text tools — they are calibrated for short excerpts, not
+corpus-sized input.
+
 Arabic normalization is also available inside corpus cleaning, and Arabic
 is supported end-to-end in Vector KWIC via the multilingual bge-m3 model.
 

@@ -2303,6 +2303,61 @@ code, pre { font-family: var(--font-mono); }
 .dialect-picker { font-size: 13px; color: var(--text-muted); display: flex; gap: var(--space-1); align-items: center; }
 .dialect-picker select { padding: var(--space-1) var(--space-2); }
 
+/* r4: Arabic Tools corpus mode — input-source toggle + bulk job progress. */
+.ar-source-toggle {
+  display: inline-flex;
+  gap: 2px;
+  align-self: flex-start;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-subtle);
+}
+.ar-source-btn {
+  padding: var(--space-1) var(--space-3);
+  font-size: 13px;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+}
+.ar-source-btn.active {
+  background: var(--bg-elevated);
+  color: var(--brand-500);
+  border-color: var(--brand-400);
+  font-weight: 600;
+}
+.ar-corpus-panel { display: flex; flex-direction: column; gap: var(--space-3); }
+.ar-corpus-picker select { min-inline-size: min(420px, 100%); font-family: inherit; }
+.ar-corpus-empty {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: flex-start;
+  padding: var(--space-3);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  font-size: 14px;
+}
+.ar-bulk-controls { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+.ar-bulk-progress-wrap { display: flex; flex-direction: column; gap: var(--space-1); }
+.ar-bulk-progress {
+  inline-size: 100%;
+  block-size: 10px;
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--bg-subtle);
+}
+.ar-bulk-progress::-webkit-progress-bar { background: var(--bg-subtle); }
+.ar-bulk-progress::-webkit-progress-value { background: var(--bar-brand); transition: inline-size 0.4s ease; }
+.ar-bulk-progress::-moz-progress-bar { background: var(--bar-brand); }
+.ar-bulk-progress-text { font-size: 12.5px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.ar-json-btn { padding: var(--space-1) var(--space-3); font-size: 13px; }
+
 .text-input-area {
   background: var(--bg-elevated);
   border: 1px solid var(--border);
