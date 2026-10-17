@@ -666,6 +666,82 @@ Two typical engines to attach:
 `VITE_ENGINE_URL` still works exactly as before: builds with it baked in
 attach automatically, with no per-user setup.
 
+### 5.9 Windows code signing (removing the SmartScreen warning)
+
+The blue **"Windows protected your PC"** Microsoft Defender SmartScreen
+screen appears whenever a user runs an **unsigned** installer that has not
+yet earned file reputation. CorpusMind's NSIS `.exe` and `.msi` installers
+were unsigned up to and including v1.2.14-3, so every first-time Windows
+user saw it.
+
+**What #LancsBox does (for comparison).** The closest peer corpus tool does
+*not* eliminate the screen: the official LancsBox manual instructs users to
+*"agree to security warnings on your machine — #LancsBox is safe to run"*,
+and its help page says *"Allow #LancsBox to run by adjusting security
+settings"*. That is a documented click-through, not a fix — useful as an
+interim mitigation, which is exactly how the CorpusMind download page uses
+it (the Windows card carries the same "More info → Run anyway" note, EN/AR).
+
+**What CorpusMind does instead — real Authenticode signing, wired into the
+release pipeline** (`scripts/ci_windows_signing_config.py` +
+`.github/workflows/release.yml`, Windows job). The pipeline supports two
+mutually exclusive paths and falls back to unsigned (with a loud job-summary
+warning) when neither is configured:
+
+**Path A — Azure Trusted Signing (recommended).** Microsoft's managed
+signing service: certificates chain to a Microsoft-operated CA, which is the
+fastest route to SmartScreen reputation, and private keys never leave
+Microsoft's HSMs (satisfying the CA/B Forum's post-2023 key-storage rules).
+Basic tier is USD 9.99/month. Setup:
+
+1. Create a **Trusted Signing** account in the Azure portal (identity
+   validation for an individual or organisation is required; it can take a
+   few days). Create a **certificate profile** (Public Trust) inside it.
+2. Register an **Entra ID app** (service principal) with a client secret
+   that has the Trusted Signing **Signer** role on the account.
+3. Set these repository **secrets** (Settings → Secrets and variables →
+   Actions):
+   - `CM_AZURE_TENANT_ID` — the Entra tenant ID
+   - `CM_AZURE_CLIENT_ID` — the app (client) ID
+   - `CM_AZURE_CLIENT_SECRET` — the client secret
+4. Set these repository **variables** (same page, Variables tab):
+   - `CM_TS_ENDPOINT` — e.g. `https://eus.codesigning.azure.net` (shown on
+     the account overview; must match the account's region)
+   - `CM_TS_ACCOUNT` — the Trusted Signing account name
+   - `CM_TS_PROFILE` — the certificate profile name
+5. Re-run the release. The workflow installs `artifact-signing-cli`, and
+   Tauri's `signCommand` signs the `.exe`, the `.msi`, *and* the NSIS
+   uninstaller; a "Verify installer signatures" step then asserts the
+   artifacts really carry the signature.
+
+**Path B — classic PFX certificate (any CA).** Buy a code-signing
+certificate, export it as PFX, base64-encode it
+(`certutil -encode cert.pfx cert.b64` on Windows), and set two secrets:
+
+- `CM_WINDOWS_CERTIFICATE` — the base64 PFX (whitespace tolerated)
+- `CM_WINDOWS_CERTIFICATE_PASSWORD` — the PFX password
+
+The workflow imports it into the runner's `CurrentUser\My` store and signs
+via `certificateThumbprint` + SHA-256 + an RFC 3161 timestamp
+(`http://timestamp.digicert.com` by default, override with the
+`CM_WIN_TIMESTAMP_URL` env var). Tauri signs the uninstaller too.
+
+**Reputation reality (2026).** Signing removes the *unsigned-app* class of
+SmartScreen blocks, but SmartScreen also scores **file reputation**:
+Microsoft's own guidance is that neither OV nor even EV certificates
+guarantee an immediately clean screen any more — reputation accrues with
+downloads/installs over days to weeks. Trusted Signing identities
+historically warm up fastest. Expect the warning to fade after the first
+signed releases have some download volume; until then, the download-page
+click-through note (above) covers new users, and publishing
+`SHA256SUMS.txt` (the release pipeline attaches it automatically) lets
+anyone verify integrity independently.
+
+**Verification.** After any signed release, on a Windows machine:
+`Get-AuthenticodeSignature .\CorpusMind_<version>_x64-setup.exe |
+Format-List` → `Status: Valid` with the organisation identity as the
+signer; the MSI and the installed `uninstall.exe` carry the same signature.
+
 ---
 
 ## 6. Running the Desktop App (Tauri 2)

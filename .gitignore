@@ -139,3 +139,7 @@ secrets/
 node_modules/
 scripts/__pycache__/
 dev-dist/
+
+# v1.2.14-3: generated at build time by scripts/ci_windows_signing_config.py
+# (never commit — it embeds the signing endpoint/account/profile)
+desktop/src-tauri/signing-override.json

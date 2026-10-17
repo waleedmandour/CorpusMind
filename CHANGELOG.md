@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
 
+### Added (Release engineering, 2026-10-17 — Windows code signing pipeline)
+
+<!-- windows-signing-2026-10-17 -->
+- **The release pipeline can now sign the Windows installers, removing the Microsoft Defender SmartScreen "Windows protected your PC" screen once a signing identity is configured.** Two secrets-driven paths in the Windows job (`.github/workflows/release.yml`): **Azure Trusted Signing** (recommended — Microsoft-operated CA, fastest reputation; secrets `CM_AZURE_TENANT_ID`/`CM_AZURE_CLIENT_ID`/`CM_AZURE_CLIENT_SECRET` + variables `CM_TS_ENDPOINT`/`CM_TS_ACCOUNT`/`CM_TS_PROFILE`, signed via Tauri `signCommand` + `artifact-signing-cli`) and a **classic PFX certificate** (`CM_WINDOWS_CERTIFICATE` + `CM_WINDOWS_CERTIFICATE_PASSWORD`, imported into `CurrentUser\My`, signed via `certificateThumbprint` + SHA-256 + RFC 3161 timestamp). The NSIS `.exe`, the `.msi`, and the NSIS uninstaller are all covered; a new "Verify installer signatures" step asserts the artifacts really carry a signature. With neither path configured the build stays unsigned exactly as before — but the job summary now says so loudly. Config is generated per-run by `scripts/ci_windows_signing_config.py` into a git-ignored `signing-override.json` (never committed). Docs: `docs/BUILD_GUIDE.md` §5.9, including the 2026 reputation reality (even EV certificates no longer guarantee an instantly clean screen) and the peer comparison: #LancsBox documents a SmartScreen click-through ("agree to security warnings") rather than eliminating it, while the CorpusMind download page now carries the same interim click-through note (EN/AR) for the unsigned interim period.
+
 ## [1.2.14-3] — 2026-10-17 — PWA removal, Persuasion-Index resource fixes, collocates-per-level slider (pre-release)
 
 > Third pre-release of v1.2.14. Three user-facing corrections and one

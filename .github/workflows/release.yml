@@ -97,6 +97,30 @@ jobs:
     needs: test-gate
     runs-on: windows-latest
     timeout-minutes: 45
+    env:
+      # Windows code signing (v1.2.14-3 — see docs/BUILD_GUIDE.md §5.9).
+      # Neutral CM_* names mirror the macOS job: secrets that don't exist
+      # expand to the empty string, so the configure step decides the mode
+      # from PRESENCE and never treats "unset" as "configured". Two supported
+      # paths:
+      #   trusted — Azure Trusted Signing (recommended): Microsoft-operated CA,
+      #             fastest SmartScreen reputation. Needs the three CM_AZURE_*
+      #             app credentials plus the CM_TS_* repository VARIABLES
+      #             (endpoint/account/profile of the signing account).
+      #   pfx     — classic Authenticode: CM_WINDOWS_CERTIFICATE (base64 PFX)
+      #             + CM_WINDOWS_CERTIFICATE_PASSWORD; signed from the
+      #             CurrentUser\My store via certificateThumbprint.
+      # With neither configured the build stays unsigned (pre-signing
+      # behaviour) and the configure step writes a visible warning to the
+      # job summary.
+      CM_AZURE_TENANT_ID: ${{ secrets.CM_AZURE_TENANT_ID }}
+      CM_AZURE_CLIENT_ID: ${{ secrets.CM_AZURE_CLIENT_ID }}
+      CM_AZURE_CLIENT_SECRET: ${{ secrets.CM_AZURE_CLIENT_SECRET }}
+      CM_TS_ENDPOINT: ${{ vars.CM_TS_ENDPOINT }}
+      CM_TS_ACCOUNT: ${{ vars.CM_TS_ACCOUNT }}
+      CM_TS_PROFILE: ${{ vars.CM_TS_PROFILE }}
+      CM_WINDOWS_CERTIFICATE: ${{ secrets.CM_WINDOWS_CERTIFICATE }}
+      CM_WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.CM_WINDOWS_CERTIFICATE_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
 
@@ -330,9 +354,98 @@ jobs:
         shell: pwsh
         run: pwsh -File scripts/ci_smoke_engine.ps1 -Bin "desktop/src-tauri/binaries/corpusmind-engine/corpusmind-engine.exe" -InternalDir "desktop/src-tauri/binaries/corpusmind-engine/_internal" -WarnFile "engine/build/corpusmind-engine/warn-corpusmind-engine.txt"
 
+      # ── Windows code signing (v1.2.14-3) ──────────────────────────────────
+      # Decides the signing mode from which secrets/vars are present, imports
+      # the PFX into the user store when the classic path is configured, and
+      # emits desktop/src-tauri/signing-override.json (a Tauri --config
+      # override) so `cargo tauri build` signs the NSIS installer, the MSI,
+      # and the NSIS uninstaller. Unsigned builds keep working unchanged but
+      # get a loud step-summary warning (SmartScreen).
+      - name: Configure Windows code signing
+        id: signing
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $mode = "none"
+
+          if ($env:CM_AZURE_CLIENT_SECRET -and $env:CM_TS_ENDPOINT -and $env:CM_TS_ACCOUNT -and $env:CM_TS_PROFILE) {
+            $mode = "trusted"
+          }
+          elseif ($env:CM_WINDOWS_CERTIFICATE) {
+            $mode = "pfx"
+            # Decode + import the PFX into CurrentUser\My for signtool.
+            $pfxPath = "$env:RUNNER_TEMP\corpusmind-signing.pfx"
+            [IO.File]::WriteAllBytes($pfxPath, [Convert]::FromBase64String(($env:CM_WINDOWS_CERTIFICATE -replace "\s", "")))
+            $pfxPassword = ConvertTo-SecureString -String $env:CM_WINDOWS_CERTIFICATE_PASSWORD -Force -AsPlainText
+            $cert = Import-PfxCertificate -FilePath $pfxPath -CertStoreLocation Cert:\CurrentUser\My -Password $pfxPassword
+            Remove-Item $pfxPath -Force
+            # GITHUB_ENV only applies to SUBSEQUENT steps — also set it in
+            # THIS process so the config helper below sees it immediately.
+            $env:CM_WIN_THUMBPRINT = $cert.Thumbprint
+            "CM_WIN_THUMBPRINT=$($cert.Thumbprint)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+            Write-Host "Imported signing certificate $($cert.Subject) ($($cert.Thumbprint))"
+          }
+
+          "mode=$mode" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          python scripts/ci_windows_signing_config.py
+
+          if ($mode -eq "none") {
+            $warn = @"
+          ## Windows installers are UNSIGNED :warning:
+
+          No signing identity is configured for this run, so the `.exe`/`.msi` triggers the
+          Microsoft Defender SmartScreen "Windows protected your PC" screen for new users.
+          Configure Azure Trusted Signing (recommended) or a PFX certificate — see
+          **docs/BUILD_GUIDE.md §5.9** for the exact secret/variable names.
+          "@
+            $warn | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+          }
+
+      # artifact-signing-cli is only needed on the Trusted Signing path.
+      - name: Install artifact-signing CLI (Trusted Signing)
+        if: steps.signing.outputs.mode == 'trusted'
+        run: cargo install artifact-signing-cli --locked
+
       - name: Build Tauri app (NSIS + MSI)
         working-directory: desktop/src-tauri
-        run: cargo tauri build
+        env:
+          # artifact-signing-cli reads the standard AZURE_* names; map them
+          # only for this step so an empty secret can never leak elsewhere.
+          # Empty when signing is not configured — the CLI is not invoked then.
+          AZURE_TENANT_ID: ${{ secrets.CM_AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.CM_AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.CM_AZURE_CLIENT_SECRET }}
+        run: |
+          $tauriArgs = @("build")
+          if (Test-Path signing-override.json) { $tauriArgs += @("--config", "signing-override.json") }
+          cargo tauri @tauriArgs
+
+      - name: Verify installer signatures
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem desktop/src-tauri/target/release/bundle/nsis/*.exe | Select-Object -First 1
+          $msi = Get-ChildItem desktop/src-tauri/target/release/bundle/msi/*.msi | Select-Object -First 1
+          $mode = "${{ steps.signing.outputs.mode }}"
+          foreach ($f in @($exe, $msi)) {
+            if (-not $f) { continue }
+            $sig = Get-AuthenticodeSignature -FilePath $f.FullName
+            Write-Host "$($f.Name): Status=$($sig.Status) Signer=$($sig.SignerCertificate.Subject)"
+            if ($mode -eq "none") {
+              if ($sig.Status -ne "NotSigned") { Write-Warning "$($f.Name) unexpectedly carries a signature in mode=none" }
+            } elseif ($sig.Status -eq "NotSigned") {
+              # Hard failure: the build was configured to sign, yet the
+              # artifact carries no Authenticode signature at all.
+              Write-Host "ERROR: $($f.Name) is UNSIGNED but signing mode is $mode"
+              exit 1
+            } elseif ($sig.Status -ne "Valid") {
+              # A cryptographically-present signature whose CHAIN the runner
+              # cannot fully validate (missing intermediate/root in the
+              # runner's trust store). End-user Windows machines retrieve
+              # chain data via AIA, so this is informational here — signtool
+              # (or the signing CLI) already hard-failed on real errors.
+              Write-Warning "$($f.Name): signature present, runner chain check = $($sig.Status) (informational)"
+            }
+          }
 
       - name: Verify installer size
         shell: pwsh
