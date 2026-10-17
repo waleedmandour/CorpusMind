@@ -1088,7 +1088,7 @@ def discourse_taxonomy_list() -> list[dict]:
     items.append(
         {
             "key": PERSUASION_TAXONOMY_KEY,
-            "name": "Persuasion Index (Wang & Gong 2026) - 15 dimensions",
+            "name": "Persuasion Index (Gong et al. 2026) - 15 dimensions",
             "languages": ["en"],
             "citation": PERSUASION_CITATION,
             "categories": sorted(
@@ -2357,7 +2357,7 @@ async def compute_sfg_discourse_analysis(
 # --------------------------------------------------------------------------- #
 # §8.15c Persuasion Index lens (v1.2.7, §4)
 #
-# Integrates the persuasion-index package (Wang & Gong 2026, EMNLP;
+# Integrates the persuasion-index package (Gong et al. 2026, EMNLP;
 # Apache-2.0) as a citable lens: 15 interpretable dimensions scored per
 # document, aggregated to corpus-level 0–100 indices. The optional LIWC /
 # concreteness / NRC-VAD resources are NOT required — the package's own
@@ -2370,9 +2370,10 @@ async def compute_sfg_discourse_analysis(
 PERSUASION_TAXONOMY_KEY = "persuasion_gong2026"
 
 PERSUASION_CITATION = (
-    "Wang, Z., & Gong, L. (2026). persuasion-index: Theory-guided, "
-    "interpretable analysis of persuasive language (v0.3.0). EMNLP 2026. "
-    "Apache-2.0. https://github.com/krystalgong/Persuasion_Index_Code "
+    "Gong, L., Wang, Z., Xu, Y., & Mendelsohn, J. (2026). Persuasion Index: "
+    "A theory-guided framework for persuasion analysis (persuasion-index "
+    "v0.3.0). EMNLP 2026 Main Conference. Apache-2.0. "
+    "https://github.com/krystalgong/Persuasion_Index_Code "
     "(arXiv:2606.14580). Scores are aggregated over documents; optional "
     "LIWC/concreteness/VAD resources are not bundled, and the package "
     "degrades those subfeatures to neutral baselines."
@@ -2573,7 +2574,7 @@ async def compute_persuasion_discourse_analysis(
     return DiscourseResult(
         categories=categories,
         total_tokens=total_tokens,
-        taxonomy="Persuasion Index (Wang & Gong 2026) - 15 dimensions",
+        taxonomy="Persuasion Index (Gong et al. 2026) - 15 dimensions",
         taxonomy_key=PERSUASION_TAXONOMY_KEY,
         citation=PERSUASION_CITATION,
         compare_corpus_id=None,

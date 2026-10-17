@@ -1556,7 +1556,7 @@ function DiscoursePanel({ cid }: { cid: string }) {
       { key: "cialdini2007", name: "Cialdini 2007" },
       { key: "usas", name: "CLAWS/USAS semantic tagset (top-level)" },
       { key: "sfg_hm2014", name: "SFG Transitivity & Modality (Halliday & Matthiessen 2014)" },
-      { key: "persuasion_gong2026", name: "Persuasion Index (Wang & Gong 2026) - 15 dimensions" },
+      { key: "persuasion_gong2026", name: "Persuasion Index (Gong et al. 2026) - 15 dimensions" },
     ];
   // v1.2.10: language-coverage badge — driven entirely by the engine
   // registry via /discourse/taxonomies (traceable, not hardcoded here).

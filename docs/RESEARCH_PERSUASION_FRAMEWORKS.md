@@ -3,7 +3,7 @@
 **Status:** Investigation report — no code changed in this document's scope.
 **Date:** 2026-10-17
 **Scope:** `Discourse → Persuasion Index` lens (`engine/discourse/service.py`, `engine/discourse/pi_resources.py`, `engine/api/phase2.py:persuasion_health`, `web/src/views/AnalysisView.tsx`, `web/src/components/PersuasionRadar.tsx`).
-**Question:** The Persuasive Index lens "requires the user to download components in order to perform the analysis". Can the underlying framework (`persuasion-index==0.3.0`, Wang & Gong 2026) be replaced by another persuasion-discourse framework with quantitative analyses?
+**Question:** The Persuasive Index lens "requires the user to download components in order to perform the analysis". Can the underlying framework (`persuasion-index==0.3.0`, Gong et al. 2026) be replaced by another persuasion-discourse framework with quantitative analyses?
 
 ---
 

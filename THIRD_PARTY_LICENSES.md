@@ -121,7 +121,7 @@ Phase 0 release.
 
 | Package | License | Purpose |
 | --- | --- | --- |
-| [persuasion-index](https://github.com/krystalgong/Persuasion_Index_Code) | Apache-2.0 | 15-dimension persuasive-language scoring (Wang & Gong 2026, EMNLP). Pinned main dependency since v1.2.8 — the packaged engine ships the lens. |
+| [persuasion-index](https://github.com/krystalgong/Persuasion_Index_Code) | Apache-2.0 | 15-dimension persuasive-language scoring (Gong et al. 2026, EMNLP). Pinned main dependency since v1.2.8 — the packaged engine ships the lens. |
 | pandas, wordfreq, vaderSentiment | BSD-3 / CC-BY-SA-style data terms / MIT | Transitive dependencies of persuasion-index (see upstream THIRD_PARTY_RESOURCES.md for its optional LIWC/concreteness/NRC-VAD resources, which CorpusMind does NOT bundle) |
 
 ### Student Mode classroom stack (v1.2.9)

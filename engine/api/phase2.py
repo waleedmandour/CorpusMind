@@ -373,7 +373,7 @@ async def persuasion_health() -> dict:
             "installed": False,
             "version": None,
             "install_hint": (
-                "pip install persuasion-index (Apache-2.0, Wang & Gong 2026) "
+                "pip install persuasion-index (Apache-2.0, Gong et al. 2026) "
                 "or pip install -e '.[persuasion]' in the engine directory"
             ),
             "resources_required": False,
@@ -472,7 +472,7 @@ async def discourse(
                 503,
                 "The persuasion-index package is not installed in this "
                 "engine. Install it with `pip install persuasion-index` "
-                "(Apache-2.0, Wang & Gong 2026) to enable the Persuasion "
+                "(Apache-2.0, Gong et al. 2026) to enable the Persuasion "
                 "Index lens.",
             ) from e
         if msg.startswith("taxonomy_language_mismatch:"):

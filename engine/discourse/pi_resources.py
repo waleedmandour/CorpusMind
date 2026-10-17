@@ -62,16 +62,33 @@ PI_RESOURCE_LAYOUT: dict[str, tuple[str, str, str, str]] = {
     "PI_CONCRETENESS_FILE": (
         "single_word_concreteness",
         "Brysbaert_concretness_dataset.xlsx",
-        "https://biblio.ugent.be/publication/5774089",
-        "Obtain from the official source (Brysbaert et al. 2014, "
-        "supplemental data); not redistributed by CorpusMind or PI.",
+        # v1.2.15: the publisher-hosted supplemental xlsx of the BRM 2014
+        # article (verified: Sheet1 carries the Word / Conc.M columns
+        # persuasion-index validates, 39,954 rows). The Ghent bibliographic
+        # page (https://biblio.ugent.be/publication/5774089) is the paper's
+        # landing page but hosts ONLY the article PDF — never the dataset —
+        # so it cannot serve as the download link.
+        "https://static-content.springer.com/esm/art%3A10.3758%2Fs13428-013-0403-5/MediaObjects/13428_2013_403_MOESM1_ESM.xlsx",
+        "Publisher-hosted supplemental data of Brysbaert, Warriner & "
+        "Kuperman (2014, Behavior Research Methods 46:904-911); the "
+        "downloaded file (13428_2013_403_MOESM1_ESM.xlsx) is renamed to "
+        "the target filename below. Not redistributed by CorpusMind or PI.",
     ),
     "PI_MWE_CONCRETENESS_FILE": (
         "multiword_concreteness",
         "MultiwordExpression_Concreteness_Ratings.csv",
-        "https://osf.io/ksypa/",
-        "Obtain from the authors' OSF repository; not redistributed by "
-        "CorpusMind or PI.",
+        # v1.2.15: the file's own OSF page (GUID he4dv), verified through
+        # the OSF API: MultiwordExpression_Concreteness_Ratings.csv,
+        # 2,995,806 B, Expression / Mean_C columns — exactly what
+        # persuasion-index validates. The project GUID (osf.io/ksypa) is
+        # only the landing page: its osfstorage root holds just the rating
+        # instructions .docx; the CSV lives under the project's GitHub
+        # storage (mirrored at github.com/ejmuraki/multiword-exp).
+        "https://osf.io/he4dv/",
+        "Muraki, Abdalla, Brysbaert & Pexman (2023, Behavior Research "
+        "Methods 55:2522-2531), shared openly by the authors on OSF "
+        "(project https://osf.io/ksypa/ — Files → GitHub); not "
+        "redistributed by CorpusMind or PI.",
     ),
     "PI_LIWC_FILE": (
         "liwc",

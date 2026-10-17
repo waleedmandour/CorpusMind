@@ -1,6 +1,6 @@
 """v1.2.7 (§4) — Persuasion Index lens (persuasion_gong2026).
 
-The persuasion-index package (Wang & Gong 2026, Apache-2.0) is an OPTIONAL
+The persuasion-index package (Gong et al. 2026, Apache-2.0) is an OPTIONAL
 dependency: positive-path tests skip when it is absent, and the API degrades
 to an honest 503 rather than a crash.
 """

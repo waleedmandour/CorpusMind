@@ -731,7 +731,7 @@ the dependency parses:
 ## Persuasion Index — new in v1.2.7 (§4)
 
 The Discourse page gains a sixth lens, `persuasion_gong2026`, powered by
-the **persuasion-index** package (Wang & Gong 2026, EMNLP; Apache-2.0):
+the **persuasion-index** package (Gong et al. 2026, EMNLP; Apache-2.0):
 15 interpretable dimensions (Evidence, Specificity, Authority/Credibility,
 Logic/Cohesion, Argumentation, Opponent's View, Sentiment, Politeness,
 Reciprocity, Impact, Commitment, Scarcity/Urgency, Engagement, Propaganda,
@@ -758,9 +758,9 @@ indices** (the mean across scored documents).
 
 **Citation:**
 
-- Wang, Z., & Gong, L. (2026). persuasion-index: Theory-guided,
-  interpretable analysis of persuasive language (v0.3.0). In *Proceedings
-  of EMNLP 2026*. Apache-2.0.
+- Gong, L., Wang, Z., Xu, Y., & Mendelsohn, J. (2026). Persuasion Index:
+  A theory-guided framework for persuasion analysis (persuasion-index
+  v0.3.0). EMNLP 2026 Main Conference. Apache-2.0.
   https://github.com/krystalgong/Persuasion_Index_Code (arXiv:2606.14580)
 
 ## Cialdini 2007 persuasion cue lens — new in v1.2.10

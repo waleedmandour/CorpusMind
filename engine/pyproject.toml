@@ -107,7 +107,7 @@ arabic = [
 urdu-hindi-farsi = [
     "stanza>=1.8.0",
 ]
-# v1.2.7 (§4): Persuasion Index lens (Wang & Gong 2026, Apache-2.0).
+# v1.2.7 (§4): Persuasion Index lens (Gong et al. 2026, Apache-2.0).
 # v1.2.8 (review #6): promoted to MAIN dependencies above — the packaged
 # engine must ship the lens, so the extra is now only a compatibility
 # alias. Still pinned to 0.3.0 (see the main-dependency comment).

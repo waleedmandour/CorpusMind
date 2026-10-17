@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
 
+### Fixed (Persuasion Index resources, 2026-10-17 — download links that actually serve the data)
+
+<!-- pi-resource-links-2026-10-17 -->
+- **The Persuasion Index panel's "official source" links now resolve to pages/downloads that actually serve the four optional resource files.** The single-word concreteness link pointed at the Ghent bibliographic page (`biblio.ugent.be/publication/5774089`) — the paper's landing page, which hosts only the article PDF and never the dataset (its old direct-file URL `…/file/5774093.xlsx` 404s). It now points at the publisher-hosted supplemental xlsx of Brysbaert, Warriner & Kuperman (2014, *BRM* 46:904–911), verified to carry the exact `Word`/`Conc.M` columns persuasion-index validates (39,954 rows). The multiword-concreteness link pointed at the OSF *project* page (`osf.io/ksypa/`), and the installer tried `osf.io/download/ksypa/` — but the project's osfstorage root contains only the rating-instructions .docx, so that URL could never yield the CSV. The panel now links the file's own OSF page (GUID `he4dv`, verified via the OSF API: `MultiwordExpression_Concreteness_Ratings.csv`, 2,995,806 B, `Expression`/`Mean_C` columns — Muraki, Abdalla, Brysbaert & Pexman 2023, *BRM* 55:2522–2531), and `scripts/install_pi_resources.py` downloads it from the OSF GUID with the author's GitHub mirror (`ejmuraki/multiword-exp`) as fallback. LIWC (`liwc.app/download`) and NRC-VAD (`saifmohammad.com`, official v2.1 zip verified to contain the exact unigrams path/schema persuasion-index expects) were already correct and are unchanged.
+- **Installer downloads are now content-checked** (`scripts/install_pi_resources.py`): the xlsx must start with the zip (`PK`) magic and the CSV's first line must be the `Expression,…Mean_C` header — so an HTML error or maintenance page (as served during an OSF outage) is rejected with an explicit message instead of being silently installed as a data file the engine then fails to parse.
+- **Corrected the lens citation:** the author list and title now match the package's own `CITATION.cff` — Gong, L., Wang, Z., Xu, Y., & Mendelsohn, J. (2026), *Persuasion Index: A theory-guided framework for persuasion analysis* (the previous strings credited "Wang & Gong"). Updated the user-visible citation line, the taxonomy display name, the install hints, and the docs (EN/AR user guide, methodology, research report); the `persuasion_gong2026` taxonomy key and all i18n keys are unchanged.
+
 ### Added (PWA, 2026-10-16 — runtime engine attachment)
 
 <!-- pwa-attach-2026-10-16 -->

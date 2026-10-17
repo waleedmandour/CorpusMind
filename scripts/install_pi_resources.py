@@ -10,10 +10,11 @@ forbid redistribution. persuasion-index resolves them through its own
 This script arranges the official downloads into that folder:
 
   1. single-word concreteness (Brysbaert et al. 2014, .xlsx)
-     - can be fetched directly from the official Ghent University host
-       (``--all-open``), or placed manually (``--from <file>``);
-  2. multiword-expression concreteness (.csv, OSF)
-     - direct fetch (``--all-open``) or ``--from``;
+     - can be fetched directly from the publisher-hosted supplemental
+       archive (``--all-open``), or placed manually (``--from <file>``);
+  2. multiword-expression concreteness (.csv, Muraki et al. 2023, OSF)
+     - direct fetch from the file's OSF GUID or the authors' GitHub
+       mirror (``--all-open``) or ``--from``;
   3. NRC-VAD lexicon v2.1 unigrams
      - YOU download the official zip (the site requires agreement to the
        license terms), then ``--nrc-vad-zip <downloaded.zip>`` extracts
@@ -21,6 +22,10 @@ This script arranges the official downloads into that folder:
   4. LIWC dictionary
      - YOU own a license; ``--liwc-file <en_liwc.txt>`` copies your
        legacy .dic (LIWC-22 .dicx is NOT supported by PI 0.3.0).
+
+Each direct download is content-checked (xlsx zip magic / CSV header) so
+an HTML error or maintenance page is rejected instead of being installed
+under the canonical filename.
 
 Examples
 --------
@@ -61,20 +66,47 @@ DIRECT_FETCH = {
     "single_word_concreteness": {
         "filename": "Brysbaert_concretness_dataset.xlsx",
         "urls": [
-            # Ghent University bibliographic repository (publisher copy).
-            "https://biblio.ugent.be/publication/5774089/file/5774093.xlsx",
-            # Elsevier journal supplemental archive (BRM 2014 article).
+            # Publisher (Springer) supplemental archive of the BRM 2014
+            # article — verified to carry the Word / Conc.M columns
+            # persuasion-index validates (39,954 rows). The Ghent
+            # bibliographic page (biblio.ugent.be/publication/5774089) is
+            # the paper's landing page but hosts only the article PDF, so
+            # it is NOT a data source and its old direct-file URL 404s.
             "https://static-content.springer.com/esm/art%3A10.3758%2Fs13428-013-0403-5/MediaObjects/13428_2013_403_MOESM1_ESM.xlsx",
         ],
     },
     "multiword_concreteness": {
         "filename": "MultiwordExpression_Concreteness_Ratings.csv",
         "urls": [
-            # OSF project ksypa (authors' repository).
-            "https://osf.io/download/ksypa/",
+            # The exact file on the authors' OSF project ksypa (GitHub
+            # storage add-on; file GUID he4dv, verified via the OSF API).
+            # NOTE: the project GUID itself (/download/ksypa/) does NOT
+            # serve this file — the project's osfstorage root holds only
+            # the rating-instructions .docx, so the old URL could never
+            # yield the CSV.
+            "https://osf.io/download/he4dv/",
+            # Author's mirror of the same file (byte-identical size,
+            # 2,995,806 B; Expression / Mean_C header).
+            "https://raw.githubusercontent.com/ejmuraki/multiword-exp/master/MultiwordExpression_Concreteness_Ratings.csv",
         ],
     },
 }
+
+
+def content_ok(key: str, data: bytes) -> bool:
+    """Cheap content gate for a freshly downloaded resource.
+
+    Rejects HTML/error/maintenance pages (e.g. an OSF outage) before they
+    can be saved under the canonical filename and look installed to the
+    engine — the failure mode that motivated v1.2.15.
+    """
+    if key == "single_word_concreteness":
+        # .xlsx is a zip archive: PK magic + the real file is ~2.2 MB.
+        return data[:2] == b"PK" and len(data) > 100_000
+    if key == "multiword_concreteness":
+        first_line = data[:2048].lstrip(b"\xef\xbb\xbf").split(b"\n", 1)[0].strip()
+        return first_line.startswith(b"Expression") and b"Mean_C" in first_line
+    return False
 
 
 def default_dir() -> Path:
@@ -87,16 +119,15 @@ def default_dir() -> Path:
     return home / ".corpusmind" / "pi-resources"
 
 
-def fetch(url: str, dest: Path) -> bool:
-    """Download url→dest. Returns True on success; prints the failure."""
+def fetch_bytes(url: str) -> bytes | None:
+    """Download url into memory. Returns None on any network/OS failure."""
     try:
         req = urllib.request.Request(url, headers={"User-Agent": "CorpusMind-pi-installer/1.0"})
-        with urllib.request.urlopen(req, timeout=60) as resp, dest.open("wb") as out:
-            shutil.copyfileobj(resp, out)
-        return dest.is_file() and dest.stat().st_size > 0
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            return resp.read()
     except Exception as exc:  # noqa: BLE001 — report any network/OS failure
         print(f"    ! {url}\n      {exc}")
-        return False
+        return None
 
 
 def install_direct(target: Path, key: str) -> bool:
@@ -108,13 +139,23 @@ def install_direct(target: Path, key: str) -> bool:
     print(f"[get ] {key} → {dest}")
     for url in spec["urls"]:
         print(f"    trying {url}")
-        if fetch(url, dest):
-            print(f"    ok ({dest.stat().st_size:,} bytes)")
-            return True
-    dest.unlink(missing_ok=True)
+        data = fetch_bytes(url)
+        if data is None:
+            continue
+        if not content_ok(key, data):
+            print(
+                f"    ! downloaded bytes are not the expected data file "
+                f"({len(data):,} B) — the host is serving an error or wrong "
+                "page; trying the next source"
+            )
+            continue
+        dest.write_bytes(data)
+        print(f"    ok ({len(data):,} bytes)")
+        return True
     print(
-        "    ! all direct sources failed — download manually from the URL in\n"
-        "      docs/USER_GUIDE.md (Persuasion Index section) and rerun with --from."
+        "    ! all direct sources failed — download manually from the link in\n"
+        "      the app's Persuasion Index resource panel (official source per\n"
+        "      resource) and rerun with --from / --mwe-from."
     )
     return False
 

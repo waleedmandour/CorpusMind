@@ -281,7 +281,7 @@ governor–dependent pairs.
   types (material, mental, relational, behavioural, verbal, existential)
   and modality values, derived from the stored Universal Dependencies
   parse.
-- **Persuasion Index (Wang & Gong 2026)** — 15 interpretable dimensions of
+- **Persuasion Index (Gong et al. 2026)** — 15 interpretable dimensions of
   persuasive language per document, grouped by the classical appeals
   (Logos, Ethos, Pathos) and shown as a radar chart. The package is
   version-pinned (persuasion-index 0.3.0, Apache-2.0) and ships inside the
