@@ -1,6 +1,6 @@
 # CorpusMind User Guide
 
-> Version 1.2.14-6 | AGPL-3.0-only
+> Version 1.2.14-7 | AGPL-3.0-only
 >
 > Authors: Dr. Waleed Mandour (Sultan Qaboos University, ORCID: 0000-0002-9262-5993)
 > and Prof. Wesam Ibrahim (Princess Nourah Bint Abdulrahman University, ORCID: 0000-0003-0710-6038)
@@ -13,7 +13,7 @@ If you use CorpusMind in your research, please cite it as:
 
 > Mandour, W., & Ibrahim, W. (2026). *CorpusMind: A local-first, AI-native
 > research environment for corpus linguistics and multimodal discourse
-> analysis* (Version 1.2.14-6) [Computer software]. Zenodo.
+> analysis* (Version 1.2.14-7) [Computer software]. Zenodo.
 > https://doi.org/10.5281/zenodo.21226650
 
 ---

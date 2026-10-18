@@ -98,6 +98,83 @@ once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 <!-- windows-signing-2026-10-17 -->
 - **The release pipeline can now sign the Windows installers, removing the Microsoft Defender SmartScreen "Windows protected your PC" screen once a signing identity is configured.** Two secrets-driven paths in the Windows job (`.github/workflows/release.yml`): **Azure Trusted Signing** (recommended — Microsoft-operated CA, fastest reputation; secrets `CM_AZURE_TENANT_ID`/`CM_AZURE_CLIENT_ID`/`CM_AZURE_CLIENT_SECRET` + variables `CM_TS_ENDPOINT`/`CM_TS_ACCOUNT`/`CM_TS_PROFILE`, signed via Tauri `signCommand` + `artifact-signing-cli`) and a **classic PFX certificate** (`CM_WINDOWS_CERTIFICATE` + `CM_WINDOWS_CERTIFICATE_PASSWORD`, imported into `CurrentUser\My`, signed via `certificateThumbprint` + SHA-256 + RFC 3161 timestamp). The NSIS `.exe`, the `.msi`, and the NSIS uninstaller are all covered; a new "Verify installer signatures" step asserts the artifacts really carry a signature. With neither path configured the build stays unsigned exactly as before — but the job summary now says so loudly. Config is generated per-run by `scripts/ci_windows_signing_config.py` into a git-ignored `signing-override.json` (never committed). Docs: `docs/BUILD_GUIDE.md` §5.9, including the 2026 reputation reality (even EV certificates no longer guarantee an instantly clean screen) and the peer comparison: #LancsBox documents a SmartScreen click-through ("agree to security warnings") rather than eliminating it, while the CorpusMind download page now carries the same interim click-through note (EN/AR) for the unsigned interim period.
 
+## [1.2.14-7] — 2026-10-18 — Launch error cards fixed at the root; Arabic UI translation coverage (pre-release r7)
+
+> Seventh pre-release of v1.2.14 — a field-report fix release. r6 showed
+> two raw transport-error cards on EVERY launch ("error sending request
+> for url …/corpora/{id}" and "…/providers"), and large parts of the
+> Arabic UI still rendered hardcoded English. Both are fixed at the root:
+> boot-time queries now wait for the engine's first health answer, the
+> transport-error classifier no longer misses the desktop HTTP plugin's
+> bare-string rejections, and ten previously untranslated surfaces (KWIC
+> table, confirm dialogs, export menus, command palette, collocation
+> network chrome, About page, tagset selector, theme toggle) now follow
+> the UI language with academic Arabic phrasing and no em dashes.
+
+### Fixed
+
+- **Two error cards on every launch ("error sending request for url
+  …/corpora/{id}" and "…/providers").** Two stacked root causes:
+  (1) boot-time queries (the sidebar's active-corpus pill, HomeView's
+  provider chips, assistant suggestions) fired the moment the webview
+  mounted — often tens of seconds before the PyInstaller sidecar binds
+  its port on first launch — and their failures were captured as issues;
+  `jsonFetch` now gates the FIRST non-health call behind the engine's
+  first successful `/health` answer (latching afterwards, so mid-session
+  behaviour including the self-heal path is unchanged; `/health` itself
+  stays ungated — the health poller and the readiness wait depend on it);
+  (2) the desktop HTTP plugin rejects with a **bare string**, not an
+  `Error` instance, so `jsonFetch`'s connection-error classification
+  (`e?.message` undefined) mis-saw every transport failure as an HTTP
+  error and rethrew it raw — bypassing both the shell's self-heal probe
+  and the friendly-message wrapper, and leaking reqwest internals into
+  Smart Troubleshooting cards. Both classification sites now normalize
+  rejections to strings first, so connection failures retry, self-heal,
+  and surface the actionable engine-not-responding message in every
+  transport.
+- **A corpus deleted since the last session minted a 404 issue card on
+  launch.** The sidebar's active-corpus query now swallows exactly the
+  HTTP 404 (the App-level validator clears the stale id); any other
+  failure still propagates.
+
+### Added
+
+- **Arabic UI translation coverage for ten previously hardcoded
+  surfaces:** the shared KWIC results table (column headers + pager),
+  ConfirmDialog buttons, the ExportButton menu (labels + hints), the
+  theme toggle, the command palette (all actions reuse the sidebar's
+  translated nav keys behind a translated "Go to" prefix), the tagset
+  selector, the collocation network chrome (title, measure/collocate
+  labels, stats line, buttons, canvas aria, empty state), the About page
+  (tagline, headings, acknowledgement, license, key numbers, links), and
+  the destructive-action confirmations in corpus/project management.
+  `Vector KWIC` is now **سياق الكلمات المفتاحية الموجّه** per the
+  academic-terminology request, and every Arabic UI string is em-dash
+  free: 26 clause-separating em dashes became Arabic semicolons (؛) and
+  6 residual dashes were normalized. Technical proper nouns (measure
+  names, tagset names, format labels, bibliographic names) stay in their
+  canonical form in both languages.
+- New i18n keys ship in lockstep in both catalogs (105 new keys each;
+  parity re-verified 1123 = 1123).
+
+### Tests
+
+- Engine suite at the release commit: **793 passed / 15 skipped / 0
+  failed** (no engine change in this release). Ruff clean; mypy strict
+  baseline unchanged at **1989** (+0, advisory gate green).
+- Web: `tsc --noEmit` clean; `vite build` clean; UI regression suite
+  **49/49** — 44 existing + **5 new boot-transport tests**
+  (`boot-transport-error.test.ts`) pinning the readiness gate (health
+  probe precedes the first data call), friendly wrapping of bare-string
+  and Error-instance transport rejections, HTTP-error pass-through, and
+  `/health` staying immediate and retrying. Version lockstep: **9/9**.
+
+### Migration notes
+
+- **No API contract change, no data migration, no settings change.**
+  Existing v1.2.14-6 installations can upgrade in place. Arabic users
+  will see previously English surfaces follow the language toggle after
+  a reload; no action is needed.
 ## [1.2.14-6] — 2026-10-18 — Collocation-network 504 fix: one-pass mesh, off-loop scanning, result cache (pre-release r6)
 
 > Sixth pre-release of v1.2.14 — a focused fix release for the r4 field
