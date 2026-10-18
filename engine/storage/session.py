@@ -4,7 +4,12 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 
 from app.settings import get_settings
 from storage.models import Base
@@ -151,7 +156,7 @@ async def init_db() -> None:
     await _enable_wal_mode(engine)
 
 
-async def _enable_wal_mode(engine) -> None:
+async def _enable_wal_mode(engine: AsyncEngine) -> None:
     """r5: convert the data-directory DB to WAL journal mode (best-effort).
 
     In the default DELETE journal mode a reader blocks behind any in-flight
