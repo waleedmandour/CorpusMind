@@ -39,6 +39,8 @@ import {
   type CollocationNetworkEdge,
   type CollocationNetworkResult,
 } from "@/lib/api";
+import { t } from "@/lib/i18n";
+import { useUI } from "@/store/ui";
 
 // ─── Design tokens (match the CorpusMind dark-green system) ───────────────
 const BRAND = "#1b4d3e";
@@ -201,6 +203,8 @@ export function CollocationNetwork({
   onSetCenter,
   onNetworkLoading,
 }: CollocationNetworkProps) {
+  // v1.2.14-7 (r7): the network's visible chrome follows the UI language.
+  const lang = useUI((s) => s.lang);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const graphRef = useRef<Graph | null>(null);
   const sigmaRef = useRef<Sigma | null>(null);
@@ -763,10 +767,10 @@ export function CollocationNetwork({
   return (
     <div className="collocation-3d-network">
       <div className="network-header">
-        <h4 className="network-title">Collocation Network</h4>
+        <h4 className="network-title">{t(lang, "net_title")}</h4>
         <div className="network-controls">
           <label className="network-measure-label">
-            Measure
+            {t(lang, "net_measure")}
             <select
               value={measure}
               onChange={(e) => setMeasure(e.target.value as CollocationMeasure)}
@@ -785,9 +789,9 @@ export function CollocationNetwork({
               the camera re-fit so the graph stays inside its window. */}
           <label
             className="network-measure-label network-slider-label"
-            title="How many collocates to show per node — applies to the node word and to every collocate you expand. Release the slider to apply."
+            title={t(lang, "net_slider_title")}
           >
-            Collocates
+            {t(lang, "net_collocates")}
             <input
               type="range"
               className="network-slider"
@@ -795,8 +799,8 @@ export function CollocationNetwork({
               max={MAX_TOP_N}
               step={1}
               value={topN}
-              aria-label="Collocates per level"
-              aria-valuetext={`${topN} collocates per level`}
+              aria-label={t(lang, "net_slider_aria")}
+              aria-valuetext={t(lang, "net_valtext").replace("{n}", String(topN))}
               onChange={(e) => setTopN(Number(e.target.value))}
               onPointerUp={commitTopN}
               onKeyUp={commitTopN}
@@ -805,27 +809,30 @@ export function CollocationNetwork({
             <span className="network-slider-value">{topN}</span>
           </label>
           <span className={total.nodes >= MAX_NODES ? "network-stats warn" : "network-stats"}>
-            {total.nodes} nodes · {total.edges} edges · density {total.density.toFixed(3)}
+            {t(lang, "net_stats")
+              .replace("{a}", String(total.nodes))
+              .replace("{b}", String(total.edges))
+              .replace("{c}", total.density.toFixed(3))}
           </span>
           {mode === "canvas2d" && (
             <span
               className="network-mode-badge"
-              title="WebGL2 is not available in this window - the network is rendered with the built-in 2D canvas engine. Every interaction still works."
+              title={t(lang, "net_webgl_note")}
             >
-              2D mode
+              {t(lang, "net_mode_2d")}
             </span>
           )}
-          <button className="btn-small" onClick={resetLayout} title="Re-run the ForceAtlas2 layout">
-            Re-layout
+          <button className="btn-small" onClick={resetLayout} title={t(lang, "net_relayout")}>
+            {t(lang, "net_relayout_btn")}
           </button>
-          <button className="btn-small" onClick={recenterView} title="Reset the camera">
-            Fit view
+          <button className="btn-small" onClick={recenterView} title={t(lang, "net_recenter")}>
+            {t(lang, "net_fit_btn")}
           </button>
-          <button className="btn-small" onClick={exportPng} title="Save the current view as PNG">
-            Export PNG
+          <button className="btn-small" onClick={exportPng} title={t(lang, "net_save_png")}>
+            {t(lang, "net_export_png_btn")}
           </button>
-          <button className="btn-small" onClick={exportJson} title="Save the full graph (positions + all statistics) as JSON">
-            Export JSON
+          <button className="btn-small" onClick={exportJson} title={t(lang, "net_save_json")}>
+            {t(lang, "net_export_json_btn")}
           </button>
         </div>
       </div>
@@ -834,7 +841,7 @@ export function CollocationNetwork({
         ref={containerRef}
         className="network-canvas"
         role="application"
-        aria-label={`Interactive collocation network for '${centerNode}'. Click a collocate to expand its collocates. The table above shows the same data in text form.`}
+        aria-label={t(lang, "net_canvas_aria").replace("{n}", centerNode)}
       >
         {mode === "canvas2d" && (
           <NetworkCanvas2D
@@ -858,7 +865,7 @@ export function CollocationNetwork({
       )}
 
       {empty && !flash && !loadError && (
-        <div className="network-flash">No collocates met the thresholds - try a lower min frequency.</div>
+        <div className="network-flash">{t(lang, "net_empty")}</div>
       )}
 
       {tooltip && (

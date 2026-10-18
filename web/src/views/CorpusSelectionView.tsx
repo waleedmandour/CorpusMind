@@ -133,7 +133,9 @@ export function ProjectSelector() {
           onClick={() => {
             const p = projects.data?.find((x) => x.id === activeProjectId);
             setConfirmDeleteProject({
-              msg: `Delete project "${p?.name ?? activeProjectId}" and all of its corpora? This cannot be undone.`,
+              // v1.2.14-7 (r7): translated destructive-action message.
+              msg: t(useUI.getState().lang, "cs_del_project")
+                .replace("{n}", p?.name ?? activeProjectId),
               onConfirm: () => deleteProject.mutate(activeProjectId),
             });
           }}
@@ -284,7 +286,8 @@ function CorpusListPanel({ mode }: { mode: CorpusMode }) {
               onClick={(e) => {
                 e.stopPropagation();
                 setConfirmDelete({
-                  msg: `Delete corpus "${c.name}" and all of its documents? This cannot be undone.`,
+                  // v1.2.14-7 (r7): translated destructive-action message.
+                  msg: t(lang, "cs_del_corpus").replace("{n}", c.name),
                   onConfirm: () => deleteCorpus.mutate(c.id),
                 });
               }}

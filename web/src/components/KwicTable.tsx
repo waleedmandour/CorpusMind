@@ -7,6 +7,9 @@
  */
 import clsx from "clsx";
 
+import { t } from "@/lib/i18n";
+import { useUI } from "@/store/ui";
+
 export interface KwicLine {
   line_id: string;
   document_filename: string;
@@ -30,17 +33,20 @@ interface KwicTableProps {
 }
 
 export function KwicTable({ lines, corpusLang, corpusScriptTag }: KwicTableProps) {
+  // v1.2.14-7 (r7): column headers were hardcoded English regardless of the
+  // UI language; they now follow the active language like every other view.
+  const lang = useUI((s) => s.lang);
   return (
     <table className="kwic-table" data-corpus-script={corpusScriptTag}>
       <thead>
         <tr>
-          <th>Line ID</th>
-          <th>Document</th>
-          <th className="right-align">Left context</th>
-          <th>Node</th>
-          <th>Right context</th>
-          <th>POS</th>
-          <th>Lemma</th>
+          <th>{t(lang, "kwic_col_line")}</th>
+          <th>{t(lang, "kwic_col_doc")}</th>
+          <th className="right-align">{t(lang, "kwic_col_left")}</th>
+          <th>{t(lang, "kwic_col_node")}</th>
+          <th>{t(lang, "kwic_col_right")}</th>
+          <th>{t(lang, "kwic_col_pos")}</th>
+          <th>{t(lang, "kwic_col_lemma")}</th>
         </tr>
       </thead>
       <tbody>
@@ -77,17 +83,20 @@ interface KwicPaginationProps {
 export function KwicPagination({
   total, offset, pageSize, hasPrev, hasNext, isFetching, onPrev, onNext,
 }: KwicPaginationProps) {
+  const lang = useUI((s) => s.lang);
   if (total <= pageSize) return null;
   return (
     <div className="pagination-controls" style={{ display: "flex", gap: "var(--space-2)", alignItems: "center", marginTop: "var(--space-3)", justifyContent: "center" }}>
       <button className="btn-small" onClick={onPrev} disabled={!hasPrev || isFetching}>
-        {"\u25C0"} Previous {pageSize}
+        {"\u25C0"} {t(lang, "kwic_prev_n").replace("{n}", String(pageSize))}
       </button>
       <span style={{ fontSize: "13px", color: "var(--text-subtle)" }}>
-        Page {Math.floor(offset / pageSize) + 1} of {Math.ceil(total / pageSize)}
+        {t(lang, "kwic_page_of")
+          .replace("{a}", String(Math.floor(offset / pageSize) + 1))
+          .replace("{b}", String(Math.ceil(total / pageSize)))}
       </span>
       <button className="btn-small" onClick={onNext} disabled={!hasNext || isFetching}>
-        Next {pageSize} {"\u25B6"}
+        {t(lang, "kwic_next_n").replace("{n}", String(pageSize))} {"\u25B6"}
       </button>
     </div>
   );

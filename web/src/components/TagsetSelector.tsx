@@ -11,6 +11,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api } from "@/lib/api";
+import { t } from "@/lib/i18n";
+import { useUI } from "@/store/ui";
 
 const TAGSET_LABELS: Record<string, string> = {
   upos: "UD UPOS (universal)",
@@ -28,16 +30,19 @@ const GRAMMATICAL_AR = ["upos", "calima"];
 const GRAMMATICAL_NEW_LANGS = ["upos"];
 const SEMANTIC = ["usas"];
 
-const TAGSET_HINTS: Record<string, string> = {
-  upos: "The 17-tag universal inventory - language-independent default.",
-  ptb: "The classic Penn Treebank tags (NN, VBD, IN, ...) - English treebank standard.",
-  claws7: "The ~150-tag BNC/Sketch Engine tagset, mapped from Penn Treebank (approximation).",
-  calima: "Native CAMeL Tools morphological tags (noun, verb, adj, prep, ...).",
-  usas: "UCREL Semantic Analysis System top-level categories (A=abstract ... Z=grammatical words). Lexicon-based, experimental - cite the USAS taxonomy.",
+// v1.2.14-7 (r7): hints now resolve through i18n keys; the tagset names
+// themselves are proper nouns and stay as-is in both languages.
+const TAGSET_HINT_KEYS: Record<string, Parameters<typeof t>[1]> = {
+  upos: "ts_hint_upos",
+  ptb: "ts_hint_ptb",
+  claws7: "ts_hint_claws7",
+  calima: "ts_hint_calima",
+  usas: "ts_hint_usas",
 };
 
 export function TagsetSelector({ cid }: { cid: string }) {
   const qc = useQueryClient();
+  const lang = useUI((s) => s.lang);
   const corpusQ = useQuery({
     queryKey: ["corpus", cid],
     queryFn: () => api.getCorpus(cid),
@@ -54,38 +59,36 @@ export function TagsetSelector({ cid }: { cid: string }) {
   });
 
   const grammatical = language === "ar" ? GRAMMATICAL_AR : ["ur", "hi", "fa"].includes(language) ? GRAMMATICAL_NEW_LANGS : GRAMMATICAL_EN;
-  const chosenHint = TAGSET_HINTS[current];
+  const chosenHintKey = TAGSET_HINT_KEYS[current];
 
   return (
     <div className="corpus-card tagset-card">
-      <h3>Tagset</h3>
+      <h3>{t(lang, "ts_title")}</h3>
       <p className="settings-text-muted">
-        Step 1 - choose the grammatical or semantic tagset used when the corpus
-        is tagged, parsed and (re)compiled. Files uploaded afterwards are
-        annotated with this scheme; the choice is saved with the corpus.
+        {t(lang, "ts_intro")}
       </p>
       <select
         className="tagset-select"
         value={current}
         disabled={saveTagset.isPending}
         onChange={(e) => saveTagset.mutate(e.target.value)}
-        aria-label="Corpus tagset"
+        aria-label={t(lang, "ts_aria")}
       >
-        <optgroup label="Grammatical">
-          {grammatical.map((t) => (
-            <option key={t} value={t}>{TAGSET_LABELS[t] ?? t}</option>
+        <optgroup label={t(lang, "ts_grammatical")}>
+          {grammatical.map((t2) => (
+            <option key={t2} value={t2}>{TAGSET_LABELS[t2] ?? t2}</option>
           ))}
         </optgroup>
-        <optgroup label="Semantic">
-          {SEMANTIC.map((t) => (
-            <option key={t} value={t}>{TAGSET_LABELS[t] ?? t}</option>
+        <optgroup label={t(lang, "ts_semantic")}>
+          {SEMANTIC.map((t2) => (
+            <option key={t2} value={t2}>{TAGSET_LABELS[t2] ?? t2}</option>
           ))}
         </optgroup>
       </select>
-      {chosenHint && <p className="tagset-hint">{chosenHint}</p>}
+      {chosenHintKey && <p className="tagset-hint">{t(lang, chosenHintKey)}</p>}
       {saveTagset.isError && (
         <p className="settings-text-muted" role="alert">
-          Could not save the tagset: {(saveTagset.error as Error)?.message}
+          {t(lang, "ts_save_error")} {(saveTagset.error as Error)?.message}
         </p>
       )}
     </div>

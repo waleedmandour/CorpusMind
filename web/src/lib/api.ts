@@ -1911,6 +1911,28 @@ function withDeadline<T>(p: Promise<T>, timeoutMs?: number, signal?: AbortSignal
 }
 
 async function jsonFetch<T>(path: string, init?: RequestInit, timeoutMs?: number): Promise<T> {
+  // v1.2.14-7 (r7 boot-race fix): the webview boots in about a second, but the
+  // PyInstaller sidecar can take tens of seconds to bind its port on first
+  // launch (antivirus scans of the extracted tree). Boot-time queries (the
+  // sidebar's active-corpus pill, HomeView's provider chips, assistant
+  // suggestions) used to fire immediately, fail with a connection error, and
+  // mint raw reqwest error cards on EVERY launch. Non-health endpoints now
+  // wait once for the engine's first successful health answer before their
+  // first attempt. /health itself keeps its immediate behaviour — the health
+  // poller and waitForEngine depend on it not blocking. After the first
+  // success _engineReady latches true and this gate is a no-op, so
+  // mid-session behaviour (including the self-heal path below) is unchanged.
+  const isHealthProbe = path.includes("/health");
+  if (engineAttached() && !isHealthProbe && !_engineReady) {
+    if (init?.signal?.aborted) throw makeAbortError();
+    const ready = await waitForEngine(120);
+    if (init?.signal?.aborted) throw makeAbortError();
+    if (!ready) {
+      throw friendlyEngineError(
+        new Error("error sending request for url (engine unreachable during startup wait)"),
+      );
+    }
+  }
   // Task 1: Retry on connection errors (engine still starting up).
   // Only retry on /health and /version endpoints — other endpoints
   // should fail fast so the user sees errors, not silent retries.
@@ -1929,7 +1951,14 @@ async function jsonFetch<T>(path: string, init?: RequestInit, timeoutMs?: number
     // probe/restart the engine while an analysis is legitimately still
     // running) and never retry it.
     if (e?.name === "AbortError" || init?.signal?.aborted) throw e;
-    const isConnError = !!e?.message && !e.message.includes("HTTP ");
+    // v1.2.14-7: the Tauri HTTP plugin rejects with a bare STRING ("error
+    // sending request for url …"), not an Error instance — e.message is
+    // undefined on it, so this check used to classify every transport
+    // failure as an HTTP error and rethrow BEFORE the self-heal probe and
+    // the friendly wrapper, leaking the raw plugin string into Smart
+    // Troubleshooting cards. Normalize to a string first.
+    const rawMsg = e instanceof Error ? e.message : String(e ?? "");
+    const isConnError = !!rawMsg && !rawMsg.includes("HTTP ");
     if (!isConnError) throw e;
     // v1.2.5: the engine may have died mid-session or still be starting up
     // (PyInstaller one-file extraction + antivirus can outrun any fixed
@@ -1978,8 +2007,12 @@ async function jsonFetchAttempt<T>(
       // v1.2.12 (rc7): an aborted request must never be retried — rethrow
       // immediately so the Cancel resolves this attempt for good.
       if (e?.name === "AbortError" || init?.signal?.aborted) throw e;
-      // Only retry on connection errors (engine not ready), not on HTTP errors
-      const isConnError = !e.message?.includes("HTTP ");
+      // Only retry on connection errors (engine not ready), not on HTTP errors.
+      // v1.2.14-7: same string-rejection normalization as jsonFetch — a bare
+      // string from the Tauri transport has no .message, which used to make
+      // this classify it as a non-retryable error.
+      const rawMsg = e instanceof Error ? e.message : String(e ?? "");
+      const isConnError = !rawMsg.includes("HTTP ");
       if (isConnError && attempt < maxRetries) {
         await new Promise((resolve) => setTimeout(resolve, 500 * (attempt + 1)));
         continue;

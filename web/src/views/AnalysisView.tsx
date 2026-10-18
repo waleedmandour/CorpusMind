@@ -386,10 +386,10 @@ function CollocationPanel({ cid }: { cid: string }) {
           <input type="checkbox" checked={normalizeArabic} onChange={(e) => setNormalizeArabic(e.target.checked)} />
           {t(lang, "arb_normalize")}
         </label>
-        <button onClick={onSearch} disabled={!node.trim()}>Compute</button>
+        <button onClick={onSearch} disabled={!node.trim()}>{t(lang, "analysis_compute")}</button>
         <ExportButton onExport={onExport} disabled={!result.data} />
         <ExportButton
-          label="Export diagram"
+          label={t(lang, "exp_label_diagram")}
           onExport={onExport}
           disabled={!result.data}
           formats={["svg", "png"]}

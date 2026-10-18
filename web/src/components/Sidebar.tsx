@@ -143,7 +143,17 @@ export function Sidebar() {
 
   const activeCorpus = useQuery({
     queryKey: ["corpus", activeCorpusId],
-    queryFn: () => activeCorpusId ? api.getCorpus(activeCorpusId) : Promise.resolve(null),
+    // v1.2.14-7: a corpus deleted since the last session answers HTTP 404
+    // once the engine is up; the App-level validator clears the persisted id
+    // in that case. Swallow the 404 here so a stale id never mints an issue
+    // card on launch — any other failure still propagates.
+    queryFn: () =>
+      activeCorpusId
+        ? api.getCorpus(activeCorpusId).catch((e) => {
+            if (String(e).includes("HTTP 404")) return null;
+            throw e;
+          })
+        : Promise.resolve(null),
     enabled: !!activeCorpusId,
   });
 

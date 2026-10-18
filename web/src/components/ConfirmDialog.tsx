@@ -14,6 +14,7 @@
  *   <ConfirmDialog state={confirmState} onClose={() => setConfirmState(null)} />
  */
 import { useUI } from "@/store/ui";
+import { t } from "@/lib/i18n";
 
 interface ConfirmState {
   msg: string;
@@ -22,6 +23,9 @@ interface ConfirmState {
 
 export function ConfirmDialog({ state, onClose }: { state: ConfirmState | null; onClose: () => void }) {
   const theme = useUI((s) => s.theme);
+  // v1.2.14-7 (r7): the dialog chrome followed the UI language, but its two
+  // buttons were hardcoded English. The message itself comes from the caller.
+  const lang = useUI((s) => s.lang);
   if (!state) return null;
 
   return (
@@ -67,7 +71,7 @@ export function ConfirmDialog({ state, onClose }: { state: ConfirmState | null; 
               cursor: "pointer",
             }}
           >
-            Cancel
+            {t(lang, "dlg_cancel")}
           </button>
           <button
             className="btn-small"
@@ -85,7 +89,7 @@ export function ConfirmDialog({ state, onClose }: { state: ConfirmState | null; 
               cursor: "pointer",
             }}
           >
-            Confirm
+            {t(lang, "dlg_confirm")}
           </button>
         </div>
       </div>

@@ -16,6 +16,8 @@
  */
 import { useState, useRef, useEffect } from "react";
 import type { ExportFormat } from "@/lib/api";
+import { t } from "@/lib/i18n";
+import { useUI } from "@/store/ui";
 
 interface ExportButtonProps {
   label?: string;
@@ -26,32 +28,40 @@ interface ExportButtonProps {
 
 const DEFAULT_FORMATS: Array<ExportFormat | "svg" | "png"> = ["xlsx", "csv", "tsv", "txt", "json"];
 
-const FORMAT_LABELS: Record<string, string> = {
+// v1.2.14-7 (r7): format names stay as international format labels, but the
+// descriptive hints and the txt/svg/png display names now follow the UI
+// language. xlsx/csv/tsv/json keep their universal names in both languages.
+const FORMAT_LABEL_KEYS: Partial<Record<string, Parameters<typeof t>[1]>> = {
+  txt: "exp_fmt_txt",
+  svg: "exp_fmt_svg",
+  png: "exp_fmt_png",
+};
+
+const FORMAT_HINT_KEYS: Record<string, Parameters<typeof t>[1]> = {
+  xlsx: "exp_hint_xlsx",
+  csv: "exp_hint_csv",
+  tsv: "exp_hint_tsv",
+  txt: "exp_hint_txt",
+  json: "exp_hint_json",
+  svg: "exp_hint_svg",
+  png: "exp_hint_png",
+};
+
+const STATIC_FORMAT_LABELS: Record<string, string> = {
   xlsx: "Excel (.xlsx)",
   csv: "CSV (.csv)",
   tsv: "TSV (.tsv)",
-  txt: "Plain text (.txt)",
   json: "JSON (.json)",
-  svg: "SVG diagram (.svg)",
-  png: "PNG image (.png)",
-};
-
-const FORMAT_HINTS: Record<string, string> = {
-  xlsx: "Styled spreadsheet - opens in Excel/Sheets",
-  csv: "Universal comma-separated - any tool",
-  tsv: "Tab-separated - paste into Excel/Sheets",
-  txt: "Plain text table - for emails / quick view",
-  json: "Structured - for programmatic use / re-import",
-  svg: "Vector diagram - scales to any size, for papers/slides",
-  png: "Raster image 1600x1200 - for Word docs / social media",
 };
 
 export function ExportButton({
-  label = "Export",
+  label,
   onExport,
   disabled = false,
   formats = DEFAULT_FORMATS,
 }: ExportButtonProps) {
+  const lang = useUI((s) => s.lang);
+  const effectiveLabel = label ?? t(lang, "exp_label");
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -72,9 +82,9 @@ export function ExportButton({
         className="btn-small export-trigger"
         disabled={disabled}
         onClick={() => setOpen(!open)}
-        title="Export results"
+        title={t(lang, "exp_menu_title")}
       >
-        {label} {"\u25BE"}
+        {effectiveLabel} {"\u25BE"}
       </button>
       {open && (
         <div className="export-menu" role="menu">
@@ -86,10 +96,16 @@ export function ExportButton({
                 onExport(fmt);
                 setOpen(false);
               }}
-              title={FORMAT_HINTS[fmt]}
+              title={FORMAT_HINT_KEYS[fmt] ? t(lang, FORMAT_HINT_KEYS[fmt]) : undefined}
             >
-              <span className="export-menu-label">{FORMAT_LABELS[fmt] ?? fmt}</span>
-              <span className="export-menu-hint">{FORMAT_HINTS[fmt]}</span>
+              <span className="export-menu-label">
+                {FORMAT_LABEL_KEYS[fmt]
+                  ? t(lang, FORMAT_LABEL_KEYS[fmt])
+                  : (STATIC_FORMAT_LABELS[fmt] ?? fmt)}
+              </span>
+              <span className="export-menu-hint">
+                {FORMAT_HINT_KEYS[fmt] ? t(lang, FORMAT_HINT_KEYS[fmt]) : ""}
+              </span>
             </button>
           ))}
         </div>
