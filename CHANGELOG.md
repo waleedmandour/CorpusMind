@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
 
+### Fixed (Collocation network, 2026-10-18 — the r4 field report's 504)
+
+<!-- colloc-network-504-2026-10-18 -->
+- **The collocation network no longer times out on large corpora — the
+  r4 field report (HTTP 504 "Collocation network exceeded the 30s
+  deadline" on an Arabic corpus, with a concurrent request failing at
+  the transport level) is fixed at the root.** Three engine changes:
+  (1) the depth-2 mesh now runs as **one pass** — a single self-join
+  fetches the tokens of every sentence containing ANY pivot and one
+  counting sweep answers every pivot×graph-node pair, replacing the
+  per-pivot scans that cost `top_n` window scans per build (14 at the
+  shipped default; a 40K-token benchmark went from 4.4s of scans to
+  0.9s, and the old cost grew linearly with `top_n` while the new one
+  stays flat); (2) `compute_collocations` runs its Python window sweep
+  and the vocabulary fold-aggregation **in a worker thread**, so a heavy
+  scan no longer stalls the event loop — this is what made concurrent
+  requests (the corpus-detail fetch, the shell's 3s health probe) fail
+  or time out while a network build ran, and could trigger the shell's
+  self-heal restart, which is where the raw "error sending request for
+  url …/corpora/…" card came from; (3) the overall request deadline
+  default moves 30s → 60s (`CORPUSMIND_NETWORK_TIMEOUT_S` unchanged) as
+  headroom for very large corpora — with the one-pass mesh the deadline
+  is rarely reached at all. A bounded LRU result cache also serves
+  same-parameter re-queries (the network's center scan re-uses the flat
+  table's just-computed result; re-clicks are instant) with rows copied
+  per call so callers can never alias the cached payload. The depth-2
+  mesh is also slightly more complete than before: mesh edges are
+  matched on the folded collocate key and named with the graph node's
+  display string, so a mesh edge to the node is no longer dropped when
+  the node's own surface forms tie (e.g. diacritic vs plain spellings of
+  the same Arabic word). Engine change only — no API contract change,
+  no frontend change.
+
 ### Added (Arabic Tools, 2026-10-17 — analyze a pre-loaded Arabic corpus from 'Your Corpus')
 
 <!-- arabic-corpus-mode-2026-10-17 -->
@@ -65,6 +98,83 @@ once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 <!-- windows-signing-2026-10-17 -->
 - **The release pipeline can now sign the Windows installers, removing the Microsoft Defender SmartScreen "Windows protected your PC" screen once a signing identity is configured.** Two secrets-driven paths in the Windows job (`.github/workflows/release.yml`): **Azure Trusted Signing** (recommended — Microsoft-operated CA, fastest reputation; secrets `CM_AZURE_TENANT_ID`/`CM_AZURE_CLIENT_ID`/`CM_AZURE_CLIENT_SECRET` + variables `CM_TS_ENDPOINT`/`CM_TS_ACCOUNT`/`CM_TS_PROFILE`, signed via Tauri `signCommand` + `artifact-signing-cli`) and a **classic PFX certificate** (`CM_WINDOWS_CERTIFICATE` + `CM_WINDOWS_CERTIFICATE_PASSWORD`, imported into `CurrentUser\My`, signed via `certificateThumbprint` + SHA-256 + RFC 3161 timestamp). The NSIS `.exe`, the `.msi`, and the NSIS uninstaller are all covered; a new "Verify installer signatures" step asserts the artifacts really carry a signature. With neither path configured the build stays unsigned exactly as before — but the job summary now says so loudly. Config is generated per-run by `scripts/ci_windows_signing_config.py` into a git-ignored `signing-override.json` (never committed). Docs: `docs/BUILD_GUIDE.md` §5.9, including the 2026 reputation reality (even EV certificates no longer guarantee an instantly clean screen) and the peer comparison: #LancsBox documents a SmartScreen click-through ("agree to security warnings") rather than eliminating it, while the CorpusMind download page now carries the same interim click-through note (EN/AR) for the unsigned interim period.
 
+## [1.2.14-6] — 2026-10-18 — Collocation-network 504 fix: one-pass mesh, off-loop scanning, result cache (pre-release r6)
+
+> Sixth pre-release of v1.2.14 — a focused fix release for the r4 field
+> report: the collocation network returned HTTP 504 on a large Arabic
+> corpus while a concurrent request surfaced a raw transport error, and
+> no task indicator appeared because the network build is a direct query.
+> The scan cost is fixed at the root (one-pass mesh + worker-thread
+> scanning + result cache + 60s headroom), so the deadline is no longer
+> reachable in normal use.
+
+### Fixed
+
+- **Collocation network 504 on large/Arabic corpora.** The depth-2 mesh
+  ran one full `compute_collocations()` scan per pivot — 14 window scans
+  per network build at the shipped `top_n=14` — and every scan re-fetched
+  the pivot's node sentences and re-counted every window token in Python.
+  The new `compute_collocation_mesh()` answers every pivot×graph-node
+  pair with ONE self-join + ONE counting sweep, with semantics proven
+  identical to the per-pivot scans by test (same real-token filter, same
+  fold rule, same ±window span, same sentence scope, same ordered
+  x→y direction, same O/fx/fy/N and all eight association measures).
+- **Concurrent requests stalling (the "error sending request for url …"
+  card) while a network build ran.** `compute_collocations`' pure-Python
+  window sweep — multiple seconds on a frequent node — executed on the
+  event loop, delaying every other request and the shell's health probe;
+  a probe that outlived its grace window let the desktop shell's self-heal
+  restart a live engine, which is what produced the raw reqwest transport
+  error on `GET /corpora/{id}`. The sweep (and the vocabulary
+  fold-aggregation) now run via `asyncio.to_thread`; the event loop stays
+  responsive for the whole scan.
+- **Repeated scans re-paying the same computation.** A bounded LRU
+  (64 entries) memoises collocation results keyed on every input that can
+  change the outcome (version, level, span, min_freq, measures, folded
+  node, normalization fingerprint, subcorpus, POS/stopword filters) and
+  is version-scoped, so a recompile naturally misses. The network's
+  center scan now typically hits the cache the flat collocation table
+  just warmed.
+
+### Changed
+
+- **Network deadline default 30s → 60s.** Both network endpoints' overall
+  wall-clock deadline (`CORPUSMIND_NETWORK_TIMEOUT_S`, still env-overridable)
+  moves to 60s as headroom for very large corpora; with the one-pass mesh
+  the deadline is rarely reached. The 504 message and its advice (smaller
+  top_n, narrower window, more frequent node) are unchanged.
+- **Depth-2 mesh edges are keyed on the folded collocate** and named with
+  the known graph node's display string. The previous per-pivot approach
+  could drop a mesh edge to the node when the node's surface forms tied
+  (diacritic vs plain spellings resolving to different display strings);
+  those edges now attach. Mesh candidate rows are no longer capped at
+  `top_n*3` before the known-node filter — every pivot×known pair with
+  O ≥ min_freq becomes an edge, bounded by the max_nodes cap as before.
+
+### Tests
+
+- Engine suite at the release commit: **790 passed / 15 skipped / 0
+  failed** (783 baseline + 7 new). The new `tests/test_r6_network_mesh.py`
+  proves mesh ≡ per-pivot scans on English and Arabic (normalize_arabic)
+  corpora — candidate sets, O/fx/fy/N and all eight measures per pair —
+  plus hand-counted co-occurrence spots, the min_freq cut, known-set
+  containment, empty/unknown inputs, the LRU cache (hit, param change,
+  limit slicing, clear), and the endpoint serving the mesh edge.
+- mypy strict baseline re-locked **1992 → 1989** (net −3; the reworked
+  code is fully annotated and two legacy errors fell out of the move),
+  per repo convention ("count, don't chase zero"); the advisory gate is
+  green.
+- Web: `tsc --noEmit` clean; UI regression suite **44/44** (no frontend
+  change in this release). Version lockstep: **9/9**.
+
+### Migration notes
+
+- **No API contract change, no data migration.** The network endpoints
+  keep their request/response shape; only the deadline default and the
+  (rare) 504 threshold move. Existing v1.2.14-4 installations can upgrade
+  in place. Deployments that raised `CORPUSMIND_NETWORK_TIMEOUT_S` to
+  work around the r4 issue may keep the env override or drop it — both
+  work.
 ## [1.2.14-5] — 2026-10-18 — Bulk Arabic start can no longer fail as a bare 500; WAL journal mode (pre-release)
 
 > Fifth pre-release of v1.2.14, and a direct answer to the first field

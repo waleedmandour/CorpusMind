@@ -23,17 +23,25 @@ Reproducibility: every response echoes the query parameters (level, window,
 min_freq, measure) exactly like the flat collocation table.
 
 v1.2.14 (P1.2):
-  - Network endpoints are now wrapped in the shared analysis concurrency
+  - Network endpoints are wrapped in the shared analysis concurrency
     limiter (`_analysis_semaphore` from engine/api/analysis.py) so they
-    share the same 4-slot budget as /collocations and /keyness. Previously
-    they bypassed the limiter and could starve other analysis traffic.
-  - The depth-2 mesh (per-pivot collocation scans) is now run with
-    asyncio.gather and a bounded fan-out of 8 instead of a serial `for`
-    loop. With the shipped top_n=14, this collapses 14 serial scans into
-    ~2 round-trips.
-  - Both endpoints now have an overall 30-second wall-clock deadline
-    (asyncio.wait_for). Over-budget requests return 504 with an actionable
-    message instead of hanging.
+    share the same 4-slot budget as /collocations and /keyness.
+
+v1.2.14-6 (r5 field-report fix):
+  - The depth-2 mesh no longer runs one compute_collocations() scan per
+    pivot (the v1.2.14 gather under an 8-way fan-out still cost 14 window
+    scans per build). stats.service.compute_collocation_mesh() now answers
+    every pivot×graph-node pair with ONE self-join + ONE counting sweep,
+    so a network build costs roughly two scans instead of top_n+1 — the
+    r4 field report (HTTP 504 on large Arabic corpora) cannot recur at
+    the scan level.
+  - compute_collocations runs its Python window sweep in a worker thread,
+    so a heavy scan no longer stalls the event loop — concurrent requests
+    (corpus detail, health probes) are served while the network builds.
+  - The overall wall-clock deadline default is raised 30s → 60s (still
+    env-overridable via CORPUSMIND_NETWORK_TIMEOUT_S) as headroom for very
+    large corpora; the mesh keeps the deadline from being reached at all
+    in normal use.
 """
 from __future__ import annotations
 
@@ -47,7 +55,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.logging import get_logger
-from stats.service import compute_collocations
+from stats.service import compute_collocation_mesh, compute_collocations
 from storage.session import get_session
 
 log = get_logger(__name__)
@@ -55,12 +63,10 @@ router = APIRouter()
 
 # v1.2.14 (P1.2): overall wall-clock deadline for a network request. Over-
 # budget requests return 504. Env-overridable for classroom deployments
-# with larger corpora.
-_NETWORK_DEADLINE_S = float(os.environ.get("CORPUSMIND_NETWORK_TIMEOUT_S", "30"))
-
-# Bounded fan-out for the depth-2 per-pivot scan. 8 keeps SQLite page cache
-# warm without overwhelming the connection pool.
-_FANOUT = 8
+# with larger corpora. v1.2.14-6: default raised 30 -> 60 as headroom for
+# very large corpora — the one-pass mesh below makes the deadline nearly
+# unreachable in normal use (a build now costs ~2 scans, not top_n+1).
+_NETWORK_DEADLINE_S = float(os.environ.get("CORPUSMIND_NETWORK_TIMEOUT_S", "60"))
 
 # Lazily imported analysis semaphore — kept in engine.api.analysis to share
 # the slot budget with /collocations and /keyness.
@@ -120,11 +126,10 @@ class NetworkRequest(BaseModel):
     window: int = Field(5, ge=1, le=20)
     min_freq: int = Field(3, ge=1)
     measure: MEASURES = "mi"
-    # v1.2.15: cap raised 30 -> 40 so the UI's "collocates per level" slider
+    # v1.2.14-4: cap raised 30 -> 40 so the UI's "collocates per level" slider
     # can grow BOTH levels of the network (the pivot's collocates and each
-    # expanded collocate's own collocates). The depth-2 mesh scan is bounded
-    # per pivot (limit=top_n*3) and fanned out in batches of _FANOUT, so the
-    # extra width costs linear, not quadratic, work.
+    # expanded collocate's own collocates). Since v1.2.14-6 the mesh costs
+    # one union scan regardless of top_n, so the extra width stays linear.
     top_n: int = Field(14, ge=3, le=40, description="Max collocates of the pivot")
     depth: int = Field(2, ge=1, le=2, description="2 = mesh collocates against each other")
     max_nodes: int = Field(60, ge=5, le=150, description="Safety cap on returned nodes")
@@ -246,45 +251,27 @@ async def _collocation_network_impl(
         G.add_edge(req.node, collocate, **attrs)
 
     # depth 2: mesh collocates against each other AND against the center.
-    # v1.2.14 (P1.2): parallelise the per-pivot scans with asyncio.gather
-    # under a bounded fan-out. The previous serial `for` loop fired 14
-    # scans back-to-back; with the v1.2.14 vocab cache (P1.1), the only
-    # remaining per-scan cost is the window self-join, which is now bound
-    # by fan-out rather than by N.
-    if req.depth >= 2:
-        async def _mesh_one(pivot: str) -> list[dict[str, Any]]:
-            try:
-                pivot_result = await compute_collocations(
-                    session,
-                    cid,
-                    pivot,
-                    level=req.level,
-                    window=req.window,
-                    min_freq=req.min_freq,
-                    limit=req.top_n * 3,
-                )
-                return list(pivot_result.rows)
-            except Exception as e:
-                log.warning(
-                    "collocation_network_pivot_failed", pivot=pivot, error=str(e)
-                )
-                return []
-
+    # v1.2.14-6: ONE union scan replaces the per-pivot gather. The previous
+    # design (v1.2.14 P1.2) ran a full compute_collocations() scan per
+    # pivot — 14 window scans per network build — which is what pushed
+    # large Arabic corpora past the deadline (r4 field report: HTTP 504).
+    # compute_collocation_mesh() counts every pivot×graph-node pair with
+    # identical semantics in a single self-join + single counting sweep.
+    if req.depth >= 2 and top:
         pivots = [row["collocate"] for row in top]
-        # Chunk into _FANOUT batches so we don't open 14 concurrent
-        # DB transactions on the same session at once.
-        for i in range(0, len(pivots), _FANOUT):
-            batch = pivots[i: i + _FANOUT]
-            results = await asyncio.gather(*(_mesh_one(p) for p in batch))
-            for pivot, rows in zip(batch, results, strict=False):
-                for prow in rows:
-                    other = prow["collocate"]
-                    if other == pivot or other not in G.nodes:
-                        continue
-                    attrs = _edge_attrs(prow)
-                    attrs["weight"] = _row_measure(attrs, req.measure)
-                    if not G.has_edge(pivot, other):
-                        G.add_edge(pivot, other, **attrs)
+        mesh_rows = await compute_collocation_mesh(
+            session, cid, pivots, known=list(G.nodes),
+            level=req.level, window=req.window, min_freq=req.min_freq,
+        )
+        for pivot, rows in mesh_rows.items():
+            for prow in rows:
+                other = prow["collocate"]
+                if other == pivot or other not in G.nodes:
+                    continue
+                attrs = _edge_attrs(prow)
+                attrs["weight"] = _row_measure(attrs, req.measure)
+                if not G.has_edge(pivot, other):
+                    G.add_edge(pivot, other, **attrs)
 
     # Safety cap: drop lowest-degree non-center nodes until within budget.
     if G.number_of_nodes() > req.max_nodes:
@@ -377,38 +364,23 @@ async def _collocation_network_expand_impl(
 
     # Mesh the new nodes against each other (cheap, bounded by top_n) so a
     # freshly expanded cluster is not a pure star.
-    # v1.2.14 (P1.2): parallelise with asyncio.gather under a bounded fan-out.
+    # v1.2.14-6: ONE union scan (compute_collocation_mesh) replaces the
+    # per-pivot gather — same parity as the network build above.
     if req.depth >= 2 and len(new_nodes) > 1:
-        async def _mesh_one(pivot: str) -> list[dict[str, Any]]:
-            try:
-                pivot_result = await compute_collocations(
-                    session,
-                    cid,
-                    pivot,
-                    level=req.level,
-                    window=req.window,
-                    min_freq=req.min_freq,
-                    limit=req.top_n,
-                )
-                return list(pivot_result.rows)
-            except Exception as e:
-                log.warning("collocation_network_expand_pivot_failed",
-                             pivot=pivot, error=str(e))
-                return []
-
-        pivots = list(new_nodes)[: req.top_n]
-        for i in range(0, len(pivots), _FANOUT):
-            batch = pivots[i: i + _FANOUT]
-            results = await asyncio.gather(*(_mesh_one(p) for p in batch))
-            for pivot, rows in zip(batch, results, strict=False):
-                for prow in rows:
-                    other = prow["collocate"]
-                    if other == pivot or other not in G.nodes:
-                        continue
-                    attrs = _edge_attrs(prow)
-                    attrs["weight"] = _row_measure(attrs, req.measure)
-                    if not G.has_edge(pivot, other):
-                        G.add_edge(pivot, other, **attrs)
+        pivots = sorted(new_nodes)[: req.top_n]
+        mesh_rows = await compute_collocation_mesh(
+            session, cid, pivots, known=list(G.nodes),
+            level=req.level, window=req.window, min_freq=req.min_freq,
+        )
+        for pivot, rows in mesh_rows.items():
+            for prow in rows:
+                other = prow["collocate"]
+                if other == pivot or other not in G.nodes:
+                    continue
+                attrs = _edge_attrs(prow)
+                attrs["weight"] = _row_measure(attrs, req.measure)
+                if not G.has_edge(pivot, other):
+                    G.add_edge(pivot, other, **attrs)
 
     nodes = [
         _node_payload(n, freq.get(n, 0), n == req.node, G)

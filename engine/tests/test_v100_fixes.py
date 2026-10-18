@@ -207,13 +207,27 @@ class _FakeResult:
 
 
 def _patch_compute(monkeypatch, table: dict[str, list[dict]]):
-    """Patch api.network.compute_collocations with a canned table."""
+    """Patch api.network.compute_collocations + compute_collocation_mesh.
+
+    v1.2.15-1: the depth-2 mesh is served by compute_collocation_mesh (one
+    union scan) instead of per-pivot compute_collocations calls, so the
+    fake mesh derives each pivot's rows from the same canned table,
+    filtered to the known node set — mirroring the real helper's contract.
+    """
     import api.network as network_mod
 
     async def fake_compute(session, corpus_id, pivot, **kwargs):
         return _FakeResult(table.get(pivot, []))
 
+    async def fake_mesh(session, corpus_id, pivots, known, **kwargs):
+        known_set = set(known)
+        return {
+            p: [dict(r) for r in table.get(p, []) if r["collocate"] in known_set]
+            for p in pivots
+        }
+
     monkeypatch.setattr(network_mod, "compute_collocations", fake_compute)
+    monkeypatch.setattr(network_mod, "compute_collocation_mesh", fake_mesh)
 
 
 def test_row_measure_maps_delta_p():

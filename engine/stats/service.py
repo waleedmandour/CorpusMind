@@ -8,12 +8,14 @@ statistic) includes that ID so the AI Assistant can cite it (§11.1).
 """
 from __future__ import annotations
 
+import asyncio
 import re
 from collections import Counter, OrderedDict, defaultdict
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from typing import Literal
+from typing import Any, Literal
 
-from sqlalchemy import ColumnElement, func, select
+from sqlalchemy import ColumnElement, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.logging import get_logger
@@ -869,10 +871,19 @@ async def _get_folded_vocab(session: AsyncSession, version_id: str,
             return norm.norm_py(_fold(t))
     else:
         fold = _ar_fold if norm.enabled else _fold
-    folded_counts: Counter = Counter()
-    for text, cnt in (await session.execute(vocab_stmt)).all():
-        if text and not text.isspace():
-            folded_counts[fold(text)] += cnt
+    vocab_rows = (await session.execute(vocab_stmt)).all()
+
+    def _fold_vocab_rows() -> Counter:
+        counts: Counter = Counter()
+        for text, cnt in vocab_rows:
+            if text and not text.isspace():
+                counts[fold(text)] += cnt
+        return counts
+
+    # v1.2.14-6: the fold-aggregation sweep is pure Python over potentially
+    # hundreds of thousands of types — run it in a worker thread so the
+    # event loop keeps serving concurrent requests while it runs.
+    folded_counts = await asyncio.to_thread(_fold_vocab_rows)
     N = sum(folded_counts.values())
     out = (folded_counts, N)
     with _VOCAB_CACHE_LOCK:
@@ -887,6 +898,186 @@ def clear_vocab_cache() -> None:
     """Drop the vocab cache. Tests call this to assert cache behaviour."""
     with _VOCAB_CACHE_LOCK:
         _VOCAB_CACHE.clear()
+
+
+# v1.2.14-6: process-level memoisation of collocation RESULTS (candidates,
+# pre-limit). The network endpoint's center scan re-issues the exact scan
+# the flat collocation table just ran (same version, node, window,
+# min_freq), and a re-click on the same node re-pays it again. The cache is
+# keyed on EVERYTHING that can change the outcome and is version-scoped, so
+# a recompile naturally misses. Bounded LRU, same discipline as the vocab
+# cache above; rows are copied per call so callers never alias the payload.
+_COLLOC_CACHE: OrderedDict[tuple[Any, ...], tuple[list[dict[str, Any]], list[str]]] = (
+    _collections.OrderedDict()
+)
+_COLLOC_CACHE_LOCK = _threading.Lock()
+_COLLOC_CACHE_MAX = 64
+
+
+def clear_colloc_cache() -> None:
+    """Drop the collocation result cache. Tests call this to assert behaviour."""
+    with _COLLOC_CACHE_LOCK:
+        _COLLOC_CACHE.clear()
+
+
+def _colloc_cache_key(
+    version_id: str,
+    level: str,
+    sl: int,
+    sr: int,
+    min_freq: int,
+    measures: list[str],
+    node_lower: str,
+    node_folded: str,
+    norm: _Norm,
+    document_ids: list[str] | None,
+    pos_include: list[str] | None,
+    pos_exclude: list[str] | None,
+    stopword_set: set[str] | None,
+) -> tuple[Any, ...]:
+    """Hashable key covering every input that can change a collocation result.
+
+    The resolved _Norm is fingerprinted as (enabled, lang, legacy, zwnj) —
+    that tuple fully determines both the SQL-side expression and the
+    Python-side fold used for matching and aggregation.
+    """
+    norm_sig = (
+        bool(getattr(norm, "enabled", False)),
+        getattr(norm, "lang", ""),
+        bool(getattr(norm, "legacy", False)),
+        getattr(norm, "zwnj", "keep"),
+    )
+    doc_sig: tuple[Any, ...] = () if document_ids is None else tuple(sorted(document_ids))
+    inc_sig = tuple(sorted(p.upper() for p in (pos_include or ())))
+    exc_sig = tuple(sorted(p.upper() for p in (pos_exclude or ())))
+    stop_sig: tuple[Any, ...] | None = None if not stopword_set else tuple(sorted(stopword_set))
+    return (
+        version_id, level, sl, sr, min_freq, tuple(measures),
+        node_lower, node_folded, norm_sig, doc_sig, inc_sig, exc_sig, stop_sig,
+    )
+
+
+def _colloc_scan_core(
+    rows_raw: Sequence[Any],
+    *,
+    node_folded: str,
+    fold: Callable[[str], str],
+    sl: int,
+    sr: int,
+    fx: int,
+    folded_counts: Counter[str],
+    N: int,
+    min_freq: int,
+    measures: list[str],
+    stopword_set: set[str] | None,
+    stop_norm: set[str] | None,
+    inc: list[str],
+    exc: list[str],
+) -> tuple[list[dict[str, Any]], list[str]]:
+    """The pure-Python half of compute_collocations (v1.2.14-6).
+
+    Extracted verbatim — identical sentence assembly, window sweep, folding
+    rule and measure set — so it can run in a worker thread via
+    asyncio.to_thread. A frequent node on a large corpus spends multiple
+    SECONDS in this sweep; on the event loop that stalled every concurrent
+    request (and the shell's 3 s health probe) for the whole duration — the
+    r4 field report's failed GET /corpora/{id} and the spurious self-heal
+    restart both trace back to this blocking. rows_raw and folded_counts are
+    read-only here; every mutated structure is local to this call.
+    """
+    sentences: dict[tuple[str, int], list[tuple[int, str, str]]] = defaultdict(list)
+    for doc_id, sent_idx, tok_idx, text, is_punct, pos in rows_raw:
+        if is_punct or pos == "SPACE" or (text and text.isspace()):
+            continue
+        sentences[(doc_id, sent_idx)].append((tok_idx, text, pos or ""))
+
+    def _pos_allowed(pos: str) -> bool:
+        if inc and not any(pos.startswith(p) for p in inc):
+            return False
+        if exc and any(pos.startswith(p) for p in exc):
+            return False
+        return True
+
+    O_counter: Counter[str] = Counter()
+    surfaces: dict[str, Counter[str]] = defaultdict(Counter)
+    skipped_stop = 0
+    for toks in sentences.values():
+        clean = [(idx, text, pos) for idx, text, pos in toks]
+        for i, (_idx, text, _pos) in enumerate(clean):
+            if fold(text) != node_folded:
+                continue
+            lo = max(0, i - sl)
+            hi = min(len(clean), i + sr + 1)
+            for j in range(lo, hi):
+                if j == i:
+                    continue
+                collocate_text, collocate_pos = clean[j][1], clean[j][2]
+                if stopword_set and (
+                    collocate_text.lower() in stopword_set
+                    or (stop_norm and fold(collocate_text) in stop_norm)
+                ):
+                    skipped_stop += 1
+                    continue
+                if not _pos_allowed(collocate_pos):
+                    continue
+                key = fold(collocate_text)
+                O_counter[key] += 1
+                surfaces[key][collocate_text] += 1
+
+    # --- measures per candidate ------------------------------------------- #
+    candidates: list[dict[str, Any]] = []
+    warnings: list[str] = []
+    chi2_warned = False
+    for key, o in O_counter.items():
+        if o < min_freq:
+            continue
+        fy = folded_counts.get(key, 0)
+        if fy == 0:
+            continue
+        a = min(o, fx, fy)
+        b = fx - a
+        c = fy - a
+        d = N - fx - fy + a
+        if b < 0 or c < 0 or d < 0:
+            continue
+
+        display = surfaces[key].most_common(1)[0][0]
+        row: dict[str, Any] = {"collocate": display, "O": a, "fx": fx, "fy": fy, "N": N}
+        if "mi" in measures:
+            row["mi"] = round(mutual_information(O=o, R=fx, C=fy, N=N), 4)
+        if "t_score" in measures:
+            row["t_score"] = round(t_score(O=o, R=fx, C=fy, N=N), 4)
+        if "log_likelihood" in measures:
+            row["log_likelihood"] = round(log_likelihood_2x2(a, b, c, d), 4)
+        if "dice" in measures:
+            row["dice"] = round(dice_coefficient(joint=o, fx=fx, fy=fy), 4)
+        if "log_dice" in measures:
+            row["log_dice"] = round(log_dice(joint=o, fx=fx, fy=fy), 4)
+        if "chi_square" in measures:
+            row["chi_square"] = round(chi_square_2x2(a, b, c, d), 4)
+            row["chi2_min_expected"] = round(chi2_min_expected(a, b, c, d), 4)
+            if not chi2_warned and row["chi2_min_expected"] < 5:
+                warnings.append(
+                    "Some χ² expected cell counts are below 5 (Cochran rule) - "
+                    "treat χ² as indicative for sparse pairs; prefer log-likelihood or Fisher."
+                )
+                chi2_warned = True
+        if "fisher" in measures:
+            row["fisher"] = round(fisher_exact_2x2(a, b, c, d), 6)
+        if "delta_p" in measures:
+            dp_yx, dp_xy = delta_p(joint=o, fx=fx, fy=fy, N=N)
+            row["delta_p_y_given_x"] = round(dp_yx, 4)
+            row["delta_p_x_given_y"] = round(dp_xy, 4)
+        candidates.append(row)
+
+    def _sort_key(r: dict[str, Any]) -> float:
+        return r.get("log_likelihood", 0.0) or r.get("mi", 0.0) or float(r.get("O", 0))
+    candidates.sort(key=_sort_key, reverse=True)
+
+    if skipped_stop and stopword_set:
+        warnings.append(f"{skipped_stop} collocate tokens were excluded as stopwords.")
+
+    return candidates, warnings
 
 
 async def compute_collocations(
@@ -958,6 +1149,27 @@ async def compute_collocations(
 
     node_lower = node.lower()
     node_folded = fold(node)
+
+    # v1.2.14-6: memoised result lookup. The network endpoint's center scan
+    # re-issues the exact query the flat collocation table just ran, and
+    # same-params re-clicks re-pay it again — serve those from the LRU.
+    # Rows are copied per call so callers can never alias the cached payload.
+    cache_key = _colloc_cache_key(
+        version_id, level, sl, sr, min_freq, measures,
+        node_lower, node_folded, norm, document_ids,
+        pos_include, pos_exclude, stopword_set,
+    )
+    with _COLLOC_CACHE_LOCK:
+        cached = _COLLOC_CACHE.get(cache_key)
+        if cached is not None:
+            _COLLOC_CACHE.move_to_end(cache_key)
+            cached_rows, cached_warnings = cached
+            return CollocationResult(
+                node=node, window=window, span_left=sl, span_right=sr,
+                min_freq=min_freq, measures=measures,
+                rows=[dict(r) for r in cached_rows[:limit]],
+                warnings=list(cached_warnings),
+            )
 
     # --- 1. node sentences (window scan scope) ---------------------------- #
     if norm.enabled:
@@ -1052,100 +1264,36 @@ async def compute_collocations(
         stmt = stmt.where(s_tok.document_id.in_(document_ids))
     rows_raw = (await session.execute(stmt)).all()
 
-    sentences: dict[tuple[str, int], list[tuple[int, str, str]]] = defaultdict(list)
-    for doc_id, sent_idx, tok_idx, text, is_punct, pos in rows_raw:
-        if is_punct or pos == "SPACE" or (text and text.isspace()):
-            continue
-        sentences[(doc_id, sent_idx)].append((tok_idx, text, pos or ""))
-
-    # --- 4. window scan with folding + filters ---------------------------- #
+    # v1.2.14-6: the window sweep + measures are pure Python over the fetched
+    # rows (possibly hundreds of thousands of tokens). Run them in a worker
+    # thread so the event loop keeps serving concurrent requests — health
+    # probes, corpus-detail fetches, other users' queries — while it runs.
     inc = [p.upper() for p in (pos_include or [])]
     exc = [p.upper() for p in (pos_exclude or [])]
+    candidates, warnings = await asyncio.to_thread(
+        _colloc_scan_core,
+        rows_raw,
+        node_folded=node_folded,
+        fold=fold,
+        sl=sl,
+        sr=sr,
+        fx=fx,
+        folded_counts=folded_counts,
+        N=N,
+        min_freq=min_freq,
+        measures=measures,
+        stopword_set=stopword_set,
+        stop_norm=stop_norm,
+        inc=inc,
+        exc=exc,
+    )
 
-    def _pos_allowed(pos: str) -> bool:
-        if inc and not any(pos.startswith(p) for p in inc):
-            return False
-        if exc and any(pos.startswith(p) for p in exc):
-            return False
-        return True
-
-    O_counter: Counter = Counter()
-    surfaces: dict[str, Counter] = defaultdict(Counter)
-    skipped_stop = 0
-    for toks in sentences.values():
-        clean = [(idx, text, pos) for idx, text, pos in toks]
-        for i, (_idx, text, _pos) in enumerate(clean):
-            if fold(text) != node_folded:
-                continue
-            lo = max(0, i - sl)
-            hi = min(len(clean), i + sr + 1)
-            for j in range(lo, hi):
-                if j == i:
-                    continue
-                collocate_text, collocate_pos = clean[j][1], clean[j][2]
-                if stopword_set and (
-                    collocate_text.lower() in stopword_set
-                    or (stop_norm and fold(collocate_text) in stop_norm)
-                ):
-                    skipped_stop += 1
-                    continue
-                if not _pos_allowed(collocate_pos):
-                    continue
-                key = fold(collocate_text)
-                O_counter[key] += 1
-                surfaces[key][collocate_text] += 1
-
-    # --- 5. measures per candidate ----------------------------------------- #
-    candidates = []
-    chi2_warned = False
-    for key, o in O_counter.items():
-        if o < min_freq:
-            continue
-        fy = folded_counts.get(key, 0)
-        if fy == 0:
-            continue
-        a = min(o, fx, fy)
-        b = fx - a
-        c = fy - a
-        d = N - fx - fy + a
-        if b < 0 or c < 0 or d < 0:
-            continue
-
-        display = surfaces[key].most_common(1)[0][0]
-        row = {"collocate": display, "O": a, "fx": fx, "fy": fy, "N": N}
-        if "mi" in measures:
-            row["mi"] = round(mutual_information(O=o, R=fx, C=fy, N=N), 4)
-        if "t_score" in measures:
-            row["t_score"] = round(t_score(O=o, R=fx, C=fy, N=N), 4)
-        if "log_likelihood" in measures:
-            row["log_likelihood"] = round(log_likelihood_2x2(a, b, c, d), 4)
-        if "dice" in measures:
-            row["dice"] = round(dice_coefficient(joint=o, fx=fx, fy=fy), 4)
-        if "log_dice" in measures:
-            row["log_dice"] = round(log_dice(joint=o, fx=fx, fy=fy), 4)
-        if "chi_square" in measures:
-            row["chi_square"] = round(chi_square_2x2(a, b, c, d), 4)
-            row["chi2_min_expected"] = round(chi2_min_expected(a, b, c, d), 4)
-            if not chi2_warned and row["chi2_min_expected"] < 5:
-                warnings.append(
-                    "Some χ² expected cell counts are below 5 (Cochran rule) - "
-                    "treat χ² as indicative for sparse pairs; prefer log-likelihood or Fisher."
-                )
-                chi2_warned = True
-        if "fisher" in measures:
-            row["fisher"] = round(fisher_exact_2x2(a, b, c, d), 6)
-        if "delta_p" in measures:
-            dp_yx, dp_xy = delta_p(joint=o, fx=fx, fy=fy, N=N)
-            row["delta_p_y_given_x"] = round(dp_yx, 4)
-            row["delta_p_x_given_y"] = round(dp_xy, 4)
-        candidates.append(row)
-
-    def _sort_key(r: dict) -> float:
-        return r.get("log_likelihood", 0.0) or r.get("mi", 0.0) or float(r.get("O", 0))
-    candidates.sort(key=_sort_key, reverse=True)
-
-    if skipped_stop and stopword_set:
-        warnings.append(f"{skipped_stop} collocate tokens were excluded as stopwords.")
+    # v1.2.14-6: memoise the FULL candidate set (pre-limit) + warnings.
+    with _COLLOC_CACHE_LOCK:
+        _COLLOC_CACHE[cache_key] = (candidates, warnings)
+        _COLLOC_CACHE.move_to_end(cache_key)
+        while len(_COLLOC_CACHE) > _COLLOC_CACHE_MAX:
+            _COLLOC_CACHE.popitem(last=False)
 
     return CollocationResult(
         node=node,
@@ -1154,9 +1302,212 @@ async def compute_collocations(
         span_right=sr,
         min_freq=min_freq,
         measures=measures,
-        rows=candidates[:limit],
+        # v1.2.14-6: copies, not the cached dicts themselves — callers must
+        # never be able to mutate the memoised payload (the cache-hit path
+        # above already copies).
+        rows=[dict(r) for r in candidates[:limit]],
         warnings=warnings,
     )
+
+
+# --------------------------------------------------------------------------- #
+# Collocation network mesh — ONE pass for every pivot×known pair (v1.2.14-6)
+# --------------------------------------------------------------------------- #
+
+
+async def compute_collocation_mesh(
+    session: AsyncSession,
+    corpus_id: str,
+    pivots: list[str],
+    known: list[str],
+    *,
+    level: Literal["word", "lemma"] = "word",
+    window: int = 5,
+    span_left: int | None = None,
+    span_right: int | None = None,
+    min_freq: int = 3,
+    document_ids: list[str] | None = None,
+    normalize_arabic: bool = False,
+    normalize: bool | None = None,
+    zwnj: str = "keep",
+) -> dict[str, list[dict[str, Any]]]:
+    """Co-occurrence counts for MANY pivots at once, in a single scan.
+
+    The collocation network's depth-2 mesh previously issued one full
+    compute_collocations() scan per pivot (14 window scans per build at the
+    shipped top_n). Every scan re-fetched the pivot's node sentences and
+    re-counted every window token in Python — that is what pushed large
+    Arabic corpora past the network endpoint's deadline (r4 field report:
+    HTTP 504 on the collocation network).
+
+    This helper answers every pivot → known pair in ONE pass:
+
+      1. one self-join fetches the tokens of every sentence containing ANY
+         pivot (the node-side predicate is a single IN / OR list, so the
+         planner still does one n_tok-first scan with the LEFT JOIN order
+         v1.2.14-2 established);
+      2. one window sweep counts ordered pairs (pivot → known) with the
+         EXACT semantics of compute_collocations: same real-token filter,
+         same fold rule, same ±window span, same sentence scope, same
+         ordered (x=pivot, y=collocate) direction;
+      3. the association measures run per surviving pair — all eight of
+         them, so the frontend can re-weight edges without a refetch.
+
+    Only collocates whose folded form is in `known` are counted, so the
+    mesh can never add a node the graph has not admitted. `pivots` and
+    `known` are DISPLAY forms (the strings the graph / flat-table rows
+    actually carry); matching happens on the folded forms so case and
+    diacritic variants line up exactly like the flat table.
+
+    Returns {pivot_display: [row, ...]} with rows shaped like
+    compute_collocations rows (collocate / O / fx / fy / N + measures),
+    sorted deterministically. No stopword or POS filters — the network
+    endpoints never pass any.
+    """
+    sl = window if span_left is None else max(0, min(20, span_left))
+    sr = window if span_right is None else max(0, min(20, span_right))
+
+    # Dedupe while preserving order — a repeated pivot must not double-count.
+    seen: set[str] = set()
+    uniq_pivots: list[str] = []
+    for p in pivots:
+        if p and p not in seen:
+            seen.add(p)
+            uniq_pivots.append(p)
+    if not uniq_pivots or not known:
+        return {}
+
+    version_id = await _latest_version_id(session, corpus_id)
+    if not version_id:
+        return {}
+
+    norm = await _resolve_norm(session, corpus_id, normalize=normalize,
+                               normalize_arabic=normalize_arabic, zwnj=zwnj)
+    # Annotate first: assigning the nested def and the module-level folder
+    # to one Callable-typed name keeps mypy from comparing param names.
+    fold: Callable[[str], str]
+    if norm.enabled and norm.lang != "ar":
+        def _fold_normed(t: str) -> str:
+            return norm.norm_py(_fold(t))
+        fold = _fold_normed
+    else:
+        fold = _ar_fold if norm.enabled else _fold
+
+    # Folded pivot keys → first display form; folded known keys → display.
+    # First-wins keeps the mapping deterministic for a given input order.
+    pivot_by_fold: dict[str, str] = {}
+    for p in uniq_pivots:
+        pivot_by_fold.setdefault(fold(p), p)
+    known_by_fold: dict[str, str] = {}
+    for k in known:
+        if k:
+            known_by_fold.setdefault(fold(k), k)
+    if not pivot_by_fold or not known_by_fold:
+        return {}
+
+    # Whole-corpus marginals (memoised — the center scan already paid this).
+    folded_counts, N = await _get_folded_vocab(session, version_id, level, norm, document_ids)
+
+    from sqlalchemy.orm import aliased
+
+    n_tok = aliased(Token, name="n_tok")
+    s_tok = aliased(Token, name="s_tok")
+    col_n = {"word": n_tok.text, "lemma": n_tok.lemma}[level]
+    n_real = (n_tok.is_punct == False) & (n_tok.pos != "SPACE")  # noqa: E712
+    if norm.enabled:
+        pivot_norms = [norm.norm_py(p.lower()) for p in uniq_pivots]
+        n_cond = (norm.sql_expr(col_n, wrap_lower=True).in_(pivot_norms)) & n_real
+    else:
+        n_cond = or_(
+            *[
+                (func.lower(col_n) == p.lower()) | (func.lower(col_n) == fold(p))
+                for p in uniq_pivots
+            ]
+        ) & n_real
+    stmt = (
+        select(
+            s_tok.document_id,
+            s_tok.sentence_idx,
+            s_tok.token_idx,
+            s_tok.text.label("text"),
+            s_tok.is_punct,
+            s_tok.pos,
+        )
+        .select_from(n_tok)
+        .join(
+            s_tok,
+            (s_tok.version_id == n_tok.version_id)
+            & (s_tok.document_id == n_tok.document_id)
+            & (s_tok.sentence_idx == n_tok.sentence_idx),
+            isouter=True,  # LEFT JOIN forbids SQLite from reordering (v1.2.14-2)
+        )
+        .where(n_tok.version_id == version_id, n_cond)
+        .distinct()
+        .order_by(s_tok.document_id, s_tok.sentence_idx, s_tok.token_idx)
+    )
+    if document_ids is not None:
+        stmt = stmt.where(s_tok.document_id.in_(document_ids))
+    rows_raw = (await session.execute(stmt)).all()
+
+    pivot_folds = set(pivot_by_fold)
+    known_folds = set(known_by_fold)
+
+    def _mesh_count() -> Counter[tuple[str, str]]:
+        """Ordered-pair window sweep — runs in a worker thread (read-only inputs)."""
+        sentences: dict[tuple[str, int], list[tuple[int, str, str]]] = defaultdict(list)
+        for doc_id, sent_idx, tok_idx, text, is_punct, pos in rows_raw:
+            if is_punct or pos == "SPACE" or (text and text.isspace()):
+                continue
+            sentences[(doc_id, sent_idx)].append((tok_idx, text, pos or ""))
+        pairs: Counter[tuple[str, str]] = Counter()
+        for toks in sentences.values():
+            folds = [fold(t) for _i, t, _p in toks]
+            for i, pf in enumerate(folds):
+                if pf not in pivot_folds:
+                    continue
+                lo = max(0, i - sl)
+                hi = min(len(folds), i + sr + 1)
+                for j in range(lo, hi):
+                    if j == i:
+                        continue
+                    kf = folds[j]
+                    if kf in known_folds:
+                        pairs[(pf, kf)] += 1
+        return pairs
+
+    pair_counts = await asyncio.to_thread(_mesh_count)
+
+    out: dict[str, list[dict[str, Any]]] = {}
+    for (pf, kf), o in sorted(pair_counts.items()):
+        if o < min_freq:
+            continue
+        fx = folded_counts.get(pf, 0)
+        fy = folded_counts.get(kf, 0)
+        if fx == 0 or fy == 0:
+            continue
+        a = min(o, fx, fy)
+        b = fx - a
+        c = fy - a
+        d = N - fx - fy + a
+        if b < 0 or c < 0 or d < 0:
+            continue
+        dp_yx, dp_xy = delta_p(joint=o, fx=fx, fy=fy, N=N)
+        row: dict[str, Any] = {
+            "collocate": known_by_fold[kf],
+            "O": a, "fx": fx, "fy": fy, "N": N,
+            "mi": round(mutual_information(O=o, R=fx, C=fy, N=N), 4),
+            "t_score": round(t_score(O=o, R=fx, C=fy, N=N), 4),
+            "log_likelihood": round(log_likelihood_2x2(a, b, c, d), 4),
+            "dice": round(dice_coefficient(joint=o, fx=fx, fy=fy), 4),
+            "log_dice": round(log_dice(joint=o, fx=fx, fy=fy), 4),
+            "chi_square": round(chi_square_2x2(a, b, c, d), 4),
+            "chi2_min_expected": round(chi2_min_expected(a, b, c, d), 4),
+            "delta_p_y_given_x": round(dp_yx, 4),
+            "delta_p_x_given_y": round(dp_xy, 4),
+            "fisher": round(fisher_exact_2x2(a, b, c, d), 6),
+        }
+        out.setdefault(pivot_by_fold[pf], []).append(row)
+    return out
 
 
 # --------------------------------------------------------------------------- #
