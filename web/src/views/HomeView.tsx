@@ -62,15 +62,16 @@ export function HomeView() {
   // never renders inside the desktop shell (isTauri), where the sidecar
   // engine + native provider health make the whole question moot.
   const pwaEngineOffline = !isTauri && health.isFetched && !engineOk;
-  const ollamaOk = isTauri
-    ? (nativeHealth.data?.ollama.healthy ?? false)
-    : (providers.data?.providers.find((p) => p.name === "ollama")?.healthy ?? false);
+  // v1.2.14-8 (r8, P0-3b): the ENGINE is the single source of truth for
+  // provider detection (it probes the configured URLs) — the native probe
+  // is only the pre-engine fallback in the desktop shell.
+  const ollamaOk = (providers.data?.providers.find((p) => p.name === "ollama")?.healthy)
+    ?? (isTauri ? (nativeHealth.data?.ollama.healthy ?? false) : false);
   // v1.2.10: LM Studio sits next to Ollama on the home page — same
-  // detection source (Rust all_providers_health in the desktop app, the
-  // engine's /providers list in browser mode), same chip treatment.
-  const lmstudioOk = isTauri
-    ? (nativeHealth.data?.lmstudio.healthy ?? false)
-    : (providers.data?.providers.find((p) => p.name === "lmstudio")?.healthy ?? false);
+  // detection source (the engine's /providers list, native fallback before
+  // the engine is up), same chip treatment.
+  const lmstudioOk = (providers.data?.providers.find((p) => p.name === "lmstudio")?.healthy)
+    ?? (isTauri ? (nativeHealth.data?.lmstudio.healthy ?? false) : false);
 
   // v1.2.1: the Lens-specific quick-action list is gone (Lens lives in its
   // own repository) — this is always the main-app card list.

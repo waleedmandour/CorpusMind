@@ -12,7 +12,9 @@ Differences from Phase 0:
 
 from __future__ import annotations
 
+import asyncio
 import json
+import os
 import time
 from dataclasses import dataclass, field
 from typing import Any, Literal
@@ -23,10 +25,20 @@ from sqlalchemy.orm import selectinload
 from ai.providers import Message, ModelProvider
 from ai.tools import execute_tool, schemas_for_llm
 from app.logging import get_logger
+from app.settings import get_settings
 from storage.models import Conversation, ConversationTurn
 from storage.session import session_scope
 
 log = get_logger(__name__)
+
+# v1.2.14-8 (r8, P0-2): the confidence layer runs UNDER ITS OWN CAP so it
+# can never eat the turn budget — the answer is persisted (and handed to
+# the endpoint) before the layer even starts.
+_CONFIDENCE_CAP_S = float(os.environ.get("CORPUSMIND_CONFIDENCE_TIMEOUT_S", "15"))
+
+# "auto" skips the layer for LOCAL providers (the extra LLM calls are the
+# slowest exactly where the answer must not wait on them).
+_LOCAL_PROVIDER_NAMES = {"ollama", "lmstudio"}
 
 
 @dataclass
@@ -53,6 +65,11 @@ class AssistantTurn:
     confidence_reasoning: str = ""
     needs_validation: bool = False
     mcqs: list[dict[str, Any]] = field(default_factory=list)
+    # v1.2.14-8 (r8): False whenever the layer did not run to completion
+    # (skipped for local providers by default, capped-out, or cut by the
+    # overall deadline) — the API surfaces this honestly instead of letting
+    # the 1.0 default masquerade as an assessment.
+    confidence_assessed: bool = False
 
 
 class Assistant:
@@ -129,7 +146,32 @@ class Assistant:
         self.model = model
         self.corpus_id = corpus_id
 
-    async def answer(self, convo_id: str, user_text: str, context: str | None = None) -> AssistantTurn:
+    @staticmethod
+    def _confidence_layer_enabled(provider: ModelProvider) -> bool:
+        """Whether the post-answer confidence layer should run for this turn.
+
+        v1.2.14-8 (r8, P0-2): 'auto' (default) runs it only for CLOUD
+        providers — on local models it was two extra sequential LLM calls
+        between a finished answer and its persistence.
+        """
+        try:
+            policy = get_settings().confidence_layer
+        except Exception:
+            policy = "auto"
+        if policy == "on":
+            return True
+        if policy == "off":
+            return False
+        return getattr(provider, "name", "") not in _LOCAL_PROVIDER_NAMES
+
+    async def answer(
+        self,
+        convo_id: str,
+        user_text: str,
+        context: str | None = None,
+        *,
+        progress: dict[str, Any] | None = None,
+    ) -> AssistantTurn:
         """One grounded chat round-trip. Uses its own session_scope() for ALL
         database operations — no external session is passed in. This eliminates
         the greenlet conflict that occurs when two async sessions (the request's
@@ -391,42 +433,14 @@ class Assistant:
 
         elapsed = int((time.perf_counter() - started) * 1000)
 
-        # Confidence layer
-        confidence = 1.0
-        confidence_reasoning = ""
-        needs_validation = False
-        mcqs: list[dict[str, Any]] = []
-
-        if tool_calls and evidence:
-            try:
-                from ai.confidence import assess_confidence, generate_mcqs, needs_user_validation
-
-                evidence_dicts = [
-                    {"kind": e.kind, "ref": e.ref, "snippet": e.snippet} for e in evidence
-                ]
-                conf_result = await assess_confidence(
-                    self.provider,
-                    self.model,
-                    user_text,
-                    evidence_dicts,
-                    content,
-                )
-                confidence = conf_result.get("confidence", 0.5)
-                confidence_reasoning = conf_result.get("reasoning", "")
-                if needs_user_validation(confidence):
-                    needs_validation = True
-                    mcqs = await generate_mcqs(
-                        self.provider,
-                        self.model,
-                        user_text,
-                        evidence_dicts,
-                        content,
-                        conf_result.get("unsupported_claims", []),
-                    )
-            except Exception as e:
-                log.warning("confidence_layer_error", error=str(e))
-
-        # === Persist the assistant turn in a NEW session ===
+        # === v1.2.14-8 (r8, P0-2): PERSIST FIRST ===
+        # The old order ran assess_confidence + generate_mcqs (two more full
+        # LLM calls) BEFORE persistence, all inside the endpoint's overall
+        # wait_for — a slow confidence step not only delayed the answer, the
+        # deadline's cancellation DISCARDED the completed answer and left
+        # the turn unpersisted. The turn is now durable BEFORE any optional
+        # enrichment runs, and `progress` lets the API recover the answer
+        # from the deadline handler instead of returning a bare 504.
         persisted_turn_id: int | None = None
         async with session_scope() as session:
             # Use selectinload to eagerly load turns (avoid greenlet lazy-load error)
@@ -454,13 +468,84 @@ class Assistant:
                 await session.flush()  # Issue 5 fix: populate the autoincrement id
                 persisted_turn_id = at.id
 
+        if progress is not None:
+            # Deadline-recovery payload: survives the cancellation of this
+            # coroutine (shared by reference with the endpoint).
+            progress.update({
+                "turn_id": persisted_turn_id,
+                "content": content,
+                "grounded": bool(tool_calls),
+                "tool_calls": tool_calls,
+                "evidence": [
+                    {"kind": e.kind, "ref": e.ref, "snippet": e.snippet} for e in evidence
+                ],
+                "elapsed_ms": elapsed,
+            })
+
         log.info(
             "assistant_turn",
             conversation=convo_id,
             grounded=bool(tool_calls),
             tools=[t["name"] for t in tool_calls],
             ms=elapsed,
+            persisted=persisted_turn_id is not None,
         )
+
+        # === Confidence layer (optional, and capped) ===
+        confidence = 1.0
+        confidence_reasoning = ""
+        needs_validation = False
+        mcqs: list[dict[str, Any]] = []
+        confidence_assessed = False
+
+        if tool_calls and evidence and self._confidence_layer_enabled(self.provider):
+            try:
+                from ai.confidence import assess_confidence, generate_mcqs, needs_user_validation
+
+                evidence_dicts = [
+                    {"kind": e.kind, "ref": e.ref, "snippet": e.snippet} for e in evidence
+                ]
+
+                async def _run_confidence_layer() -> tuple[float, str, bool, list[dict[str, Any]]]:
+                    conf_result = await assess_confidence(
+                        self.provider,
+                        self.model,
+                        user_text,
+                        evidence_dicts,
+                        content,
+                    )
+                    conf = conf_result.get("confidence", 0.5)
+                    reasoning = conf_result.get("reasoning", "")
+                    validation = needs_user_validation(conf)
+                    questions: list[dict[str, Any]] = []
+                    if validation:
+                        questions = await generate_mcqs(
+                            self.provider,
+                            self.model,
+                            user_text,
+                            evidence_dicts,
+                            content,
+                            conf_result.get("unsupported_claims", []),
+                        )
+                    return conf, reasoning, validation, questions
+
+                (
+                    confidence,
+                    confidence_reasoning,
+                    needs_validation,
+                    mcqs,
+                ) = await asyncio.wait_for(_run_confidence_layer(), timeout=_CONFIDENCE_CAP_S)
+                confidence_assessed = True
+            except TimeoutError:
+                # The answer above is already persisted and about to be
+                # returned — the layer's result is dropped, never the answer.
+                log.warning(
+                    "confidence_layer_timeout",
+                    cap_s=_CONFIDENCE_CAP_S,
+                    hint="answer persisted first (r8 P0-2); layer result dropped",
+                )
+            except Exception as e:
+                log.warning("confidence_layer_error", error=str(e))
 
         return AssistantTurn(
             content=content,
@@ -473,6 +558,7 @@ class Assistant:
             needs_validation=needs_validation,
             mcqs=mcqs,
             turn_id=persisted_turn_id,
+            confidence_assessed=confidence_assessed,
         )
 
 

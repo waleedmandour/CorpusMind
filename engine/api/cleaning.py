@@ -94,6 +94,10 @@ async def clean_corpus_route(
         log.error("clean_failed", corpus_id=cid, error=str(e))
         raise HTTPException(500, f"Cleaning failed: {e}") from e
 
+    from stats.service import bump_data_epoch
+
+    bump_data_epoch()  # r8 P0-1: cleaning replaces the annotation version
+
     return CleaningResponse(
         corpus_id=result.corpus_id,
         documents_cleaned=result.documents_cleaned,

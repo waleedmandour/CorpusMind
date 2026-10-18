@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
@@ -55,6 +56,13 @@ class ChatResponse(BaseModel):
     confidence_reasoning: str = ""
     needs_validation: bool = False
     mcqs: list[dict] = []
+    # v1.2.14-8 (r8, P0-2): honest enrichment flags. partial=True means the
+    # overall deadline fired AFTER the answer was persisted and recovered
+    # here instead of a bare 504; confidence_assessed=False means the
+    # confidence layer did not run to completion (skipped for local
+    # providers by default, capped out, or cut by the deadline).
+    partial: bool = False
+    confidence_assessed: bool = False
 
 
 @router.post("/chat", response_model=ChatResponse)
@@ -138,6 +146,23 @@ async def chat(
                 f"Please check Settings > Model Providers.",
             )
 
+    # v1.2.14-8 (r8, P0-3a): auto-selection found nothing usable. Answer
+    # with an actionable 4xx instead of letting the request die later as a
+    # bare 502 against whatever the server does with a missing model.
+    if not req.model:
+        if req.provider == "lmstudio":
+            raise HTTPException(
+                status_code=422,
+                detail="No chat model found in LM Studio — it is serving only "
+                "embedding/rerank models, or none are loaded. Load a chat "
+                "model in LM Studio (Developer → Load Model), then try again.",
+            )
+        raise HTTPException(
+            status_code=422,
+            detail=f"No model is available on the '{req.provider}' provider. "
+            "Pick a model in Settings > Model Providers and try again.",
+        )
+
     # CRITICAL GREENLET FIX: Don't pass the request's session to answer().
     # The answer() method calls execute_tool() which opens its own session_scope()
     # — a second session on the same async engine. When two async sessions
@@ -167,19 +192,28 @@ async def chat(
     await session.commit()
 
     assistant = Assistant(provider, model=req.model, corpus_id=req.corpus_id)
+    # v1.2.14-8 (r8, P0-2): deadline-recovery payload. answer() fills this
+    # right after persisting the turn; the dict is shared by reference so it
+    # survives the wait_for cancellation below.
+    progress: dict[str, Any] = {}
     try:
         # v1.2.14 (P2.3): overall deadline for the chat turn. The
         # assistant chains up to 4 LLM calls + 3 tool calls; without
         # this cap a cold Ollama 7B + slow tool produced a 5-10 min
         # "Thinking…" with no recovery short of a page reload.
+        # r8 (P0-2): the turn is persisted BEFORE the optional confidence
+        # layer runs, and the layer has its own short cap — so this
+        # deadline now only ever fires while the MODEL is still working,
+        # and a completed answer is recovered below instead of discarded.
         try:
             turn = await asyncio.wait_for(
-                assistant.answer(convo_id, req.message, context=req.context),
+                assistant.answer(convo_id, req.message, context=req.context, progress=progress),
                 timeout=_CHAT_TIMEOUT_S,
             )
         except TimeoutError:
             log.warning("chat_timeout", conversation_id=convo_id,
-                         timeout_s=_CHAT_TIMEOUT_S)
+                         timeout_s=_CHAT_TIMEOUT_S,
+                         recovered=bool(progress.get("turn_id") is not None))
             # v1.2.9 audit: failed classroom chats are recorded too (anonymously).
             _sm = getattr(request.app.state, "server_mode", None)
             if _sm is not None and getattr(request.state, "role", "") == "student":
@@ -189,6 +223,26 @@ async def chat(
                                  model=req.model or "")
                 except Exception:
                     pass
+            if progress.get("turn_id") is not None:
+                # r8 P0-2: the answer was fully generated and persisted —
+                # return it (flagged partial) instead of throwing it away.
+                return ChatResponse(
+                    turn_id=progress.get("turn_id"),
+                    conversation_id=convo_id,
+                    content=progress.get("content", ""),
+                    grounded=bool(progress.get("grounded")),
+                    tool_calls=progress.get("tool_calls", []),
+                    evidence=progress.get("evidence", []),
+                    elapsed_ms=progress.get("elapsed_ms", 0),
+                    provider=req.provider,
+                    model=req.model or getattr(provider, "default_model", ""),
+                    confidence=1.0,
+                    confidence_reasoning="",
+                    needs_validation=False,
+                    mcqs=[],
+                    partial=True,
+                    confidence_assessed=False,
+                )
             return JSONResponse(
                 status_code=504,
                 content={
@@ -253,6 +307,8 @@ async def chat(
         confidence_reasoning=turn.confidence_reasoning,
         needs_validation=turn.needs_validation,
         mcqs=turn.mcqs,
+        partial=False,
+        confidence_assessed=turn.confidence_assessed,
     )
 
 

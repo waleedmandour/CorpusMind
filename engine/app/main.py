@@ -151,6 +151,18 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     settings = get_settings()
+    # v1.2.14-8 (r8, P0-3b): re-apply runtime provider overrides (LM Studio
+    # base URL / API key) persisted by POST /ai/lmstudio-config, so a custom
+    # port survives an app restart. Best-effort — a corrupt file must never
+    # block engine boot.
+    try:
+        from app.provider_config import apply_persisted_overrides
+
+        apply_persisted_overrides(settings)
+    except Exception as e:  # pragma: no cover — defensive
+        from app.logging import get_logger as _gl
+
+        _gl(__name__).warning("provider_config_apply_failed", error=str(e))
     app = FastAPI(
         title="CorpusMind Engine",
         description=(

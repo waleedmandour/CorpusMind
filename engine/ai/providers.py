@@ -26,6 +26,7 @@ import abc
 import base64
 import json
 import os
+import re
 import time
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
@@ -610,6 +611,16 @@ class _OpenAICompatibleProvider(ModelProvider):
     default_model: str = ""
     tags_path: str = "/v1/models"
     auth_header: str | None = None
+    # v1.2.14-8 (r8, P0-3a): LM Studio exposes richer model metadata than
+    # the OpenAI-compat /v1/models via its REST /api/v0/models: per-model
+    # kind (llm|vlm|embeddings) and load state (loaded|not-loaded). Only
+    # providers that actually serve it opt in; every other
+    # OpenAI-compatible server falls back to the name denylist.
+    v0_models_enabled: bool = False
+    # Last health() failure reason, surfaced verbatim by /providers so the
+    # UI can say WHAT failed (refused vs 401/403 vs …) instead of a bare
+    # red chip. Empty string when healthy.
+    last_health_detail: str = ""
 
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
@@ -773,9 +784,85 @@ class _OpenAICompatibleProvider(ModelProvider):
     async def health(self) -> bool:
         try:
             r = await self._client.get(self.tags_path, timeout=5.0)
-            return r.status_code == 200
-        except httpx.HTTPError:
+        except httpx.HTTPError as e:
+            # v1.2.14-8 (r8): classify the failure so the chips can say why.
+            self.last_health_detail = (
+                "connection refused — is the server running (and is its "
+                "local server started / port correct)?"
+                if isinstance(e, httpx.ConnectError)
+                else f"connection failed: {e}"
+            )
             return False
+        if r.status_code in (401, 403):
+            self.last_health_detail = (
+                f"HTTP {r.status_code} — the server requires an API key "
+                "(set it in Settings → Model Providers → LM Studio)"
+            )
+            return False
+        if r.status_code != 200:
+            self.last_health_detail = f"HTTP {r.status_code} from {self.tags_path}"
+            return False
+        self.last_health_detail = ""
+        return True
+
+    # --- v1.2.14-8 (r8, P0-3a): chat-model auto-selection -----------------
+
+    # Names that look like embedding / rerank models. Chat must NEVER be
+    # auto-sent to one (LM Studio serves them over the same /v1/models).
+    # Boundary-aware so 'e5'/'gte' cannot false-positive inside ordinary
+    # model names (e.g. 'qwen2.5-7b-instruct' is untouched).
+    _NON_CHAT_MODEL_RE = re.compile(
+        r"(?:embed|embedding|bge|rerank|nomic|minilm|colbert|splade|voyage"
+        r"|(?:^|[^a-z0-9])e5(?:[^a-z0-9]|$)"
+        r"|(?:^|[^a-z0-9])gte(?:[^a-z0-9]|$))",
+        re.IGNORECASE,
+    )
+
+    async def _v0_model_entries(self) -> list[dict[str, Any]]:
+        """LM Studio REST catalogue: [{id, type: llm|vlm|embeddings, state}].
+
+        Empty on ANY failure (older LM Studio builds 404 the endpoint) —
+        callers fall back to the denylist path.
+        """
+        try:
+            r = await self._client.get("/api/v0/models", timeout=5.0)
+            if r.status_code != 200:
+                return []
+            items = (r.json() or {}).get("data") or []
+            return [m for m in items if isinstance(m, dict)]
+        except Exception:
+            return []
+
+    async def pick_default_model(self) -> str | None:
+        """First CHAT-capable model — never an embedding/rerank model.
+
+        v1.2.14-8 (r8, P0-3a): the inherited pick returned the FIRST
+        /v1/models entry, and LM Studio commonly serves an embedding model
+        first — every auto-selected grounded turn then died against it.
+        Order: (1) LM Studio /api/v0/models metadata when available (type
+        llm|vlm, preferring a LOADED model); (2) /v1/models + name
+        denylist. Returns None when the server only offers embedding/rerank
+        models — the API layer turns that into an actionable 4xx instead of
+        a bare 502.
+        """
+        if self.v0_models_enabled:
+            entries = await self._v0_model_entries()
+            if entries:
+                chat = [
+                    m for m in entries if str(m.get("type", "")) in {"llm", "vlm"}
+                ]
+                if chat:
+                    loaded = [m for m in chat if str(m.get("state", "")) == "loaded"]
+                    pick_from = loaded or chat
+                    name = pick_from[0].get("id") or pick_from[0].get("name")
+                    if name:
+                        return str(name)
+                return None  # v0 spoke: only embedding/rerank models present
+        models = await self.list_models()
+        for m in models:
+            if m and not self._NON_CHAT_MODEL_RE.search(m):
+                return m
+        return None
 
 
 # --------------------------------------------------------------------------- #
@@ -1607,10 +1694,19 @@ class OllamaProvider(ModelProvider):
 
 class LMStudioProvider(_OpenAICompatibleProvider):
     name = "lmstudio"
+    # v1.2.14-8 (r8, P0-3a): LM Studio serves /api/v0/models with per-model
+    # type (llm|vlm|embeddings) + state (loaded|not-loaded) — the primary
+    # source for chat-model auto-selection.
+    v0_models_enabled = True
 
     def __init__(self, settings: Settings) -> None:
         self.base_url = settings.lmstudio_base_url
         self.default_model = settings.lmstudio_default_model
+        # v1.2.14-8 (r8, P0-3c): optional Bearer key (LM Studio behind a
+        # tunnel that requires token auth). Empty → no Authorization header.
+        api_key = getattr(settings, "lmstudio_api_key", "")
+        if api_key:
+            self.auth_header = f"Bearer {api_key}"
         super().__init__(settings)
 
     async def supports_vision(self, model: str | None = None) -> bool:

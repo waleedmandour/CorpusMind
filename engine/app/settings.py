@@ -57,6 +57,10 @@ class Settings(BaseSettings):
     ollama_default_model: str = "llama3.2:3b"
     lmstudio_base_url: str = "http://127.0.0.1:1234/v1"
     lmstudio_default_model: str = "local-model"
+    # v1.2.14-8 (r8, P0-3c): optional Bearer token for LM Studio servers
+    # behind a tunnel that require one. Empty (default) sends no
+    # Authorization header — the stock local-server experience.
+    lmstudio_api_key: str = ""
     # v1.2.1: "gemini" routes through Google's OpenAI-compatible endpoint;
     # "custom" accepts ANY OpenAI-compatible cloud API (DeepSeek, Mistral,
     # Groq, OpenRouter, xAI, Together, …) via cloud_base_url.
@@ -116,6 +120,17 @@ class Settings(BaseSettings):
     # If True, any request that would route to CloudProvider returns 403.
     # Belt-and-suspenders alongside the UI's cloud indicator (§7.5).
     cloud_disabled_hard: bool = False
+
+    # --- v1.2.14-8 (r8, P0-2): assistant confidence-layer policy ---
+    # The grounded assistant can run a post-answer confidence assessment
+    # (+ MCQ generation when confidence is low) — two EXTRA LLM calls after
+    # the answer already exists. "auto" (default) runs the layer only for
+    # CLOUD providers and skips it for local models (ollama / lmstudio),
+    # where those extra calls are the slowest and the answer must not wait
+    # on them. "on" forces the layer everywhere; "off" disables it. When
+    # the layer runs it is capped by CORPUSMIND_CONFIDENCE_TIMEOUT_S (15 s)
+    # and can never delay or discard the persisted answer.
+    confidence_layer: Literal["auto", "on", "off"] = "auto"
 
     # --- CORS (for the web app running in a browser pointed at a non-localhost engine) ---
     # NOTE: the Tauri desktop webview sends a real `Origin` header and this

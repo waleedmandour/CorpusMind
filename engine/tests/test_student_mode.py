@@ -796,7 +796,7 @@ async def test_student_chat_question_and_response_audited(classroom, monkeypatch
 
     from ai import Assistant
 
-    async def _fake_answer(self, convo_id, message, context=None):
+    async def _fake_answer(self, convo_id, message, context=None, *, progress=None):
         from types import SimpleNamespace
 
         return SimpleNamespace(
@@ -810,6 +810,7 @@ async def test_student_chat_question_and_response_audited(classroom, monkeypatch
             confidence_reasoning="",
             needs_validation=False,
             mcqs=[],
+            confidence_assessed=False,
         )
 
     monkeypatch.setattr(Assistant, "answer", _fake_answer)

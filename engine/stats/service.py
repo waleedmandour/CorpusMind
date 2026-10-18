@@ -830,14 +830,56 @@ _VOCAB_CACHE_LOCK = _threading.Lock()
 _VOCAB_CACHE_MAX = 256
 
 
+# v1.2.14-8 (r8, P0-1): global corpus-data epoch. Both memo caches below are
+# keyed by (version_id, ...) — but a document delete (or an add into an
+# existing corpus) keeps the SAME annotation version, so the key is
+# unchanged and the stale Counter was served forever (clear_vocab_cache()
+# had no production caller — field report: numbers did not move after a
+# document delete). Every mutating endpoint bumps this counter and BOTH
+# cache keys carry it, so the very next scan misses exactly once.
+_data_epoch_lock = _threading.Lock()
+_data_epoch: int = 0
+
+
+def current_data_epoch() -> int:
+    """The current corpus-data generation (part of every cache key)."""
+    with _data_epoch_lock:
+        return _data_epoch
+
+
+def bump_data_epoch() -> None:
+    """Invalidate every corpus-data memo cache lazily.
+
+    Called by mutating endpoints (document delete/add, corpus/project
+    delete, recompile/clean, subcorpus + metadata edits). Lazy is
+    deliberate: a bulk mutation costs one integer increment, and the next
+    scan repopulates what it actually needs.
+    """
+    global _data_epoch
+    with _data_epoch_lock:
+        _data_epoch += 1
+
+
+def reset_data_epoch() -> None:
+    """Test isolation hook."""
+    global _data_epoch
+    with _data_epoch_lock:
+        _data_epoch = 0
+
+
 def _vocab_cache_key(version_id: str, level: str, norm, document_ids) -> tuple:
-    """Build a hashable cache key. `norm` is the resolved normalizer."""
+    """Build a hashable cache key. `norm` is the resolved normalizer.
+
+    v1.2.14-8 (r8): the leading element is the global data epoch — document
+    deletes / adds keep the same version_id, so without it the stale Counter
+    was served forever (P0-1 field report).
+    """
     norm_sig = (getattr(norm, "lang", ""), bool(getattr(norm, "enabled", False)))
     if document_ids is None:
         doc_sig: tuple = ()
     else:
         doc_sig = tuple(sorted(document_ids))
-    return (version_id, level, norm_sig, doc_sig)
+    return (current_data_epoch(), version_id, level, norm_sig, doc_sig)
 
 
 async def _get_folded_vocab(session: AsyncSession, version_id: str,
@@ -951,7 +993,9 @@ def _colloc_cache_key(
     inc_sig = tuple(sorted(p.upper() for p in (pos_include or ())))
     exc_sig = tuple(sorted(p.upper() for p in (pos_exclude or ())))
     stop_sig: tuple[Any, ...] | None = None if not stopword_set else tuple(sorted(stopword_set))
+    # v1.2.14-8 (r8): leading data epoch — see _vocab_cache_key (P0-1).
     return (
+        current_data_epoch(),
         version_id, level, sl, sr, min_freq, tuple(measures),
         node_lower, node_folded, norm_sig, doc_sig, inc_sig, exc_sig, stop_sig,
     )

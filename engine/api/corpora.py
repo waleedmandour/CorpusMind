@@ -114,6 +114,9 @@ async def delete_project(pid: str, session: AsyncSession = Depends(get_session))
     if not p:
         raise HTTPException(404, "Project not found")
     await session.delete(p)
+    from stats.service import bump_data_epoch
+
+    bump_data_epoch()  # r8 P0-1: drop memoised vocab/collocation state
     return {"deleted": pid}
 
 
@@ -274,6 +277,9 @@ async def delete_corpus(cid: str, session: AsyncSession = Depends(get_session)) 
     from app.version_cache import invalidate_all
 
     invalidate_all()
+    from stats.service import bump_data_epoch
+
+    bump_data_epoch()  # r8 P0-1: drop memoised vocab/collocation state
     return {"deleted": cid}
 
 
@@ -343,6 +349,9 @@ async def upload_documents(
         except Exception as e:
             log.error("ingest_failed", filename=safe_filename, error=str(e))
             raise HTTPException(400, f"Failed to ingest '{safe_filename}': {e}") from e
+    from stats.service import bump_data_epoch
+
+    bump_data_epoch()  # r8 P0-1: the reused version's token set grew
     return out
 
 
@@ -384,8 +393,20 @@ async def delete_document(cid: str, did: str, session: AsyncSession = Depends(ge
     if not corpus:
         raise HTTPException(404, "Corpus not found")
 
-    # Delete the document (cascades to its tokens via the annotation version)
+    # Delete the document AND its tokens. r8 P0-1 root cause #2 (field
+    # report: analyses kept counting a deleted document): tokens belong to
+    # the annotation version (Token.document_id is a plain FK) — there is
+    # NO ORM cascade from Document to Token, and SQLite only enforces the
+    # declared ondelete="CASCADE" when PRAGMA foreign_keys=ON, which the
+    # engine never sets. The old comment claimed the DB cascade covered
+    # this; in reality the deleted document's token rows survived forever
+    # and every frequency/collocation scan kept counting them.
+    from sqlalchemy import delete as _sa_delete
+
+    from storage.models import Token as _Token
+
     filename = doc.filename
+    await session.execute(_sa_delete(_Token).where(_Token.document_id == did))
     await session.delete(doc)
     await session.flush()
 
@@ -396,6 +417,9 @@ async def delete_document(cid: str, did: str, session: AsyncSession = Depends(ge
     from app.version_cache import invalidate_all
 
     invalidate_all()
+    from stats.service import bump_data_epoch
+
+    bump_data_epoch()  # r8 P0-1: same version_id, fewer tokens — must invalidate
 
     # Recompute corpus stats
     from storage.models import AnnotationVersion, Token
@@ -620,6 +644,9 @@ async def recompile_corpus(cid: str, session: AsyncSession = Depends(get_session
 
     await session.commit()
     log.info("corpus_recompiled", cid=cid, docs=recompiled, total=len(docs))
+    from stats.service import bump_data_epoch
+
+    bump_data_epoch()  # r8 P0-1: new version row — keep every memo honest
     return {
         "recompiled": recompiled,
         "total_documents": len(docs),
@@ -661,6 +688,9 @@ async def update_document_metadata(
     new_meta.update(body.meta)
     doc.meta = new_meta
     await session.commit()
+    from stats.service import bump_data_epoch
+
+    bump_data_epoch()  # r8 P0-1: subcorpus filters resolve over metadata
     return {"ok": True, "document_id": did, "meta": new_meta}
 
 
@@ -690,6 +720,9 @@ async def update_all_document_metadata(
         doc.meta = new_meta
     await session.commit()
     log.info("bulk_meta_updated", cid=cid, documents=len(docs), keys=sorted(body.meta.keys()))
+    from stats.service import bump_data_epoch
+
+    bump_data_epoch()  # r8 P0-1: subcorpus filters resolve over metadata
     return {"ok": True, "updated": len(docs), "meta": body.meta}
 
 
@@ -743,6 +776,9 @@ async def create_subcorpus(
     )
     session.add(sc)
     await session.flush()
+    from stats.service import bump_data_epoch
+
+    bump_data_epoch()  # r8 P0-1: analysis scoping changed
     return SubcorpusOut(
         id=sc.id,
         corpus_id=sc.corpus_id,
@@ -791,6 +827,9 @@ async def create_subcorpus_from_cql(
     )
     session.add(sc)
     await session.flush()
+    from stats.service import bump_data_epoch
+
+    bump_data_epoch()  # r8 P0-1: analysis scoping changed
     return SubcorpusOut(
         id=sc.id,
         corpus_id=sc.corpus_id,
@@ -831,6 +870,9 @@ async def delete_subcorpus(
         raise HTTPException(404, "Subcorpus not found")
     await session.delete(sc)
     await session.commit()
+    from stats.service import bump_data_epoch
+
+    bump_data_epoch()  # r8 P0-1: analysis scoping changed
     return {"deleted": sid}
 
 

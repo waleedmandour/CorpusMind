@@ -235,8 +235,14 @@ export function getEngineBase(): string {
 //   - vite dev       → same-origin + dev-server proxy (vite.config.ts),
 //   - VITE_ENGINE_URL configured → hosted PWA with a real engine URL.
 // ----------------------------------------------------------------------- //
+// v1.2.14-8 (r8, P0-4): a STUDENT session implies an attached engine —
+// getEngineBase() routes every student call to the student server (see
+// below), so the status probes must go there too. Without this clause the
+// student browser saw the "engine offline" badge and false provider chips
+// while its actual data calls worked fine — the status UI lied.
 export function engineAttached(): boolean {
   if (isTauriRuntime()) return true;
+  if (getStudentServer()) return true;
   if (getAttachedEngineUrl()) return true;
   if (configuredEngineUrl) return true;
   if (import.meta.env.DEV) return true;
@@ -3101,6 +3107,36 @@ export const api = {
     jsonFetch<{ configured: boolean }>("/api/v1/ai/cloud-config", {
       method: "DELETE",
     }),
+
+  // --- LM Studio runtime config (v1.2.14-8, r8) ---
+  // The engine is the single source of truth for the LM Studio base URL;
+  // it persists the override and the chips read /providers from it.
+  getLMStudioConfig: () =>
+    jsonFetch<{ base_url: string; has_api_key: boolean; source: string }>("/api/v1/ai/lmstudio-config"),
+  setLMStudioConfig: (req: { base_url: string; api_key?: string }) =>
+    jsonFetch<{ configured: boolean; base_url: string }>("/api/v1/ai/lmstudio-config", {
+      method: "POST",
+      body: JSON.stringify(req),
+    }),
+  clearLMStudioConfig: () =>
+    jsonFetch<{ configured: boolean; base_url: string }>("/api/v1/ai/lmstudio-config", {
+      method: "DELETE",
+    }),
+
+  // --- Engine public settings (v1.2.14-8) ---
+  // Subset of engine Settings safe for the UI (no secrets) — e.g. the
+  // configured LM Studio base URL shown on the provider cards.
+  publicSettings: () =>
+    jsonFetch<{
+      cloud_provider: string;
+      cloud_disabled_hard: boolean;
+      ollama_base_url: string;
+      lmstudio_base_url: string;
+      data_dir: string;
+      gemini_available: boolean;
+      gemini_model: string;
+      sentiment_lexicon_dir: string;
+    }>("/api/v1/settings"),
 
   // --- Ollama model catalogue + pull ---
   // v1.2.0: source=curated (built-in, task-filtered) | huggingface (live GGUF

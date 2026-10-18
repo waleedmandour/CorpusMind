@@ -96,13 +96,18 @@ export function SettingsView() {
   // it to swap in the engine-first explanation (and to park the Recheck
   // buttons, whose requests have nowhere to go while the engine is down).
   const pwaEngineOffline = !isTauri && health.isFetched && !engineOk;
-  const ollamaOk = isTauri
-    ? (nativeHealth.data?.ollama.healthy ?? false)
-    : (providers.data?.providers.find((p) => p.name === "ollama")?.healthy ?? false);
-  const lmstudioOk = isTauri
-    ? (nativeHealth.data?.lmstudio.healthy ?? false)
-    : (providers.data?.providers.find((p) => p.name === "lmstudio")?.healthy ?? false);
+  // v1.2.14-8 (r8, P0-3b): the ENGINE is the single source of truth for
+  // provider detection (it probes the configured LM Studio URL); the native
+  // probe remains the fallback for the pre-engine desktop boot window.
+  const ollamaOk = (providers.data?.providers.find((p) => p.name === "ollama")?.healthy)
+    ?? (isTauri ? (nativeHealth.data?.ollama.healthy ?? false) : false);
+  const lmstudioOk = (providers.data?.providers.find((p) => p.name === "lmstudio")?.healthy)
+    ?? (isTauri ? (nativeHealth.data?.lmstudio.healthy ?? false) : false);
   const cloudOk = providers.data?.providers.find((p) => p.name === "cloud")?.healthy ?? false;
+  // v1.2.14-8 (r8): the configured LM Studio base URL, straight from the
+  // engine's public settings — the ProviderCard and the config section
+  // below display this instead of a hardcoded 127.0.0.1:1234.
+  const engineSettings = useQuery({ queryKey: ["engine-settings"], queryFn: api.publicSettings, retry: false });
 
   const [recheckingEngine, setRecheckingEngine] = useState(false);
   const [recheckingOllama, setRecheckingOllama] = useState(false);
@@ -358,7 +363,7 @@ export function SettingsView() {
               name="LM Studio"
               icon={"\u25CF"}
               healthy={lmstudioOk}
-              baseUrl="http://127.0.0.1:1234/v1"
+              baseUrl={engineSettings.data?.lmstudio_base_url ?? "http://127.0.0.1:1234/v1"}
               defaultModel={providers.data?.providers.find((p) => p.name === "lmstudio")?.default_model ?? "local-model"}
               description={pwaEngineOffline
                 ? "Runs on your computer, reached through the CorpusMind engine (currently offline). Start the engine, then this card shows the real detection state."
@@ -387,6 +392,10 @@ export function SettingsView() {
 
           {/* Cloud provider configuration */}
           <CloudProviderConfig />
+
+          {/* v1.2.14-8 (r8): LM Studio base URL + optional API key — the
+              engine persists the override and every chip/pick reads it. */}
+          <LMStudioConfig />
 
           {/* Ollama recheck button */}
           {!ollamaOk && (
@@ -1474,6 +1483,104 @@ const CLOUD_PROVIDER_META: Record<CloudProvider, { label: string; hint: string; 
     modelPlaceholder: "Model (optional, e.g. deepseek-chat)",
   },
 };
+
+// ── v1.2.14-8 (r8): LM Studio runtime configuration ──────────────────────
+// The engine is the single source of truth for the LM Studio base URL: set
+// it here, the engine persists it (survives restarts) and every provider
+// chip / model pick reads it. An optional API key is sent as a Bearer
+// header for LM Studio servers behind token-authenticated tunnels.
+
+function LMStudioConfig() {
+  const qc = useQueryClient();
+  const [baseUrl, setBaseUrl] = useState("");
+  const [apiKey, setApiKey] = useState("");
+  const [status, setStatus] = useState("");
+
+  const config = useQuery({ queryKey: ["lmstudio-config"], queryFn: api.getLMStudioConfig, retry: false });
+
+  // Prefill the field with the engine's current value once it arrives.
+  useEffect(() => {
+    if (config.data && !baseUrl) setBaseUrl(config.data.base_url);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [config.data?.base_url]);
+
+  const save = useMutation({
+    mutationFn: () => api.setLMStudioConfig({
+      base_url: baseUrl.trim(),
+      api_key: apiKey.trim() || undefined,
+    }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["lmstudio-config"] });
+      qc.invalidateQueries({ queryKey: ["providers"] });
+      qc.invalidateQueries({ queryKey: ["engine-settings"] });
+      setStatus("Saved — the engine now uses this LM Studio URL (survives restarts).");
+      setApiKey("");
+      setTimeout(() => setStatus(""), 6000);
+    },
+    onError: (e: Error) => setStatus(`Failed: ${e.message}`),
+  });
+
+  const reset = useMutation({
+    mutationFn: () => api.clearLMStudioConfig(),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["lmstudio-config"] });
+      qc.invalidateQueries({ queryKey: ["providers"] });
+      qc.invalidateQueries({ queryKey: ["engine-settings"] });
+      setStatus("Reset to the default http://127.0.0.1:1234/v1.");
+      setTimeout(() => setStatus(""), 5000);
+    },
+    onError: (e: Error) => setStatus(`Failed: ${e.message}`),
+  });
+
+  const urlOk = /^https?:\/\//.test(baseUrl.trim());
+  const isDefault = config.data?.source === "env";
+
+  return (
+    <div className="cloud-config-section" style={{ marginTop: "var(--space-3)", padding: "var(--space-3)", background: "var(--bg-subtle)", borderRadius: "var(--radius-md)", border: "1px solid var(--border)" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-2)" }}>
+        <strong>LM Studio server URL</strong>
+        {!isDefault && (
+          <span style={{ background: "var(--brand, #1b4d3e)", color: "var(--text-on-brand, #fff)", padding: "2px 8px", borderRadius: "4px", fontSize: "12px", fontWeight: 600 }}>
+            custom
+          </span>
+        )}
+      </div>
+      <p className="settings-text-muted" style={{ marginBottom: "var(--space-2)", fontSize: 12 }}>
+        Change this when LM Studio listens on another host or port. The engine
+        persists the value and uses it for detection, model picking, and chat.
+      </p>
+      <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+        <input
+          type="text"
+          value={baseUrl}
+          onChange={(e) => setBaseUrl(e.target.value)}
+          placeholder="http://127.0.0.1:1234/v1"
+          aria-label="LM Studio base URL"
+          style={{ padding: "4px 8px", fontSize: "13px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", fontFamily: "monospace" }}
+        />
+        <input
+          type="password"
+          value={apiKey}
+          onChange={(e) => setApiKey(e.target.value)}
+          placeholder={config.data?.has_api_key ? "API key saved (type to replace)" : "API key (optional — only for token-protected servers)"}
+          aria-label="LM Studio API key (optional)"
+          style={{ padding: "4px 8px", fontSize: "13px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }}
+        />
+        <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
+          <button className="btn-primary" disabled={!urlOk || save.isPending} onClick={() => save.mutate()}>
+            {save.isPending ? "Saving..." : "Save LM Studio URL"}
+          </button>
+          {!isDefault && (
+            <button className="btn-small" onClick={() => reset.mutate()} disabled={reset.isPending}>
+              {reset.isPending ? "Resetting..." : "Reset to default"}
+            </button>
+          )}
+        </div>
+      </div>
+      {status && <div className={clsx("uploader-status", status.includes("Failed") ? "error" : "success")} style={{ marginTop: "var(--space-2)" }}>{status}</div>}
+    </div>
+  );
+}
 
 function CloudProviderConfig() {
   const qc = useQueryClient();

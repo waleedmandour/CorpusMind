@@ -169,6 +169,15 @@ async def ingest_document(
             ))
     session.add_all(token_rows)
     await session.flush()
+
+    # v1.2.14-8 (r8, P0-1): the token set under `av` just grew — and when the
+    # pipeline recipe matched, `av` is a REUSED annotation version, so every
+    # version-keyed memo cache (vocab fold, collocation results) is stale
+    # from this moment. Bump the global data epoch so the next scan misses.
+    from stats.service import bump_data_epoch
+
+    bump_data_epoch()
+
     elapsed = time.perf_counter() - started
     log.info(
         "ingest_complete",

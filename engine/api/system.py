@@ -369,12 +369,19 @@ async def list_providers(request: Request) -> dict:
             healthy = False
             info.append({"name": name, "healthy": False, "error": str(e)})
             continue
-        info.append({
+        entry: dict = {
             "name": name,
             "healthy": healthy,
             "base_url": getattr(p, "base_url", "") if name != "cloud" else settings.cloud_base_url,
             "default_model": getattr(p, "default_model", ""),
-        })
+        }
+        # v1.2.14-8 (r8, P0-3b): surface WHY a provider is down (connection
+        # refused vs HTTP 401/403 vs …) instead of a bare red chip.
+        if not healthy:
+            detail = str(getattr(p, "last_health_detail", "") or "")
+            if detail:
+                entry["detail"] = detail
+        info.append(entry)
     return {"providers": info}
 
 
