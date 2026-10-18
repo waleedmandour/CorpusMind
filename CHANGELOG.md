@@ -6,6 +6,66 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
+### Fixed (r8 field reports: stale corpus numbers, discarded assistant answers, LM Studio selection, student status UI — 2026-10-19)
+
+<!-- r8-field-reports-2026-10-19 -->
+- **Editing a corpus no longer serves stale statistics (r8 P0-1).**
+  Deleting or adding a document kept the SAME annotation version, so the
+  vocab fold and collocation-result caches (both keyed by version id) served
+  the pre-mutation numbers forever — `clear_vocab_cache()` had no production
+  caller. Both caches are now keyed by a global **data epoch** that every
+  mutating endpoint bumps (document delete/add, corpus/project delete,
+  recompile, clean, subcorpus and metadata edits), so the next scan misses
+  exactly once. The fix also uncovered a second-layer bug: **the tokens of a
+  deleted document were never removed at all** (Token's `ondelete=CASCADE` is
+  inert because SQLite runs with `PRAGMA foreign_keys` off and no ORM cascade
+  exists) — `delete_document` now deletes them explicitly, and analyses stop
+  counting ghost tokens of removed documents.
+- **A finished assistant answer can no longer be delayed or destroyed by
+  the confidence layer (r8 P0-2).** The turn used to run pass1 + final +
+  confidence assessment + MCQ generation sequentially and only persisted at
+  the very end, inside the overall deadline — a slow confidence step
+  (two extra full LLM calls) pushed turns past the 180 s budget and the
+  deadline's cancellation then DISCARDED the completed answer and left the
+  turn unpersisted (bare 504). Now the turn is **persisted first**, the
+  confidence layer is **skipped for local models by default**
+  (`confidence_layer=auto`; `on`/`off` overrides via
+  `CORPUSMIND_CONFIDENCE_LAYER`) and runs under its own short cap
+  (`CORPUSMIND_CONFIDENCE_TIMEOUT_S`, 15 s) when enabled. If the overall
+  deadline still fires after the answer exists, the endpoint returns the
+  persisted answer (HTTP 200, `partial: true`, `confidence_assessed: false`)
+  instead of a bare 504. Timing on the same fake-LLM data (30 s/call
+  confidence): local grounded turn ~60 s → **0.13 s**.
+- **LM Studio: chat models are auto-selected correctly and the server
+  location is configurable (r8 P0-3).** (a) The OpenAI-compatible
+  `pick_default_model` no longer returns the first `/v1/models` entry —
+  which was frequently an embedding model that made every grounded turn
+  fail; it reads LM Studio's `/api/v0/models` metadata (type
+  llm/vlm/embeddings, preferring a loaded chat model) and falls back to a
+  boundary-aware name denylist (embed/bge/e5/gte/rerank/nomic/…), never
+  auto-sending chat to an embedding model and answering 422 with actionable
+  guidance ("load a chat model in LM Studio") when none exists. (b) The
+  LM Studio base URL is now runtime-configurable in **Settings → Model
+  Providers → LM Studio server URL** — persisted to
+  `<data_dir>/provider-config/settings.json`, re-applied at engine startup,
+  and the single source of truth: the engine's `/providers` result (which
+  uses the configured URL) drives the provider chips, with the native probe
+  kept only as the pre-engine desktop fallback. `/providers` also surfaces
+  the exact failure reason (connection refused vs HTTP 401/403) instead of a
+  bare red chip. (c) An optional API key for token-protected LM Studio
+  servers is stored engine-side (never echoed back, never exposed via
+  `/settings`) and sent as a Bearer header.
+- **Student browsers no longer see a false "engine offline" badge (r8
+  P0-4).** `engineAttached()` never consulted the classroom session, so a
+  student browser short-circuited every status probe to synthetic offline
+  responses while its actual data calls went through the student server
+  fine. The student session now implies an attached engine, and
+  `api.health()` probes the student server exactly like any other call.
+- Verification: engine pytest **810 passed / 15 skipped** (16 new r8
+  regression tests, all captured failing on r7 first), ruff clean, mypy
+  baseline unchanged (1989), web tsc clean, vite build clean, vitest
+  **51/51**, contrast + query-pending guards PASS, version lockstep 9/9.
+
 
 ### Fixed (Collocation network, 2026-10-18 — the r4 field report's 504)
 

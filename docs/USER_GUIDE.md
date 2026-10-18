@@ -1,6 +1,6 @@
 # CorpusMind User Guide
 
-> Version 1.2.14-7 | AGPL-3.0-only
+> Version 1.2.14-8 | AGPL-3.0-only
 >
 > Authors: Dr. Waleed Mandour (Sultan Qaboos University, ORCID: 0000-0002-9262-5993)
 > and Prof. Wesam Ibrahim (Princess Nourah Bint Abdulrahman University, ORCID: 0000-0003-0710-6038)
@@ -13,7 +13,7 @@ If you use CorpusMind in your research, please cite it as:
 
 > Mandour, W., & Ibrahim, W. (2026). *CorpusMind: A local-first, AI-native
 > research environment for corpus linguistics and multimodal discourse
-> analysis* (Version 1.2.14-7) [Computer software]. Zenodo.
+> analysis* (Version 1.2.14-8) [Computer software]. Zenodo.
 > https://doi.org/10.5281/zenodo.21226650
 
 ---
@@ -492,6 +492,28 @@ Apache-2.0) is recommended for grounded answers in the new languages:
   never bundled with CorpusMind. If Ollama reports the model needs a newer
   version, update Ollama from ollama.com first; the app tells you when that
   is the case instead of showing a generic "model missing" error.
+
+### 8c.1 Using LM Studio as the local provider (v1.2.14-8)
+
+CorpusMind also detects **LM Studio** as a first-class local provider
+(alongside Ollama). Start LM Studio's local server
+(**Developer → Start Local Server**), and the provider chip on the Home
+page turns green once a model is loaded.
+
+- **Different host or port?** Set it in
+  **Settings → Model Providers → LM Studio server URL**. The engine saves
+  the value (it survives an app restart) and uses it everywhere — detection,
+  model picking, and chat — so every status chip follows one configuration.
+- **Token-protected server?** If your LM Studio sits behind a tunnel that
+  requires an API key, set it in the same section; the engine sends it as a
+  Bearer header and never displays it again.
+- **Only embedding models loaded?** The assistant refuses to guess: instead
+  of failing cryptically, it tells you to load a chat model in LM Studio
+  (embedding and rerank models are never auto-selected for chat).
+- **Assistant responsiveness:** on local models the assistant returns the
+  grounded answer as soon as it is ready; the optional confidence
+  self-assessment is reserved for cloud providers, so a slow local machine
+  never delays or discards a finished answer.
 
 ---
 

@@ -774,7 +774,9 @@ camel_data -i morphology-db-msa-r13`}</pre>
         <ul>
           <li><strong>Ollama</strong> (default, local) - runs on 127.0.0.1:11434. Start it with
             <code> ollama serve</code> after installing from ollama.com.</li>
-          <li><strong>LM Studio</strong> (local) - runs on 127.0.0.1:1234.</li>
+          <li><strong>LM Studio</strong> (local) - default 127.0.0.1:1234; a different host
+            or port (and an optional API key) can be set in
+            Settings → Model Providers → LM Studio server URL (v1.2.14-8).</li>
           <li><strong>Cloud</strong> (opt-in) - Anthropic or OpenAI. Off by default; activating
             it requires explicit user action, and an unmissable indicator shows whenever a cloud
             request is in flight.</li>
