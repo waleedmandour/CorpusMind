@@ -1,13 +1,18 @@
-# CorpusMind — System Figures (Manuscript Figure Set, 2026-10-17)
+# CorpusMind — System Figures (Manuscript Figure Set, updated 2026-10-18)
 
-Five original figures for the Journal of Computational Linguistics
+Six original figures for the Journal of Computational Linguistics
 submission (20-page paper). Okabe-Ito colorblind-safe palette, English
 labels, conceptual-clean naming (real technologies, no file paths).
+
+File numbers reflect creation order, not the paper's figure numbers —
+number figures in the manuscript by order of appearance (fig0, written
+for Section 3, comes before fig1 of Section 4).
 
 ## Files
 
 | Figure | Content |
 |---|---|
+| `fig0_design_principles` | The nine non-negotiable design principles grouped into three families — Data sovereignty & ethics (P1 local-first, P9 biometric restraint), Epistemic discipline (P2 grounded AI, P3 effect size + significance, P5 framework-lensed hypotheses), Verifiable honesty (P4 transparency, P7 honest scale, P8 reproducibility) — plus P6 Arabic-first-class as the cross-cutting principle. Each card names the shipped mechanism that enforces it (hard-disable switch, 27-tool agent, six association tests + four effect sizes, twelve framework templates, annotation versioning…). |
 | `fig1_system_architecture` | Three-tier architecture: Presentation (Tauri 2 shell + React/TS web UI, Sigma.js, RTL) → Analysis engine (FastAPI sidecar, SQLite, background jobs, Smart Troubleshooting) → NLP & AI layer (spaCy ×5, CAMeL Tools, bge-m3 vectors, grounded AI agent). Student Mode sidecar shown as an optional dashed column. |
 | `fig2_analysis_workflow` | End-to-end researcher workflow in four phases: corpus construction → quantitative analysis → interpretation & grounding → publication outputs (incl. methods.pdf and YAML provenance). |
 | `fig3_arabic_pipeline` | Arabic NLP pipeline: input (pasted text or pre-loaded 'Your Corpus' corpus) → normalization → CAMeL morphology → variety identification → analysis surfaces → aggregated report & exports. Semantic color: gray input / blue processing / teal output. |
