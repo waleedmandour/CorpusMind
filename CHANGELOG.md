@@ -153,8 +153,9 @@ once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
 ### Tests
 
-- Engine suite at the release commit: **790 passed / 15 skipped / 0
-  failed** (783 baseline + 7 new). The new `tests/test_r6_network_mesh.py`
+- Engine suite at the release commit: **793 passed / 15 skipped / 0
+  failed** (783 r4 baseline + 7 new mesh tests + 3 r5 bulk-start tests).
+  The new `tests/test_r6_network_mesh.py`
   proves mesh ≡ per-pivot scans on English and Arabic (normalize_arabic)
   corpora — candidate sets, O/fx/fy/N and all eight measures per pair —
   plus hand-counted co-occurrence spots, the min_freq cut, known-set
@@ -163,7 +164,9 @@ once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 - mypy strict baseline re-locked **1992 → 1989** (net −3; the reworked
   code is fully annotated and two legacy errors fell out of the move),
   per repo convention ("count, don't chase zero"); the advisory gate is
-  green.
+  green. As a follow-up, `_enable_wal_mode`'s engine parameter (added in
+  v1.2.14-5) is now annotated `AsyncEngine`, keeping the storage package
+  at its baseline instead of re-locking +1.
 - Web: `tsc --noEmit` clean; UI regression suite **44/44** (no frontend
   change in this release). Version lockstep: **9/9**.
 
