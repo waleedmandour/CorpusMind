@@ -6,6 +6,39 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
+### Fixed (r11: the CDA frameworks are now visible in the Discourse window — 2026-10-20)
+
+<!-- frameworks-catalogue-2026-10-20 -->
+- **The theoretical-frameworks catalogue is finally on screen.** Field
+  report: "I cannot see the 3 CDA frameworks in the UI!" The 12 YAML lens
+  templates (incl. Fairclough's Three-Dimensional CDA, van Dijk's
+  Socio-Cognitive Approach and Wodak's Discourse-Historical Approach, plus
+  Machin & Mayr's Multimodal CDA) have shipped with every install and
+  `GET /api/v1/frameworks` served their metadata since v1.2.0 — but no web
+  component ever consumed the endpoint, so the Discourse window rendered
+  only cue-taxonomy category analysis. The Discourse panel now renders the
+  catalogue itself (CDA family first, engine YAMLs as the single source of
+  truth — nothing hardcoded in the UI), with each lens's analytic categories,
+  core concepts and canonical references.
+- **Every framework lens is now defined by its own research.** All 12
+  framework YAMLs gained research-grounding metadata: a scholarly
+  `description`, `core_concepts` (e.g. Fairclough's description →
+  interpretation → explanation; Wodak's nomination/predication/argumentation
+  strategies and topoi; van Dijk's mental models and ideological square) and
+  `references` citing the canonical literature (Fairclough 1989/1992/1995;
+  van Dijk 1998/2001/2008; Reisigl & Wodak 2001; Wodak & Meyer 2001/2009;
+  Machin & Mayr 2012; Halliday & Matthiessen 2014; Kress & van Leeuwen 2006;
+  Martin & White 2005; Toulmin 1958; and more). The endpoint serves the new
+  fields additively, so older installs keep working.
+- **Honest application note.** The catalogue states plainly where the lenses
+  run: framework-lensed claims are produced by the grounded Research
+  Assistant (phrased as hypotheses, never settled fact, per assistant rule
+  3), and image-based CDA (the four user-selectable CDA variants) runs in
+  the Visual Corpus window. Pinned by engine tests
+  (`test_r11_frameworks_catalogue.py`: 12 lenses, CDA trio + MCDA citations,
+  endpoint contract) and a web regression test that mounts the Discourse
+  panel and asserts the trio renders first with its literature on screen.
+
 ### Fixed (r10 release engineering: phantom mypy baseline regression cleared; baseline locked in the CI-aligned environment — 2026-10-19)
 
 <!-- r10-release-2026-10-19 -->

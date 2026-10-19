@@ -1,6 +1,6 @@
 # CorpusMind User Guide
 
-> Version 1.2.14-10 | AGPL-3.0-only
+> Version 1.2.14-11 | AGPL-3.0-only
 >
 > Authors: Dr. Waleed Mandour (Sultan Qaboos University, ORCID: 0000-0002-9262-5993)
 > and Prof. Wesam Ibrahim (Princess Nourah Bint Abdulrahman University, ORCID: 0000-0003-0710-6038)
@@ -13,7 +13,7 @@ If you use CorpusMind in your research, please cite it as:
 
 > Mandour, W., & Ibrahim, W. (2026). *CorpusMind: A local-first, AI-native
 > research environment for corpus linguistics and multimodal discourse
-> analysis* (Version 1.2.14-10) [Computer software]. Zenodo.
+> analysis* (Version 1.2.14-11) [Computer software]. Zenodo.
 > https://doi.org/10.5281/zenodo.21226650
 
 ---
@@ -333,6 +333,21 @@ governor–dependent pairs.
   scale; the diverging chart plots Log Ratio around a zero axis, with
   each category label on the opposite side of its bar's direction so
   text and bar never overlap.
+
+**Theoretical frameworks (12 lenses, new in v1.2.14-11)**. Above the cue
+lenses, the Discourse window now renders the engine's full theoretical-
+framework catalogue, CDA family first: Fairclough's Three-Dimensional CDA
+(1989/1995), van Dijk's Socio-Cognitive Approach (1998/2008), Wodak's
+Discourse-Historical Approach (Reisigl & Wodak 2001) and Machin & Mayr's
+Multimodal CDA (2012), followed by SFL, Visual Grammar, Appraisal,
+Conceptual Metaphor, semiotics (Barthes, Peirce), Aristotelian rhetoric and
+the Toulmin argumentation model. Each lens is defined by its own research —
+a scholarly description, core concepts and canonical references come from
+the framework YAMLs shipped with the app (nothing is hardcoded in the UI).
+Where the lenses *run* stays honest: framework-lensed claims are produced by
+the grounded Research Assistant and phrased as hypotheses, never settled
+fact; image-based CDA (the four user-selectable variants) runs in the
+Visual Corpus window.
 
 **Cue-lens reading aids (v1.2.10)**. Every cue-based taxonomy now also
 ships a profile radar (each axis normalized to the most frequent
