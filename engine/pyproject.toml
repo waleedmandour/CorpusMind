@@ -98,6 +98,12 @@ arabic = [
     # CAMeL Tools, SinaTools, Farasa — installed on demand in Phase 3.
     # Declared here so `pip install -e ".[arabic]"` is a one-shot.
     "camel-tools>=1.5.5",
+    # The CAMeL dialect-ID model (DIDModel6) ships as a pickled scikit-learn
+    # pipeline (pickled under 1.9.0). sklearn emits InconsistentVersionWarning
+    # on ANY version mismatch and cross-version unpickling can silently shift
+    # the dialect scores, so pin the pickle's own version — same rationale as
+    # the persuasion-index pin: identical scores on every machine.
+    "scikit-learn==1.9.0",
 ]
 # v1.2.11: Stanza backend for Urdu/Hindi/Farsi (and any other language without
 # an official spaCy model). Stanza requires torch (~800 MB), so it's an opt-in

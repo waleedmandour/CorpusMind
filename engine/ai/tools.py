@@ -953,8 +953,9 @@ TOOL_SCHEMAS: list[dict] = [
             "name": "arabic_dialect_id",
             "description": (
                 "Identify the Arabic dialect of a text (§8.21): MSA, Egyptian, Gulf, "
-                "or Levantine. Returns a probability distribution. Phase 4 will swap "
-                "in the full CAMeL DialectIdentifier model (274 MB)."
+                "or Levantine. Returns a probability distribution from the CAMeL "
+                "DIDModel6 identifier (needs the dialectid-model6 data pack, "
+                "provisioned via the in-app Arabic data installer)."
             ),
             "parameters": {
                 "type": "object",

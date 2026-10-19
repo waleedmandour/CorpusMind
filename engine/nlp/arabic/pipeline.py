@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import functools
 import os
+import re
 import threading
 from dataclasses import dataclass
 from pathlib import Path
@@ -695,14 +696,34 @@ def normalize_arabic(text: str) -> str:
     return text
 
 
+# Tashkeel = harakat (U+064B-U+065F incl. shadda/sukun), Quranic annotation
+# signs (U+0610-U+061A), superscript alef (U+0670) and the small-letter/
+# end-mark blocks (U+06D6-U+06ED). Stripped from BOTH the text and the
+# register markers before matching: Classical religious text is typically
+# fully vocalized, so raw-token matching could never hit the marker sets
+# (v1.2.14-9 sweep: a fully-vocalized hadith scored 1.0 MSA).
+_TASHKEEL_RE = re.compile("[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06ED]")
+
+
 def detect_arabic_register(text: str) -> dict[str, float]:
     """Detect Arabic register: Classical (Quranic/Classical), MSA, or Dialectal.
-    Phase 3 heuristic — Phase 4 will use a proper classifier."""
+    Phase 3 heuristic — Phase 4 will use a proper classifier.
+
+    Matching runs on tashkeel-stripped tokens (both sides), so vocalized
+    Classical text is recognized; marker forms are the bare spellings.
+    """
     # Very rough heuristic: presence of Classical markers (إنّ, قال, فعل) vs MSA
-    classical_markers = {"إنّ", "قال", "فعل", "كان", "الذي", "التي", "يا أيها"}
+    classical_markers = {"إن", "قال", "فعل", "كان", "الذي", "التي"}
     dialect_markers = {"عايز", "شلون", "شو", "هيك", "ليش", "بقى"}
-    text_words = set(text.split())
+    # Order-preserving stripped token stream: the bigram probe below needs
+    # the original word order, so the list is kept alongside the set.
+    words = [w for w in (_TASHKEEL_RE.sub("", tok) for tok in text.split()) if w]
+    text_words = set(words)
     c_score = sum(1 for m in classical_markers if m in text_words)
+    # "يا أيها" is a bigram — a single-word set can never match it, so it is
+    # tested as a phrase over the (tashkeel-stripped) token stream instead.
+    if "يا أيها" in " ".join(words):
+        c_score += 1
     d_score = sum(1 for m in dialect_markers if m in text_words)
     total = c_score + d_score + 1
     return {

@@ -6,6 +6,42 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
+### Fixed (Arabic Tools functional sweep — 2026-10-19)
+
+<!-- arabic-tools-sweep-2026-10-19 -->
+- **Register detection now recognizes fully-vocalized Classical text.**
+  Post-r9 functional sweep of the whole Arabic Tools suite found that
+  `detect_arabic_register` matched its Classical/dialectal marker sets
+  against RAW whitespace tokens, so a diacritized token could never match
+  its bare marker — and Classical religious text, the tool's primary
+  target, is exactly the text that ships fully vocalized (a vocalized
+  hadith scored 1.0 MSA). Matching now runs on tashkeel-stripped tokens on
+  both sides; the "يا أيها" marker, previously dead weight (a bigram can
+  never match a single-word set), is now tested as a phrase over the
+  stripped token stream in its original order. Bare-spelling behavior is
+  unchanged and pinned by test (`test_r10_arabic_register.py`).
+- **Dialect-ID scores are now reproducible across machines.** The CAMeL
+  DIDModel6 dialect identifier ships as a pickled scikit-learn pipeline
+  (pickled under 1.9.0); unpickling under any other sklearn version warns
+  (InconsistentVersionWarning) and measurably shifts the probabilities
+  (an Egyptian sample scored egy=0.60 under the pickle's own 1.9.0 vs
+  egy=0.9999 under 1.9.1). The `[arabic]` extra now pins
+  `scikit-learn==1.9.0` — same rationale as the persuasion-index pin:
+  identical scores on every machine that provisions Arabic support.
+- **The `arabic_dialect_id` assistant-tool description reflects the wired
+  reality.** It still said "Phase 4 will swap in the full CAMeL
+  DialectIdentifier model" — the model has been live since the dialect
+  route shipped; the description now states what the tool uses and what
+  data pack it needs.
+
+Verified by a live sweep of every Arabic surface on a fully-provisioned
+stack (camel-tools 1.6.0 + all five pinned data packs via the in-app
+installer): the 8 `/arabic/*` routes, `/bilingual/translate`, the 5
+Arabic assistant tools, the bulk job (start → progress → cancel → result)
+and `/health/resources` all pass; all 68 pre-existing Arabic tests run for
+real (previously skipped where CAMeL was absent) and the new register
+regression tests pass.
+
 ### Fixed (r9 field report: Arabic collocation network empty under the unification switch; export fidelity — 2026-10-19)
 
 <!-- r9-field-report-2026-10-19 -->
