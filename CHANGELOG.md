@@ -6,6 +6,39 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
+### Fixed (r9 field report: Arabic collocation network empty under the unification switch; export fidelity — 2026-10-19)
+
+<!-- r9-field-report-2026-10-19 -->
+- **The collocation network now honors the same normalization switches as
+  the collocation table (r9).** Field report: on an Arabic corpus the
+  collocation LIST showed results while the collocation NETWORK rendered
+  empty. Root cause: the network request model (`NetworkRequest`) carried
+  no normalization fields at all, so build, expand, and the depth-2 mesh
+  always computed on RAW tokens — a pivot picked from the unification-
+  normalized table (or typed in unified spelling) matched nothing and the
+  graph stayed empty. `normalize_arabic` / `normalize` / `zwnj` are now
+  accepted and forwarded on `/collocations/network` and
+  `/collocations/network/expand` (pivot scans AND the mesh), the React
+  network component passes the corpus's unification switch with cache keys
+  that include it, and the raw (switch-off) semantics are pinned by test.
+- **Export fidelity: collocation table, network SVG/PNG, and keyness
+  exports are computed under the same switches as their on-screen tables.**
+  The export request models had no normalization fields either, so an
+  exported Arabic collocation/keyness file silently disagreed with the
+  results shown in the UI. All three export surfaces now accept and forward
+  the switch; the client sends it from the same submitted state as the
+  table query.
+- Verification: engine pytest **808 passed / 17 skipped** (6 new r9
+  regression tests; 5 of them captured failing on r8 first — the sixth
+  pins switch-off raw semantics), ruff clean, mypy delta **zero** on the
+  changed modules (496 = 496 errors, identical modulo line shifts), web
+  tsc clean, vite build clean, vitest **56/56** (5 new client tests),
+  version lockstep 9/9. Known unfixed (reported, out of scope for r9):
+  dispersion (`compute_dispersion` takes no normalization parameter at the
+  service level), group frequency, and n-grams do not expose normalization
+  switches on their endpoints.
+
+
 ### Fixed (r8 field reports: stale corpus numbers, discarded assistant answers, LM Studio selection, student status UI — 2026-10-19)
 
 <!-- r8-field-reports-2026-10-19 -->

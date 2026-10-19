@@ -1,6 +1,6 @@
 # CorpusMind User Guide
 
-> Version 1.2.14-8 | AGPL-3.0-only
+> Version 1.2.14-9 | AGPL-3.0-only
 >
 > Authors: Dr. Waleed Mandour (Sultan Qaboos University, ORCID: 0000-0002-9262-5993)
 > and Prof. Wesam Ibrahim (Princess Nourah Bint Abdulrahman University, ORCID: 0000-0003-0710-6038)
@@ -13,7 +13,7 @@ If you use CorpusMind in your research, please cite it as:
 
 > Mandour, W., & Ibrahim, W. (2026). *CorpusMind: A local-first, AI-native
 > research environment for corpus linguistics and multimodal discourse
-> analysis* (Version 1.2.14-8) [Computer software]. Zenodo.
+> analysis* (Version 1.2.14-9) [Computer software]. Zenodo.
 > https://doi.org/10.5281/zenodo.21226650
 
 ---
@@ -253,6 +253,11 @@ toolbar sets how many collocates to show per node — it grows BOTH levels,
 the node word's collocates and each expanded collocate's own, and applies on
 release; node sizes rescale with graph size and the view re-fits so the
 network always stays inside its window (exportable as SVG/PNG/JSON).
+The network diagram and every export file (collocation table, network
+SVG/PNG, keyness) are computed under the same unification switch as the
+on-screen table: with unification enabled (v1.2.14-9), the network accepts
+the unified spelling of a node picked from the table, and exports match the
+results you see.
 
 **Keyness**: target vs reference corpus; significance (log-likelihood,
 chi-square) beside effect size (Log Ratio, %DIFF, Simple Maths, Odds
