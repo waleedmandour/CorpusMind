@@ -799,6 +799,13 @@ export interface CollocationNetworkRequest {
   depth?: 1 | 2;
   max_nodes?: number;
   known_nodes?: string[];
+  /** v1.2.14-9 (r9): normalization parity with the flat collocation
+   *  table — without these the Arabic network matched raw tokens while
+   *  the table matched unified forms, so a pivot picked from the table
+   *  rendered an empty graph. */
+  normalize_arabic?: boolean;
+  normalize?: boolean | null;
+  zwnj?: "keep" | "space" | "strip";
 }
 
 export interface CollocationNetworkResult {
@@ -3012,33 +3019,33 @@ export const api = {
       body: JSON.stringify({ unit, limit }),
     }).then((r) => r.blob()),
 
-  exportCollocations: (cid: string, node: string, fmt: ExportFormat = "xlsx", level = "word", window = 5, min_freq = 3) =>
+  exportCollocations: (cid: string, node: string, fmt: ExportFormat = "xlsx", level = "word", window = 5, min_freq = 3, normalize_arabic = false) =>
     smartFetch(`/api/v1/corpora/${cid}/export/collocations?fmt=${fmt}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ node, level, window, min_freq }),
+      body: JSON.stringify({ node, level, window, min_freq, ...(normalize_arabic ? { normalize_arabic: true } : {}) }),
     }).then((r) => r.blob()),
 
-  exportKeyness: (cid: string, reference_corpus_id: string, fmt: ExportFormat = "xlsx") =>
+  exportKeyness: (cid: string, reference_corpus_id: string, fmt: ExportFormat = "xlsx", normalize_arabic = false) =>
     smartFetch(`/api/v1/corpora/${cid}/export/keyness?fmt=${fmt}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ reference_corpus_id }),
+      body: JSON.stringify({ reference_corpus_id, ...(normalize_arabic ? { normalize_arabic: true } : {}) }),
     }).then((r) => r.blob()),
 
   // Collocation network diagram export (SVG vector + PNG raster)
-  exportCollocationNetworkSvg: (cid: string, node: string, level = "word", window = 5, min_freq = 3) =>
+  exportCollocationNetworkSvg: (cid: string, node: string, level = "word", window = 5, min_freq = 3, normalize_arabic = false) =>
     smartFetch(`/api/v1/corpora/${cid}/export/collocations.network.svg`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ node, level, window, min_freq }),
+      body: JSON.stringify({ node, level, window, min_freq, ...(normalize_arabic ? { normalize_arabic: true } : {}) }),
     }).then((r) => r.blob()),
 
-  exportCollocationNetworkPng: (cid: string, node: string, level = "word", window = 5, min_freq = 3) =>
+  exportCollocationNetworkPng: (cid: string, node: string, level = "word", window = 5, min_freq = 3, normalize_arabic = false) =>
     smartFetch(`/api/v1/corpora/${cid}/export/collocations.network.png`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ node, level, window, min_freq }),
+      body: JSON.stringify({ node, level, window, min_freq, ...(normalize_arabic ? { normalize_arabic: true } : {}) }),
     }).then((r) => r.blob()),
 
   // Backwards-compatible xlsx-only shortcuts (delegate to the multi-format versions)

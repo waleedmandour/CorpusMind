@@ -303,19 +303,19 @@ function CollocationPanel({ cid }: { cid: string }) {
     if (!submitted) return;
     if (fmt === "svg") {
       await exportWithFeedback(
-        () => api.exportCollocationNetworkSvg(cid, submitted.n, submitted.l as any, submitted.w, submitted.mf),
+        () => api.exportCollocationNetworkSvg(cid, submitted.n, submitted.l as any, submitted.w, submitted.mf, submitted.nm),
         `collocation_network_${submitted.n}.svg`,
         exportStatus.set,
       );
     } else if (fmt === "png") {
       await exportWithFeedback(
-        () => api.exportCollocationNetworkPng(cid, submitted.n, submitted.l as any, submitted.w, submitted.mf),
+        () => api.exportCollocationNetworkPng(cid, submitted.n, submitted.l as any, submitted.w, submitted.mf, submitted.nm),
         `collocation_network_${submitted.n}.png`,
         exportStatus.set,
       );
     } else {
       await exportWithFeedback(
-        () => api.exportCollocations(cid, submitted.n, fmt, submitted.l as any, submitted.w, submitted.mf),
+        () => api.exportCollocations(cid, submitted.n, fmt, submitted.l as any, submitted.w, submitted.mf, submitted.nm),
         `collocations_${submitted.n}.${fmt}`,
         exportStatus.set,
       );
@@ -428,6 +428,7 @@ function CollocationPanel({ cid }: { cid: string }) {
                 level={submitted!.l as "word" | "lemma"}
                 window={submitted!.w}
                 minFreq={submitted!.mf}
+                normalizeArabic={submitted!.nm}
                 onSetCenter={(word) => { setNode(word); setSubmitted({ n: word, l: level, w: window, mf: minFreq, sl: spanLeft, sr: spanRight, pe: posExclude.split(/[\s,]+/).map((s) => s.trim().toUpperCase()).filter(Boolean), sw: stopwordListId, nm: normalizeArabic }); }}
                 onNetworkLoading={setNetworkLoading}
               />
@@ -516,7 +517,7 @@ function KeynessPanel({ cid }: { cid: string }) {
   const onExport = async (fmt: ExportFormat | "svg" | "png") => {
     if (referenceCorpusId) {
       await exportWithFeedback(
-        () => api.exportKeyness(cid, referenceCorpusId, fmt as ExportFormat),
+        () => api.exportKeyness(cid, referenceCorpusId, fmt as ExportFormat, normalizeArabic),
         `keyness.${fmt}`,
         exportStatus.set,
       );

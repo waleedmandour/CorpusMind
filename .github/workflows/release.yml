@@ -37,6 +37,32 @@ jobs:
   # neither release workflow ran tests and ci.yml doesn't trigger on tags.
   # This gate runs the engine suite + web typecheck/build; every platform
   # job needs: it, so a red gate blocks the release.
+  # v1.2.14-9 (r9): fail FAST when the tagged tree has no committed User
+  # Guide PDF matching the release version. The r8 release burned a full
+  # 4-platform build (~40 min of runners, all green) before the checksums
+  # job's guide step failed at the very end — the PDFs had been committed
+  # in a follow-up commit, AFTER the tag. This job runs in parallel with
+  # the test gate and costs seconds; every build job below needs it.
+  preflight:
+    name: Preflight (guide matches tag)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Assert the committed User Guide matches this tag
+        run: |
+          PDF=$(ls download/CorpusMind_User_Guide_v*.pdf | sort -V | tail -1)
+          TAG_FULL="${{ github.ref_name }}"
+          TAG_FULL="${TAG_FULL#v}"
+          PDF_NUM=$(basename "$PDF" | sed -E 's/.*_v([0-9.]+(-[0-9A-Za-z.]+)?)\.pdf/\1/')
+          TAG_BASE="${TAG_FULL%%-*}"
+          if [ "$PDF_NUM" != "$TAG_FULL" ] && [ "$PDF_NUM" != "$TAG_BASE" ]; then
+            echo "ERROR: newest guide PDF is v$PDF_NUM but release tag is v$TAG_FULL"
+            echo "Regenerate the User Guide for this version (scripts/generate_user_guide_pdf.py) and commit it BEFORE tagging."
+            exit 1
+          fi
+          echo "Guide $PDF matches tag ${{ github.ref_name }}."
+
   test-gate:
     name: Test gate (engine + web)
     runs-on: ubuntu-24.04
@@ -94,7 +120,7 @@ jobs:
   # ──────────────────────────────────────────────────────────────────────
   windows:
     name: Windows (x64)
-    needs: test-gate
+    needs: [test-gate, preflight]
     runs-on: windows-latest
     timeout-minutes: 45
     env:
@@ -480,7 +506,7 @@ jobs:
   # ──────────────────────────────────────────────────────────────────────
   macos-arm64:
     name: macOS (Apple Silicon)
-    needs: test-gate
+    needs: [test-gate, preflight]
     runs-on: macos-14
     timeout-minutes: 45
     env:
@@ -687,7 +713,7 @@ jobs:
   # ──────────────────────────────────────────────────────────────────────
   macos-intel:
     name: macOS (Intel)
-    needs: test-gate
+    needs: [test-gate, preflight]
     runs-on: macos-15-intel
     # v1.2.14-3: the Intel runners are markedly slower than arm64 — with a
     # warm cargo cache the full chain (deps + PyInstaller sidecar + web build
@@ -887,7 +913,7 @@ jobs:
   # ──────────────────────────────────────────────────────────────────────
   linux:
     name: Linux (x64)
-    needs: test-gate
+    needs: [test-gate, preflight]
     runs-on: ubuntu-22.04
     timeout-minutes: 45
     steps:

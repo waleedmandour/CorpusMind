@@ -113,12 +113,23 @@ class ExportCollocationRequest(BaseModel):
     min_freq: int = 3
     measures: list[str] | None = None
     limit: int = 500
+    # v1.2.14-9 (r9): exports must be computed under the SAME normalization
+    # switches as the on-screen table — an exported Arabic collocation file
+    # previously ignored the unification switch and disagreed with the UI.
+    normalize_arabic: bool = False
+    normalize: bool | None = None
+    zwnj: Literal["keep", "space", "strip"] = "keep"
 
 
 class ExportKeynessRequest(BaseModel):
     reference_corpus_id: str
     min_freq: int = 5
     limit: int = 500
+    # v1.2.14-9 (r9): same export-fidelity parity as the collocation
+    # exports — the keyness table honors these switches, the file did not.
+    normalize_arabic: bool = False
+    normalize: bool | None = None
+    zwnj: Literal["keep", "space", "strip"] = "keep"
 
 
 ExportFormat = str  # "xlsx" | "csv" | "tsv" | "txt" | "json"
@@ -297,6 +308,8 @@ async def _export_collocations(cid: str, body: ExportCollocationRequest, fmt: Ex
     r = await compute_collocations(
         session, cid, body.node, level=body.level, window=body.window,
         min_freq=body.min_freq, measures=body.measures, limit=body.limit,
+        normalize_arabic=body.normalize_arabic,
+        normalize=body.normalize, zwnj=body.zwnj,
     )
     headers = ["Collocate", "O", "f(node)", "f(collocate)", "N"]
     if r.rows:
@@ -315,7 +328,11 @@ async def _export_keyness(cid: str, body: ExportKeynessRequest, fmt: ExportForma
     if not await session.get(Corpus, cid):
         raise HTTPException(404, "Target corpus not found")
     try:
-        r = await compute_keyness(session, cid, body.reference_corpus_id, min_freq=body.min_freq, limit=body.limit)
+        r = await compute_keyness(
+            session, cid, body.reference_corpus_id, min_freq=body.min_freq, limit=body.limit,
+            normalize_arabic=body.normalize_arabic,
+            normalize=body.normalize, zwnj=body.zwnj,
+        )
     except ValueError as e:
         # Issue 1: surface "no ingested version" as 422 — same as the analysis endpoint.
         raise HTTPException(status_code=422, detail=str(e)) from e
@@ -546,6 +563,8 @@ async def export_collocation_network_svg(
     r = await compute_collocations(
         session, cid, body.node, level=body.level, window=body.window,
         min_freq=body.min_freq, measures=body.measures, limit=body.limit,
+        normalize_arabic=body.normalize_arabic,
+        normalize=body.normalize, zwnj=body.zwnj,
     )
     svg = _build_collocation_network_svg(body.node, r.rows)
     fname = f"collocation_network_{cid}_{body.node}_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}.svg"
@@ -568,6 +587,8 @@ async def export_collocation_network_png(
     r = await compute_collocations(
         session, cid, body.node, level=body.level, window=body.window,
         min_freq=body.min_freq, measures=body.measures, limit=body.limit,
+        normalize_arabic=body.normalize_arabic,
+        normalize=body.normalize, zwnj=body.zwnj,
     )
     svg = _build_collocation_network_svg(body.node, r.rows)
     png = _svg_to_png(svg)

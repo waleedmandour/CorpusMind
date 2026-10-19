@@ -142,6 +142,10 @@ export interface CollocationNetworkProps {
   /** v1.2.14 (P1.4): fired whenever the network fetch enters/leaves the
    *  pending state, so the parent view can mount a SlowQueryNote. */
   onNetworkLoading?: (loading: boolean) => void;
+  /** v1.2.14-9 (r9): the network must run under the SAME Arabic
+   *  unification switch as the flat collocation table — a pivot picked
+   *  from the normalized table matched nothing on raw tokens otherwise. */
+  normalizeArabic?: boolean;
 }
 
 /** Deterministic circle seed — FA2 refines from here. */
@@ -202,6 +206,7 @@ export function CollocationNetwork({
   minFreq,
   onSetCenter,
   onNetworkLoading,
+  normalizeArabic = false,
 }: CollocationNetworkProps) {
   // v1.2.14-7 (r7): the network's visible chrome follows the UI language.
   const lang = useUI((s) => s.lang);
@@ -315,8 +320,8 @@ export function CollocationNetwork({
   // untouched — only the data fetch is memoised.
   const networkQueryKey = useCallback(
     (node: string) =>
-      ["collocation-network", cid, node, level, win, minFreq, appliedTopN] as const,
-    [cid, level, win, minFreq, appliedTopN],
+      ["collocation-network", cid, node, level, win, minFreq, appliedTopN, normalizeArabic] as const,
+    [cid, level, win, minFreq, appliedTopN, normalizeArabic],
   );
 
   // v1.2.14 (P1.4): expose the network loading state for the parent view
@@ -346,6 +351,7 @@ export function CollocationNetwork({
             top_n: appliedTopN,
             depth: 2,
             max_nodes: MAX_NODES,
+            ...(normalizeArabic ? { normalize_arabic: true } : {}),
           }),
           staleTime: 60_000,
         });
@@ -580,7 +586,7 @@ export function CollocationNetwork({
         // a different graph state produces a different fetch.
         const res = await qc.fetchQuery({
           queryKey: ["collocation-network-expand", cid, node, level, win, minFreq,
-                      appliedTopN, graph.nodes().slice().sort().join("|")] as const,
+                      appliedTopN, normalizeArabic, graph.nodes().slice().sort().join("|")] as const,
           queryFn: () => api.collocationNetworkExpand(cid, {
             node,
             level,
@@ -590,6 +596,7 @@ export function CollocationNetwork({
             top_n: budget,
             depth: 2,
             known_nodes: graph.nodes(),
+            ...(normalizeArabic ? { normalize_arabic: true } : {}),
           }),
           staleTime: 60_000,
         });
@@ -635,7 +642,7 @@ export function CollocationNetwork({
         flashMsg(`Expansion failed: ${(e as Error).message}`);
       }
     },
-    [cid, level, win, minFreq, appliedTopN, flashMsg, refreshAll, fitCamera, qc],
+    [cid, level, win, minFreq, appliedTopN, normalizeArabic, flashMsg, refreshAll, fitCamera, qc],
   );
 
   const collapseNode = useCallback(

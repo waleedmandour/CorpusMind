@@ -133,6 +133,17 @@ class NetworkRequest(BaseModel):
     top_n: int = Field(14, ge=3, le=40, description="Max collocates of the pivot")
     depth: int = Field(2, ge=1, le=2, description="2 = mesh collocates against each other")
     max_nodes: int = Field(60, ge=5, le=150, description="Safety cap on returned nodes")
+    # v1.2.14-9 (r9 field-report fix): the network honored NONE of the
+    # normalization switches the flat collocation table exposes. With the
+    # Arabic unification switch on, the table matched folded forms while
+    # the network computed on RAW tokens — a pivot picked from the
+    # normalized table matched nothing and the graph rendered empty
+    # ("collocation list is available but the network does not work for
+    # Arabic"). The three fields mirror CollocationRequest exactly and are
+    # passed to BOTH the pivot scans and the depth-2 mesh below.
+    normalize_arabic: bool = False
+    normalize: bool | None = None
+    zwnj: Literal["keep", "space", "strip"] = "keep"
 
 
 class ExpandRequest(NetworkRequest):
@@ -168,6 +179,9 @@ async def _pivot_rows(
         window=req.window,
         min_freq=req.min_freq,
         limit=limit,
+        normalize_arabic=req.normalize_arabic,
+        normalize=req.normalize,
+        zwnj=req.zwnj,
     )
     rows = list(result.rows)
     rows.sort(key=lambda r: _row_measure(r, req.measure), reverse=True)
@@ -262,6 +276,8 @@ async def _collocation_network_impl(
         mesh_rows = await compute_collocation_mesh(
             session, cid, pivots, known=list(G.nodes),
             level=req.level, window=req.window, min_freq=req.min_freq,
+            normalize_arabic=req.normalize_arabic,
+            normalize=req.normalize, zwnj=req.zwnj,
         )
         for pivot, rows in mesh_rows.items():
             for prow in rows:
@@ -371,6 +387,8 @@ async def _collocation_network_expand_impl(
         mesh_rows = await compute_collocation_mesh(
             session, cid, pivots, known=list(G.nodes),
             level=req.level, window=req.window, min_freq=req.min_freq,
+            normalize_arabic=req.normalize_arabic,
+            normalize=req.normalize, zwnj=req.zwnj,
         )
         for pivot, rows in mesh_rows.items():
             for prow in rows:
