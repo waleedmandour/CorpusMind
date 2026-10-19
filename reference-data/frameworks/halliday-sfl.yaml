@@ -4,6 +4,16 @@ name: halliday-sfl
 full_name: "Halliday (1985) Systemic Functional Linguistics"
 version: "0.1.0"
 framework_family: sfl
+description: "Systemic Functional Linguistics models language as a resource for making meaning, organized around three simultaneous metafunctions: ideational (representing experience), interpersonal (enacting relations and stances) and textual (organizing the message). Analysis works through system networks - transitivity, mood and modality, theme-rheme, cohesion - connecting each choice to its contextual function in register (field, tenor, mode)."
+core_concepts:
+  - "Three metafunctions: ideational, interpersonal, textual"
+  - "System networks: choice as meaning"
+  - "Transitivity (process types) and modality"
+  - "Theme-rheme and information structure"
+  - "Register: field, tenor, mode"
+references:
+  - "Halliday, M. A. K. (1985). An Introduction to Functional Grammar. Arnold."
+  - "Halliday, M. A. K., & Matthiessen, C. M. I. M. (2014). Halliday's Introduction to Functional Grammar (4th ed.). Routledge."
 categories:
   - id: ideational
     label: Ideational metafunction

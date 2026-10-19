@@ -2,6 +2,15 @@ name: toulmin-argumentation
 full_name: "Toulmin (1958) Argumentation Model"
 version: "0.1.0"
 framework_family: argumentation
+description: "Toulmin's model analyses practical argument as a pattern of interrelated moves: a claim supported by data (grounds), standing on a warrant, which can in turn be supported by backing; qualifiers express the strength of the claim and rebuttals the conditions under which it fails. The layout is the standard instrument for mapping how the arguments in a text are assembled - and where they are vulnerable."
+core_concepts:
+  - "Claim, data (grounds), warrant"
+  - "Backing, qualifier, rebuttal"
+  - "Argument layout as analytic map"
+  - "Field-dependence of warrants"
+references:
+  - "Toulmin, S. E. (1958/2003). The Uses of Argument (Updated ed.). Cambridge University Press."
+  - "Hitchcock, D., & Verheij, B. (Eds.) (2006). Arguing on the Toulmin Model. Springer."
 categories:
   - id: claim
     label: Claim (the conclusion)

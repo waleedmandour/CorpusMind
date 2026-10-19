@@ -2,6 +2,15 @@ name: barthes-semiotics
 full_name: "Barthes (1957/1964) Semiotics"
 version: "0.1.0"
 framework_family: semiotics
+description: "Barthes's semiology analyses how signs carry second-order meanings: denotation (the literal sign) is overlaid by connotation and by myth - a second-order semiological system in which historical, contingent meanings present themselves as natural. Mythologies demonstrates the method on everyday cultural artefacts; Elements of Semiology systematizes signifier/signified, syntagm and system."
+core_concepts:
+  - "Signifier / signified / sign"
+  - "Denotation vs connotation"
+  - "Myth as second-order semiological system"
+  - "Naturalization of cultural meaning"
+references:
+  - "Barthes, R. (1957/1972). Mythologies. Hill and Wang."
+  - "Barthes, R. (1964/1967). Elements of Semiology. Jonathan Cape."
 categories:
   - id: denotation
     label: Denotation (literal meaning)

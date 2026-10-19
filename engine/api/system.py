@@ -90,6 +90,11 @@ async def list_frameworks() -> dict:
                 "full_name": data.get("full_name", data.get("name", yml.stem)),
                 "version": str(data.get("version", "")),
                 "family": data.get("framework_family", ""),
+                # r11: research-grounding metadata (additive - older YAMLs
+                # without these keys simply render empty in the catalogue).
+                "description": str(data.get("description", "")).strip(),
+                "core_concepts": [str(c) for c in (data.get("core_concepts") or []) if str(c).strip()],
+                "references": [str(r) for r in (data.get("references") or []) if str(r).strip()],
                 "categories": categories,
             }
         )

@@ -2,6 +2,17 @@ name: fairclough-cda
 full_name: "Fairclough (1995) Three-Dimensional CDA"
 version: "0.1.0"
 framework_family: cda
+description: "Fairclough's three-dimensional model treats every text as simultaneously (1) a text whose vocabulary, grammar and cohesion can be described; (2) an instance of discursive practice - produced, distributed and consumed in ways that must be interpreted; and (3) a piece of social practice whose ideological effects and power relations must be explained. Analysis moves from description to interpretation to explanation, asking how linguistic choices naturalize particular representations of the social world as common sense."
+core_concepts:
+  - "Three-dimensional model: description, interpretation, explanation"
+  - "Naturalization of ideological assumptions"
+  - "Hegemony and common sense"
+  - "Interdiscursivity and recontextualization"
+  - "Member resources (interpretative repertoires)"
+references:
+  - "Fairclough, N. (1989). Language and Power. Longman."
+  - "Fairclough, N. (1992). Discourse and Social Change. Polity Press."
+  - "Fairclough, N. (1995). Critical Discourse Analysis: The Critical Study of Language. Longman."
 categories:
   - id: textual_analysis
     label: Text analysis

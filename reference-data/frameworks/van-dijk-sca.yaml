@@ -2,6 +2,17 @@ name: van-dijk-sca
 full_name: "van Dijk (2008) Socio-Cognitive Approach"
 version: "0.1.0"
 framework_family: cda
+description: "van Dijk's socio-cognitive approach places cognition between discourse and society: ideologies are shared social representations, and concrete text or talk is produced and understood through mental models and context models. Because discourse structures can only be related to social structures through these mediated cognitions, analysis examines how discourse expresses and reproduces socially shared beliefs - classically through the ideological square of positive self-presentation and negative other-presentation."
+core_concepts:
+  - "Socio-cognitive mediation: discourse - cognition - society"
+  - "Mental models and context models"
+  - "Ideologies as shared social representations"
+  - "Ideological square: positive self / negative other presentation"
+  - "Micro-macro level bridging"
+references:
+  - "van Dijk, T. A. (1998). Ideology: A Multidisciplinary Approach. Sage."
+  - "van Dijk, T. A. (2001). Multidisciplinary CDA: A plea for diversity. In Wodak & Meyer (Eds.), Methods of Critical Discourse Analysis. Sage."
+  - "van Dijk, T. A. (2008). Discourse and Context: A Sociocognitive Approach. Cambridge University Press."
 categories:
   - id: mental_models
     label: Mental models

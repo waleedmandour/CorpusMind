@@ -2,6 +2,15 @@ name: martin-white-appraisal
 full_name: "Martin & White (2005) Appraisal Theory"
 version: "0.1.0"
 framework_family: appraisal
+description: "Appraisal Theory maps evaluative meaning in discourse across three regions: attitude (affect, judgment of character, appreciation of things), engagement (the heteroglossic backdrop - resources that contract or expand dialogistic space) and graduation (force and focus). Developed within SFL, it is the standard reference for analysing how texts negotiate evaluation and align readers around community-valued stances."
+core_concepts:
+  - "Attitude: affect, judgment, appreciation"
+  - "Engagement: monogloss vs heterogloss; contract vs expand"
+  - "Graduation: force and focus"
+  - "Reader alignment and community values"
+references:
+  - "Martin, J. R., & White, P. R. R. (2005). The Language of Evaluation: Appraisal in English. Palgrave Macmillan."
+  - "Martin, J. R., & Rose, D. (2007). Working with Discourse (2nd ed.). Continuum."
 categories:
   - id: attitude
     label: Attitude (affect, judgement, appreciation)

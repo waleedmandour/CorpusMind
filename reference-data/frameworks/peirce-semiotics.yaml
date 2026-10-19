@@ -2,6 +2,15 @@ name: peirce-semiotics
 full_name: "Peirce (1867-1913) Semiotics"
 version: "0.1.0"
 framework_family: semiotics
+description: "Peirce's triadic semiotics defines the sign through its relation to an object and an interpretant, with meaning produced in an unending process of interpretation (semiosis). His trichotomy of signs - icon (resemblance), index (causal or physical connection), symbol (convention) - offers a finer-grained typology than dyadic models and treats representation as inferential and fallibilist."
+core_concepts:
+  - "Triadic sign: representamen - object - interpretant"
+  - "Semiosis: unlimited interpretive process"
+  - "Icon, index, symbol"
+  - "Abduction and fallibilism"
+references:
+  - "Peirce, C. S. (1931-1958). Collected Papers of Charles Sanders Peirce. Harvard University Press."
+  - "Atkin, A. (2010). Peirce's Theory of Signs. Stanford Encyclopedia of Philosophy."
 categories:
   - id: icon
     label: Icon (sign resembles object)

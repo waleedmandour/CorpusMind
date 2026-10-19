@@ -2,6 +2,17 @@ name: wodak-dha
 full_name: "Wodak (2001) Discourse-Historical Approach"
 version: "0.1.0"
 framework_family: cda
+description: "The discourse-historical approach embeds a text in four levels of context: the text itself, intertextual and interdiscursive relations, the extralinguistic social and sociological variables, and the broader historical context. It operationalizes analysis through discourse strategies - referential/nomination, predication, argumentation (topoi), perspectivization, and intensification/mitigation - asking how social actors, objects and events are named, characterized and legitimized in their specific historical settings."
+core_concepts:
+  - "Four-level context: text, interdiscursive, social, historical"
+  - "Nomination / referential strategies"
+  - "Predication strategies"
+  - "Argumentation strategies and topoi"
+  - "Perspectivization, intensification and mitigation"
+references:
+  - "Reisigl, M., & Wodak, R. (2001). Discourse and Discrimination: Rhetorics of Racism and Antisemitism. Routledge."
+  - "Wodak, R., & Meyer, M. (Eds.) (2001/2009). Methods of Critical Discourse Analysis. Sage."
+  - "Wodak, R. (2015). The Politics of Fear. Sage."
 categories:
   - id: content
     label: Content

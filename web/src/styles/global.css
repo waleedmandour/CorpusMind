@@ -2193,6 +2193,96 @@ code, pre { font-family: var(--font-mono); }
   color: var(--text);
 }
 
+/* r11: theoretical-frameworks catalogue in the Discourse window — the CDA
+   frameworks (Fairclough, van Dijk, Wodak) were invisible because nothing
+   consumed GET /frameworks; this renders the engine's YAML catalogue. */
+.fw-catalogue {
+  margin-block-start: var(--space-4);
+  padding: var(--space-3);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-inline-start: 3px solid var(--brand-500);
+  border-radius: var(--radius-sm);
+  font-size: 12.5px;
+}
+.fw-catalogue summary {
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text);
+  user-select: none;
+}
+.fw-catalogue .fw-count { color: var(--text-muted); font-size: 12px; }
+.fw-intro {
+  margin: var(--space-2) 0 var(--space-3);
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.fw-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--space-3);
+}
+.fw-card {
+  padding: var(--space-3);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.fw-card-critical { border-inline-start: 3px solid var(--brand-500); }
+.fw-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-size: 12.5px;
+  color: var(--text);
+}
+.fw-family {
+  flex-shrink: 0;
+  padding: 1px 7px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-subtle);
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+.fw-family-critical {
+  border-color: var(--brand-500);
+  color: var(--brand-500);
+}
+.fw-desc {
+  margin: var(--space-2) 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+.fw-block { margin-block-start: var(--space-2); }
+.fw-block-label {
+  font-weight: 600;
+  font-size: 11.5px;
+  color: var(--text);
+}
+.fw-cats { color: var(--text-muted); font-size: 11.5px; }
+.fw-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-block-start: 4px; }
+.fw-chip {
+  display: inline-block;
+  padding: 1px 7px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-subtle);
+  font-size: 11px;
+  color: var(--text);
+}
+.fw-refs {
+  margin: 4px 0 0;
+  padding-inline-start: 18px;
+  color: var(--text-muted);
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+
 .sentiment-bars { margin: var(--space-3) 0; }
 .sentiment-timeline {
   display: flex;

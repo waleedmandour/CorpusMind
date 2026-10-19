@@ -2,6 +2,16 @@ name: machin-mayr-mcda
 full_name: "Machin & Mayr (2012) Multimodal CDA"
 version: "0.1.0"
 framework_family: mcda
+description: "Machin and Mayr's multimodal introduction to CDA is a hands-on toolkit for tracing how discourse legitimates, naturalizes or recontextualizes social arrangements across language and image. It foregrounds the representation of social actors (van Leeuwen's socio-semantic network), abstraction and genericization, and the discursive construction of legitimacy - extending Fairclough-style critical questions to visual and multimodal material."
+core_concepts:
+  - "Representation of social actors (van Leeuwen)"
+  - "Recontextualization of social practice"
+  - "Legitimation and delegitimation strategies"
+  - "Discourses as unequal symbolic resources"
+  - "Multimodal critical analysis"
+references:
+  - "Machin, D., & Mayr, A. (2012). How to Do Critical Discourse Analysis: A Multimodal Introduction. Sage."
+  - "van Leeuwen, T. (2008). Discourse and Practice: New Tools for Critical Discourse Analysis. Oxford University Press."
 categories:
   - id: visual_evaluative_loading
     label: Visual evaluative loading

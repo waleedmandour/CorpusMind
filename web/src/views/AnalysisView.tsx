@@ -1489,6 +1489,105 @@ type DiscourseSortKey =
 const fmtNum = (v: number | null | undefined, digits: number) =>
   v == null ? "-" : v.toLocaleString(undefined, { maximumFractionDigits: digits });
 
+// ---------------------------------------------------------------------------
+// r11: theoretical-frameworks catalogue (field report: "I cannot see the 3
+// CDA frameworks in the UI"). The 12 YAML lens templates shipped since v1.0.0
+// and GET /api/v1/frameworks served their metadata, but NOTHING in the web
+// app ever called it — so the CDA frameworks (Fairclough, van Dijk, Wodak)
+// were invisible exactly where analysts look for them. This section renders
+// the REAL catalogue inside the Discourse window, CDA family first, each lens
+// defined by its own research tradition (description, core concepts, canonical
+// references from the YAMLs — no UI-side hardcoding, per the single-source-
+// of-truth note in api/system.py). Application stays honest: framework-lensed
+// hypotheses run in the grounded Research Assistant; image-based CDA runs in
+// the Visual Corpus window.
+// ---------------------------------------------------------------------------
+
+export type FrameworkMeta = {
+  key: string;
+  name: string;
+  full_name: string;
+  version: string;
+  family: string;
+  description?: string;
+  core_concepts?: string[];
+  references?: string[];
+  categories: Array<{ id: string; label: string; description: string }>;
+};
+
+// CDA lenses lead the catalogue: the classic trio, then Machin & Mayr's
+// multimodal CDA (the engine's 4th critical lens — family "mcda").
+const CDA_FAMILY_ORDER = ["fairclough-cda", "van-dijk-sca", "wodak-dha", "machin-mayr-mcda"];
+
+export function orderFrameworksCatalogue(fws: FrameworkMeta[]): FrameworkMeta[] {
+  const rank = (f: FrameworkMeta) => {
+    const i = CDA_FAMILY_ORDER.indexOf(f.key);
+    if (i >= 0) return i;
+    return f.family === "mcda" ? CDA_FAMILY_ORDER.length - 0.5 : 99;
+  };
+  return [...fws].sort((a, b) => rank(a) - rank(b) || a.full_name.localeCompare(b.full_name));
+}
+
+export function FrameworksCatalogue() {
+  const lang = useUI((s) => s.lang);
+  const frameworks = useQuery({
+    queryKey: ["frameworks-catalogue"],
+    queryFn: () => api.listFrameworks(),
+    staleTime: 10 * 60 * 1000, // YAML catalogue is static per install
+  });
+  const ordered = orderFrameworksCatalogue(frameworks.data?.frameworks ?? []);
+  if (frameworks.isPending || ordered.length === 0) return null;
+  return (
+    <details className="fw-catalogue" open>
+      <summary>
+        <strong>{t(lang, "fw_catalogue_title")}</strong>{" "}
+        <span className="fw-count">({ordered.length})</span>
+      </summary>
+      <p className="fw-intro">{t(lang, "fw_catalogue_intro")}</p>
+      <div className="fw-grid">
+        {ordered.map((f) => {
+          const critical = f.family === "cda" || f.family === "mcda";
+          return (
+            <article key={f.key} className={clsx("fw-card", { "fw-card-critical": critical })}>
+              <header className="fw-card-head">
+                <strong>{f.full_name}</strong>
+                <span className={clsx("fw-family", { "fw-family-critical": critical })}>{f.family.toUpperCase()}</span>
+              </header>
+              {f.description && <p className="fw-desc">{f.description}</p>}
+              {f.core_concepts && f.core_concepts.length > 0 && (
+                <div className="fw-block">
+                  <span className="fw-block-label">{t(lang, "fw_core_concepts")}:</span>
+                  <div className="fw-chips">
+                    {f.core_concepts.map((c) => (
+                      <span key={c} className="fw-chip">{c}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {f.categories.length > 0 && (
+                <div className="fw-block">
+                  <span className="fw-block-label">{t(lang, "fw_categories")}:</span>{" "}
+                  <span className="fw-cats">{f.categories.map((c) => c.label || c.id).join(" · ")}</span>
+                </div>
+              )}
+              {f.references && f.references.length > 0 && (
+                <div className="fw-block">
+                  <span className="fw-block-label">{t(lang, "fw_references")}:</span>
+                  <ul className="fw-refs">
+                    {f.references.map((r) => (
+                      <li key={r}>{r}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </article>
+          );
+        })}
+      </div>
+    </details>
+  );
+}
+
 function DiscoursePanel({ cid }: { cid: string }) {
   const lang = useUI((s) => s.lang);
   // v1.2.6: multi-taxonomy support - the lens is user-selectable and each
@@ -1652,6 +1751,10 @@ function DiscoursePanel({ cid }: { cid: string }) {
         )}
         <ExportButton onExport={(fmt_) => { if (result.data) { downloadJsonResult(result.data, `discourse.${fmt_}`, exportStatus.set); } } } disabled={!result.data} />
       </div>
+      {/* r11: the theoretical-frameworks catalogue (CDA family first) lives
+          IN the Discourse window — field report: the CDA frameworks were
+          invisible because no UI component ever consumed /frameworks. */}
+      <FrameworksCatalogue />
       {/* v1.2.10: language-coverage badge — traceable to the registry (the
           engines declares which languages each lens's cue sets/lexicons
           actually support); hidden until the taxonomies query resolves. */}

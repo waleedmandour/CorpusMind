@@ -2,6 +2,15 @@ name: aristotle-rhetoric
 full_name: "Aristotle (c. 350 BCE) Rhetoric"
 version: "0.1.0"
 framework_family: rhetoric
+description: "Aristotle's Rhetoric founds the systematic study of persuasion: speakers persuade through three pisteis - ethos (the character of the speaker), pathos (the emotions of the audience) and logos (the argument proper, especially the enthymeme). He distinguishes three genres (deliberative, forensic, epideictic) and ties effective argument to kairos, the opportune moment and situation."
+core_concepts:
+  - "Three pisteis: ethos, pathos, logos"
+  - "Enthymeme: the rhetorical syllogism"
+  - "Deliberative, forensic, epideictic genres"
+  - "Kairos: situational timing"
+  - "Topoi (common topics)"
+references:
+  - "Aristotle (c. 350 BCE/2007). On Rhetoric: A Theory of Civic Discourse (Trans. G. A. Kennedy, 2nd ed.). Oxford University Press."
 categories:
   - id: ethos
     label: Ethos (credibility of the speaker)

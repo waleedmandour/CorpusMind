@@ -6,6 +6,14 @@ name: kress-van-leeuwen
 full_name: "Kress & van Leeuwen (2006)"
 version: "0.1.0"
 framework_family: visual_grammar
+description: "Kress and van Leeuwen's grammar of visual design extends the SFL metafunctions to images: representational structures (narrative vs conceptual), interactive structures (contact, social distance, attitude, modality) and compositional structures (information value, salience, framing). The framework asks who or what is depicted, how the image engages the viewer, and how placement, size and framing organize meaning."
+core_concepts:
+  - "Representational: narrative and conceptual structures"
+  - "Interactive: contact, distance, attitude, modality"
+  - "Compositional: information value, salience, framing"
+  - "Metafunctions extended to the visual"
+references:
+  - "Kress, G., & van Leeuwen, T. (1996/2006). Reading Images: The Grammar of Visual Design. Routledge."
 
 categories:
   - id: representational

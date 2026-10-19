@@ -2879,8 +2879,10 @@ export const api = {
       { method: "POST", body: JSON.stringify(ocrLanguage ? { ocr_language: ocrLanguage } : {}) },
     ),
 
+  // r11: the catalogue now also serves research-grounding metadata
+  // (description / core_concepts / references) from the framework YAMLs.
   listFrameworks: () =>
-    jsonFetch<{ frameworks: Array<{ key: string; name: string; full_name: string; version: string; family: string; categories: Array<{ id: string; label: string; description: string }> }> }>(
+    jsonFetch<{ frameworks: Array<{ key: string; name: string; full_name: string; version: string; family: string; description?: string; core_concepts?: string[]; references?: string[]; categories: Array<{ id: string; label: string; description: string }> }> }>(
       "/api/v1/frameworks",
     ),
 

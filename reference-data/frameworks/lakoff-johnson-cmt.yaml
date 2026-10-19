@@ -2,6 +2,17 @@ name: lakoff-johnson-cmt
 full_name: "Lakoff & Johnson (1980) Conceptual Metaphor Theory"
 version: "0.1.0"
 framework_family: metaphor
+description: "Conceptual Metaphor Theory holds that metaphor is systematic thought rather than ornament: mappings from concrete source domains structure abstract target domains (ARGUMENT IS WAR, TIME IS MONEY) and surface as conventional expressions in discourse. Analysis identifies source-target mappings, their entailments and what they hide - including orientational and ontological metaphors and metonymy."
+core_concepts:
+  - "Conceptual metaphor: source-to-target mapping"
+  - "Structural, orientational, ontological metaphors"
+  - "Systematic entailments; highlighting and hiding"
+  - "Metonymy as reference shift"
+  - "Embodiment as grounding"
+references:
+  - "Lakoff, G., & Johnson, M. (1980). Metaphors We Live By. University of Chicago Press."
+  - "Lakoff, G., & Johnson, M. (1999). Philosophy in the Flesh. Basic Books."
+  - "Kovecses, Z. (2010). Metaphor: A Practical Introduction (2nd ed.). Oxford University Press."
 categories:
   - id: source_domain
     label: Source domain

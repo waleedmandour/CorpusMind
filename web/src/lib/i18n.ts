@@ -267,6 +267,14 @@ export const translations = {
     ai_cancelled: "(cancelled)",
     ai_grounded: "grounded",
     ai_ungrounded: "ungrounded",
+    // r11: theoretical-frameworks catalogue in the Discourse window (the CDA
+    // frameworks were invisible — no UI consumer of /frameworks existed).
+    fw_catalogue_title: "Theoretical frameworks",
+    fw_catalogue_intro:
+      "Each lens below is defined by its own research tradition, CDA family first — rendered from the engine's single-source-of-truth catalogue, not hardcoded here. Framework-lensed claims run in the grounded Research Assistant (phrased as hypotheses, never settled fact); image-based CDA runs in the Visual Corpus window.",
+    fw_core_concepts: "Core concepts",
+    fw_categories: "Analytic categories",
+    fw_references: "Key references",
     // v1.2.6: Discourse page multi-taxonomy selector
     discourse_taxonomy: "Taxonomy",
     discourse_note_intro:
@@ -1515,6 +1523,13 @@ export const translations = {
     ai_cancelled: "(أُلغي)",
     ai_grounded: "موثّق",
     ai_ungrounded: "غير موثّق",
+    // r11: دليل الأطر النظرية في نافذة الخطاب (كانت أطر CDA غير ظاهرة)
+    fw_catalogue_title: "الأطر النظرية",
+    fw_catalogue_intro:
+      "كل عدسة أدناه معرّفة وفق تقليدها البحثي، وعائلة CDA أولاً — تُعرض من دليل المحرك ذاته كمصدر وحيد للحقيقة، وليس مكتوبةً هنا. تعمل الادعاءات المفسَّرة بالأطر عبر مساعد البحث المُسنَد (وتُصاغ كفرضيات لا كحقائق مُسلَّم بها)، بينما يعمل تحليل الخطاب النقدي للصور في نافذة المدوّنة البصرية.",
+    fw_core_concepts: "المفاهيم الأساسية",
+    fw_categories: "الفئات التحليلية",
+    fw_references: "المراجع الأساسية",
     // v1.2.6: منتقي التصنيفات في صفحة الخطاب
     discourse_taxonomy: "التصنيف",
     discourse_note_intro:
