@@ -70,10 +70,10 @@ _NETWORK_DEADLINE_S = float(os.environ.get("CORPUSMIND_NETWORK_TIMEOUT_S", "60")
 
 # Lazily imported analysis semaphore — kept in engine.api.analysis to share
 # the slot budget with /collocations and /keyness.
-_analysis_semaphore = None
+_analysis_semaphore: asyncio.Semaphore | None = None
 
 
-def _get_analysis_semaphore():
+def _get_analysis_semaphore() -> asyncio.Semaphore:
     """Return the shared analysis semaphore, importing lazily to avoid a cycle."""
     global _analysis_semaphore
     if _analysis_semaphore is None:
