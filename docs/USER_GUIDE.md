@@ -1,6 +1,6 @@
 # CorpusMind User Guide
 
-> Version 1.2.14-9 | AGPL-3.0-only
+> Version 1.2.14-10 | AGPL-3.0-only
 >
 > Authors: Dr. Waleed Mandour (Sultan Qaboos University, ORCID: 0000-0002-9262-5993)
 > and Prof. Wesam Ibrahim (Princess Nourah Bint Abdulrahman University, ORCID: 0000-0003-0710-6038)
@@ -13,7 +13,7 @@ If you use CorpusMind in your research, please cite it as:
 
 > Mandour, W., & Ibrahim, W. (2026). *CorpusMind: A local-first, AI-native
 > research environment for corpus linguistics and multimodal discourse
-> analysis* (Version 1.2.14-9) [Computer software]. Zenodo.
+> analysis* (Version 1.2.14-10) [Computer software]. Zenodo.
 > https://doi.org/10.5281/zenodo.21226650
 
 ---
@@ -414,9 +414,14 @@ Purpose-built for learner-corpus studies (Granger 1998; Housen & Kuiken
   calima-msa-r13).
 - **Roots**: all words sharing a triliteral root (k.t.b → kitab, maktaba,
   katib, yaktub).
-- **Dialect ID**: MSA, Egyptian, Gulf, or Levantine (CAMeL DIDModel6).
+- **Dialect ID**: MSA, Egyptian, Gulf, or Levantine (CAMeL DIDModel6;
+  scores are pinned to the model's own scikit-learn version so they are
+  identical on every machine that provisions Arabic support, v1.2.14-10).
 - **Buckwalter / Dediacritize / Normalize**: script utilities.
-- **Register**: Classical / MSA / Dialectal detection.
+- **Register**: Classical / MSA / Dialectal detection. Matching runs on
+  tashkeel-stripped tokens on both sides, so fully vocalized Classical
+  text — the register's primary habitat — is recognized as Classical
+  rather than scored as plain MSA (v1.2.14-10).
 - **Translate**: Arabic–English lookup equivalents.
 - **Export** (v1.2.13): every tool result can be saved as xlsx / csv / tsv /
   txt / json — the morphology, roots, and clitics tools export their

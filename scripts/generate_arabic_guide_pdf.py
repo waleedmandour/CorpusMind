@@ -1,6 +1,6 @@
 """Generate the CorpusMind Arabic User Guide PDF with green theme and Amiri font.
 
-v1.2.14-9: bumped alongside the engine version lockstep.
+v1.2.14-10: bumped alongside the engine version lockstep.
 """
 import re
 from pathlib import Path

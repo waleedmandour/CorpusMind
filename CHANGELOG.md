@@ -6,6 +6,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
+### Fixed (r10 release engineering: phantom mypy baseline regression cleared; baseline locked in the CI-aligned environment — 2026-10-19)
+
+<!-- r10-release-2026-10-19 -->
+- **The phantom `api` mypy regression that failed the v1.2.14-9 release
+  commit is fixed at the source.** The api baseline had been re-locked from
+  a local environment that disagreed with CI by exactly 2 strict-mode
+  errors, so the r9 release commit shipped with a hidden red advisory job.
+  The shared analysis semaphore in `api/network.py`
+  (`_get_analysis_semaphore`) is now fully typed, which removes 3
+  `no-untyped-def` / `no-untyped-call` errors outright: api drops to 355,
+  below the old 356 baseline, with zero runtime change (the lazy import and
+  its fallback behavior are untouched).
+- **The mypy strict baseline is re-locked against the exact CI recipe.**
+  `scripts/mypy_report.py --update` was run under the CI-aligned
+  environment (Python 3.12, `engine[dev]` + python-multipart +
+  cryptography + camel-tools + the CAMeL data packs + en_core_web_sm
+  3.8.0), so the committed baseline now matches what CI computes
+  (api 356 → 355; every other package count unchanged). This closes the
+  phantom-regression class for future releases.
+
 ### Fixed (Arabic Tools functional sweep — 2026-10-19)
 
 <!-- arabic-tools-sweep-2026-10-19 -->
