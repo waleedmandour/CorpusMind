@@ -6,6 +6,44 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
+## [1.2.14] — 2026-10-20 — First stable release of the 1.2.14 line (stable)
+
+The `1.2.14` line was hardened across eleven pre-releases (r1–r11) before
+this stable tag; the sections below document each fix as it landed. The
+line's highlights, in order:
+
+- **r1–r2:** regression sweep, security hardening, and the collocation
+  network join-order fix.
+- **r3:** PWA removal, Persuasion-Index resource fixes, collocates-per-level
+  slider.
+- **r4:** Arabic-corpus analysis inside Arabic Tools, the Windows code-signing
+  pipeline, and honest SmartScreen guidance in the User Guide.
+- **r5:** bulk Arabic start can no longer fail as a bare 500; WAL journal
+  mode; bare-500 fix advertised on the project page.
+- **r6:** collocation-network 504 fixed at the root (one-pass mesh, off-loop
+  scanning, result cache).
+- **r7:** launch error cards fixed at the root; Arabic UI translation
+  coverage extended to ten hardcoded surfaces.
+- **r8:** four field reports fixed — stale corpus stats, discarded assistant
+  answers, LM Studio selection, student status UI — plus the r8 guide
+  shipped with its release.
+- **r9:** Arabic collocation network normalization parity with the table;
+  export fidelity.
+- **r10:** the phantom mypy baseline regression cleared at its source and the
+  baseline locked in the CI-aligned environment; the Arabic Tools functional
+  sweep (30/30 PASS) fixed register detection on vocalized Classical text and
+  pinned scikit-learn for dialect-ID reproducibility.
+- **r11:** the theoretical-frameworks catalogue surfaced in the Discourse
+  window (the 3 CDA frameworks were invisible in the UI) and all 12 lens
+  YAMLs grounded in their own research literature.
+
+This stable tag changes no engine/web/desktop behaviour versus v1.2.14-11:
+it bumps the version surfaces, regenerates the User Guides at the stable
+version, and hardens the release workflow's guide lookup to an exact-tag
+match (the old "newest by `sort -V`" pick ranks `1.2.14` *before* its own
+pre-releases, so a stable tag after pre-releases would fail preflight and
+attach the wrong guide).
+
 ### Fixed (r11: the CDA frameworks are now visible in the Discourse window — 2026-10-20)
 
 <!-- frameworks-catalogue-2026-10-20 -->

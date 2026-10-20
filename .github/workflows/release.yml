@@ -51,13 +51,23 @@ jobs:
       - uses: actions/checkout@v4
       - name: Assert the committed User Guide matches this tag
         run: |
-          PDF=$(ls download/CorpusMind_User_Guide_v*.pdf | sort -V | tail -1)
+          # v1.2.14 stable: look the guide up by EXACT tag name instead of
+          # "newest by sort -V". GNU sort -V ranks 1.2.14 BEFORE its own
+          # pre-releases (1.2.14 < 1.2.14-11), so after eleven committed
+          # pre-release PDFs the "newest" pick would be v1.2.14-11.pdf and
+          # a stable v1.2.14 release could neither pass preflight nor
+          # attach the right guide. Exact-name lookup with the historical
+          # fallbacks: rc-style tags that ship the final-version guide
+          # (v1.2.11-rc1 convention) still resolve via the base version.
           TAG_FULL="${{ github.ref_name }}"
           TAG_FULL="${TAG_FULL#v}"
-          PDF_NUM=$(basename "$PDF" | sed -E 's/.*_v([0-9.]+(-[0-9A-Za-z.]+)?)\.pdf/\1/')
           TAG_BASE="${TAG_FULL%%-*}"
-          if [ "$PDF_NUM" != "$TAG_FULL" ] && [ "$PDF_NUM" != "$TAG_BASE" ]; then
-            echo "ERROR: newest guide PDF is v$PDF_NUM but release tag is v$TAG_FULL"
+          PDF=""
+          for CAND in "download/CorpusMind_User_Guide_v${TAG_FULL}.pdf" "download/CorpusMind_User_Guide_v${TAG_BASE}.pdf"; do
+            if [ -f "$CAND" ]; then PDF="$CAND"; break; fi
+          done
+          if [ -z "$PDF" ]; then
+            echo "ERROR: no committed User Guide for tag v${TAG_FULL} (tried CorpusMind_User_Guide_v${TAG_FULL}.pdf and CorpusMind_User_Guide_v${TAG_BASE}.pdf)"
             echo "Regenerate the User Guide for this version (scripts/generate_user_guide_pdf.py) and commit it BEFORE tagging."
             exit 1
           fi
@@ -1107,24 +1117,26 @@ jobs:
           out-file-path: release-assets
       - name: Attach the 2-page User Guide PDF
         run: |
-          PDF=$(ls download/CorpusMind_User_Guide_v*.pdf | sort -V | tail -1)
           # v1.2.8 (review #7): the v1.2.8 release shipped with the stale
           # v1.2.6 PDF because nothing asserted the guide matches the tag.
-          # Refuse to publish when the newest committed guide is older
-          # than the release tag (strip the leading v from both).
           # v1.2.11-rc1: rc tags ship the FINAL-version guide (strip the
           # pre-release suffix before comparing). v1.2.13-1: pre-release
           # guides are named with the FULL pre-release version
-          # (CorpusMind_User_Guide_v1.2.13-1.pdf), so the extraction and
-          # the comparison accept a semver pre-release suffix on both
-          # sides: PDF 1.2.13-1 matches tag v1.2.13-1, and PDF 1.2.13
-          # still matches a pre-release tag of 1.2.13.
+          # (CorpusMind_User_Guide_v1.2.13-1.pdf).
+          # v1.2.14 stable: EXACT-tag lookup instead of "newest by sort -V"
+          # (see the preflight job) — sort -V ranks 1.2.14 before its own
+          # pre-releases, so the old newest-wins pick would attach the
+          # v1.2.14-11 guide to the stable release. The full-name then
+          # base-name candidates cover both naming conventions.
           TAG_FULL="${{ github.ref_name }}"
           TAG_FULL="${TAG_FULL#v}"
           TAG_BASE="${TAG_FULL%%-*}"
-          PDF_NUM=$(basename "$PDF" | sed -E 's/.*_v([0-9.]+(-[0-9A-Za-z.]+)?)\.pdf/\1/')
-          if [ "$PDF_NUM" != "$TAG_FULL" ] && [ "$PDF_NUM" != "$TAG_BASE" ]; then
-            echo "ERROR: newest guide PDF is v$PDF_NUM but release tag is v$TAG_FULL"
+          PDF=""
+          for CAND in "download/CorpusMind_User_Guide_v${TAG_FULL}.pdf" "download/CorpusMind_User_Guide_v${TAG_BASE}.pdf"; do
+            if [ -f "$CAND" ]; then PDF="$CAND"; break; fi
+          done
+          if [ -z "$PDF" ]; then
+            echo "ERROR: no committed User Guide for tag v${TAG_FULL} (tried CorpusMind_User_Guide_v${TAG_FULL}.pdf and CorpusMind_User_Guide_v${TAG_BASE}.pdf)"
             echo "Regenerate the User Guide for this version (scripts/generate_user_guide_pdf.py) and commit it."
             exit 1
           fi
