@@ -1105,13 +1105,6 @@ jobs:
           tag: ${{ github.ref_name }}
           fileName: '*'
           out-file-path: release-assets
-      - name: Generate and attach SHA256SUMS
-        working-directory: release-assets
-        run: |
-          sha256sum * > SHA256SUMS.txt
-          gh release upload "${{ github.ref_name }}" SHA256SUMS.txt --clobber
-        env:
-          GH_TOKEN: ${{ github.token }}
       - name: Attach the 2-page User Guide PDF
         run: |
           PDF=$(ls download/CorpusMind_User_Guide_v*.pdf | sort -V | tail -1)
@@ -1135,7 +1128,20 @@ jobs:
             echo "Regenerate the User Guide for this version (scripts/generate_user_guide_pdf.py) and commit it."
             exit 1
           fi
+          # r11.1: the checksum manifest must hash the FINAL asset set, so
+          # the guide PDF joins the local hash set before SHA256SUMS runs.
+          cp "$PDF" release-assets/
           gh release upload "${{ github.ref_name }}" "$PDF" --clobber
           echo "Attached $PDF to the release"
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Generate and attach SHA256SUMS
+        working-directory: release-assets
+        run: |
+          # r11.1: hash every attached asset including the guide PDF; a
+          # pre-existing manifest (job rerun) must not hash into itself.
+          rm -f SHA256SUMS.txt
+          sha256sum * > SHA256SUMS.txt
+          gh release upload "${{ github.ref_name }}" SHA256SUMS.txt --clobber
         env:
           GH_TOKEN: ${{ github.token }}
