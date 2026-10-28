@@ -676,7 +676,7 @@ function DispersionPanel({ cid }: { cid: string }) {
             <div className="hint">
               Juilland's D: 1 = perfectly even, 0 = maximally concentrated (assumes roughly equal-sized parts).
               Gries' DP: 0 = perfectly even, 1 = concentrated - expected proportions are weighted by document size (v1.0.1).
-              DP-norm makes DP comparable across different numbers of documents.
+              DP-norm makes DP comparable across corpora with different numbers <em>and sizes</em> of documents (bounded 0–1).
             </div>
           </div>
           <h3>Frequency per document</h3>

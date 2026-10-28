@@ -333,6 +333,7 @@ serious validity bug, so this is treated as a release-blocking test category.
 | Odds Ratio | Keyness effect size | `(f1 · (N2−f2)) / (f2 · (N1−f1))` |
 | Juilland's D | Dispersion | `1 − (CV / sqrt(n−1))` across n parts |
 | Gries' DP (2008) | Dispersion | `0.5 · Σ |observed_proportionᵢ − expected_proportionᵢ|` |
+| Gries' DP-norm (2008) | Dispersion | `DP / (1 − min(sᵢ))`; equals `DP·n/(n−1)` for equal parts |
 | STTR | Lexical variation | TTR over fixed-size chunks, averaged |
 | HD-D (McCarthy & Jarvis 2010) | Lexical diversity | (Σ_types (1 − P(X=0))) / 42, P(X=0) hypergeometric |
 

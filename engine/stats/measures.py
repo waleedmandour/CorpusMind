@@ -329,13 +329,19 @@ def gries_dp(observed: list[int], sizes: list[int] | None = None) -> float:
 
 
 def gries_dp_norm(observed: list[int], sizes: list[int] | None = None) -> float:
-    """DP-norm = DP · n/(n−1)  (Gries 2020) — comparable across different
-    numbers of corpus parts. Returns plain DP when n < 2."""
+    """DP-norm = DP / (1 − min(sᵢ))  (Gries 2008) — bounded in [0, 1] for any
+    part sizes, because max DP = 1 − min(sᵢ) (the item concentrated entirely in
+    the smallest part). For equal-sized parts (min(sᵢ) = 1/n) this coincides
+    with the familiar DP·n/(n−1). Returns plain DP when n < 2."""
     n = len(observed)
     dp = gries_dp(observed, sizes)
     if n < 2:
         return dp
-    return dp * n / (n - 1)
+    if sizes is not None and sum(sizes) > 0 and len(sizes) == n:
+        s_min = min(sizes) / sum(sizes)
+    else:
+        s_min = 1.0 / n
+    return dp / (1.0 - s_min)
 
 
 # --------------------------------------------------------------------------- #

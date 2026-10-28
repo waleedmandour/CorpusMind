@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import io
 import math
+import random
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -52,6 +53,29 @@ def test_gries_dp_size_weighted():
 def test_gries_dp_norm_scaling():
     dp = gries_dp([10, 0])
     assert math.isclose(gries_dp_norm([10, 0]), dp * 2 / 1)
+
+
+def test_gries_dp_norm_unequal_parts_bounded():
+    # Author's reported case: item concentrated in the smallest of 20/40/40 parts.
+    assert math.isclose(gries_dp_norm([10, 0, 0], sizes=[20, 40, 40]), 1.0)
+    # Extreme unequal case that used to return 1.8.
+    assert math.isclose(gries_dp_norm([10, 0], sizes=[10, 90]), 1.0)
+    # Below the old breakage threshold: normalizers must agree to bound at 1.
+    assert gries_dp_norm([10, 0], sizes=[10, 90]) <= 1.0
+
+
+def test_gries_dp_norm_proportional_is_zero():
+    assert math.isclose(gries_dp_norm([10, 90], sizes=[10, 90]), 0.0, abs_tol=1e-9)
+
+
+def test_gries_dp_norm_randomized_bounds():
+    rng = random.Random(11)
+    for _ in range(100):
+        n = rng.randrange(2, 8)
+        sizes = [rng.randrange(10, 500) for _ in range(n)]
+        obs = [rng.randrange(0, 50) for _ in range(n)]
+        v = gries_dp_norm(obs, sizes=sizes)
+        assert -1e-12 <= v <= 1.0 + 1e-12
 
 
 def test_fisher_exact_known_tables():

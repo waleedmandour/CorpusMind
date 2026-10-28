@@ -247,9 +247,13 @@ document lengths. When part sizes are unavailable it falls back to uniform
 `1/n`.
 
 - **Range:** [0, 1]; 0 = perfectly even, 1 = maximally concentrated
-- **DP-norm (v1.0.1):** `DP_norm = DP · n/(n−1)` (Gries 2020) is reported
-  alongside DP so values are comparable across corpora with different numbers
-  of parts
+- **DP-norm (v1.0.1; corrected in v2.0.0):** `DP_norm = DP / (1 − min(sᵢ))`
+  (Gries 2008) is reported alongside DP. Because the maximum of the ½-scaled
+  DP is exactly `1 − min(sᵢ)` (the term concentrated entirely in the smallest
+  part), this normalization is bounded in [0, 1] for **any** part sizes —
+  unequal ones included. For equal-sized parts (`min(sᵢ) = 1/n`) it coincides
+  with the familiar `DP · n/(n−1)`, which was previously (incorrectly) applied
+  to unequal parts too and could exceed 1 there.
 - **Juilland's D caveat:** D assumes roughly equal-sized parts; CorpusMind
   computes it on raw part counts and flags it accordingly — **prefer DP (with
   size weighting) for corpora with heterogeneous document lengths**
