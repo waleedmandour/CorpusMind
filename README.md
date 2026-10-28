@@ -24,12 +24,6 @@ one design language:
   Functional Linguistics, Critical Discourse Analysis, Multimodal CDA, Social
   Semiotics, and Cognitive Linguistics.
 
-Both suites are reachable from a **web app** (deployed at
-[corpus-mind-web.vercel.app](https://corpus-mind-web.vercel.app/))
-and from **native desktop apps** for Windows, Linux, and macOS (built with Tauri 2).
-Local LLM inference via **Ollama** and/or **LM Studio** lets the AI Assistant
-run entirely on the researcher's own machine.
-
 ---
 
 ## Status
