@@ -5,6 +5,7 @@ A wrong constant here is a silent, serious validity bug.
 """
 from __future__ import annotations
 
+import itertools
 import math
 import random
 
@@ -24,8 +25,8 @@ from stats.measures import (
     log_ratio,
     mutual_information,
     odds_ratio,
-    pct_diff,
     p_value_ll,
+    pct_diff,
     simple_maths,
     sttr,
     t_score,
@@ -196,12 +197,12 @@ def test_benjamini_hochberg_properties() -> None:
         ps = [rng.random() for _ in range(n)]
         qs = benjamini_hochberg(ps)
         assert len(qs) == n
-        for p, q in zip(ps, qs):
+        for p, q in zip(ps, qs, strict=True):
             assert q >= p - 1e-12          # q dominates p
             assert 0.0 < q <= 1.0 + 1e-12  # bounded in (0, 1]
         order = sorted(range(n), key=lambda i: ps[i])
         qs_sorted = [qs[i] for i in order]
-        for a, b in zip(qs_sorted, qs_sorted[1:]):
+        for a, b in itertools.pairwise(qs_sorted):
             assert b >= a - 1e-9           # non-decreasing in p order
 
 

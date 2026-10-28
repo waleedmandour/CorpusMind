@@ -259,7 +259,7 @@ async def compute_keyness_with_reference_list(
     ll_vals = [r.measures.get("log_likelihood", 0.0) for r in results]
     p_vals = [p_value_ll(ll) if math.isfinite(ll) else 1.0 for ll in ll_vals]
     q_vals = benjamini_hochberg(p_vals)
-    for r, p, q in zip(results, p_vals, q_vals):
+    for r, p, q in zip(results, p_vals, q_vals, strict=True):
         r.measures["p_ll"] = round(p, 6)
         r.measures["q_bh"] = round(q, 6)
 
@@ -275,11 +275,11 @@ async def compute_keyness_with_reference_list(
         positive_keywords=[{"term": r.term, "f1": r.f1, "f2": r.f2, **r.measures} for r in positive],
         negative_keywords=[{"term": r.term, "f1": r.f1, "f2": r.f2, **r.measures} for r in negative],
         N1=N1, N2=N2,
-        warnings=warnings
-        + [
+        warnings=[
+            *warnings,
             f"{len(results)} words tested; log-likelihood thresholds are PER-WORD. "
             f"Significance after multiple-testing correction = q_bh < 0.05 "
             f"(Benjamini–Hochberg FDR); always read alongside an effect size "
-            f"(log_ratio / pct_diff)."
+            f"(log_ratio / pct_diff).",
         ],
     )

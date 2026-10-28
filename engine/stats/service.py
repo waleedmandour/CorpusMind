@@ -21,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.logging import get_logger
 from stats.measures import (
+    KeynessRow,
     benjamini_hochberg,
     chi2_min_expected,
     chi_square_2x2,
@@ -36,7 +37,6 @@ from stats.measures import (
     mutual_information,
     p_value_ll,
     t_score,
-    KeynessRow,
 )
 from storage.models import AnnotationVersion, Corpus, Document, Token
 
@@ -1696,7 +1696,7 @@ async def compute_keyness(
     ll_vals = [r.measures.get("log_likelihood", 0.0) for r in rows]
     p_vals = [p_value_ll(ll) if math.isfinite(ll) else 1.0 for ll in ll_vals]
     q_vals = benjamini_hochberg(p_vals)
-    for r, p, q in zip(rows, p_vals, q_vals):
+    for r, p, q in zip(rows, p_vals, q_vals, strict=True):
         r.measures["p_ll"] = round(p, 6)
         r.measures["q_bh"] = round(q, 6)
 
