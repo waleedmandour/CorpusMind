@@ -14,7 +14,7 @@
 > Mandour, W., & Ibrahim, W. (2026). *CorpusMind: A local-first, AI-native
 > research environment for corpus linguistics and multimodal discourse
 > analysis* (Version 1.2.14) [Computer software]. Zenodo.
-> https://doi.org/10.5281/zenodo.21226650
+> https://doi.org/10.5281/zenodo.21226649
 
 ---
 
@@ -925,4 +925,4 @@ https://github.com/waleedmandour/CorpusMind/issues مع مقتطف من السج
 - تطبيق الويب المباشر: https://corpus-mind-web.vercel.app/
 - دليل البناء: docs/BUILD_GUIDE.md
 - المرجع المنهجي: docs/METHODOLOGY.md
-- معرّف Zenodo: https://doi.org/10.5281/zenodo.21226650
+- معرّف Zenodo: https://doi.org/10.5281/zenodo.21226649

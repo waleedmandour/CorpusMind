@@ -14,7 +14,7 @@ If you use CorpusMind in your research, please cite it as:
 > Mandour, W., & Ibrahim, W. (2026). *CorpusMind: A local-first, AI-native
 > research environment for corpus linguistics and multimodal discourse
 > analysis* (Version 1.2.14) [Computer software]. Zenodo.
-> https://doi.org/10.5281/zenodo.21226650
+> https://doi.org/10.5281/zenodo.21226649
 
 ---
 
@@ -914,4 +914,4 @@ tokens between groups. On untrusted networks, prefer Secure mode.
 - Live web app: https://corpus-mind-web.vercel.app/
 - Build Guide: docs/BUILD_GUIDE.md
 - Methodology Reference: docs/METHODOLOGY.md
-- Zenodo DOI: https://doi.org/10.5281/zenodo.21226650
+- Zenodo DOI: https://doi.org/10.5281/zenodo.21226649
