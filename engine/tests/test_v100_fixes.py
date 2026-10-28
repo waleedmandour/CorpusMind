@@ -74,6 +74,16 @@ def test_assistant_prompt_prompts_tool_use_not_refusal():
     ), "canned refusal must be gone from the prompt (auto-grounding replaces it)"
 
 
+def test_assistant_prompt_logdice_scale() -> None:
+    """F3: the prompt must describe the real LogDice scale (14 + log2(Dice),
+    max 14) — not the phantom '-15 to 0' range."""
+    prompt = _base_prompt_text()
+    src = prompt if prompt else Path("ai/assistant.py").read_text(encoding="utf-8")
+    assert "max 14" in src, "prompt must state LogDice max 14 (14 + log2(Dice))"
+    assert "14 + log2(Dice)" in src, "prompt must give the LogDice formula"
+    assert "-15 to 0" not in src, "phantom LogDice range '-15 to 0' must be gone"
+
+
 def test_salient_terms_quoted_span_wins():
     from ai.assistant import _salient_terms
 
