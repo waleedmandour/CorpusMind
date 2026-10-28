@@ -9,6 +9,7 @@ statistic) includes that ID so the AI Assistant can cite it (§11.1).
 from __future__ import annotations
 
 import asyncio
+import math
 import re
 from collections import Counter, OrderedDict, defaultdict
 from collections.abc import Callable, Sequence
@@ -20,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.logging import get_logger
 from stats.measures import (
+    benjamini_hochberg,
     chi2_min_expected,
     chi_square_2x2,
     compute_keyness_row,
@@ -32,7 +34,9 @@ from stats.measures import (
     log_dice,
     log_likelihood_2x2,
     mutual_information,
+    p_value_ll,
     t_score,
+    KeynessRow,
 )
 from storage.models import AnnotationVersion, Corpus, Document, Token
 
@@ -1674,7 +1678,7 @@ async def compute_keyness(
     # with min_freq — the HAVING clause already filtered at SQL level,
     # so this set is 80-95% smaller than before.
     all_words = set(target_freqs) | set(ref_freqs)
-    rows: list[KeynessRow_dict] = []
+    rows: list[KeynessRow] = []
     for word in all_words:
         f1 = target_freqs.get(word, 0)
         f2 = ref_freqs.get(word, 0)
@@ -1683,6 +1687,18 @@ async def compute_keyness(
             continue
         kr = compute_keyness_row(word, f1, f2, N1, N2, smooth=1.0)
         rows.append(kr)
+
+    # v2.0.0 (F4): exact per-word p-values + Benjamini–Hochberg FDR
+    # correction over ALL tested words (the full candidate set, computed
+    # before sorting/limiting). Per-word LL thresholds like 3.84 ignore
+    # that thousands of words are tested simultaneously and overstate
+    # significance; q_bh < 0.05 is the defensible criterion.
+    ll_vals = [r.measures.get("log_likelihood", 0.0) for r in rows]
+    p_vals = [p_value_ll(ll) if math.isfinite(ll) else 1.0 for ll in ll_vals]
+    q_vals = benjamini_hochberg(p_vals)
+    for r, p, q in zip(rows, p_vals, q_vals):
+        r.measures["p_ll"] = round(p, 6)
+        r.measures["q_bh"] = round(q, 6)
 
     # Sort by log_likelihood descending
     rows.sort(key=lambda r: r.measures.get("log_likelihood", 0.0), reverse=True)
@@ -1701,12 +1717,21 @@ async def compute_keyness(
         warnings=(
             ([f"{len(stopword_set)} stopwords excluded from both corpora."] if stopword_set else [])
             + ([f"{_norm_description(norm)} applied to both corpora."] if norm.enabled else [])
+            + [
+                f"{len(rows)} words tested; log-likelihood thresholds are PER-WORD. "
+                f"Significance after multiple-testing correction = q_bh < 0.05 "
+                f"(Benjamini–Hochberg FDR); always read alongside an effect size "
+                f"(log_ratio / pct_diff)."
+            ]
         ),
     )
 
 
-# Type alias used internally above — the dataclass is in stats.measures
-KeynessRow_dict = type(compute_keyness_row("x", 0, 0, 1, 1))
+# Kept as a backwards-compatible alias for any external importer; the
+# proper instance type is stats.measures.KeynessRow (the previous
+# `type(compute_keyness_row(...))` construction produced type[X], which
+# type-checks as the class object rather than an instance).
+KeynessRow_dict = KeynessRow
 
 
 # --------------------------------------------------------------------------- #

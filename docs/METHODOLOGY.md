@@ -161,6 +161,33 @@ formed by treating the two corpora as rows and the term-vs-other as columns:
 
 **Chi-square (χ²)** — same 2×2 application.
 
+#### Exact p-values and multiple-testing correction (v2.0.0)
+
+LL/G² is asymptotically χ²₁ under H₀ (Dunning 1993), so each term gets an
+**exact per-word p-value** from the χ²(1) survival function, computed with the
+stdlib alone:
+
+$$p = \mathrm{erfc}\!\left(\sqrt{\mathrm{LL}/2}\right)$$
+
+A keyness run tests **thousands of words simultaneously**, so per-word
+thresholds (the familiar χ²₁ critical value 3.84 ≈ p < 0.05) overstate
+significance badly: with 5,000 words tested, ~250 true-null words are expected
+to clear 3.84 by chance alone. CorpusMind therefore also reports
+**Benjamini–Hochberg FDR-corrected q-values** (Benjamini & Hochberg 1995) over
+the full candidate set (all tested words, before ranking/limiting):
+
+$$q_{(i)} = \min_{j \ge i}\left(\frac{n}{j}\, p_{(j)}\right)$$
+
+- `p_ll` — exact per-word p-value for log-likelihood
+- `q_bh` — BH-adjusted q-value; **`q_bh < 0.05` is the defensible
+  significance criterion** for keyword lists
+- Every keyness result carries a methodology warning stating how many words
+  were tested and that per-word LL thresholds are uncorrected
+
+**Reference:** Benjamini, Y., & Hochberg, Y. (1995). Controlling the false
+discovery rate: A practical and powerful approach to multiple testing.
+*Journal of the Royal Statistical Society, Series B*, 57(1), 289–300.
+
 ### Effect size measures
 
 #### Log Ratio — Hardie (2014)
@@ -170,6 +197,14 @@ $$\text{Log Ratio} = \log_2\!\left(\frac{f_1 / N_1}{f_2 / N_2}\right)$$
 - **Use:** keyness effect size
 - **Sign:** positive when over-represented in the target corpus, zero at parity
 - **Interpretation:** a value of `+1` means the term is twice as frequent per token in the target corpus
+- **v2.0.0 (zero cells):** a zero frequency is replaced with **0.5** (Hardie
+  2014; the same continuity correction Odds Ratio applies via
+  Haldane–Anscombe), so the value is always finite, rankable, and JSON-safe
+  (`±inf` is not valid JSON). Worked example: a term absent from the target
+  (`f1 = 0`) with `f2 = 100`, `N1 = 50,000`, `N2 = 1,000,000` gives
+  `log2((0.5/50000)/(100/1000000)) = log2(0.1) = −3.32` (previously `−inf`);
+  the mirror case `f1 = 100, f2 = 0` gives `+11.97` (previously `+inf`).
+  Signed values are kept (two-sided keyword lists).
 
 **Reference:** Hardie, A. (2014). A single, transparent measure of keywordness. *ICAME 35*.
 
@@ -182,6 +217,9 @@ where `norm_fi = (fi / Ni) × 1,000,000` (per-million-words normalized frequency
 - **Use:** keyness effect size
 - **Sign:** same as Log Ratio
 - **Interpretation:** percentage difference in normalized frequency
+- **v2.0.0 (zero cells):** the same 0.5 substitution as Log Ratio is applied
+  to zero frequencies, so %DIFF is finite (and JSON-safe) across the whole
+  battery rather than `+inf` when the reference frequency is 0
 
 **Reference:** Gabrielatos, C., & Marchi, A. (2012). Keyness: Appropriate metrics and practical issues. *CADS International Conference*.
 

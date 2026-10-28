@@ -84,6 +84,18 @@ def test_assistant_prompt_logdice_scale() -> None:
     assert "-15 to 0" not in src, "phantom LogDice range '-15 to 0' must be gone"
 
 
+def test_assistant_prompt_keyness_fdr_guidance() -> None:
+    """F4: the prompt must steer the model to BH-corrected q_bh instead of
+    per-word LL thresholds, and describe the Hardie 0.5-substituted LogRatio."""
+    prompt = _base_prompt_text()
+    src = prompt if prompt else Path("ai/assistant.py").read_text(encoding="utf-8")
+    assert "q_bh" in src, "prompt must name the BH-corrected q_bh field"
+    assert "multiple-testing correction" in src
+    assert "0.5-substituted" in src, "prompt must state the Hardie zero-cell substitution"
+    assert ">3.84 = p<0.05" not in src, "uncorrected per-word threshold phrasing must be gone"
+    assert "pair corrected significance (q_bh) with effect size" in src
+
+
 def test_salient_terms_quoted_span_wins():
     from ai.assistant import _salient_terms
 

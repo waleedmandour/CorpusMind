@@ -389,15 +389,25 @@ async def test_dispersion_size_weighted(client):
 
 @pytest.mark.asyncio
 async def test_keyness_stopwords_via_api(client):
-    cid = await _make_corpus(client, b"The cat sat. The cat ran. Dogs bark loudly outside.")
-    # use the same corpus as reference — degenerate but exercises the path
+    cid = await _make_corpus(client, b"cat cat cat cat cat cat dog dog")
+    ref_cid = await _make_corpus(client, b"dog dog dog dog dog cat")
     r = await client.post(
         f"/api/v1/corpora/{cid}/keyness",
-        json={"reference_corpus_id": cid, "stopword_list_id": "builtin:en"},
+        json={"reference_corpus_id": ref_cid, "stopword_list_id": "builtin:en"},
     )
     assert r.status_code == 200
     data = r.json()
     assert isinstance(data.get("warnings"), list)
+    # v2.0.0 (F4): every keyness row carries exact p + BH q; the FDR
+    # methodology warning is present.
+    kws = data["positive_keywords"] + data["negative_keywords"]
+    assert kws, "target-vs-reference keyness returns rows"
+    for kw in kws:
+        assert "p_ll" in kw and "q_bh" in kw
+        assert math.isfinite(kw["p_ll"]) and math.isfinite(kw["q_bh"])
+        assert 0.0 < kw["p_ll"] <= 1.0 and 0.0 < kw["q_bh"] <= 1.0
+        assert kw["q_bh"] >= kw["p_ll"] - 1e-9
+    assert any("Benjamini–Hochberg" in w for w in data["warnings"])
     terms = {kw["term"] for kw in data["positive_keywords"]} | {kw["term"] for kw in data["negative_keywords"]}
     assert "the" not in terms
 
@@ -451,8 +461,13 @@ async def test_keyness_bridge_excludes_f2_zero(monkeypatch):
     assert "gamma" not in terms  # absent from reference list → excluded
     assert "alpha" in terms
     assert result.warnings  # top-N methodology warning present
+    # v2.0.0 (F4): p_ll / q_bh flow through the bridge pipeline too.
     for kw in result.positive_keywords + result.negative_keywords:
         assert math.isfinite(kw["log_ratio"]) or kw["f2"] > 0
+        assert "p_ll" in kw and "q_bh" in kw
+        assert math.isfinite(kw["p_ll"]) and math.isfinite(kw["q_bh"])
+        assert kw["q_bh"] >= kw["p_ll"] - 1e-9
+    assert any("Benjamini–Hochberg" in w for w in result.warnings)
 
 
 @pytest.mark.asyncio

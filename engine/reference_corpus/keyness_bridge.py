@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import csv
 import json
+import math
 from collections import Counter
 from functools import lru_cache
 from pathlib import Path
@@ -33,7 +34,7 @@ from pathlib import Path
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.logging import get_logger
-from stats.measures import compute_keyness_row
+from stats.measures import benjamini_hochberg, compute_keyness_row, p_value_ll
 from stats.service import KeynessResult, _corpus_size, _latest_version_id
 
 from .manager import ReferenceCorpusManager, get_manager
@@ -252,6 +253,16 @@ async def compute_keyness_with_reference_list(
             row.measures = {k: row.measures[k] for k in measures if k in row.measures}
         results.append(row)
 
+    # v2.0.0 (F4): exact per-word p-values + Benjamini–Hochberg FDR over
+    # ALL tested terms, computed after the measures filter so p_ll/q_bh
+    # survive into the response regardless of the requested subset.
+    ll_vals = [r.measures.get("log_likelihood", 0.0) for r in results]
+    p_vals = [p_value_ll(ll) if math.isfinite(ll) else 1.0 for ll in ll_vals]
+    q_vals = benjamini_hochberg(p_vals)
+    for r, p, q in zip(results, p_vals, q_vals):
+        r.measures["p_ll"] = round(p, 6)
+        r.measures["q_bh"] = round(q, 6)
+
     # 4) Sort + split into positive / negative.
     results.sort(key=lambda r: r.measures.get("log_likelihood", 0.0), reverse=True)
     positive = [r for r in results if r.measures.get("log_likelihood", 0.0) > 0][:limit]
@@ -264,5 +275,11 @@ async def compute_keyness_with_reference_list(
         positive_keywords=[{"term": r.term, "f1": r.f1, "f2": r.f2, **r.measures} for r in positive],
         negative_keywords=[{"term": r.term, "f1": r.f1, "f2": r.f2, **r.measures} for r in negative],
         N1=N1, N2=N2,
-        warnings=warnings,
+        warnings=warnings
+        + [
+            f"{len(results)} words tested; log-likelihood thresholds are PER-WORD. "
+            f"Significance after multiple-testing correction = q_bh < 0.05 "
+            f"(Benjamini–Hochberg FDR); always read alongside an effect size "
+            f"(log_ratio / pct_diff)."
+        ],
     )
