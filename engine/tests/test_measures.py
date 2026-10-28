@@ -11,6 +11,7 @@ import random
 import pytest
 
 from stats.measures import (
+    benjamini_hochberg,
     chi_square_2x2,
     compute_keyness_row,
     delta_p,
@@ -24,6 +25,7 @@ from stats.measures import (
     mutual_information,
     odds_ratio,
     pct_diff,
+    p_value_ll,
     simple_maths,
     sttr,
     t_score,
@@ -137,6 +139,90 @@ def test_simple_maths_smooth_default():
 def test_odds_ratio_one_when_equal_distributions():
     or_ = odds_ratio(f1=10, f2=100, N1=1000, N2=10000)
     assert math.isclose(or_, 1.0, rel_tol=1e-6)
+
+
+def test_log_ratio_zero_cells_hardie_substitution() -> None:
+    # Golden values (Hardie 2014 0.5 substitution):
+    # log2((0.5/50000)/(100/1000000)) = log2(0.1) = -3.321928...
+    assert log_ratio(0, 100, 50_000, 1_000_000) == pytest.approx(-3.321928094887362, rel=1e-9)
+    # log2((100/50000)/(0.5/1000000)) = log2(4000) = 11.965784...
+    assert log_ratio(100, 0, 50_000, 1_000_000) == pytest.approx(11.965784284662087, rel=1e-9)
+    # Always finite (±inf is not valid JSON and breaks JSON.parse clients).
+    assert math.isfinite(log_ratio(0, 100, 50_000, 1_000_000))
+    assert math.isfinite(log_ratio(100, 0, 50_000, 1_000_000))
+    # Sign semantics preserved: absent-from-target → negative,
+    # absent-from-reference → positive.
+    assert log_ratio(0, 100, 50_000, 1_000_000) < 0
+    assert log_ratio(100, 0, 50_000, 1_000_000) > 0
+
+
+def test_pct_diff_zero_cells_finite() -> None:
+    # Used to be +inf; with the 0.5 substitution it is finite:
+    # nf1 = 10000/pm, nf2 = (0.5/1000)·1e6 = 500/pm → ((10000−500)/500)·100 = 1900
+    v = pct_diff(10, 0, 1000, 1000)
+    assert math.isfinite(v)
+    assert v == pytest.approx(1900.0, rel=1e-9)
+    # Equal zero-zero → 0.
+    assert math.isclose(pct_diff(0, 0, 1000, 1000), 0.0, abs_tol=1e-9)
+
+
+def test_p_value_ll_chi2_critical_values() -> None:
+    # The χ²₁ 95% critical value the prompt used to misuse as a per-word
+    # threshold: p(3.841458820694124) ≈ 0.05 exactly.
+    assert p_value_ll(3.841458820694124) == pytest.approx(0.05, abs=1e-12)
+    assert p_value_ll(6.634896601021213) == pytest.approx(0.01, abs=1e-12)
+    assert p_value_ll(0.0) == 1.0
+    assert p_value_ll(-1.0) == 1.0
+    # Monotone decreasing in LL.
+    assert p_value_ll(10.0) < p_value_ll(5.0) < p_value_ll(1.0)
+
+
+def test_benjamini_hochberg_golden() -> None:
+    # Worked example (Benjamini & Hochberg 1995 step-up):
+    assert benjamini_hochberg([0.01, 0.04, 0.03, 0.005]) == [
+        pytest.approx(0.02),
+        pytest.approx(0.04),
+        pytest.approx(0.04),
+        pytest.approx(0.02),
+    ]
+    assert benjamini_hochberg([]) == []
+    assert benjamini_hochberg([0.5]) == [pytest.approx(0.5)]
+
+
+def test_benjamini_hochberg_properties() -> None:
+    rng = random.Random(3)
+    for _ in range(50):
+        n = rng.randrange(2, 40)
+        ps = [rng.random() for _ in range(n)]
+        qs = benjamini_hochberg(ps)
+        assert len(qs) == n
+        for p, q in zip(ps, qs):
+            assert q >= p - 1e-12          # q dominates p
+            assert 0.0 < q <= 1.0 + 1e-12  # bounded in (0, 1]
+        order = sorted(range(n), key=lambda i: ps[i])
+        qs_sorted = [qs[i] for i in order]
+        for a, b in zip(qs_sorted, qs_sorted[1:]):
+            assert b >= a - 1e-9           # non-decreasing in p order
+
+
+def test_benjamini_hochberg_fdr_control_simulation() -> None:
+    # Simulated FDR check: 900 true-null p ~ U(0,1), 100 true-effect p ~ U(0,0.05).
+    # At q < 0.05 the false discovery proportion must stay near/below 0.05
+    # on average (BH guarantee); a raw per-test 0.05 threshold would let
+    # ~45 nulls through vs BH's expected ≤ 5.
+    rng = random.Random(17)
+    fdr_sum, raw_fdr_sum = 0.0, 0.0
+    trials = 30
+    for _ in range(trials):
+        ps = [rng.random() for _ in range(900)] + [rng.uniform(0, 0.05) for _ in range(100)]
+        qs = benjamini_hochberg(ps)
+        discovered = [i for i in range(1000) if qs[i] < 0.05]
+        false_disc = sum(1 for i in discovered if i < 900)
+        fdr_sum += false_disc / max(len(discovered), 1)
+        raw = [i for i in range(1000) if ps[i] < 0.05]
+        raw_fdr_sum += sum(1 for i in raw if i < 900) / max(len(raw), 1)
+    assert fdr_sum / trials <= 0.10                 # BH controls FDR
+    assert fdr_sum / trials < raw_fdr_sum / trials  # and beats uncorrected
 
 
 def test_compute_keyness_row_carries_all_measures():

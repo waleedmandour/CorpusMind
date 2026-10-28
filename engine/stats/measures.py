@@ -141,31 +141,36 @@ class KeynessRow:
     measures: dict[str, float]
 
 
-def _norm_freq(f: int, N: int) -> float:
+def _norm_freq(f: int | float, N: int) -> float:
     """Per-million-words normalized frequency."""
     return (f / N) * 1_000_000 if N > 0 else 0.0
 
 
 def log_ratio(f1: int, f2: int, N1: int, N2: int) -> float:
-    """Log Ratio = log2( (f1/N1) / (f2/N2) )  (Hardie 2014) — effect size."""
+    """Log Ratio = log2( (f1/N1) / (f2/N2) )  (Hardie 2014) — effect size.
+
+    Zero cells use the 0.5 substitution (Hardie 2014; same continuity
+    correction odds_ratio applies via Haldane–Anscombe), so the result is
+    always finite and rankable — and JSON-safe (±inf is not valid JSON and
+    breaks JSON.parse clients). Interpretation: each unit = a doubling of
+    the relative-frequency ratio; negative = less frequent in the target."""
     if N1 <= 0 or N2 <= 0:
         return 0.0
     if f1 <= 0 and f2 <= 0:
         return 0.0
-    if f1 <= 0:
-        return float("-inf")  # term absent from target, present in ref
-    if f2 <= 0:
-        return float("inf")   # term present in target, absent from ref
-    return math.log2((f1 / N1) / (f2 / N2))
+    f1s = max(f1, 0.5)
+    f2s = max(f2, 0.5)
+    return math.log2((f1s / N1) / (f2s / N2))
 
 
 def pct_diff(f1: int, f2: int, N1: int, N2: int) -> float:
-    """%DIFF = ((norm_f1 − norm_f2) / norm_f2) × 100  (Gabrielatos & Marchi 2012)."""
+    """%DIFF = ((norm_f1 − norm_f2) / norm_f2) × 100  (Gabrielatos & Marchi 2012).
+
+    Zero cells use the same 0.5 substitution as :func:`log_ratio`, keeping
+    %DIFF finite (and JSON-safe) across the whole battery."""
     if N1 <= 0 or N2 <= 0:
         return 0.0
-    nf1, nf2 = _norm_freq(f1, N1), _norm_freq(f2, N2)
-    if nf2 <= 0:
-        return float("inf") if nf1 > 0 else 0.0
+    nf1, nf2 = _norm_freq(max(f1, 0.5), N1), _norm_freq(max(f2, 0.5), N2)
     return ((nf1 - nf2) / nf2) * 100
 
 
@@ -277,6 +282,37 @@ def compute_keyness_row(
         "odds_ratio": odds_ratio_haldane(f1, f2, N1, N2),
     }
     return KeynessRow(term=term, f1=f1, f2=f2, N1=N1, N2=N2, measures=measures)
+
+
+def p_value_ll(ll: float) -> float:
+    """Exact p-value for one degree of freedom: survival function of χ²(1).
+
+    LL/G² is asymptotically χ²₁ under H₀ (Dunning 1993); the survival
+    function of χ²(1) is p = erfc(sqrt(ll / 2)) — exact to float precision
+    with the stdlib alone (no scipy)."""
+    if ll <= 0:
+        return 1.0
+    return math.erfc(math.sqrt(ll / 2.0))
+
+
+def benjamini_hochberg(p_values: list[float]) -> list[float]:
+    """BH step-up q-values (Benjamini & Hochberg 1995), order-preserving.
+
+    Returns one q per input, in input order. q_i = min over ranks j >= rank_i
+    of (n / j) · p_(j), computed as a running minimum from the largest p down.
+    Controls the expected false discovery rate at the level the caller
+    compares q against (conventionally 0.05)."""
+    n = len(p_values)
+    if n == 0:
+        return []
+    order = sorted(range(n), key=lambda i: p_values[i])
+    q = [0.0] * n
+    running = 1.0
+    for rank_from_top, idx in enumerate(reversed(order), start=1):
+        rank = n - rank_from_top + 1
+        running = min(running, p_values[idx] * n / rank)
+        q[idx] = min(1.0, running)
+    return q
 
 
 # --------------------------------------------------------------------------- #
