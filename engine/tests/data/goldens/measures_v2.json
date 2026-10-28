@@ -1,0 +1,396 @@
+{
+ "_meta": {
+  "description": "F6 golden fixtures for the statistical battery (FIXPLAN §F6.2). Expected values were generated ONCE from the fixed engine (post F1-F4) and cross-checked at generation time against independent references: exact math.comb hypergeometrics (HD-D), fractions.Fraction rational arithmetic (DP-norm, Juilland's D), algebraically split log paths (LogDice, Log Ratio, %DIFF, G²), the literal nested-min BH definition, and brute-force per-window slicing (MATTR). Non-finite values are stored as the strings '-inf'/'inf' (JSON has no Infinity literal). Token texts are space-joined strings. Do not hand-edit: regenerate instead.",
+  "engine_commit": "04cf36b",
+  "engine_version": "1.2.14",
+  "plan_section": "FIXPLAN §F6.2",
+  "tolerance": "rel 1e-9 (abs 1e-12 for values near zero)"
+ },
+ "hd_d": [
+  {
+   "name": "distinct_500_all_types_once",
+   "tokens": "w0 w1 w2 w3 w4 w5 w6 w7 w8 w9 w10 w11 w12 w13 w14 w15 w16 w17 w18 w19 w20 w21 w22 w23 w24 w25 w26 w27 w28 w29 w30 w31 w32 w33 w34 w35 w36 w37 w38 w39 w40 w41 w42 w43 w44 w45 w46 w47 w48 w49 w50 w51 w52 w53 w54 w55 w56 w57 w58 w59 w60 w61 w62 w63 w64 w65 w66 w67 w68 w69 w70 w71 w72 w73 w74 w75 w76 w77 w78 w79 w80 w81 w82 w83 w84 w85 w86 w87 w88 w89 w90 w91 w92 w93 w94 w95 w96 w97 w98 w99 w100 w101 w102 w103 w104 w105 w106 w107 w108 w109 w110 w111 w112 w113 w114 w115 w116 w117 w118 w119 w120 w121 w122 w123 w124 w125 w126 w127 w128 w129 w130 w131 w132 w133 w134 w135 w136 w137 w138 w139 w140 w141 w142 w143 w144 w145 w146 w147 w148 w149 w150 w151 w152 w153 w154 w155 w156 w157 w158 w159 w160 w161 w162 w163 w164 w165 w166 w167 w168 w169 w170 w171 w172 w173 w174 w175 w176 w177 w178 w179 w180 w181 w182 w183 w184 w185 w186 w187 w188 w189 w190 w191 w192 w193 w194 w195 w196 w197 w198 w199 w200 w201 w202 w203 w204 w205 w206 w207 w208 w209 w210 w211 w212 w213 w214 w215 w216 w217 w218 w219 w220 w221 w222 w223 w224 w225 w226 w227 w228 w229 w230 w231 w232 w233 w234 w235 w236 w237 w238 w239 w240 w241 w242 w243 w244 w245 w246 w247 w248 w249 w250 w251 w252 w253 w254 w255 w256 w257 w258 w259 w260 w261 w262 w263 w264 w265 w266 w267 w268 w269 w270 w271 w272 w273 w274 w275 w276 w277 w278 w279 w280 w281 w282 w283 w284 w285 w286 w287 w288 w289 w290 w291 w292 w293 w294 w295 w296 w297 w298 w299 w300 w301 w302 w303 w304 w305 w306 w307 w308 w309 w310 w311 w312 w313 w314 w315 w316 w317 w318 w319 w320 w321 w322 w323 w324 w325 w326 w327 w328 w329 w330 w331 w332 w333 w334 w335 w336 w337 w338 w339 w340 w341 w342 w343 w344 w345 w346 w347 w348 w349 w350 w351 w352 w353 w354 w355 w356 w357 w358 w359 w360 w361 w362 w363 w364 w365 w366 w367 w368 w369 w370 w371 w372 w373 w374 w375 w376 w377 w378 w379 w380 w381 w382 w383 w384 w385 w386 w387 w388 w389 w390 w391 w392 w393 w394 w395 w396 w397 w398 w399 w400 w401 w402 w403 w404 w405 w406 w407 w408 w409 w410 w411 w412 w413 w414 w415 w416 w417 w418 w419 w420 w421 w422 w423 w424 w425 w426 w427 w428 w429 w430 w431 w432 w433 w434 w435 w436 w437 w438 w439 w440 w441 w442 w443 w444 w445 w446 w447 w448 w449 w450 w451 w452 w453 w454 w455 w456 w457 w458 w459 w460 w461 w462 w463 w464 w465 w466 w467 w468 w469 w470 w471 w472 w473 w474 w475 w476 w477 w478 w479 w480 w481 w482 w483 w484 w485 w486 w487 w488 w489 w490 w491 w492 w493 w494 w495 w496 w497 w498 w499",
+   "sample_size": 42,
+   "expected": 1.0000000000000062
+  },
+  {
+   "name": "two_level_500",
+   "tokens": "a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a b0 b1 b2 b3 b4 b5 b6 b7 b8 b9 b10 b11 b12 b13 b14 b15 b16 b17 b18 b19 b20 b21 b22 b23 b24 b25 b26 b27 b28 b29 b30 b31 b32 b33 b34 b35 b36 b37 b38 b39 b40 b41 b42 b43 b44 b45 b46 b47 b48 b49 b50 b51 b52 b53 b54 b55 b56 b57 b58 b59 b60 b61 b62 b63 b64 b65 b66 b67 b68 b69 b70 b71 b72 b73 b74 b75 b76 b77 b78 b79 b80 b81 b82 b83 b84 b85 b86 b87 b88 b89 b90 b91 b92 b93 b94 b95 b96 b97 b98 b99 b100 b101 b102 b103 b104 b105 b106 b107 b108 b109 b110 b111 b112 b113 b114 b115 b116 b117 b118 b119 b120 b121 b122 b123 b124 b125 b126 b127 b128 b129 b130 b131 b132 b133 b134 b135 b136 b137 b138 b139 b140 b141 b142 b143 b144 b145 b146 b147 b148 b149 b150 b151 b152 b153 b154 b155 b156 b157 b158 b159 b160 b161 b162 b163 b164 b165 b166 b167 b168 b169 b170 b171 b172 b173 b174 b175 b176 b177 b178 b179 b180 b181 b182 b183 b184 b185 b186 b187 b188 b189 b190 b191 b192 b193 b194 b195 b196 b197 b198 b199",
+   "sample_size": 42,
+   "expected": 0.42380952380952247
+  },
+  {
+   "name": "zipf_shaped_600",
+   "tokens": "z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z0 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z1 z2 z2 z2 z2 z2 z2 z2 z2 z2 z2 z2 z2 z2 z2 z2 z2 z2 z2 z2 z2 z2 z2 z2 z2 z2 z2 z2 z2 z2 z2 z2 z2 z2 z2 z2 z2 z2 z2 z2 z2 z2 z2 z2 z2 z2 z2 z2 z2 z2 z2 z3 z3 z3 z3 z3 z3 z3 z3 z3 z3 z3 z3 z3 z3 z3 z3 z3 z3 z3 z3 z3 z3 z3 z3 z3 z3 z3 z3 z3 z3 z3 z3 z3 z3 z3 z3 z3 z3 z4 z4 z4 z4 z4 z4 z4 z4 z4 z4 z4 z4 z4 z4 z4 z4 z4 z4 z4 z4 z4 z4 z4 z4 z4 z4 z4 z4 z4 z4 z5 z5 z5 z5 z5 z5 z5 z5 z5 z5 z5 z5 z5 z5 z5 z5 z5 z5 z5 z5 z5 z5 z5 z5 z5 z6 z6 z6 z6 z6 z6 z6 z6 z6 z6 z6 z6 z6 z6 z6 z6 z6 z6 z6 z6 z6 z7 z7 z7 z7 z7 z7 z7 z7 z7 z7 z7 z7 z7 z7 z7 z7 z7 z7 z7 z8 z8 z8 z8 z8 z8 z8 z8 z8 z8 z8 z8 z8 z8 z8 z8 z8 z9 z9 z9 z9 z9 z9 z9 z9 z9 z9 z9 z9 z9 z9 z9 z10 z10 z10 z10 z10 z10 z10 z10 z10 z10 z10 z10 z10 z10 z11 z11 z11 z11 z11 z11 z11 z11 z11 z11 z11 z11 z12 z12 z12 z12 z12 z12 z12 z12 z12 z12 z12 z12 z13 z13 z13 z13 z13 z13 z13 z13 z13 z13 z13 z14 z14 z14 z14 z14 z14 z14 z14 z14 z14 z15 z15 z15 z15 z15 z15 z15 z15 z15 z16 z16 z16 z16 z16 z16 z16 z16 z16 z17 z17 z17 z17 z17 z17 z17 z17 z18 z18 z18 z18 z18 z18 z18 z18 z19 z19 z19 z19 z19 z19 z19 z19 z20 z20 z20 z20 z20 z20 z20 z21 z21 z21 z21 z21 z21 z21 z22 z22 z22 z22 z22 z22 z22 z23 z23 z23 z23 z23 z23 z24 z24 z24 z24 z24 z24 z25 z25 z25 z25 z25 z25 z26 z26 z26 z26 z26 z26 z27 z27 z27 z27 z27 z28 z28 z28 z28 z28 z29 z29 z29 z29",
+   "sample_size": 42,
+   "expected": 0.4102430890945922
+  },
+  {
+   "name": "sparse_3type_600",
+   "tokens": "the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the the cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat cat dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog dog",
+   "sample_size": 42,
+   "expected": 0.07089135090254438
+  },
+  {
+   "name": "short_text_falls_back_to_ttr",
+   "tokens": "a a a a a a a a a a b b b b b b b b b b c c c c c c c c c c",
+   "sample_size": 42,
+   "expected": 0.1
+  },
+  {
+   "name": "custom_sample_size_10",
+   "tokens": "x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x y0 y1 y2 y3 y4 y5 y6 y7 y8 y9 y10 y11 y12 y13 y14 y15 y16 y17 y18 y19 y20 y21 y22 y23 y24 y25 y26 y27 y28 y29 y30 y31 y32 y33 y34 y35 y36 y37 y38 y39 y40 y41 y42 y43 y44 y45 y46 y47 y48 y49",
+   "sample_size": 10,
+   "expected": 0.599940658032741
+  }
+ ],
+ "gries_dp_norm": [
+  {
+   "name": "equal_parts_uniform",
+   "observed": [
+    10,
+    10,
+    10,
+    10
+   ],
+   "sizes": null,
+   "expected": 0.0
+  },
+  {
+   "name": "equal_parts_concentrated",
+   "observed": [
+    30,
+    0,
+    0,
+    0
+   ],
+   "sizes": null,
+   "expected": 1.0
+  },
+  {
+   "name": "unequal_concentrated_in_smallest",
+   "observed": [
+    10,
+    0,
+    0
+   ],
+   "sizes": [
+    20,
+    40,
+    40
+   ],
+   "expected": 1.0
+  },
+  {
+   "name": "unequal_proportional",
+   "observed": [
+    10,
+    90
+   ],
+   "sizes": [
+    10,
+    90
+   ],
+   "expected": 0.0
+  },
+  {
+   "name": "unequal_mid",
+   "observed": [
+    5,
+    25,
+    20
+   ],
+   "sizes": [
+    10,
+    20,
+    70
+   ],
+   "expected": 0.33333333333333326
+  },
+  {
+   "name": "no_sizes_four_parts_last_only",
+   "observed": [
+    0,
+    0,
+    0,
+    30
+   ],
+   "sizes": null,
+   "expected": 1.0
+  },
+  {
+   "name": "sparse_concentrated_in_largest",
+   "observed": [
+    1,
+    0
+   ],
+   "sizes": [
+    99,
+    1
+   ],
+   "expected": 0.010101010101010107
+  }
+ ],
+ "juillands_d": [
+  {
+   "name": "even_four_parts",
+   "freqs": [
+    10,
+    10,
+    10,
+    10
+   ],
+   "expected": 1.0
+  },
+  {
+   "name": "all_in_one_part_four_parts",
+   "freqs": [
+    10,
+    0,
+    0,
+    0
+   ],
+   "expected": 0.0
+  },
+  {
+   "name": "two_parts_3_1",
+   "freqs": [
+    3,
+    1
+   ],
+   "expected": 0.5
+  },
+  {
+   "name": "skewed_five_parts",
+   "freqs": [
+    50,
+    20,
+    15,
+    10,
+    5
+   ],
+   "expected": 0.6047152924789526
+  }
+ ],
+ "log_dice": [
+  {
+   "name": "perfect_association",
+   "joint": 10,
+   "fx": 10,
+   "fy": 10,
+   "expected": 14.0
+  },
+  {
+   "name": "weak_association_1pct",
+   "joint": 1,
+   "fx": 100,
+   "fy": 100,
+   "expected": 7.356143810225276
+  },
+  {
+   "name": "zero_joint",
+   "joint": 0,
+   "fx": 50,
+   "fy": 80,
+   "expected": "-inf"
+  },
+  {
+   "name": "moderate_40pct",
+   "joint": 50,
+   "fx": 100,
+   "fy": 150,
+   "expected": 12.678071905112638
+  }
+ ],
+ "keyness_rows": [
+  {
+   "name": "over_represented",
+   "term": "k100",
+   "f1": 100,
+   "f2": 10,
+   "N1": 10000,
+   "N2": 10000,
+   "measures": {
+    "log_likelihood": 85.87967951505031,
+    "chi_square": 74.04360345536817,
+    "log_ratio": 3.321928094887362,
+    "pct_diff": 900.0,
+    "simple_maths": 9.991008991008991,
+    "odds_ratio": 10.090909090909092
+   }
+  },
+  {
+   "name": "zero_in_target",
+   "term": "k0a",
+   "f1": 0,
+   "f2": 100,
+   "N1": 50000,
+   "N2": 1000000,
+   "measures": {
+    "log_likelihood": 9.758509055421651,
+    "chi_square": 5.000476235831985,
+    "log_ratio": -3.321928094887362,
+    "pct_diff": -90.0,
+    "simple_maths": 0.009900990099009901,
+    "odds_ratio": 0.09949159214875512
+   }
+  },
+  {
+   "name": "zero_in_reference",
+   "term": "k0b",
+   "f1": 100,
+   "f2": 0,
+   "N1": 50000,
+   "N2": 1000000,
+   "measures": {
+    "log_likelihood": 609.0950968997633,
+    "chi_square": 2000.1904943327936,
+    "log_ratio": 11.965784284662087,
+    "pct_diff": 399900.0,
+    "simple_maths": 2001.0,
+    "odds_ratio": 4028.0177653530527
+   }
+  },
+  {
+   "name": "zero_both",
+   "term": "k00",
+   "f1": 0,
+   "f2": 0,
+   "N1": 50000,
+   "N2": 1000000,
+   "measures": {
+    "log_likelihood": 0.0,
+    "chi_square": 0.0,
+    "log_ratio": 0.0,
+    "pct_diff": 1900.0,
+    "simple_maths": 1.0,
+    "odds_ratio": 19.99981000189998
+   }
+  },
+  {
+   "name": "proportional_neutral",
+   "term": "kprop",
+   "f1": 7,
+   "f2": 7,
+   "N1": 1000,
+   "N2": 1000,
+   "measures": {
+    "log_likelihood": 0.0,
+    "chi_square": 0.0,
+    "log_ratio": 0.0,
+    "pct_diff": 0.0,
+    "simple_maths": 1.0,
+    "odds_ratio": 1.0
+   }
+  },
+  {
+   "name": "sparse_extreme",
+   "term": "ksparse",
+   "f1": 1,
+   "f2": 2000,
+   "N1": 800,
+   "N2": 2000000,
+   "measures": {
+    "log_likelihood": 0.04631714515681051,
+    "chi_square": 0.05002504253679393,
+    "log_ratio": 0.32192809488736235,
+    "pct_diff": 25.0,
+    "simple_maths": 1.2497502497502497,
+    "odds_ratio": 1.2503128911138923
+   }
+  },
+  {
+   "name": "pct_diff_1900_worked_example",
+   "term": "k1900",
+   "f1": 10,
+   "f2": 0,
+   "N1": 1000,
+   "N2": 1000,
+   "measures": {
+    "log_likelihood": 13.913195078972075,
+    "chi_square": 10.050251256281406,
+    "log_ratio": 4.321928094887363,
+    "pct_diff": 1900.0,
+    "simple_maths": 10001.0,
+    "odds_ratio": 21.21201413427562
+   }
+  }
+ ],
+ "p_value_ll": [
+  {
+   "ll": 3.841458820694124,
+   "expected": 0.05000000000000008
+  },
+  {
+   "ll": 6.634896601021213,
+   "expected": 0.01000000000000001
+  },
+  {
+   "ll": 0.0,
+   "expected": 1.0
+  }
+ ],
+ "benjamini_hochberg": [
+  {
+   "name": "bh1995_worked_example",
+   "p_values": [
+    0.01,
+    0.04,
+    0.03,
+    0.005
+   ],
+   "expected": [
+    0.02,
+    0.04,
+    0.04,
+    0.02
+   ]
+  },
+  {
+   "name": "five_mixed",
+   "p_values": [
+    0.001,
+    0.5,
+    0.02,
+    0.1,
+    0.8
+   ],
+   "expected": [
+    0.005,
+    0.625,
+    0.05,
+    0.16666666666666666,
+    0.8
+   ]
+  }
+ ],
+ "mattr": [
+  {
+   "name": "periodic_120_window7",
+   "tokens": "a a a a a a a a b b b b b b c c c c d d a a a a a a a a b b b b b b c c c c d d a a a a a a a a b b b b b b c c c c d d a a a a a a a a b b b b b b c c c c d d a a a a a a a a b b b b b b c c c c d d a a a a a a a a b b b b b b c c c c d d",
+   "window": 7,
+   "expected": 0.3107769423558893
+  },
+  {
+   "name": "short_falls_back_to_ttr",
+   "tokens": "a a a b b c",
+   "window": 50,
+   "expected": 0.5
+  }
+ ],
+ "sttr": [
+  {
+   "name": "three_300_chunks",
+   "tokens": "a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a t0 t1 t2 t3 t4 t5 t6 t7 t8 t9 t10 t11 t12 t13 t14 t15 t16 t17 t18 t19 t20 t21 t22 t23 t24 t25 t26 t27 t28 t29 t30 t31 t32 t33 t34 t35 t36 t37 t38 t39 t40 t41 t42 t43 t44 t45 t46 t47 t48 t49 t50 t51 t52 t53 t54 t55 t56 t57 t58 t59 t60 t61 t62 t63 t64 t65 t66 t67 t68 t69 t70 t71 t72 t73 t74 t75 t76 t77 t78 t79 t80 t81 t82 t83 t84 t85 t86 t87 t88 t89 b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b u0 u1 u2 u3 u4 u5 u6 u7 u8 u9 u10 u11 u12 u13 u14 u15 u16 u17 u18 u19 u20 u21 u22 u23 u24 u25 u26 u27 u28 u29 u30 u31 u32 u33 u34 u35 u36 u37 u38 u39 u40 u41 u42 u43 u44 u45 u46 u47 u48 u49 u50 u51 u52 u53 u54 u55 u56 u57 u58 u59 u60 u61 u62 u63 u64 u65 u66 u67 u68 u69 u70 u71 u72 u73 u74 u75 u76 u77 u78 u79 u80 u81 u82 u83 u84 u85 u86 u87 u88 u89 u90 u91 u92 u93 u94 u95 u96 u97 u98 u99 u100 u101 u102 u103 u104 u105 u106 u107 u108 u109 u110 u111 u112 u113 u114 u115 u116 u117 u118 u119 u120 u121 u122 u123 u124 u125 u126 u127 u128 u129 u130 u131 u132 u133 u134 u135 u136 u137 u138 u139 u140 u141 u142 u143 u144 u145 u146 u147 u148 u149 c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14 v15 v16 v17 v18 v19 v20 v21 v22 v23 v24 v25 v26 v27 v28 v29",
+   "chunk_size": 300,
+   "expected": 0.3033333333333333
+  }
+ ],
+ "type_token_ratio": [
+  {
+   "name": "two_types_three_tokens",
+   "tokens": "a a b",
+   "expected": 0.6666666666666666
+  }
+ ]
+}

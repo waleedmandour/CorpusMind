@@ -83,6 +83,9 @@ desktop-lens/src-tauri/binaries/*
 # ---------------------------------------------------------------------------
 data/
 projects/
+# F6 exception: engine test fixtures under tests/data are committed test
+# data (golden statistics battery, FIXPLAN §F6), not user data.
+!engine/tests/data/
 *.db
 *.db-journal
 *.sqlite
