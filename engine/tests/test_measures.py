@@ -6,6 +6,9 @@ A wrong constant here is a silent, serious validity bug.
 from __future__ import annotations
 
 import math
+import random
+
+import pytest
 
 from stats.measures import (
     chi_square_2x2,
@@ -13,6 +16,7 @@ from stats.measures import (
     delta_p,
     dice_coefficient,
     gries_dp,
+    hd_d,
     juillands_d,
     log_dice,
     log_likelihood_2x2,
@@ -183,3 +187,35 @@ def test_sttr_chunks_evenly():
     chunk = ["a"] * 500 + ["b"] * 500
     tokens = chunk * 5
     assert math.isclose(sttr(tokens, chunk_size=1000), 0.002, rel_tol=1e-6)
+
+
+def test_hd_d_standard_scale_500_distinct():
+    # Golden: for 500 all-distinct types each P(X=0) = (N-42)/N, so
+    # Σ(1−P0) = 500 · (42/500) = 42 → HD-D = 42/42 = 1.0 exactly.
+    assert hd_d([f"w{i}" for i in range(500)]) == pytest.approx(1.0, abs=1e-9)
+
+
+def test_hd_d_matches_independent_reference():
+    # Cross-check the P(X=0) product against exact combinatorics (no scipy):
+    toks = ["a"] * 300 + [f"b{i}" for i in range(200)]  # N=500
+    N, b = len(toks), 42
+    from collections import Counter
+    from math import comb
+
+    ref = sum(1 - comb(N - f, b) / comb(N, b) for f in Counter(toks).values()) / b
+    assert hd_d(toks) == pytest.approx(ref, rel=1e-9)
+
+
+def test_hd_d_length_robustness():
+    # The measure's raison d'être: near-invariance to text length.
+    rng = random.Random(7)
+    vocab = [f"w{i}" for i in range(400)]
+    text = [rng.choice(vocab) for _ in range(3000)]
+    assert abs(hd_d(text) - hd_d(text[:1000])) < 0.05
+
+
+def test_hd_d_bounded():
+    for seed in range(20):
+        rng = random.Random(seed)
+        toks = [f"w{rng.randrange(60)}" for _ in range(rng.randrange(50, 800))]
+        assert 0.0 < hd_d(toks) <= 1.0

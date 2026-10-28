@@ -334,6 +334,7 @@ serious validity bug, so this is treated as a release-blocking test category.
 | Juilland's D | Dispersion | `1 − (CV / sqrt(n−1))` across n parts |
 | Gries' DP (2008) | Dispersion | `0.5 · Σ |observed_proportionᵢ − expected_proportionᵢ|` |
 | STTR | Lexical variation | TTR over fixed-size chunks, averaged |
+| HD-D (McCarthy & Jarvis 2010) | Lexical diversity | (Σ_types (1 − P(X=0))) / 42, P(X=0) hypergeometric |
 
 All statistics are **computed by these pure functions**, never by an LLM. The AI Assistant calls these same deterministic `compute_*` functions and feeds the pre-computed numbers to the LLM for interpretation only — the LLM never computes a statistic. This keeps every result reproducible and defensible under peer review.
 

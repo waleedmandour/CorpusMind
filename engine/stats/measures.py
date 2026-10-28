@@ -436,16 +436,13 @@ def sttr(tokens: list[str], *, chunk_size: int = 1000) -> float:
 def hd_d(tokens: list[str], *, sample_size: int = 42) -> float:
     """HD-D (McCarthy & Jarvis 2010) — hypergeometric distribution diversity.
 
-    The vocd-D replacement: for each type, sum the hypergeometric probability
-    of appearing exactly x times in a random 42-token sample, divided by x.
-    Types appearing in every sample contribute ~1; rare types contribute
-    their appearance probability, so the index is robust to text length.
-    Computed with an exact float recurrence (no scipy dependency):
-
-        P(X=0) = Π_{i<b} (N-f-i)/(N-i)
-        P(X=x) = P(X=x-1) · (f-x+1)/x · (b-x+1)/(N-f-b+x)
-
-    Returns the raw HD-D value (~0.5–0.95, comparable to a 42-token TTR).
+    HD-D = (Σ_types (1 − P(X_t = 0))) / 42, where P(X_t = 0) is the hypergeometric
+    probability that a type with frequency f never appears in a random 42-token
+    sample from N tokens. The sum is the expected number of types in the sample
+    (E[V(42)]); dividing by 42 puts the index on the standard 0–1 scale (500
+    all-distinct tokens → 1.0). Matches the published `lexical-diversity`
+    implementation (Σ(1−P0)/42). Texts ≤ 42 tokens fall back to raw TTR, because
+    a 42-token sample then covers the whole text.
     """
     from collections import Counter
     from math import prod
@@ -458,16 +455,7 @@ def hd_d(tokens: list[str], *, sample_size: int = 42) -> float:
         return len(set(tokens)) / n
     total = 0.0
     for f in Counter(tokens).values():
-        # P(X=0) via a stable product; then iterate P(X=x) by ratio.
+        # P(X=0) via a stable, overflow-free product.
         p0 = prod((n - f - i) / (n - i) for i in range(b))
-        p = p0
-        contribution = 0.0
-        x_max = min(f, b)
-        for x in range(1, x_max + 1):
-            denom = n - f - b + x
-            p = p * ((f - x + 1) / x) * ((b - x + 1) / denom) if denom > 0 else 0.0
-            if p <= 0.0:
-                break
-            contribution += p / x
-        total += contribution
-    return total
+        total += 1.0 - p0
+    return total / b

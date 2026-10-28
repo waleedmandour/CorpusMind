@@ -505,24 +505,35 @@ linguistics (Sawalha & Atwell 2013; Al-Thubaity 2014). They are
 **lossy** — the original forms are preserved alongside the normalized
 text for reproducibility.
 
-## HD-D — McCarthy & Jarvis (2010) — new in v1.2.0
+## HD-D — McCarthy & Jarvis (2010) — new in v1.2.0, standard scale from v2.0.0
 
-For each type with corpus frequency $f$, HD-D sums the hypergeometric
-probability of the type appearing exactly $x$ times in a random 42-token
-sample, divided by $x$:
+HD-D is the vocd-D replacement: instead of averaging TTR over random samples,
+it computes the **expected number of types in a random 42-token sample** and
+divides by 42. For each type with corpus frequency $f$, the hypergeometric
+probability that the type appears **at least once** in a random 42-token sample
+is $1 - P(X{=}0)$, where:
 
-$$\text{HD-D} = \sum_{t} \sum_{x=1}^{\min(f_t,\,42)} \frac{P(X_t = x)}{x}, \qquad
-P(X = x) = \frac{\binom{f}{x}\binom{N-f}{42-x}}{\binom{N}{42}}$$
+$$P(X{=}0) = \frac{\binom{N-f}{42}}{\binom{N}{42}}
+           = \prod_{i=0}^{41} \frac{N-f-i}{N-i}$$
 
-Computed with an exact float recurrence (no scipy dependency):
+Summing $1 - P(X{=}0)$ over all types gives the expected type count $E[V(42)]$;
+dividing by the sample size puts the index on the standard 0–1 scale:
 
-$$P(X{=}0) = \prod_{i=0}^{41} \frac{N-f-i}{N-i}, \qquad
-P(X{=}x) = P(X{=}x{-}1)\cdot\frac{f-x+1}{x}\cdot\frac{42-x+1}{N-f-42+x}$$
+$$\text{HD-D} = \frac{1}{42} \sum_{t} \left(1 - P(X_t = 0)\right)$$
 
-- **Use:** the vocd-D replacement — length-robust lexical diversity for
-  learner corpora (short texts fall back to raw TTR when $n \le 42$).
+- **Range:** $(0, 1]$. Worked example: 500 all-distinct tokens → each type has
+  $P(X{=}0) = (500-42)/500$, so the sum is $500 \cdot 42/500 = 42$ and
+  HD-D $= 42/42 = 1.0$ (maximally diverse). A text of one repeated type → 0.
+  Natural text typically lands in ~0.4–0.95.
+- **Use:** length-robust lexical diversity for learner corpora (short texts
+  fall back to raw TTR when $n \le 42$, because a 42-token sample then covers
+  the whole text).
 - **Where:** `stats/measures.py::hd_d`, reported in the CAF battery and
   usable via the frequency lexical-diversity battery.
+- **Scale note (v2.0.0):** the implementation now matches the published
+  Σ(1−P₀)/42 definition (verified against the `lexical-diversity` reference
+  implementation). Pre-2.0.0 values are on a different scale **and** a different
+  per-type aggregation; they are not recoverable by dividing by 42 — recompute.
 
 **Reference:** McCarthy, P. M., & Jarvis, S. (2010). MTLD, vocd-D, and HD-D:
 A validation study of sophisticated approaches to lexical diversity

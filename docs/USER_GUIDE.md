@@ -408,7 +408,8 @@ Purpose-built for learner-corpus studies (Granger 1998; Housen & Kuiken
 2009):
 
 - **CAF Report**: complexity, accuracy, and fluency indicators for the
-  active corpus, including HD-D (heterogeneous hapax-based diversity).
+  active corpus, including HD-D (hypergeometric sampling diversity:
+  expected type density in a 42-token sample, 0–1).
 - **CIA Compare**: compare two corpora (e.g. learner vs expert writing)
   across the CAF battery with effect sizes.
 - **Error Patterns**: candidate learner-error patterns surfaced from POS

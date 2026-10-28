@@ -11,11 +11,10 @@ Covers, in order:
     (Project → Corpus(l1/proficiency) → Documents → AnnotationVersion →
     Tokens, mirroring the test_ai_chat_endpoint_e2e.py seeding pattern).
 
-NOTE on hd_d: the implementation returns the RAW McCarthy–Jarvis sum; for
-texts longer than the 42-token sample window that sum can exceed 1 (it equals
-≈42 for 100 all-distinct tokens). For texts ≤ 42 tokens it falls back to
-plain TTR, which is why the (0, 1] assertions below use short texts — the
-behaviour is documented, not a bug this module may "fix" silently.
+NOTE on hd_d: the implementation follows the published McCarthy–Jarvis (2010)
+standard scale, (Σ_types (1 − P(X=0))) / 42, so every value lies in (0, 1]
+(500 all-distinct tokens → exactly 1.0; the numerator is the expected number of
+types in a 42-token sample). For texts ≤ 42 tokens it falls back to plain TTR.
 """
 from __future__ import annotations
 
@@ -63,9 +62,9 @@ def test_hd_d_sanity():
     assert d_distinct == pytest.approx(1.0)   # all-distinct short text → TTR = 1
 
     # Longer texts: the ordering property still holds (repetition lowers HD-D
-    # drastically), even though the raw sum exceeds 1 there. (A text made of a
-    # single repeated type yields exactly 0 — avoided here to keep the > 0
-    # assertion meaningful.)
+    # drastically) and every value stays on the standard 0–1 scale.
+    # (A text made of a single repeated type yields exactly 0 — avoided here to
+    # keep the > 0 assertion meaningful.)
     long_distinct = hd_d([f"t{i}" for i in range(100)])
     long_repeated = hd_d(["a"] * 50 + [f"o{i}" for i in range(50)])
     assert 0 < long_repeated < long_distinct
