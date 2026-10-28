@@ -55,7 +55,7 @@ def test_gries_dp_norm_scaling():
     assert math.isclose(gries_dp_norm([10, 0]), dp * 2 / 1)
 
 
-def test_gries_dp_norm_unequal_parts_bounded():
+def test_gries_dp_norm_unequal_parts_bounded() -> None:
     # Author's reported case: item concentrated in the smallest of 20/40/40 parts.
     assert math.isclose(gries_dp_norm([10, 0, 0], sizes=[20, 40, 40]), 1.0)
     # Extreme unequal case that used to return 1.8.
@@ -64,11 +64,11 @@ def test_gries_dp_norm_unequal_parts_bounded():
     assert gries_dp_norm([10, 0], sizes=[10, 90]) <= 1.0
 
 
-def test_gries_dp_norm_proportional_is_zero():
+def test_gries_dp_norm_proportional_is_zero() -> None:
     assert math.isclose(gries_dp_norm([10, 90], sizes=[10, 90]), 0.0, abs_tol=1e-9)
 
 
-def test_gries_dp_norm_randomized_bounds():
+def test_gries_dp_norm_randomized_bounds() -> None:
     rng = random.Random(11)
     for _ in range(100):
         n = rng.randrange(2, 8)
