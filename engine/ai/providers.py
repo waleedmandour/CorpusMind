@@ -34,6 +34,7 @@ from typing import Any, Literal
 
 import httpx
 
+from ai.resilience import post_with_resilience, stream_with_resilience
 from app.logging import get_logger
 from app.settings import Settings
 
@@ -681,7 +682,15 @@ class _OpenAICompatibleProvider(ModelProvider):
             payload["response_format"] = {"type": "json_object"}
 
         try:
-            r = await self._client.post("/v1/chat/completions", json=payload, timeout=timeout)
+            # v2.0.1: transient-failure retry (connect blips, 429/5xx from
+            # the gateway) — see ai/resilience.py for the policy.
+            r = await post_with_resilience(
+                self._client,
+                "/v1/chat/completions",
+                json=payload,
+                timeout=timeout,
+                label=f"{self.name}:chat",
+            )
             r.raise_for_status()
         except httpx.HTTPError as e:
             # v1.2.10: same empty-stringify guard as the Ollama chat path —
@@ -717,9 +726,18 @@ class _OpenAICompatibleProvider(ModelProvider):
             "stream": True,
         }
         try:
-            async with self._client.stream(
-                "POST", "/v1/chat/completions", json=payload, timeout=timeout
-            ) as r:
+            # v2.0.1: retry the connect/headers phase only — a dropped
+            # connection mid-stream is never replayed (would duplicate
+            # tokens the user already saw).
+            r = await stream_with_resilience(
+                self._client,
+                "POST",
+                "/v1/chat/completions",
+                json=payload,
+                timeout=timeout,
+                label=f"{self.name}:stream",
+            )
+            try:
                 r.raise_for_status()
                 async for line in r.aiter_lines():
                     if not line or not line.startswith("data: "):
@@ -735,6 +753,8 @@ class _OpenAICompatibleProvider(ModelProvider):
                     except (json.JSONDecodeError, KeyError, IndexError):
                         log.debug("unparsable_stream_chunk", provider=self.name, line=line[:200])
                         continue
+            finally:
+                await r.aclose()
         except httpx.HTTPError as e:
             # v1.2.10: same empty-stringify guard as the chat path above.
             raise ModelProviderError(
@@ -1063,16 +1083,20 @@ class OllamaProvider(ModelProvider):
                 max_tokens=max_tokens,
             )
 
-        log.info(
-            "ollama_chat_request",
-            model=model_name,
-            messages=len(messages),
-            qwen3=is_qwen3,
-            json_mode=json_mode,
-        )
-
         try:
-            r = await self._client.post("/api/chat", json=payload, timeout=timeout)
+            log.info(
+                "ollama_chat_request",
+                model=model_name,
+                messages=len(messages),
+                qwen3=is_qwen3,
+                json_mode=json_mode,
+            )
+
+            # v2.0.1: transient-failure retry (Ollama restarting under RAM
+            # pressure, keep-alive drops) — see ai/resilience.py.
+            r = await post_with_resilience(
+                self._client, "/api/chat", json=payload, timeout=timeout, label="ollama:chat"
+            )
             r.raise_for_status()
         except httpx.HTTPError as e:
             # v1.2.10: include the exception type - httpx timeouts stringify
@@ -1177,7 +1201,16 @@ class OllamaProvider(ModelProvider):
 
         tools_fallback_used = False
         try:
-            r = await self._client.post("/v1/chat/completions", json=payload, timeout=timeout)
+            # v2.0.1: transient-failure retry — see ai/resilience.py. The
+            # 400-with-tools fallback below is untouched: 400 is a permanent
+            # status, so post_with_resilience returns it as-is for inspection.
+            r = await post_with_resilience(
+                self._client,
+                "/v1/chat/completions",
+                json=payload,
+                timeout=timeout,
+                label="ollama:chat_tools",
+            )
             if r.status_code == 400 and wire_tools:
                 # v1.2.0 no-tools fallback: some models (or older servers)
                 # reject ANY tool payload with 400 — e.g. models whose
@@ -1202,8 +1235,12 @@ class OllamaProvider(ModelProvider):
                 }
                 retry_payload.pop("tools", None)
                 retry_payload.pop("response_format", None)
-                r = await self._client.post(
-                    "/v1/chat/completions", json=retry_payload, timeout=timeout
+                r = await post_with_resilience(
+                    self._client,
+                    "/v1/chat/completions",
+                    json=retry_payload,
+                    timeout=timeout,
+                    label="ollama:chat_tools_fallback",
                 )
             r.raise_for_status()
         except httpx.HTTPError as e:
@@ -1267,7 +1304,11 @@ class OllamaProvider(ModelProvider):
             },
         }
         try:
-            async with self._client.stream("POST", "/api/chat", json=payload, timeout=timeout) as r:
+            # v2.0.1: retry the connect/headers phase only (see ai/resilience.py).
+            r = await stream_with_resilience(
+                self._client, "POST", "/api/chat", json=payload, timeout=timeout, label="ollama:stream"
+            )
+            try:
                 r.raise_for_status()
                 async for line in r.aiter_lines():
                     if not line:
@@ -1284,6 +1325,8 @@ class OllamaProvider(ModelProvider):
                     except json.JSONDecodeError:
                         log.debug("ollama_stream_unparsable", line=line[:200])
                         continue
+            finally:
+                await r.aclose()
         except httpx.HTTPError as e:
             # v1.2.10: same empty-stringify guard as the chat path above.
             raise ModelProviderError(

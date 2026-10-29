@@ -287,6 +287,32 @@ def test_end_to_end_hallucinated_answer_is_caught() -> None:
 # --------------------------------------------------------------------- #
 # AraSEG boundary metrics on synthetic documents
 # --------------------------------------------------------------------- #
+def test_segmentation_predict_boundaries_newline_markers() -> None:
+    """Regression: AraSEG PA streams contain bare '\\n' marker tokens; the
+    predictor must map boundaries through a char-to-token owner map, not by
+    re-counting whitespace tokens (which shifts every boundary after the
+    first marker and produced micro-F1 0.107 on PA in run 40913999140)."""
+    from eval.segmentation_araseg import predict_boundaries
+
+    # single marker between two punctuated sentences
+    toks = ["قال.", "\n", "ذهب."]
+    assert predict_boundaries(toks) == [1, 0, 1]
+
+    # cumulative case: two markers — the old counting shifted by +1 each
+    toks = ["أ.", "\n", "ب.", "\n", "ج."]
+    assert predict_boundaries(toks) == [1, 0, 1, 0, 1]
+
+    # paragraph break with NO terminal punctuation: the newline itself is the
+    # cue, and gold (PA: 100% of markers) puts the boundary on the content
+    # token before the marker
+    toks = ["أ", "ب", "\n", "ج."]
+    assert predict_boundaries(toks) == [0, 1, 0, 1]
+
+    # marker-only padding never becomes a predicted boundary
+    toks = ["قال.", "\n"]
+    assert predict_boundaries(toks) == [1, 0]
+
+
 def test_segmentation_prf1_perfect_and_imperfect() -> None:
     from eval.segmentation_araseg import evaluate
 
