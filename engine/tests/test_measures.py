@@ -18,6 +18,7 @@ from stats.measures import (
     delta_p,
     dice_coefficient,
     gries_dp,
+    gries_dp_norm,
     hd_d,
     juillands_d,
     log_dice,
@@ -327,6 +328,32 @@ def test_gries_dp_max_when_concentrated_in_one_part():
     assert math.isclose(dp, 0.75, abs_tol=1e-9)
 
 
+def test_gries_dp_norm_zero_size_parts() -> None:
+    """v2.0.0 §3: empty documents must not flatten the normalization — the
+    minimum runs over parts that can actually hold occurrences (size > 0).
+    Hand-derived from DP_norm = DP / (1 − min-positive-share), where max DP
+    = 1 − min-positive-share."""
+    # The §3 worked case: all occurrences in the only non-empty part of two
+    # → DP 0.5, min positive share 0.5 → 1.0 (was 0.5 before the fix).
+    assert gries_dp_norm([0, 10, 0], sizes=[0, 50, 50]) == pytest.approx(1.0, abs=1e-12)
+    # Zero-size part among equal-sized positives → 1.0
+    assert gries_dp_norm([10, 0, 0, 0], sizes=[100, 100, 100, 0]) == pytest.approx(1.0, abs=1e-12)
+    # Already-correct unequal cases stay 1.0
+    assert gries_dp_norm([10, 0, 0], sizes=[20, 40, 40]) == pytest.approx(1.0, abs=1e-12)
+    assert gries_dp_norm([10, 0], sizes=[10, 90]) == pytest.approx(1.0, abs=1e-12)
+    # Proportional case: DP 0.3, min positive share 0.1 → 0.3/0.9 = 1/3
+    assert gries_dp_norm([0, 0, 0, 10], sizes=[100, 100, 100, 700]) == pytest.approx(1.0 / 3.0, rel=1e-9)
+    # Perfectly proportional distribution → 0.0
+    assert gries_dp_norm([10, 90], sizes=[10, 90]) == 0.0
+    # Fewer than two positive-size parts → plain DP (necessarily 0 here)
+    assert gries_dp_norm([5, 0], sizes=[100, 0]) == 0.0
+    # Degenerate inputs
+    assert gries_dp_norm([5]) == 0.0
+    assert gries_dp_norm([]) == 0.0
+    # Equal-sized uniform expectations are unchanged
+    assert gries_dp_norm([30, 0, 0, 0]) == 1.0
+
+
 # --------------------------------------------------------------------------- #
 # Lexical variation
 # --------------------------------------------------------------------------- #
@@ -379,3 +406,29 @@ def test_hd_d_bounded() -> None:
         rng = random.Random(seed)
         toks = [f"w{rng.randrange(60)}" for _ in range(rng.randrange(50, 800))]
         assert 0.0 < hd_d(toks) <= 1.0
+
+
+def test_hd_d_sample_size_guard() -> None:
+    """v2.0.0 §4a: an empty sample has no defined expected type count —
+    sample_size < 1 must raise ValueError (was ZeroDivisionError at the
+    `total / b` division)."""
+    with pytest.raises(ValueError, match="sample_size must be at least 1"):
+        hd_d(["a", "b", "a"], sample_size=0)
+    with pytest.raises(ValueError, match="sample_size must be at least 1"):
+        hd_d(["a", "b", "a"], sample_size=-1)
+
+
+def test_hd_d_clamped_to_one() -> None:
+    """v2.0.0 §4b: 500 all-distinct tokens → Σ(1−P0) = 500·(42/500) = 42
+    exactly in real arithmetic; float noise used to leak
+    1.0000000000000062 past the 0–1 scale — the clamp makes it exactly 1.0."""
+    v = hd_d([f"w{i}" for i in range(500)])
+    assert v <= 1.0
+    assert v == pytest.approx(1.0, abs=1e-9)
+
+
+def test_hd_d_single_type_and_empty() -> None:
+    # ["a"]*500: the sample always contains the single type → E[V(42)] = 1
+    # → HD-D = 1/42 (hand-derived: P0 = 0 when f = n).
+    assert hd_d(["a"] * 500) == pytest.approx(1.0 / 42.0, rel=1e-9)
+    assert hd_d([]) == 0.0

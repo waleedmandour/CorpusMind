@@ -407,13 +407,24 @@ def gries_dp_norm(observed: list[int], sizes: list[int] | None = None) -> float:
     """DP-norm = DP / (1 − min(sᵢ))  (Gries 2008) — bounded in [0, 1] for any
     part sizes, because max DP = 1 − min(sᵢ) (the item concentrated entirely in
     the smallest part). For equal-sized parts (min(sᵢ) = 1/n) this coincides
-    with the familiar DP·n/(n−1). Returns plain DP when n < 2."""
+    with the familiar DP·n/(n−1). Returns plain DP when n < 2.
+
+    Zero-size parts (empty documents) are excluded from the minimum: DP is
+    maximal when ALL occurrences sit in the smallest part, and a part with no
+    tokens cannot hold any occurrence, so it cannot be the part that bounds
+    the maximum — including it would under-state the normalization (e.g.
+    [0,10,0] over parts 0/50/50 scored 0.5 instead of 1.0). If fewer than two
+    parts have tokens there is nothing to normalize and plain DP (necessarily
+    0) is returned."""
     n = len(observed)
     dp = gries_dp(observed, sizes)
     if n < 2:
         return dp
     if sizes is not None and sum(sizes) > 0 and len(sizes) == n:
-        s_min = min(sizes) / sum(sizes)
+        positive = [s for s in sizes if s > 0]
+        if len(positive) < 2:
+            return dp
+        s_min = min(positive) / sum(sizes)
     else:
         s_min = 1.0 / n
     return dp / (1.0 - s_min)
@@ -524,10 +535,16 @@ def hd_d(tokens: list[str], *, sample_size: int = 42) -> float:
     all-distinct tokens → 1.0). Matches the published `lexical-diversity`
     implementation (Σ(1−P0)/42). Texts ≤ 42 tokens fall back to raw TTR, because
     a 42-token sample then covers the whole text.
+
+    Raises ValueError if sample_size < 1 (an empty sample has no defined
+    expected type count); the result is clamped to ≤ 1.0 against float noise
+    on the all-distinct upper bound (1.0000000000000062 → 1.0).
     """
     from collections import Counter
     from math import prod
 
+    if sample_size < 1:
+        raise ValueError("sample_size must be at least 1")
     n = len(tokens)
     if n == 0:
         return 0.0
@@ -539,4 +556,4 @@ def hd_d(tokens: list[str], *, sample_size: int = 42) -> float:
         # P(X=0) via a stable, overflow-free product.
         p0 = prod((n - f - i) / (n - i) for i in range(b))
         total += 1.0 - p0
-    return total / b
+    return min(1.0, total / b)
