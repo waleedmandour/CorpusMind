@@ -225,7 +225,7 @@ jobs:
   grounding:
     name: Grounding fidelity (provider-in-the-loop)
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 150
     if: github.event_name == 'workflow_dispatch' && inputs.run_grounding
     env:
       CORPUSMIND_CLOUD_PROVIDER: ${{ inputs.cloud_vendor || 'gemini' }}
