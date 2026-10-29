@@ -1,7 +1,7 @@
 """Generate the CorpusMind User Guide PDF using ReportLab.
 Style adapted from the RDAT Translation Copilot user guide (v0.2.0).
 
-v2.0.0: bumped alongside the engine version lockstep.
+v2.0.1: bumped alongside the engine version lockstep.
 """
 import re
 from pathlib import Path

@@ -1,6 +1,6 @@
 # دليل المستخدم - CorpusMind
 
-> الإصدار 2.0.0 | رخصة AGPL-3.0
+> الإصدار 2.0.1 | رخصة AGPL-3.0
 
 > المؤلفان: د. وليد مندور (جامعة السلطان قابوس، ORCID: 0000-0002-9262-5993)
 > وأ.د. وسام إبراهيم (جامعة الأميرة نورة بنت عبدالرحمن، ORCID: 0000-0003-0710-6038)
@@ -13,8 +13,8 @@
 
 > Mandour, W., & Ibrahim, W. (2026). *CorpusMind: A local-first, AI-native
 > research environment for corpus linguistics and multimodal discourse
-> analysis* (Version 2.0.0) [Computer software]. Zenodo.
-> https://doi.org/10.5281/zenodo.21226649
+> analysis* (Version 2.0.1) [Computer software]. Zenodo.
+> https://doi.org/10.5281/zenodo.23216073
 
 ---
 
@@ -925,4 +925,4 @@ https://github.com/waleedmandour/CorpusMind/issues مع مقتطف من السج
 - تطبيق الويب المباشر: https://corpus-mind-web.vercel.app/
 - دليل البناء: docs/BUILD_GUIDE.md
 - المرجع المنهجي: docs/METHODOLOGY.md
-- معرّف Zenodo: https://doi.org/10.5281/zenodo.21226649
+- معرّف Zenodo: https://doi.org/10.5281/zenodo.23216073

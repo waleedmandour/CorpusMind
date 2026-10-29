@@ -45,12 +45,12 @@ type: software
 license: AGPL-3.0-only
 repository-code: "https://github.com/waleedmandour/CorpusMind"
 repository-artifact: "https://github.com/waleedmandour/CorpusMind/releases"
-url: "https://doi.org/10.5281/zenodo.21226649"
-version: 2.0.0
-date-released: 2026-10-29
+url: "https://doi.org/10.5281/zenodo.23216073"
+version: 2.0.1
+date-released: 2026-10-30
 identifiers:
   - type: doi
-    value: "10.5281/zenodo.21226649"
+    value: "10.5281/zenodo.23216073"
     description: "Zenodo concept DOI for CorpusMind — always resolves to the latest version"
 preferred-citation:
   type: software
@@ -62,11 +62,11 @@ preferred-citation:
       given-names: Wesam
   title: "CorpusMind: Local-first, AI-native research environment for corpus linguistics and multimodal discourse analysis"
   year: 2026
-  version: 2.0.0
-  doi: "10.5281/zenodo.21226649"
+  version: 2.0.1
+  doi: "10.5281/zenodo.23216073"
   publisher:
     name: "Zenodo"
-  date-released: 2026-10-29
+  date-released: 2026-10-30
   keywords:
     - corpus linguistics
     - discourse analysis
@@ -75,7 +75,7 @@ preferred-citation:
     - visual grammar
     - local-first software
   license: AGPL-3.0-only
-  url: "https://doi.org/10.5281/zenodo.21226649"
+  url: "https://doi.org/10.5281/zenodo.23216073"
   notes: >-
     CorpusMind was developed at Sultan Qaboos University. The desktop
     application bundles a FastAPI engine, a Tauri 2 shell, and an installable
