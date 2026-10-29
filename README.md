@@ -1,8 +1,8 @@
 # CorpusMind
 
-[![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.21226649-blue)](https://doi.org/10.5281/zenodo.21226649)
+[![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.21226649-blue)](https://doi.org/10.5281/zenodo.23216073)
 [![License: AGPL-3.0-only](https://img.shields.io/badge/License-AGPL--3.0--only-blue.svg)](https://www.gnu.org/licenses/agpl-3.0.html)
-[![GitHub release](https://img.shields.io/badge/release-v2.0.0-blue)](https://github.com/waleedmandour/CorpusMind/releases)
+[![GitHub release](https://img.shields.io/badge/release-v2.0.1-blue)](https://github.com/waleedmandour/CorpusMind/releases)
 [![CI](https://github.com/waleedmandour/CorpusMind/actions/workflows/ci.yml/badge.svg)](https://github.com/waleedmandour/CorpusMind/actions/workflows/ci.yml)
 
 > A local-first, AI-native research environment for corpus linguistics and multimodal discourse analysis.
@@ -34,9 +34,9 @@ run entirely on the researcher's own machine.
 
 ## Status
 
-**Current release: v2.0.0** — the text suite is fully functional.
+**Current release: v2.0.1** — the text suite is fully functional.
 
-**Language support (v2.0.0):**
+**Language support (v2.0.1):**
 
 | Language | Script | Coverage |
 | --- | --- | --- |
@@ -145,7 +145,7 @@ Health check:
 
 ```bash
 curl http://127.0.0.1:8765/api/v1/health
-# {"status":"ok","engine":"corpusmind-engine","version":"2.0.0"}
+# {"status":"ok","engine":"corpusmind-engine","version":"2.0.1"}
 ```
 
 ### 2. Run the web frontend
@@ -416,8 +416,8 @@ If you use CorpusMind in your research, please cite it as:
 
 > Mandour, W., & Ibrahim, W. (2026). *CorpusMind: A local-first, AI-native
 > research environment for corpus linguistics and multimodal discourse
-> analysis* (Version 2.0.0) [Computer software]. Zenodo.
-> https://doi.org/10.5281/zenodo.21226649
+> analysis* (Version 2.0.1) [Computer software]. Zenodo.
+> https://doi.org/10.5281/zenodo.23216073
 >
 > Dr. Waleed Mandour, Sultan Qaboos University, ORCID: 0000-0002-9262-5993
 > Prof. Wesam Ibrahim, Princess Nourah Bint Abdulrahman University, ORCID: 0000-0003-0710-6038
@@ -431,19 +431,25 @@ If you use CorpusMind in your research, please cite it as:
                    for corpus linguistics and multimodal discourse analysis}},
   month        = oct,
   year         = 2026,
-  version      = {2.0.0},
+  version      = {2.0.1},
   publisher    = {Zenodo},
-  doi          = {10.5281/zenodo.21226649},
-  url          = {https://doi.org/10.5281/zenodo.21226649}
+  doi          = {10.5281/zenodo.23216073},
+  url          = {https://doi.org/10.5281/zenodo.23216073}
 }
 ```
 
-**Versioned DOIs:** The DOI above (10.5281/zenodo.21226649) is the
-*concept DOI* — it is stable across releases and always resolves to the
-latest version deposited on Zenodo. Version DOIs pin a single deposit:
+**Versioned DOIs:** The DOI above (10.5281/zenodo.23216073) is the
+*concept DOI* of the Zenodo–GitHub integration (re-linked 2026-10) — it is
+stable across releases and always resolves to the latest version deposited on
+Zenodo; it is also the v2.0.0 version record, the first deposit of this
+family. Version DOIs pin a single deposit:
+v2.0.0 → [10.5281/zenodo.23216073](https://doi.org/10.5281/zenodo.23216073)
+(same record — first of the family);
 v1.2.10 → [10.5281/zenodo.23052753](https://doi.org/10.5281/zenodo.23052753);
 v0.1.0 → [10.5281/zenodo.21226650](https://doi.org/10.5281/zenodo.21226650).
-(v1.2.11–v1.2.14 were tagged on GitHub but not deposited on Zenodo.)
+(v1.2.11–v1.2.14 were tagged on GitHub but not deposited; the pre-2026-10
+family's concept DOI, 10.5281/zenodo.21226649, remains valid but resolves to
+v1.2.10.)
 Cite the concept DOI in general; cite a version DOI when you need to
 reproduce results from one specific deposited release.
 
@@ -485,7 +491,7 @@ cloud services. The software is released free of charge under the GNU
 Affero General Public License v3.0 (AGPL-3.0-only), and will remain free
 and open-source in perpetuity. The authors bear all development and
 maintenance costs personally. If you find CorpusMind useful in your
-research, please cite it using the DOI above (10.5281/zenodo.21226649)
+research, please cite it using the DOI above (10.5281/zenodo.23216073)
 and consider contributing bug reports, feature requests, or pull requests
 on GitHub.
 

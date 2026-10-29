@@ -1,6 +1,6 @@
 # CorpusMind User Guide
 
-> Version 2.0.0 | AGPL-3.0-only
+> Version 2.0.1 | AGPL-3.0-only
 >
 > Authors: Dr. Waleed Mandour (Sultan Qaboos University, ORCID: 0000-0002-9262-5993)
 > and Prof. Wesam Ibrahim (Princess Nourah Bint Abdulrahman University, ORCID: 0000-0003-0710-6038)
@@ -13,8 +13,8 @@ If you use CorpusMind in your research, please cite it as:
 
 > Mandour, W., & Ibrahim, W. (2026). *CorpusMind: A local-first, AI-native
 > research environment for corpus linguistics and multimodal discourse
-> analysis* (Version 2.0.0) [Computer software]. Zenodo.
-> https://doi.org/10.5281/zenodo.21226649
+> analysis* (Version 2.0.1) [Computer software]. Zenodo.
+> https://doi.org/10.5281/zenodo.23216073
 
 ---
 
@@ -914,4 +914,4 @@ tokens between groups. On untrusted networks, prefer Secure mode.
 - Live web app: https://corpus-mind-web.vercel.app/
 - Build Guide: docs/BUILD_GUIDE.md
 - Methodology Reference: docs/METHODOLOGY.md
-- Zenodo DOI: https://doi.org/10.5281/zenodo.21226649
+- Zenodo DOI: https://doi.org/10.5281/zenodo.23216073

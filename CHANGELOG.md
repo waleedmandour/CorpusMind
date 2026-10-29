@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
-## [Unreleased]
+## [2.0.1] — 2026-10-30
 
 ### Fixed — Arabic sentence segmentation (engine semantics; sentence counts change)
 
@@ -44,6 +44,18 @@ indices change accordingly. No statistical golden values are affected
   with the provider **registry name** passed to `eval.run_grounding`
   (ollama | cloud | lmstudio); dispatching with `cloud` previously failed
   Settings validation at boot.
+- The grounding sweep now survives provider rate limits: `run_grounding
+  --pause S` paces the question dispatch (default 7 s in CI — free-tier
+  Gemini allows ~10 requests/min), and `--rate-retries N` re-POSTs a question
+  on HTTP 429/502/503 with 20/40/80 s waits (Retry-After honoured, 90 s cap).
+  The sweep is read-only, so replay is safe; the engine's interactive-chat
+  retry policy is unchanged. Run and report artifacts are written to
+  `engine/eval/runs/` consistently (the previous workflow paths silently
+  uploaded nothing), and the CI job sets `CORPUSMIND_DEBUG_RAW=1` so provider
+  integration faults arrive diagnosable in the run log. A free-tier daily
+  request pool (exhausted mid-battery by automatic retries) shows up as
+  uniform NO_ANSWER verdicts — re-run the next day or with a paid key.
+
 ### Fixed
 
 - **Assistant chat no longer dies on the first transient provider hiccup**
