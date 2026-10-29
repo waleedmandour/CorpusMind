@@ -314,10 +314,10 @@ jobs:
           path: benchmarks/results/run-${{ github.run_id }}
 
       - name: Write snapshot manifest
-        run: python benchmarks/scripts/make_manifest.py \
-               benchmarks/results/run-${{ github.run_id }} \
-               --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
-               --commit "${{ github.sha }}"
+        run: |
+          python benchmarks/scripts/make_manifest.py "benchmarks/results/run-${{ github.run_id }}" \
+            --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --commit "${{ github.sha }}"
 
       - name: Commit snapshot
         run: |
