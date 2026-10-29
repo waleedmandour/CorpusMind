@@ -219,7 +219,8 @@ async def run(data: Path, limit: int | None, en_text: Path | None, out: Path | N
 
 def main() -> None:
     ap = argparse.ArgumentParser(description="Segmentation downstream-delta eval")
-    ap.add_argument("--data", required=True, help="AraSEG JSONL (doc_id/tokens/labels)")
+    ap.add_argument("--data", required=True, type=Path,
+                    help="AraSEG JSONL (doc_id/tokens/labels)")
     ap.add_argument("--limit", type=int, default=None)
     ap.add_argument("--en-text", type=Path, default=None,
                     help="optional English parallel text for the alignment delta")

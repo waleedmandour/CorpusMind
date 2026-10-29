@@ -1,0 +1,328 @@
+# CorpusMind benchmark battery (manuscript-facing).
+#
+# Runs the three benchmark pieces that can execute deterministically on CI
+# runners and produces reviewer-verifiable artifacts:
+#
+#   1. perf-arabic  — scripts/benchmark_arabic_corpus.py: the REAL production
+#      path (CAMeL calima-msa-r13 morphology + DIDModel6 dialect ID) at
+#      corpus scale, with repetitions, spread, and a full provenance block.
+#   2. seg-araseg   — engine/eval/segmentation_araseg.py (intrinsic boundary
+#      P/R/F1 vs the AraSEG shared-task dev splits) and
+#      engine/eval/segmentation_downstream.py (extrinsic deltas through the
+#      real engine). Data is fetched from Hugging Face and verified against
+#      the pinned checksums in benchmarks/data/araseg_sha256.txt — never
+#      vendored, never silently updated.
+#   3. grounding    — OPTIONAL (workflow_dispatch only, needs provider
+#      secrets): the assistant-in-the-loop grounding fidelity run
+#      (eval.run_grounding + eval.score). CI without a real LLM provider can
+#      only exercise the harness mechanics (already covered offline by
+#      tests/test_eval_grounding.py), so the paper's grounding numbers must
+#      come from a dispatched run with secrets configured.
+#
+# Results handling (academic practice):
+#   - every run uploads machine-readable JSON artifacts + a markdown summary;
+#   - a dispatched run with commit_results=true additionally commits the
+#     artifacts under benchmarks/results/<run-id>/ together with a manifest
+#     (run URL, commit, UTC time, artifact sha256s) so the manuscript can cite
+#     an immutable, auditable snapshot.
+#
+# Note on runner noise: CI runners are standardized (ubuntu-latest) but shared
+# infrastructure; throughput numbers carry run-to-run variance, which is why
+# the battery reports repetitions and CV% instead of single measurements.
+
+name: Benchmarks
+
+on:
+  workflow_dispatch:
+    inputs:
+      bench_sizes:
+        description: "Token counts for the Arabic pipeline benchmark (comma-separated)"
+        default: "20000,100000,250000"
+        required: false
+      bench_reps:
+        description: "Timed repetitions per size"
+        default: "3"
+        required: false
+      seg_limit:
+        description: "Documents per condition for the downstream-delta eval"
+        default: "5"
+        required: false
+      run_grounding:
+        description: "Run grounding fidelity (needs CORPUSMIND_CLOUD_* secrets)"
+        type: boolean
+        default: false
+      grounding_provider:
+        description: "Provider name passed to eval.run_grounding (ollama | cloud | lmstudio)"
+        default: "cloud"
+        required: false
+      grounding_model:
+        description: "Model id for the provider"
+        default: ""
+        required: false
+      commit_results:
+        description: "Commit artifacts to benchmarks/results/ (data-only commit)"
+        type: boolean
+        default: false
+  pull_request:
+    paths:
+      - "benchmarks/**"
+      - "scripts/benchmark_arabic_corpus.py"
+      - ".github/workflows/benchmarks.yml"
+      - "engine/eval/**"
+      - "engine/nlp/arabic/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # -----------------------------------------------------------------------
+  # 1. Arabic production-path throughput at corpus scale
+  # -----------------------------------------------------------------------
+  perf-arabic:
+    name: Perf (Arabic pipeline)
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: engine/pyproject.toml
+
+      - name: Install engine + CAMeL Tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e "./engine[dev]" python-multipart cryptography
+          pip install camel-tools docopt pyrsistent muddler emoji
+
+      - name: Cache CAMeL Tools data
+        uses: actions/cache@v4
+        with:
+          path: ~/.camel_tools
+          key: ${{ runner.os }}-camel-tools-data-${{ hashFiles('engine/pyproject.toml') }}
+
+      - name: Download CAMeL morphology + dialect data
+        run: |
+          camel_data -i morphology-db-msa-r13
+          camel_data -i dialectid-model6
+
+      - name: Run benchmark
+        run: |
+          python scripts/benchmark_arabic_corpus.py \
+            --sizes "${{ inputs.bench_sizes || '20000,100000' }}" \
+            --reps "${{ inputs.bench_reps || '3' }}" \
+            --label "ci-${{ github.event_name }}" \
+            --out benchmarks/out/perf_arabic.json
+
+      - name: Markdown summary
+        run: python benchmarks/scripts/summary_md.py benchmarks/out >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf-arabic
+          path: benchmarks/out/
+          if-no-files-found: error
+
+  # -----------------------------------------------------------------------
+  # 2. Arabic sentence segmentation vs AraSEG (intrinsic + extrinsic)
+  # -----------------------------------------------------------------------
+  seg-araseg:
+    name: Segmentation (AraSEG)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: engine/pyproject.toml
+
+      - name: Install engine + CAMeL Tools + pyarrow
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e "./engine[dev]" python-multipart cryptography pyarrow
+          pip install camel-tools docopt pyrsistent muddler emoji
+
+      - name: Cache CAMeL Tools data
+        uses: actions/cache@v4
+        with:
+          path: ~/.camel_tools
+          key: ${{ runner.os }}-camel-tools-data-${{ hashFiles('engine/pyproject.toml') }}
+
+      - name: Download CAMeL morphology + dialect data
+        run: |
+          camel_data -i morphology-db-msa-r13
+          camel_data -i dialectid-model6
+
+      - name: Fetch AraSEG dev splits (checksum-pinned)
+        run: bash benchmarks/scripts/fetch_araseg.sh /tmp/araseg
+
+      - name: Convert parquet -> JSONL (with provenance side-car)
+        run: |
+          python benchmarks/scripts/araseg_parquet_to_jsonl.py \
+            --parquet /tmp/araseg/PA_dev.parquet --out /tmp/araseg/PA/dev.jsonl \
+            --source "https://huggingface.co/datasets/MBZUAI/AraSeg-2026-Shared-Task-PA (dev split, checksum-pinned)"
+          python benchmarks/scripts/araseg_parquet_to_jsonl.py \
+            --parquet /tmp/araseg/NP_dev.parquet --out /tmp/araseg/NP/dev.jsonl \
+            --source "https://huggingface.co/datasets/MBZUAI/AraSeg-2026-Shared-Task-NP (dev split, checksum-pinned)"
+
+      - name: Intrinsic evaluation (PA + NP, full dev)
+        working-directory: engine
+        run: |
+          mkdir -p ../benchmarks/out
+          python -m eval.segmentation_araseg --data /tmp/araseg/PA/dev.jsonl \
+            --task PA --out ../benchmarks/out/seg_intrinsic_PA.json
+          python -m eval.segmentation_araseg --data /tmp/araseg/NP/dev.jsonl \
+            --task NP --out ../benchmarks/out/seg_intrinsic_NP.json
+
+      - name: Extrinsic downstream deltas (PA + NP, limited)
+        working-directory: engine
+        run: |
+          python -m eval.segmentation_downstream --data /tmp/araseg/PA/dev.jsonl \
+            --limit "${{ inputs.seg_limit || '5' }}" --out ../benchmarks/out/seg_downstream_PA.json
+          python -m eval.segmentation_downstream --data /tmp/araseg/NP/dev.jsonl \
+            --limit "${{ inputs.seg_limit || '5' }}" --out ../benchmarks/out/seg_downstream_NP.json
+
+      - name: Copy data provenance side-cars
+        run: |
+          mkdir -p benchmarks/out
+          cp /tmp/araseg/PA/dev.jsonl.meta.json benchmarks/out/PA_dev.meta.json || true
+          cp /tmp/araseg/NP/dev.jsonl.meta.json benchmarks/out/NP_dev.meta.json || true
+          cp /tmp/araseg/araseg_sha256.txt benchmarks/out/araseg_sha256.txt || true
+
+      - name: Markdown summary
+        run: python benchmarks/scripts/summary_md.py benchmarks/out >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: seg-araseg
+          path: benchmarks/out/
+          if-no-files-found: error
+
+  # -----------------------------------------------------------------------
+  # 3. Assistant grounding fidelity (OPTIONAL — needs a real provider)
+  # -----------------------------------------------------------------------
+  grounding:
+    name: Grounding fidelity (provider-in-the-loop)
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    if: github.event_name == 'workflow_dispatch' && inputs.run_grounding
+    env:
+      CORPUSMIND_CLOUD_PROVIDER: ${{ inputs.grounding_provider }}
+      CORPUSMIND_CLOUD_API_KEY: ${{ secrets.CORPUSMIND_CLOUD_API_KEY }}
+      CORPUSMIND_CLOUD_DEFAULT_MODEL: ${{ inputs.grounding_model }}
+      CORPUSMIND_CLOUD_BASE_URL: ${{ secrets.CORPUSMIND_CLOUD_BASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Guard — is a provider key configured?
+        id: guard
+        run: |
+          if [ -z "${{ secrets.CORPUSMIND_CLOUD_API_KEY }}" ]; then
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::grounding run skipped — set repo secrets CORPUSMIND_CLOUD_API_KEY (and optionally CORPUSMIND_CLOUD_BASE_URL), then dispatch again with run_grounding=true"
+          else
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Python 3.12
+        if: steps.guard.outputs.available == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: engine/pyproject.toml
+
+      - name: Install engine + CAMeL Tools
+        if: steps.guard.outputs.available == 'true'
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e "./engine[dev]" python-multipart cryptography
+          pip install camel-tools docopt pyrsistent muddler emoji
+
+      - name: Cache CAMeL Tools data
+        if: steps.guard.outputs.available == 'true'
+        uses: actions/cache@v4
+        with:
+          path: ~/.camel_tools
+          key: ${{ runner.os }}-camel-tools-data-${{ hashFiles('engine/pyproject.toml') }}
+
+      - name: Download CAMeL morphology + dialect data
+        if: steps.guard.outputs.available == 'true'
+        run: |
+          camel_data -i morphology-db-msa-r13
+          camel_data -i dialectid-model6
+
+      - name: Install pinned spaCy model (must match grounding gold _meta = 3.8.0)
+        if: steps.guard.outputs.available == 'true'
+        # NOT `python -m spacy download` — that installs the latest build and
+        # would drift from the frozen gold's recorded model version (the gold
+        # determinism test fails on exactly this drift).
+        run: pip install "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl"
+
+      - name: Run the 80-question bank
+        if: steps.guard.outputs.available == 'true'
+        working-directory: engine
+        run: |
+          python -m eval.run_grounding \
+            --provider "${{ inputs.grounding_provider }}" \
+            ${{ inputs.grounding_model && format('--model {0}', inputs.grounding_model) || '' }} \
+            --out runs/paper_run.json
+
+      - name: Score the run
+        if: steps.guard.outputs.available == 'true'
+        working-directory: engine
+        run: python -m eval.score runs/paper_run.json --out runs/paper_report.json --verbose
+
+      - name: Upload report
+        if: steps.guard.outputs.available == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: grounding-report
+          path: engine/eval/runs/
+          if-no-files-found: error
+
+  # -----------------------------------------------------------------------
+  # 4. Results snapshot (OPTIONAL — data-only commit for the manuscript)
+  # -----------------------------------------------------------------------
+  results-snapshot:
+    name: Commit results snapshot
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [perf-arabic, seg-araseg]
+    if: github.event_name == 'workflow_dispatch' && inputs.commit_results
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: benchmarks/results/run-${{ github.run_id }}
+
+      - name: Write snapshot manifest
+        run: python benchmarks/scripts/make_manifest.py \
+               benchmarks/results/run-${{ github.run_id }} \
+               --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+               --commit "${{ github.sha }}"
+
+      - name: Commit snapshot
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add benchmarks/results
+          git commit -m "bench: results snapshot from run ${{ github.run_id }} (commit ${{ github.sha }})"
+          git push

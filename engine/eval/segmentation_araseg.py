@@ -143,7 +143,9 @@ def main() -> None:
     summary = {k: v for k, v in report.items() if k != "per_doc"}
     print(json.dumps(summary, ensure_ascii=False, indent=1))
     if args.out:
-        Path(args.out).write_text(
+        out_path = Path(args.out)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(
             json.dumps({"task": args.task, **report}, ensure_ascii=False, indent=1),
             encoding="utf-8",
         )
