@@ -12,9 +12,12 @@ AraSEG corpus from a local path you provide.
 - Repository: https://github.com/mbzuai-nlp/araseg-shared-task-2026
 - Datasets: HF `MBZUAI/AraSeg-2026-Shared-Task-{PA,NoPnx-PA,NP,NoPnx-NP}`
   (splits: train 174 / dev 222 / test 262 documents; 658 docs, 451K words total).
-- Licence: **MIT** (verified on the dataset card and the GitHub repo,
-  2026-10-29). No licence obstacle for research use; we still fetch rather
-  than vendor, so the repo stays lean and the corpus provenance explicit.
+- Licence: the shared-task **GitHub repo is MIT**, but the **dataset itself is
+  CC BY-SA 4.0** (dataset card; corrected 2026-10-29 — an earlier version of
+  this file wrongly claimed MIT for the data). CC BY-SA imposes no obstacle
+  for research use with attribution; because we fetch rather than vendor, no
+  redistribution happens from this repo. The AraSEG team's released
+  segmentation models (`MBZUAI/sentseg-camelbert-*`) are MIT.
 
 ## Format expected by the eval modules
 
