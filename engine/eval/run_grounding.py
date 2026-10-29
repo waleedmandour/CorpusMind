@@ -85,7 +85,11 @@ async def run(
                 # longer wait is safe (the sweep is read-only), and the wait
                 # honours Retry-After when the gateway sends one.
                 attempt = 0
-                while r.status_code in (429, 503) and attempt < rate_retries:
+                # 429/503 pass through raw; 502 is the chat endpoint's wrapper
+                # for an upstream failure the engine's own (short) retry
+                # budget already exhausted — for a read-only sweep, re-POSTing
+                # after a longer wait is the correct harness-level recovery.
+                while r.status_code in (429, 502, 503) and attempt < rate_retries:
                     retry_after = 0.0
                     raw = r.headers.get("retry-after", "")
                     try:
@@ -146,7 +150,7 @@ def main() -> None:
     ap.add_argument("--pause", type=float, default=0.0,
                     help="seconds to sleep BEFORE each question (rate-limit pacing; 7.0 fits free-tier Gemini ~10 RPM)")
     ap.add_argument("--rate-retries", type=int, default=0,
-                    help="harness-level re-POSTs on HTTP 429/503 (waits 20/40/80s, Retry-After honoured, 90s cap)")
+                    help="harness-level re-POSTs on HTTP 429/502/503 (waits 20/40/80s, Retry-After honoured, 90s cap)")
     args = ap.parse_args()
     out = Path(args.out) if args.out else _RUNS_DIR / (
         "grounding_run_" + datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ") + ".json"

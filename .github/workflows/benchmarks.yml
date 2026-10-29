@@ -232,6 +232,11 @@ jobs:
       CORPUSMIND_CLOUD_API_KEY: ${{ secrets.CORPUSMIND_CLOUD_API_KEY }}
       CORPUSMIND_CLOUD_DEFAULT_MODEL: ${{ inputs.grounding_model }}
       CORPUSMIND_CLOUD_BASE_URL: ${{ secrets.CORPUSMIND_CLOUD_BASE_URL }}
+      # Diagnostics: a provider-integration bug (8x "unexpected response
+      # shape" in run 40953800717) is undiagnosable from logs while the
+      # engine withholds raw bodies. CI logs are ephemeral and the bank is
+      # public gold — include the raw provider responses.
+      CORPUSMIND_DEBUG_RAW: "1"
     steps:
       - uses: actions/checkout@v4
 
