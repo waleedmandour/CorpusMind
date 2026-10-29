@@ -90,6 +90,9 @@ projects/
 # its sha256 manifest, and the frozen grounding gold — committed research
 # fixtures (reviewed golden files), not user data. eval/runs/ stays ignored.
 !engine/eval/data/
+# Benchmark exception: benchmarks/data holds the checksum pins for the fetched
+# evaluation datasets (AraSEG) — provenance fixtures, not user data.
+!benchmarks/data/
 *.db
 *.db-journal
 *.sqlite
@@ -151,3 +154,6 @@ dev-dist/
 # (never commit — it embeds the signing endpoint/account/profile)
 desktop/src-tauri/signing-override.json
 engine/eval/runs/
+# Benchmarks: raw per-run outputs stay uncommitted; only curated snapshots
+# under benchmarks/results/ (committed by the workflow with a manifest) land.
+benchmarks/out/
