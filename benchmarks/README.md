@@ -83,6 +83,7 @@ python -m eval.score runs/paper_run.json --out runs/paper_report.json --verbose
 
 ## Results snapshots
 
-| Run | Commit | Contents | Manifest |
-|---|---|---|---|
-| _(populated by dispatched runs with `commit_results=true`)_ | | | |
+| Run | Commit | Contents | Manifest | Status |
+|---|---|---|---|---|
+| [40913999140](https://github.com/waleedmandour/CorpusMind/actions/runs/40913999140) | `9cad418` | perf-arabic + seg-araseg (PA/NP) | [`run-40913999140/manifest.json`](results/run-40913999140/manifest.json) | **Superseded** — its PA micro-F1 (0.107) was an evaluation-harness artifact (boundary mis-alignment on AraSEG `\n` marker tokens; fixed in PR #28) |
+| [40935967239](https://github.com/waleedmandour/CorpusMind/actions/runs/40935967239) | `ee5001c` | perf-arabic + seg-araseg (PA/NP), corrected evaluator | [`run-40935967239/manifest.json`](results/run-40935967239/manifest.json) | **Canonical manuscript snapshot**: seg PA micro-F1 **0.673** / macro 0.648, NP 0.528; analyze_arabic 3,243–3,266 tok/s (CV < 0.6%), dialect-ID ~107K tok/s |
