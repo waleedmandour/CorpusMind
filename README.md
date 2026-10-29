@@ -2,7 +2,7 @@
 
 [![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.21226649-blue)](https://doi.org/10.5281/zenodo.21226649)
 [![License: AGPL-3.0-only](https://img.shields.io/badge/License-AGPL--3.0--only-blue.svg)](https://www.gnu.org/licenses/agpl-3.0.html)
-[![GitHub release](https://img.shields.io/badge/release-v1.2.14-blue)](https://github.com/waleedmandour/CorpusMind/releases)
+[![GitHub release](https://img.shields.io/badge/release-v2.0.0-blue)](https://github.com/waleedmandour/CorpusMind/releases)
 [![CI](https://github.com/waleedmandour/CorpusMind/actions/workflows/ci.yml/badge.svg)](https://github.com/waleedmandour/CorpusMind/actions/workflows/ci.yml)
 
 > A local-first, AI-native research environment for corpus linguistics and multimodal discourse analysis.
@@ -34,9 +34,9 @@ run entirely on the researcher's own machine.
 
 ## Status
 
-**Current release: v1.2.14** — the text suite is fully functional.
+**Current release: v2.0.0** — the text suite is fully functional.
 
-**Language support (v1.2.14):**
+**Language support (v2.0.0):**
 
 | Language | Script | Coverage |
 | --- | --- | --- |
@@ -69,8 +69,7 @@ maintained as **CorpusMind Lens** at
 this repository ships only the CorpusMind text-analysis app.
 
 **Both apps:** a web app + a Tauri 2 desktop shell (CorpusMind here,
-CorpusMind Lens in its own repo), 330+ backend test functions (800+ test
-cases via parametrization), ruff-clean,
+CorpusMind Lens in its own repo), 850+ backend tests, ruff-clean,
 self-hosted Docker image. The two apps connect via the versioned
 Companion-Mode API when both are installed.
 
@@ -146,7 +145,7 @@ Health check:
 
 ```bash
 curl http://127.0.0.1:8765/api/v1/health
-# {"status":"ok","engine":"corpusmind-engine","version":"1.2.14"}
+# {"status":"ok","engine":"corpusmind-engine","version":"2.0.0"}
 ```
 
 ### 2. Run the web frontend
@@ -334,7 +333,7 @@ serious validity bug, so this is treated as a release-blocking test category.
 | Odds Ratio | Keyness effect size | `(f1 · (N2−f2)) / (f2 · (N1−f1))` |
 | Juilland's D | Dispersion | `1 − (CV / sqrt(n−1))` across n parts |
 | Gries' DP (2008) | Dispersion | `0.5 · Σ |observed_proportionᵢ − expected_proportionᵢ|` |
-| Gries' DP-norm (2008) | Dispersion | `DP / (1 − min(sᵢ))`; equals `DP·n/(n−1)` for equal parts |
+| Gries' DP-norm (Lijffijt & Gries 2012; Gries 2020) | Dispersion | `DP / (1 − min(sᵢ))`; equals `DP·n/(n−1)` for equal parts |
 | STTR | Lexical variation | TTR over fixed-size chunks, averaged |
 | HD-D (McCarthy & Jarvis 2010) | Lexical diversity | (Σ_types (1 − P(X=0))) / 42, P(X=0) hypergeometric |
 
@@ -417,7 +416,7 @@ If you use CorpusMind in your research, please cite it as:
 
 > Mandour, W., & Ibrahim, W. (2026). *CorpusMind: A local-first, AI-native
 > research environment for corpus linguistics and multimodal discourse
-> analysis* (Version 1.2.14) [Computer software]. Zenodo.
+> analysis* (Version 2.0.0) [Computer software]. Zenodo.
 > https://doi.org/10.5281/zenodo.21226649
 >
 > Dr. Waleed Mandour, Sultan Qaboos University, ORCID: 0000-0002-9262-5993
@@ -432,7 +431,7 @@ If you use CorpusMind in your research, please cite it as:
                    for corpus linguistics and multimodal discourse analysis}},
   month        = oct,
   year         = 2026,
-  version      = {1.2.14},
+  version      = {2.0.0},
   publisher    = {Zenodo},
   doi          = {10.5281/zenodo.21226649},
   url          = {https://doi.org/10.5281/zenodo.21226649}

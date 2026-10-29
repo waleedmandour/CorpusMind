@@ -18,6 +18,7 @@ from stats.measures import (
     delta_p,
     dice_coefficient,
     gries_dp,
+    gries_dp_norm,
     hd_d,
     juillands_d,
     log_dice,
@@ -28,6 +29,7 @@ from stats.measures import (
     p_value_ll,
     pct_diff,
     simple_maths,
+    split_keywords_by_direction,
     sttr,
     t_score,
     type_token_ratio,
@@ -167,6 +169,29 @@ def test_pct_diff_zero_cells_finite() -> None:
     assert math.isclose(pct_diff(0, 0, 1000, 1000), 0.0, abs_tol=1e-9)
 
 
+def test_pct_diff_substitutes_reference_frequency_only() -> None:
+    """v2.0.0 §2: the 0.5 substitution applies to the REFERENCE frequency
+    (denominator) only — substituting the numerator too distorted values
+    that were already finite. Hand-derived (norm = per-million):
+
+    pct_diff(0, 100, 50_000, 1_000_000):   nf1 = 0, nf2 = 100
+        → ((0 − 100)/100)·100 = −100.0  (was −90.0 under the both-sides bug)
+    pct_diff(100, 0, 50_000, 1_000_000):   nf1 = 2000, nf2 = 0.5
+        → ((2000 − 0.5)/0.5)·100 = 399900.0  (finite, unchanged)
+    pct_diff(0, 0, 50_000, 1_000_000):     absent from BOTH → 0.0
+        (was +1900.0 under the both-sides bug)
+    pct_diff(200, 100, 50_000, 1_000_000): nf1 = 4000, nf2 = 100
+        → ((4000 − 100)/100)·100 = 3900.0  (nonzero cells bit-identical)
+    """
+    assert pct_diff(0, 100, 50_000, 1_000_000) == pytest.approx(-100.0, abs=1e-9)
+    assert pct_diff(100, 0, 50_000, 1_000_000) == pytest.approx(399900.0, rel=1e-9)
+    assert pct_diff(0, 0, 50_000, 1_000_000) == 0.0
+    assert pct_diff(200, 100, 50_000, 1_000_000) == pytest.approx(3900.0, rel=1e-9)
+    # Nonzero-cell path is untouched by the substitution logic.
+    assert pct_diff(50, 100, 50_000, 1_000_000) == pytest.approx(900.0, rel=1e-9)
+    assert math.isfinite(pct_diff(0, 100, 1, 1))  # JSON-safety on degenerate sizes
+
+
 def test_p_value_ll_chi2_critical_values() -> None:
     # The χ²₁ 95% critical value the prompt used to misuse as a per-word
     # threshold: p(3.841458820694124) ≈ 0.05 exactly.
@@ -232,6 +257,55 @@ def test_compute_keyness_row_carries_all_measures():
     assert set(row.measures.keys()) == expected_keys
 
 
+def test_split_keywords_by_direction_uses_signed_effect_size() -> None:
+    """v2.0.0 §1: G² is UNSIGNED — the positive/negative split must follow
+    the signed effect size (log_ratio), not the sign of log_likelihood.
+    Hand-derived effect sizes for these exact tables (N1=50_000, N2=1_000_000):
+    over_used  (f1=200, f2=100): log2((200/50000)/(100/1e6)) = log2(40)  ≈ +5.32
+    under_used (f1=5,   f2=400): log2((5/50000)/(400/1e6))   = log2(1/4) = −2.0
+    same_rate  (f1=50,  f2=1000): 1000 pm vs 1000 pm          = 0.0
+    """
+    rows = [
+        compute_keyness_row("over_used", 200, 100, 50_000, 1_000_000),
+        compute_keyness_row("under_used", 5, 400, 50_000, 1_000_000),
+        compute_keyness_row("same_rate", 50, 1000, 50_000, 1_000_000),
+    ]
+    assert rows[0].measures["log_ratio"] == pytest.approx(math.log2(40), abs=1e-9)
+    assert rows[1].measures["log_ratio"] == pytest.approx(-2.0, abs=1e-9)
+    assert rows[2].measures["log_ratio"] == 0.0
+    triples = sorted(
+        ((r, r.measures["log_likelihood"], r.measures["log_ratio"]) for r in rows),
+        key=lambda t: t[1],
+        reverse=True,
+    )
+    positive, negative = split_keywords_by_direction(triples, limit=10)
+    assert [e["term"] for e in positive] == ["over_used"]
+    assert [e["term"] for e in negative] == ["under_used"]
+    # log_ratio == 0 appears in NEITHER list
+    assert "same_rate" not in {e["term"] for e in positive + negative}
+    # Entries keep the pipelines' response shape
+    assert {"term", "f1", "f2", "log_ratio"} <= set(positive[0])
+
+
+def test_split_keywords_by_direction_truncates_to_limit() -> None:
+    """Both lists are truncated to `limit` AFTER the BH step (which callers
+    run over ALL tested terms before splitting)."""
+    rows = [
+        compute_keyness_row("big_over", 400, 50, 50_000, 1_000_000),
+        compute_keyness_row("small_over", 100, 100, 50_000, 1_000_000),
+        compute_keyness_row("under", 5, 400, 50_000, 1_000_000),
+    ]
+    triples = sorted(
+        ((r, r.measures["log_likelihood"], r.measures["log_ratio"]) for r in rows),
+        key=lambda t: t[1],
+        reverse=True,
+    )
+    positive, negative = split_keywords_by_direction(triples, limit=1)
+    # big_over has by far the largest G² (400 vs 21.4 expected in target)
+    assert [e["term"] for e in positive] == ["big_over"]
+    assert [e["term"] for e in negative] == ["under"]
+
+
 # --------------------------------------------------------------------------- #
 # Dispersion
 # --------------------------------------------------------------------------- #
@@ -252,6 +326,32 @@ def test_gries_dp_zero_when_uniform():
 def test_gries_dp_max_when_concentrated_in_one_part():
     dp = gries_dp([10, 0, 0, 0])
     assert math.isclose(dp, 0.75, abs_tol=1e-9)
+
+
+def test_gries_dp_norm_zero_size_parts() -> None:
+    """v2.0.0 §3: empty documents must not flatten the normalization — the
+    minimum runs over parts that can actually hold occurrences (size > 0).
+    Hand-derived from DP_norm = DP / (1 − min-positive-share), where max DP
+    = 1 − min-positive-share."""
+    # The §3 worked case: all occurrences in the only non-empty part of two
+    # → DP 0.5, min positive share 0.5 → 1.0 (was 0.5 before the fix).
+    assert gries_dp_norm([0, 10, 0], sizes=[0, 50, 50]) == pytest.approx(1.0, abs=1e-12)
+    # Zero-size part among equal-sized positives → 1.0
+    assert gries_dp_norm([10, 0, 0, 0], sizes=[100, 100, 100, 0]) == pytest.approx(1.0, abs=1e-12)
+    # Already-correct unequal cases stay 1.0
+    assert gries_dp_norm([10, 0, 0], sizes=[20, 40, 40]) == pytest.approx(1.0, abs=1e-12)
+    assert gries_dp_norm([10, 0], sizes=[10, 90]) == pytest.approx(1.0, abs=1e-12)
+    # Proportional case: DP 0.3, min positive share 0.1 → 0.3/0.9 = 1/3
+    assert gries_dp_norm([0, 0, 0, 10], sizes=[100, 100, 100, 700]) == pytest.approx(1.0 / 3.0, rel=1e-9)
+    # Perfectly proportional distribution → 0.0
+    assert gries_dp_norm([10, 90], sizes=[10, 90]) == 0.0
+    # Fewer than two positive-size parts → plain DP (necessarily 0 here)
+    assert gries_dp_norm([5, 0], sizes=[100, 0]) == 0.0
+    # Degenerate inputs
+    assert gries_dp_norm([5]) == 0.0
+    assert gries_dp_norm([]) == 0.0
+    # Equal-sized uniform expectations are unchanged
+    assert gries_dp_norm([30, 0, 0, 0]) == 1.0
 
 
 # --------------------------------------------------------------------------- #
@@ -306,3 +406,29 @@ def test_hd_d_bounded() -> None:
         rng = random.Random(seed)
         toks = [f"w{rng.randrange(60)}" for _ in range(rng.randrange(50, 800))]
         assert 0.0 < hd_d(toks) <= 1.0
+
+
+def test_hd_d_sample_size_guard() -> None:
+    """v2.0.0 §4a: an empty sample has no defined expected type count —
+    sample_size < 1 must raise ValueError (was ZeroDivisionError at the
+    `total / b` division)."""
+    with pytest.raises(ValueError, match="sample_size must be at least 1"):
+        hd_d(["a", "b", "a"], sample_size=0)
+    with pytest.raises(ValueError, match="sample_size must be at least 1"):
+        hd_d(["a", "b", "a"], sample_size=-1)
+
+
+def test_hd_d_clamped_to_one() -> None:
+    """v2.0.0 §4b: 500 all-distinct tokens → Σ(1−P0) = 500·(42/500) = 42
+    exactly in real arithmetic; float noise used to leak
+    1.0000000000000062 past the 0–1 scale — the clamp makes it exactly 1.0."""
+    v = hd_d([f"w{i}" for i in range(500)])
+    assert v <= 1.0
+    assert v == pytest.approx(1.0, abs=1e-9)
+
+
+def test_hd_d_single_type_and_empty() -> None:
+    # ["a"]*500: the sample always contains the single type → E[V(42)] = 1
+    # → HD-D = 1/42 (hand-derived: P0 = 0 when f = n).
+    assert hd_d(["a"] * 500) == pytest.approx(1.0 / 42.0, rel=1e-9)
+    assert hd_d([]) == 0.0

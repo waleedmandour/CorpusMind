@@ -11,7 +11,7 @@ abstract: >
   analysis without writing a line of code, without sending unpublished data
   to a third-party server unless they explicitly choose to, and without
   losing the methodological transparency that peer review demands. The
-  desktop application bundles a FastAPI engine, a Tauri 2 shell, and an
+  desktop application bundles a FastAPI engine, a Tauri 2 shell, and a
   web app, supporting English and Arabic text analysis, vision
   pipelines for multimodal discourse, and a pluggable AI assistant that can
   connect to local (Ollama, LM Studio) or remote (OpenAI, Anthropic) model
@@ -20,9 +20,9 @@ authors:
   - family-names: Mandour
     given-names: Waleed
     name-particle: ""
-    affiliation: "Sultan Qaboos University, Department of English Language and Literature"
+    affiliation: "Sultan Qaboos University, Center for Preparatory Studies"
     orcid: "https://orcid.org/0000-0002-9262-5993"
-    email: "waleed.mandour@squ.edu.om"
+    email: "w.abumandour@squ.edu.om"
   - family-names: Ibrahim
     given-names: Wesam
     affiliation: "Princess Nourah Bint Abdulrahman University"
@@ -46,8 +46,8 @@ license: AGPL-3.0-only
 repository-code: "https://github.com/waleedmandour/CorpusMind"
 repository-artifact: "https://github.com/waleedmandour/CorpusMind/releases"
 url: "https://doi.org/10.5281/zenodo.21226649"
-version: 1.2.14
-date-released: 2026-10-20
+version: 2.0.0
+date-released: 2026-10-29
 identifiers:
   - type: doi
     value: "10.5281/zenodo.21226649"
@@ -62,11 +62,11 @@ preferred-citation:
       given-names: Wesam
   title: "CorpusMind: Local-first, AI-native research environment for corpus linguistics and multimodal discourse analysis"
   year: 2026
-  version: 1.2.14
+  version: 2.0.0
   doi: "10.5281/zenodo.21226649"
   publisher:
     name: "Zenodo"
-  date-released: 2026-10-20
+  date-released: 2026-10-29
   keywords:
     - corpus linguistics
     - discourse analysis

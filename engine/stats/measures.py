@@ -16,7 +16,9 @@ Conventions (matching the mission):
 from __future__ import annotations
 
 import math
+from collections.abc import Sequence
 from dataclasses import dataclass
+from typing import Any
 
 # --------------------------------------------------------------------------- #
 # Collocation measures
@@ -166,11 +168,20 @@ def log_ratio(f1: int, f2: int, N1: int, N2: int) -> float:
 def pct_diff(f1: int, f2: int, N1: int, N2: int) -> float:
     """%DIFF = ((norm_f1 − norm_f2) / norm_f2) × 100  (Gabrielatos & Marchi 2012).
 
-    Zero cells use the same 0.5 substitution as :func:`log_ratio`, keeping
-    %DIFF finite (and JSON-safe) across the whole battery."""
+    The 0.5 substitution applies to the REFERENCE frequency only — the
+    denominator is the only cell that can make %DIFF infinite. Substituting
+    the numerator too distorted already-finite values: a word absent from
+    the target (f1 = 0) scored −90% instead of exactly −100%. With f1 = 0
+    the raw zero is kept, so the result is exactly −100.0; a word absent
+    from the reference (f2 = 0) is scored against 0.5/N2, keeping %DIFF
+    finite (and JSON-safe) across the whole battery. Words absent from
+    BOTH corpora return 0.0."""
     if N1 <= 0 or N2 <= 0:
         return 0.0
-    nf1, nf2 = _norm_freq(max(f1, 0.5), N1), _norm_freq(max(f2, 0.5), N2)
+    if f1 <= 0 and f2 <= 0:
+        return 0.0
+    nf1 = _norm_freq(f1, N1)
+    nf2 = _norm_freq(max(f2, 0.5), N2)
     return ((nf1 - nf2) / nf2) * 100
 
 
@@ -284,6 +295,34 @@ def compute_keyness_row(
     return KeynessRow(term=term, f1=f1, f2=f2, N1=N1, N2=N2, measures=measures)
 
 
+def split_keywords_by_direction(
+    rows: Sequence[tuple[KeynessRow, float, float]],
+    *,
+    limit: int,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Split fully-scored keyness rows into positive/negative keyword dicts.
+
+    `rows` are (row, log_likelihood, log_ratio) triples read from the FULL
+    measure battery (before any requested measure-subset filtering) and
+    already sorted by log_likelihood descending. G² is UNSIGNED, so the
+    positive/negative direction must come from the signed effect size
+    (log_ratio, Hardie 2014): positive = log_ratio > 0, negative =
+    log_ratio < 0, and a term with log_ratio == 0 appears in neither list.
+    Both lists keep the log_likelihood-descending order and are truncated
+    to `limit` — callers run the Benjamini–Hochberg step over ALL tested
+    terms before this split, so truncation here never affects q_bh.
+    """
+    positive: list[dict[str, Any]] = []
+    negative: list[dict[str, Any]] = []
+    for row, _ll, lr in rows:
+        entry: dict[str, Any] = {"term": row.term, "f1": row.f1, "f2": row.f2, **row.measures}
+        if lr > 0:
+            positive.append(entry)
+        elif lr < 0:
+            negative.append(entry)
+    return positive[:limit], negative[:limit]
+
+
 def p_value_ll(ll: float) -> float:
     """Exact p-value for one degree of freedom: survival function of χ²(1).
 
@@ -365,16 +404,29 @@ def gries_dp(observed: list[int], sizes: list[int] | None = None) -> float:
 
 
 def gries_dp_norm(observed: list[int], sizes: list[int] | None = None) -> float:
-    """DP-norm = DP / (1 − min(sᵢ))  (Gries 2008) — bounded in [0, 1] for any
-    part sizes, because max DP = 1 − min(sᵢ) (the item concentrated entirely in
-    the smallest part). For equal-sized parts (min(sᵢ) = 1/n) this coincides
-    with the familiar DP·n/(n−1). Returns plain DP when n < 2."""
+    """DP-norm = DP / (1 − min(sᵢ))  (Lijffijt & Gries 2012; Gries 2020, Eq. 13)
+    — bounded in [0, 1] for any part sizes, because max DP = 1 − min(sᵢ) (the
+    item concentrated entirely in the smallest part). For equal-sized parts
+    (min(sᵢ) = 1/n) this coincides with the familiar DP·n/(n−1) — the form
+    Gries (2008) proposed, valid only for equal-sized parts. Returns plain
+    DP when n < 2.
+
+    Zero-size parts (empty documents) are excluded from the minimum: DP is
+    maximal when ALL occurrences sit in the smallest part, and a part with no
+    tokens cannot hold any occurrence, so it cannot be the part that bounds
+    the maximum — including it would under-state the normalization (e.g.
+    [0,10,0] over parts 0/50/50 scored 0.5 instead of 1.0). If fewer than two
+    parts have tokens there is nothing to normalize and plain DP (necessarily
+    0) is returned."""
     n = len(observed)
     dp = gries_dp(observed, sizes)
     if n < 2:
         return dp
     if sizes is not None and sum(sizes) > 0 and len(sizes) == n:
-        s_min = min(sizes) / sum(sizes)
+        positive = [s for s in sizes if s > 0]
+        if len(positive) < 2:
+            return dp
+        s_min = min(positive) / sum(sizes)
     else:
         s_min = 1.0 / n
     return dp / (1.0 - s_min)
@@ -485,10 +537,16 @@ def hd_d(tokens: list[str], *, sample_size: int = 42) -> float:
     all-distinct tokens → 1.0). Matches the published `lexical-diversity`
     implementation (Σ(1−P0)/42). Texts ≤ 42 tokens fall back to raw TTR, because
     a 42-token sample then covers the whole text.
+
+    Raises ValueError if sample_size < 1 (an empty sample has no defined
+    expected type count); the result is clamped to ≤ 1.0 against float noise
+    on the all-distinct upper bound (1.0000000000000062 → 1.0).
     """
     from collections import Counter
     from math import prod
 
+    if sample_size < 1:
+        raise ValueError("sample_size must be at least 1")
     n = len(tokens)
     if n == 0:
         return 0.0
@@ -500,4 +558,4 @@ def hd_d(tokens: list[str], *, sample_size: int = 42) -> float:
         # P(X=0) via a stable, overflow-free product.
         p0 = prod((n - f - i) / (n - i) for i in range(b))
         total += 1.0 - p0
-    return total / b
+    return min(1.0, total / b)

@@ -13,9 +13,11 @@ from __future__ import annotations
 import io
 import math
 import random
+from typing import Any, cast
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from pytest import MonkeyPatch
 
 from stats.measures import (
     chi2_min_expected,
@@ -468,6 +470,103 @@ async def test_keyness_bridge_excludes_f2_zero(monkeypatch):
         assert math.isfinite(kw["p_ll"]) and math.isfinite(kw["q_bh"])
         assert kw["q_bh"] >= kw["p_ll"] - 1e-9
     assert any("Benjamini–Hochberg" in w for w in result.warnings)
+    # v2.0.0 (§1): G² is unsigned — the split follows log_ratio. BOTH tested
+    # words are UNDER-used here (alpha: 10% of target vs 62.5% of reference;
+    # beta: 1% vs 37.5%), so both must be in negative_keywords only.
+    assert {kw["term"] for kw in result.negative_keywords} == {"alpha", "beta"}
+    assert result.positive_keywords == []
+
+
+@pytest.mark.asyncio
+async def test_keyness_bridge_direction_split_follows_log_ratio(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """v2.0.0 (§1): an under-used word (log_ratio < 0 but G² > 0) must land
+    in negative_keywords and be absent from positive_keywords."""
+    from reference_corpus import keyness_bridge
+
+    async def _fake_latest(session: Any, corpus_id: str) -> str:
+        return "vid"
+
+    async def _fake_size(session: Any, vid: str) -> int:
+        return 1000
+
+    monkeypatch.setattr(keyness_bridge, "_latest_version_id", _fake_latest)
+    monkeypatch.setattr(keyness_bridge, "_corpus_size", _fake_size)
+
+    class _FakeResult:
+        def all(self) -> list[tuple[str]]:
+            # up:   100/1000 = 100k pm (target) vs 50/1000 = 50k pm (ref) → over-used
+            # down: 100/1000 = 100k pm (target) vs 150/1000 = 150k pm (ref) → under-used
+            return [("up",)] * 100 + [("down",)] * 100
+
+    class _FakeSession:
+        async def execute(self, stmt: Any) -> _FakeResult:
+            return _FakeResult()
+
+    monkeypatch.setattr(
+        keyness_bridge,
+        "load_frequency_list",
+        lambda name: {"up": 50, "down": 150, "filler": 800},
+    )
+
+    result = await keyness_bridge.compute_keyness_with_reference_list(
+        cast(Any, _FakeSession()), "corpus-x", "be06-top1000"
+    )
+    assert [kw["term"] for kw in result.positive_keywords] == ["up"]
+    assert [kw["term"] for kw in result.negative_keywords] == ["down"]
+    down = result.negative_keywords[0]
+    # G² for the under-used word is still strongly positive — the OLD
+    # log_likelihood-based split filed it under positive_keywords.
+    assert down["log_likelihood"] > 0
+    assert down["log_ratio"] < 0
+    assert math.isfinite(down["p_ll"]) and math.isfinite(down["q_bh"])
+    assert down["q_bh"] >= down["p_ll"] - 1e-9
+
+
+@pytest.mark.asyncio
+async def test_keyness_bridge_subset_measures_keep_pq_and_split(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """v2.0.0 (§1): a measures subset that omits log_likelihood/log_ratio
+    must still carry p_ll/q_bh computed from the FULL battery, and the
+    direction split must still be correct."""
+    from reference_corpus import keyness_bridge
+
+    async def _fake_latest(session: Any, corpus_id: str) -> str:
+        return "vid"
+
+    async def _fake_size(session: Any, vid: str) -> int:
+        return 1000
+
+    monkeypatch.setattr(keyness_bridge, "_latest_version_id", _fake_latest)
+    monkeypatch.setattr(keyness_bridge, "_corpus_size", _fake_size)
+
+    class _FakeResult:
+        def all(self) -> list[tuple[str]]:
+            return [("up",)] * 100 + [("down",)] * 100
+
+    class _FakeSession:
+        async def execute(self, stmt: Any) -> _FakeResult:
+            return _FakeResult()
+
+    monkeypatch.setattr(
+        keyness_bridge,
+        "load_frequency_list",
+        lambda name: {"up": 50, "down": 150, "filler": 800},
+    )
+
+    result = await keyness_bridge.compute_keyness_with_reference_list(
+        cast(Any, _FakeSession()), "corpus-x", "be06-top1000", measures=["chi_square"]
+    )
+    assert [kw["term"] for kw in result.positive_keywords] == ["up"]
+    assert [kw["term"] for kw in result.negative_keywords] == ["down"]
+    up = result.positive_keywords[0]
+    # Subset filter applied, but p_ll/q_bh survive and stay significant
+    assert "log_likelihood" not in up and "log_ratio" not in up
+    assert set(up) == {"term", "f1", "f2", "chi_square", "p_ll", "q_bh"}
+    assert 0.0 < up["p_ll"] <= 1.0
+    assert 0.0 < up["q_bh"] < 0.05
 
 
 @pytest.mark.asyncio

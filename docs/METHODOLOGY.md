@@ -217,9 +217,12 @@ where `norm_fi = (fi / Ni) × 1,000,000` (per-million-words normalized frequency
 - **Use:** keyness effect size
 - **Sign:** same as Log Ratio
 - **Interpretation:** percentage difference in normalized frequency
-- **v2.0.0 (zero cells):** the same 0.5 substitution as Log Ratio is applied
-  to zero frequencies, so %DIFF is finite (and JSON-safe) across the whole
-  battery rather than `+inf` when the reference frequency is 0
+- **v2.0.0 (zero cells):** the 0.5 substitution applies to the REFERENCE
+  frequency only (the denominator is the only cell that can produce `±inf`),
+  so %DIFF is finite (and JSON-safe) across the whole battery rather than
+  `+inf` when the reference frequency is 0. A word absent from the target
+  (`f1 = 0`) keeps its raw zero and scores exactly −100%; words absent from
+  both corpora return 0.0
 
 **Reference:** Gabrielatos, C., & Marchi, A. (2012). Keyness: Appropriate metrics and practical issues. *CADS International Conference*.
 
@@ -286,19 +289,26 @@ document lengths. When part sizes are unavailable it falls back to uniform
 
 - **Range:** [0, 1]; 0 = perfectly even, 1 = maximally concentrated
 - **DP-norm (v1.0.1; corrected in v2.0.0):** `DP_norm = DP / (1 − min(sᵢ))`
-  (Gries 2008) is reported alongside DP. Because the maximum of the ½-scaled
-  DP is exactly `1 − min(sᵢ)` (the term concentrated entirely in the smallest
-  part), this normalization is bounded in [0, 1] for **any** part sizes —
-  unequal ones included. For equal-sized parts (`min(sᵢ) = 1/n`) it coincides
-  with the familiar `DP · n/(n−1)`, which was previously (incorrectly) applied
-  to unequal parts too and could exceed 1 there.
+  (Lijffijt & Gries 2012; Gries 2020, Eq. 13) is reported alongside DP, where
+  `min(sᵢ)` is the share of the smallest corpus part. Because the maximum of
+  the ½-scaled DP is exactly `1 − min(sᵢ)` (the term concentrated entirely in
+  the smallest part), this normalization is bounded in [0, 1] for **any** part
+  sizes — unequal ones included. Gries (2008) normalised with `DP · n/(n−1)`,
+  correct only for equal-sized parts; CorpusMind ≤ v1.2.14 applied that form
+  to all part sizes, so DP-norm could exceed 1 (1.2 for [10,0,0] over parts
+  20/40/40; 1.8 for [10,0] over 10/90). For equal-sized parts (`min(sᵢ) = 1/n`)
+  the corrected form coincides with `DP · n/(n−1)`.
 - **Juilland's D caveat:** D assumes roughly equal-sized parts; CorpusMind
   computes it on raw part counts and flags it accordingly — **prefer DP (with
   size weighting) for corpora with heterogeneous document lengths**
 - **Range (v1.0.1):** every dispersion result also reports `range` (number of
   documents containing the term) and `range_percent`
 
-**Reference:** Gries, S. Th. (2008). Dispersions and adjusted frequencies in corpora. *International Journal of Corpus Linguistics*, 13(4), 403–437.
+**References:**
+
+- Gries, S. Th. (2008). Dispersions and adjusted frequencies in corpora. *International Journal of Corpus Linguistics*, 13(4), 403–437.
+- Lijffijt, J., & Gries, S. Th. (2012). Correction to Stefan Th. Gries' "Dispersions and adjusted frequencies in corpora" (IJCL 13:4 (2008), 403–437). *International Journal of Corpus Linguistics*, 17(1), 147–149. https://doi.org/10.1075/ijcl.17.1.08lij
+- Gries, S. Th. (2020). Analyzing dispersion. In M. Paquot & S. Th. Gries (Eds.), *A Practical Handbook of Corpus Linguistics* (p. 99 ff.). Springer. https://doi.org/10.1007/978-3-030-46216-1_5
 
 ---
 

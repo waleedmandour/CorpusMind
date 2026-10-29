@@ -1102,8 +1102,8 @@ corpusmind-engine`}</pre>
         <p>If you use CorpusMind in your research, please cite it as:</p>
         <pre>{`Mandour, W., & Ibrahim, W. (2026). CorpusMind: A local-first,
 AI-native research environment for corpus linguistics and
-multimodal discourse analysis (Version 0.1.16) [Computer
-software]. Zenodo. https://doi.org/10.5281/zenodo.21226650`}</pre>
+multimodal discourse analysis (Version 2.0.0) [Computer
+software]. Zenodo. https://doi.org/10.5281/zenodo.21226649`}</pre>
         <h4>License</h4>
         <p>
           CorpusMind is released under the <strong>GNU Affero General Public License v3.0</strong>
@@ -1116,7 +1116,7 @@ software]. Zenodo. https://doi.org/10.5281/zenodo.21226650`}</pre>
           <li><a href="https://github.com/waleedmandour/CorpusMind">GitHub Repository</a></li>
           <li><a href="https://corpus-mind-web.vercel.app/">Live PWA on Vercel</a></li>
           <li><a href="https://github.com/waleedmandour/CorpusMind/releases">Releases</a></li>
-          <li><a href="https://doi.org/10.5281/zenodo.21226650">Zenodo DOI</a></li>
+          <li><a href="https://doi.org/10.5281/zenodo.21226649">Zenodo DOI</a></li>
         </ul>
       </>
     ),

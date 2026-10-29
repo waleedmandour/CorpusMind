@@ -6,6 +6,67 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
+## [2.0.0] — 2026-10-29 — Statistical correctness release
+
+### BREAKING CHANGES — published statistic values change; re-run affected analyses
+
+- **HD-D** is now the standard McCarthy & Jarvis (2010) measure: the expected
+  type-token ratio of a random 42-token sample, on a 0–1 scale (500
+  all-distinct tokens: **42.0 → 1.0**). The per-type aggregation changed as
+  well, so old values are **NOT recoverable by dividing by 42** (worked
+  example from the remediation audit: old 28.346 → old/42 = 0.675, but the
+  correct standard value on the same sample is 0.749; reproducible with a
+  2,000-token Zipf sample — token for rank r drawn with weight 1/r,
+  vocabulary 1,000, seed 42).
+- **DP-norm** uses `DP / (1 − min(sᵢ))`. Old values were wrong for UNEQUAL
+  parts: 1.2 → 1.0 for [10,0,0] over parts 20/40/40; 1.8 → 1.0 for [10,0]
+  over 10/90. Equal-sized-part results are unchanged. Versions ≤ 1.2.14
+  applied the Gries (2008) normalisation `DP·n/(n−1)` to all part sizes;
+  that form is valid only for equal-sized parts and was superseded by the
+  Lijffijt & Gries (2012) correction.
+- **Log Ratio** applies the Hardie (2014) 0.5 substitution for zero cells:
+  `±inf` → finite (−3.321928 / +11.965784 for the (0,100)/(100,0) golden
+  cases). **%DIFF** now substitutes the reference frequency only: a word
+  absent from the target (f1 = 0) scores exactly −100% (the 0.5-substituted
+  numerator distorted already-finite values, e.g. −90% instead of −100%).
+  Log Ratio keeps substituting both cells — that is Hardie (2014).
+
+### Added
+
+- `p_ll` and `q_bh` on every keyness row in BOTH keyness pipelines (the
+  reference-corpus bridge and corpus-vs-corpus service): the exact χ²₁
+  p-value for log-likelihood and the Benjamini–Hochberg FDR-corrected q,
+  computed over ALL tested words before sorting/limiting, plus a
+  methodology warning steering reports to `q_bh < 0.05` instead of the
+  per-word LL > 3.84 heuristic.
+
+### Fixed
+
+- Reference-list keyness positive/negative split: G² is unsigned, so the
+  split now follows the sign of Log Ratio (under-used words were landing
+  in `positive_keywords`), and p_ll/q_bh survive measure-subset requests.
+- Assistant prompt: corrected LogDice scale (14 + log₂(Dice), max 14) and
+  removal of the unsourced "≥7 strong / 4–7 moderate / <4 weak" bands;
+  added DP/DP-norm and HD-D reading notes.
+- README/CITATION.cff concept DOI and release facts (v1.2.14, Zenodo
+  concept DOI 10.5281/zenodo.21226649).
+- DP-norm with zero-size parts (empty documents no longer flatten the
+  normalisation); `hd_d` argument validation (`sample_size < 1` raises
+  `ValueError`) and clamping to 1.0.
+
+### Migration
+
+Re-run any analysis whose HD-D, DP-norm or keyness values you reported:
+old and new values are not related by a constant factor (HD-D's per-type
+aggregation changed; DP-norm depends on the smallest part share). Results
+from v1.2.14 and earlier should not be mixed with v2.0.0 results in the
+same table or figure.
+
+### Known limitation
+
+Per-word p-values assume token independence; BH controls multiplicity,
+not burstiness.
+
 ## [1.2.14] — 2026-10-20 — First stable release of the 1.2.14 line (stable)
 
 The `1.2.14` line was hardened across eleven pre-releases (r1–r11) before

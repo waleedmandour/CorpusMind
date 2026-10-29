@@ -1,4 +1,4 @@
-"""F6 — statistical invariant & golden guard suite (FIXPLAN §F6).
+"""F6 — statistical invariant & golden guard suite (the v2.0.0 golden battery).
 
 The regression net that would have caught the four statistical bugs fixed
 in F1–F4 (HD-D scale, DP-norm bound, Log Ratio/%DIFF ±inf, BH q-values).
@@ -256,7 +256,7 @@ def test_golden_fixture_shape() -> None:
     }
     assert expected_families <= set(data)
     total = sum(len(v) for k, v in data.items() if not k.startswith("_"))
-    assert total >= 30  # FIXPLAN §F6.2 promises a battery of ~30 inputs
+    assert total >= 30  # the F6 golden battery promises ~30 inputs
 
 
 def test_golden_hd_d() -> None:
@@ -368,7 +368,7 @@ def test_golden_type_token_ratio() -> None:
 
 
 def test_hd_d_agrees_with_published_lexical_diversity_package() -> None:
-    """FIXPLAN §F6.3 — cross-implementation check against the published
+    """F6.3 — cross-implementation check against the published
     ``lexical-diversity`` package. Skipped unless it happens to be installed
     (it is NOT a project dependency; CI and dev environments run without it,
     so this adds no dependency and never blocks)."""

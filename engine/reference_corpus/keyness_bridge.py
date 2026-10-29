@@ -34,7 +34,12 @@ from pathlib import Path
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.logging import get_logger
-from stats.measures import benjamini_hochberg, compute_keyness_row, p_value_ll
+from stats.measures import (
+    benjamini_hochberg,
+    compute_keyness_row,
+    p_value_ll,
+    split_keywords_by_direction,
+)
 from stats.service import KeynessResult, _corpus_size, _latest_version_id
 
 from .manager import ReferenceCorpusManager, get_manager
@@ -235,8 +240,10 @@ async def compute_keyness_with_reference_list(
         )
 
     # 3) Compute per-row keyness using the shared formula.
-    # ``compute_keyness_row`` always computes the full §12 battery; the
-    # ``measures`` argument above just controls which keys the API returns.
+    # ``compute_keyness_row`` always computes the full §12 battery; the FULL
+    # battery values are captured below BEFORE any measure-subset filtering,
+    # because p_ll/q_bh and the direction split both need log_likelihood /
+    # log_ratio even when the caller requests a subset that omits them.
     all_terms = set(target_freqs) & set(ref_freqs)
     results = []
     for term in all_terms:
@@ -246,16 +253,14 @@ async def compute_keyness_with_reference_list(
         # target corpus — they wouldn't be interpretable as keywords anyway.
         if f1 < min_freq:
             continue
-        row = compute_keyness_row(term, f1, f2, N1, N2)
-        # Filter to the requested measures (keeps the response shape stable
-        # if a caller asks for a subset).
-        if measures != list(row.measures.keys()):
-            row.measures = {k: row.measures[k] for k in measures if k in row.measures}
-        results.append(row)
+        results.append(compute_keyness_row(term, f1, f2, N1, N2))
+
+    full_ll = {r.term: r.measures.get("log_likelihood", 0.0) for r in results}
+    full_lr = {r.term: r.measures.get("log_ratio", 0.0) for r in results}
 
     # v2.0.0 (F4): exact per-word p-values + Benjamini–Hochberg FDR over
-    # ALL tested terms, computed after the measures filter so p_ll/q_bh
-    # survive into the response regardless of the requested subset.
+    # ALL tested terms — computed from the full battery, before any subset
+    # filtering and before sorting/limiting.
     ll_vals = [r.measures.get("log_likelihood", 0.0) for r in results]
     p_vals = [p_value_ll(ll) if math.isfinite(ll) else 1.0 for ll in ll_vals]
     q_vals = benjamini_hochberg(p_vals)
@@ -263,17 +268,30 @@ async def compute_keyness_with_reference_list(
         r.measures["p_ll"] = round(p, 6)
         r.measures["q_bh"] = round(q, 6)
 
-    # 4) Sort + split into positive / negative.
-    results.sort(key=lambda r: r.measures.get("log_likelihood", 0.0), reverse=True)
-    positive = [r for r in results if r.measures.get("log_likelihood", 0.0) > 0][:limit]
-    negative = [r for r in reversed(results) if r.measures.get("log_likelihood", 0.0) <= 0][:limit]
+    # v2.0.0 (§1): apply the requested measure subset AFTER the p/q step —
+    # p_ll and q_bh are ALWAYS attached, and the direction split reads
+    # log_ratio from the full battery captured above (G² is unsigned).
+    # KeynessRow is frozen, so the dict is edited in place (the previous
+    # rebind `row.measures = {...}` would raise FrozenInstanceError on any
+    # subset request).
+    allowed = set(measures) | {"p_ll", "q_bh"}
+    for r in results:
+        if set(r.measures) != allowed:
+            for k in [k for k in r.measures if k not in allowed]:
+                del r.measures[k]
+
+    # 4) Sort + split into positive / negative via the shared helper
+    # (positive = log_ratio > 0, negative = log_ratio < 0).
+    triples = [(r, full_ll[r.term], full_lr[r.term]) for r in results]
+    triples.sort(key=lambda t: t[1], reverse=True)
+    positive, negative = split_keywords_by_direction(triples, limit=limit)
 
     return KeynessResult(
         target_corpus_id=target_corpus_id,
         reference_corpus_id=f"ref:{reference_name}",
         measures=measures,
-        positive_keywords=[{"term": r.term, "f1": r.f1, "f2": r.f2, **r.measures} for r in positive],
-        negative_keywords=[{"term": r.term, "f1": r.f1, "f2": r.f2, **r.measures} for r in negative],
+        positive_keywords=positive,
+        negative_keywords=negative,
         N1=N1, N2=N2,
         warnings=[
             *warnings,
