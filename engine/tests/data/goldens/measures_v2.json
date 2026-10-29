@@ -1,9 +1,9 @@
 {
  "_meta": {
-  "description": "F6 golden fixtures for the statistical battery (FIXPLAN §F6.2). Expected values were generated ONCE from the fixed engine (post F1-F4) and cross-checked at generation time against independent references: exact math.comb hypergeometrics (HD-D), fractions.Fraction rational arithmetic (DP-norm, Juilland's D), algebraically split log paths (LogDice, Log Ratio, %DIFF, G²), the literal nested-min BH definition, and brute-force per-window slicing (MATTR). Non-finite values are stored as the strings '-inf'/'inf' (JSON has no Infinity literal). Token texts are space-joined strings. Do not hand-edit: regenerate instead.",
+  "description": "F6 golden fixtures for the statistical battery. Expected values were generated ONCE from the fixed engine (post F1-F4) and cross-checked at generation time against independent references: exact math.comb hypergeometrics (HD-D), fractions.Fraction rational arithmetic (DP-norm, Juilland's D), algebraically split log paths (LogDice, Log Ratio, %DIFF, G²), the literal nested-min BH definition, and brute-force per-window slicing (MATTR). Non-finite values are stored as the strings '-inf'/'inf' (JSON has no Infinity literal). Token texts are space-joined strings. Do not hand-edit: regenerate instead.",
   "engine_commit": "04cf36b",
   "engine_version": "1.2.14",
-  "plan_section": "FIXPLAN §F6.2",
+  "plan_section": "F6 golden battery",
   "tolerance": "rel 1e-9 (abs 1e-12 for values near zero)"
  },
  "hd_d": [
