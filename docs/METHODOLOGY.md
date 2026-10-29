@@ -217,9 +217,12 @@ where `norm_fi = (fi / Ni) × 1,000,000` (per-million-words normalized frequency
 - **Use:** keyness effect size
 - **Sign:** same as Log Ratio
 - **Interpretation:** percentage difference in normalized frequency
-- **v2.0.0 (zero cells):** the same 0.5 substitution as Log Ratio is applied
-  to zero frequencies, so %DIFF is finite (and JSON-safe) across the whole
-  battery rather than `+inf` when the reference frequency is 0
+- **v2.0.0 (zero cells):** the 0.5 substitution applies to the REFERENCE
+  frequency only (the denominator is the only cell that can produce `±inf`),
+  so %DIFF is finite (and JSON-safe) across the whole battery rather than
+  `+inf` when the reference frequency is 0. A word absent from the target
+  (`f1 = 0`) keeps its raw zero and scores exactly −100%; words absent from
+  both corpora return 0.0
 
 **Reference:** Gabrielatos, C., & Marchi, A. (2012). Keyness: Appropriate metrics and practical issues. *CADS International Conference*.
 

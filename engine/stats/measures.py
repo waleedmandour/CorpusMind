@@ -168,11 +168,20 @@ def log_ratio(f1: int, f2: int, N1: int, N2: int) -> float:
 def pct_diff(f1: int, f2: int, N1: int, N2: int) -> float:
     """%DIFF = ((norm_f1 − norm_f2) / norm_f2) × 100  (Gabrielatos & Marchi 2012).
 
-    Zero cells use the same 0.5 substitution as :func:`log_ratio`, keeping
-    %DIFF finite (and JSON-safe) across the whole battery."""
+    The 0.5 substitution applies to the REFERENCE frequency only — the
+    denominator is the only cell that can make %DIFF infinite. Substituting
+    the numerator too distorted already-finite values: a word absent from
+    the target (f1 = 0) scored −90% instead of exactly −100%. With f1 = 0
+    the raw zero is kept, so the result is exactly −100.0; a word absent
+    from the reference (f2 = 0) is scored against 0.5/N2, keeping %DIFF
+    finite (and JSON-safe) across the whole battery. Words absent from
+    BOTH corpora return 0.0."""
     if N1 <= 0 or N2 <= 0:
         return 0.0
-    nf1, nf2 = _norm_freq(max(f1, 0.5), N1), _norm_freq(max(f2, 0.5), N2)
+    if f1 <= 0 and f2 <= 0:
+        return 0.0
+    nf1 = _norm_freq(f1, N1)
+    nf2 = _norm_freq(max(f2, 0.5), N2)
     return ((nf1 - nf2) / nf2) * 100
 
 

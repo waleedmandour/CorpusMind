@@ -168,6 +168,29 @@ def test_pct_diff_zero_cells_finite() -> None:
     assert math.isclose(pct_diff(0, 0, 1000, 1000), 0.0, abs_tol=1e-9)
 
 
+def test_pct_diff_substitutes_reference_frequency_only() -> None:
+    """v2.0.0 §2: the 0.5 substitution applies to the REFERENCE frequency
+    (denominator) only — substituting the numerator too distorted values
+    that were already finite. Hand-derived (norm = per-million):
+
+    pct_diff(0, 100, 50_000, 1_000_000):   nf1 = 0, nf2 = 100
+        → ((0 − 100)/100)·100 = −100.0  (was −90.0 under the both-sides bug)
+    pct_diff(100, 0, 50_000, 1_000_000):   nf1 = 2000, nf2 = 0.5
+        → ((2000 − 0.5)/0.5)·100 = 399900.0  (finite, unchanged)
+    pct_diff(0, 0, 50_000, 1_000_000):     absent from BOTH → 0.0
+        (was +1900.0 under the both-sides bug)
+    pct_diff(200, 100, 50_000, 1_000_000): nf1 = 4000, nf2 = 100
+        → ((4000 − 100)/100)·100 = 3900.0  (nonzero cells bit-identical)
+    """
+    assert pct_diff(0, 100, 50_000, 1_000_000) == pytest.approx(-100.0, abs=1e-9)
+    assert pct_diff(100, 0, 50_000, 1_000_000) == pytest.approx(399900.0, rel=1e-9)
+    assert pct_diff(0, 0, 50_000, 1_000_000) == 0.0
+    assert pct_diff(200, 100, 50_000, 1_000_000) == pytest.approx(3900.0, rel=1e-9)
+    # Nonzero-cell path is untouched by the substitution logic.
+    assert pct_diff(50, 100, 50_000, 1_000_000) == pytest.approx(900.0, rel=1e-9)
+    assert math.isfinite(pct_diff(0, 100, 1, 1))  # JSON-safety on degenerate sizes
+
+
 def test_p_value_ll_chi2_critical_values() -> None:
     # The χ²₁ 95% critical value the prompt used to misuse as a per-word
     # threshold: p(3.841458820694124) ≈ 0.05 exactly.

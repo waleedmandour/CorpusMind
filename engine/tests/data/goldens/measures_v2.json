@@ -230,7 +230,7 @@
     "log_likelihood": 9.758509055421651,
     "chi_square": 5.000476235831985,
     "log_ratio": -3.321928094887362,
-    "pct_diff": -90.0,
+    "pct_diff": -100.0,
     "simple_maths": 0.009900990099009901,
     "odds_ratio": 0.09949159214875512
    }
@@ -262,7 +262,7 @@
     "log_likelihood": 0.0,
     "chi_square": 0.0,
     "log_ratio": 0.0,
-    "pct_diff": 1900.0,
+    "pct_diff": 0.0,
     "simple_maths": 1.0,
     "odds_ratio": 19.99981000189998
    }
