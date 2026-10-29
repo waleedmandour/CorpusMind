@@ -6,6 +6,38 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
+## [Unreleased]
+
+### Fixed
+
+- **Assistant chat no longer dies on the first transient provider hiccup**
+  (recurring "HTTP 502: Model call failed" reports). The provider layer now
+  retries transient failures — transport errors (connect/reset/read/write)
+  and HTTP 408/425/429/500/502/503/504/529 — with exponential backoff and
+  full jitter (AWS Builders' Library recipe), honoring a server-provided
+  `Retry-After` (capped at 15s), 3 attempts total. Deterministic 4xx client
+  errors (400/401/403/404/422) still fail fast with the same actionable
+  messages as before. Streaming calls retry only the connect/headers phase;
+  a completion that already emitted tokens is never replayed. Applies to
+  Ollama (native + OpenAI-compat tool path), LM Studio, and the cloud
+  provider; error-message shapes are unchanged.
+- **Self-hosted deployments (Docker/nginx):** the TLS proxy now sets
+  explicit `proxy_read_timeout 300s` / `proxy_connect_timeout 15s` /
+  `proxy_send_timeout 60s` on `/api/` — the previous defaults killed
+  grounded assistant turns that ran longer than nginx's 60s read timeout as
+  502/504 mid-conversation.
+- **AraSEG segmentation benchmark (research code):** the boundary-alignment
+  step in `engine/eval/segmentation_araseg.py` re-counted whitespace tokens
+  per predicted chunk, but the AraSEG PA dev streams contain 4,844 bare
+  `\n` line-break marker tokens, so every boundary after the first marker
+  shifted — the published PA micro-F1 of 0.107 in results snapshot
+  `run-40913999140` was an evaluation artifact, not the engine's score.
+  Alignment now goes through an explicit per-character owner map (line-break
+  markers are emitted as real newlines, which the engine legitimately splits
+  on). Corrected dev numbers: **PA micro-F1 0.673** (macro 0.648), NP
+  unchanged at 0.528. The committed snapshot under `benchmarks/results/`
+  predates the fix and will be superseded by a fresh dispatched run.
+
 ## [2.0.0] — 2026-10-29 — Statistical correctness release
 
 ### BREAKING CHANGES — published statistic values change; re-run affected analyses
