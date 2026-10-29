@@ -2,7 +2,7 @@
 
 [![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.21226649-blue)](https://doi.org/10.5281/zenodo.21226649)
 [![License: AGPL-3.0-only](https://img.shields.io/badge/License-AGPL--3.0--only-blue.svg)](https://www.gnu.org/licenses/agpl-3.0.html)
-[![GitHub release](https://img.shields.io/badge/release-v1.2.14-blue)](https://github.com/waleedmandour/CorpusMind/releases)
+[![GitHub release](https://img.shields.io/badge/release-v2.0.0-blue)](https://github.com/waleedmandour/CorpusMind/releases)
 [![CI](https://github.com/waleedmandour/CorpusMind/actions/workflows/ci.yml/badge.svg)](https://github.com/waleedmandour/CorpusMind/actions/workflows/ci.yml)
 
 > A local-first, AI-native research environment for corpus linguistics and multimodal discourse analysis.
@@ -34,9 +34,9 @@ run entirely on the researcher's own machine.
 
 ## Status
 
-**Current release: v1.2.14** — the text suite is fully functional.
+**Current release: v2.0.0** — the text suite is fully functional.
 
-**Language support (v1.2.14):**
+**Language support (v2.0.0):**
 
 | Language | Script | Coverage |
 | --- | --- | --- |
@@ -146,7 +146,7 @@ Health check:
 
 ```bash
 curl http://127.0.0.1:8765/api/v1/health
-# {"status":"ok","engine":"corpusmind-engine","version":"1.2.14"}
+# {"status":"ok","engine":"corpusmind-engine","version":"2.0.0"}
 ```
 
 ### 2. Run the web frontend
@@ -417,7 +417,7 @@ If you use CorpusMind in your research, please cite it as:
 
 > Mandour, W., & Ibrahim, W. (2026). *CorpusMind: A local-first, AI-native
 > research environment for corpus linguistics and multimodal discourse
-> analysis* (Version 1.2.14) [Computer software]. Zenodo.
+> analysis* (Version 2.0.0) [Computer software]. Zenodo.
 > https://doi.org/10.5281/zenodo.21226649
 >
 > Dr. Waleed Mandour, Sultan Qaboos University, ORCID: 0000-0002-9262-5993
@@ -432,7 +432,7 @@ If you use CorpusMind in your research, please cite it as:
                    for corpus linguistics and multimodal discourse analysis}},
   month        = oct,
   year         = 2026,
-  version      = {1.2.14},
+  version      = {2.0.0},
   publisher    = {Zenodo},
   doi          = {10.5281/zenodo.21226649},
   url          = {https://doi.org/10.5281/zenodo.21226649}

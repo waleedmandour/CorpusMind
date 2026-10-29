@@ -53,7 +53,7 @@ export function AboutView() {
           Mandour, W., &amp; Ibrahim, W. (2026). <em>CorpusMind: A local-first,
           AI-native research environment for corpus linguistics and multimodal
           discourse analysis</em> (Version {version}) [Computer software]. Zenodo.
-          <a href="https://doi.org/10.5281/zenodo.21226650">https://doi.org/10.5281/zenodo.21226650</a>
+          <a href="https://doi.org/10.5281/zenodo.21226649">https://doi.org/10.5281/zenodo.21226649</a>
         </div>
       </section>
 
@@ -124,7 +124,7 @@ export function AboutView() {
           <a href="https://github.com/waleedmandour/CorpusMind" className="about-link">{t(lang, "about_link_repo")}</a>
           <a href="https://corpus-mind-web.vercel.app/" className="about-link">{t(lang, "about_link_web")}</a>
           <a href="https://github.com/waleedmandour/CorpusMind/releases" className="about-link">{t(lang, "about_link_releases")}</a>
-          <a href="https://doi.org/10.5281/zenodo.21226650" className="about-link">{t(lang, "about_link_zenodo")}</a>
+          <a href="https://doi.org/10.5281/zenodo.21226649" className="about-link">{t(lang, "about_link_zenodo")}</a>
           <a href="https://github.com/waleedmandour/CorpusMind/blob/main/docs/USER_GUIDE.md" className="about-link">{t(lang, "about_link_guide")}</a>
           <a href="https://github.com/waleedmandour/CorpusMind/blob/main/docs/BUILD_GUIDE.md" className="about-link">{t(lang, "about_link_build")}</a>
           <a href="https://github.com/waleedmandour/CorpusMind/blob/main/docs/METHODOLOGY.md" className="about-link">{t(lang, "about_link_method")}</a>
