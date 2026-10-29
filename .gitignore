@@ -86,6 +86,10 @@ projects/
 # F6 exception: engine test fixtures under tests/data are committed test
 # data (golden statistics battery, the F6 golden battery), not user data.
 !engine/tests/data/
+# Eval-harness exception: engine/eval/data holds the frozen snapshot corpus,
+# its sha256 manifest, and the frozen grounding gold — committed research
+# fixtures (reviewed golden files), not user data. eval/runs/ stays ignored.
+!engine/eval/data/
 *.db
 *.db-journal
 *.sqlite
@@ -146,3 +150,4 @@ dev-dist/
 # v1.2.14-3: generated at build time by scripts/ci_windows_signing_config.py
 # (never commit — it embeds the signing endpoint/account/profile)
 desktop/src-tauri/signing-override.json
+engine/eval/runs/

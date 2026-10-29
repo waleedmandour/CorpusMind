@@ -1,0 +1,7818 @@
+{
+ "_meta": {
+  "description": "Frozen grounding gold for the fixed snapshot corpus. Produced ONCE by eval/build_gold.py from the engine's own tool registry; every numeric answer the assistant gives is scored against these values. Do not regenerate silently: a rebuild must be reviewed like any golden-file change (see measures_v2.json discipline). Tool outputs are frozen verbatim as provenance.",
+  "engine_version": "2.0.0",
+  "git_commit": "1457736",
+  "created_utc": "2026-10-29T13:12:01+00:00",
+  "spacy_model": {
+   "en_core_web_sm": "3.8.0"
+  },
+  "arabic_pack": {
+   "status": "ready"
+  },
+  "snapshot": {
+   "en_news.txt": "2de994e8e50dd7f14e33df69c8327fb76cf7c9c90877c3e4603b28c1297c94f9",
+   "en_academic.txt": "e4c45639c311f6d533113f97c0a73d8a3abe99e32ee0e9ace4e68b0275c329c8",
+   "en_learner.txt": "7343c83132570299d4bc7bcb91f4c9e93bb9dbc68f2851533b882bb03140133c",
+   "ar_msa.txt": "29dd5871b9b44be838350583fe8c375173376ddd06d94781efa6fa81cc80c40d",
+   "ar_classical.txt": "29ef1a2abfb28d8dd35c1066c15a04af88f2c2fa57cfbf31726aa497a5aee42d",
+   "ar_dialect.txt": "5d0a95cd5914b86ccff0f93242134279cba0f7141c3a2e71e02e9659a7b54b13",
+   "ar_nopunct.txt": "6062f14bad04f0f29c28bd9e6619724bc0a9d09a9ea55e2e24bf606ac38ccabb",
+   "en_parallel.txt": "cc4914be7d98d4c9540c298ef9d18ea3502a595a147f35c95a5c36c60661ca82",
+   "ar_parallel.txt": "468cc499fff7885787781d2b8dacfe9aa7cbc89d7861067f754f67fd76b85880"
+  },
+  "corpus_layout": {
+   "C1": {
+    "name": "EN-all",
+    "language": "en",
+    "files": [
+     "en_news.txt",
+     "en_academic.txt",
+     "en_learner.txt"
+    ]
+   },
+   "C2": {
+    "name": "EN-learner",
+    "language": "en",
+    "files": [
+     "en_learner.txt"
+    ]
+   },
+   "C3": {
+    "name": "EN-press",
+    "language": "en",
+    "files": [
+     "en_news.txt",
+     "en_academic.txt"
+    ]
+   },
+   "C4": {
+    "name": "AR-all",
+    "language": "ar",
+    "files": [
+     "ar_msa.txt",
+     "ar_classical.txt",
+     "ar_dialect.txt",
+     "ar_nopunct.txt"
+    ]
+   },
+   "C5": {
+    "name": "AR-parallel",
+    "language": "ar",
+    "files": [
+     "ar_parallel.txt"
+    ]
+   },
+   "C6": {
+    "name": "EN-parallel",
+    "language": "en",
+    "files": [
+     "en_parallel.txt"
+    ]
+   }
+  },
+  "question_count": 80
+ },
+ "corpus_map": {
+  "C1": "b978e05762c146d3",
+  "C2": "139b5f9f002b4730",
+  "C3": "287e79a486d44b5b",
+  "C4": "e7de99d8b8ff4e9e",
+  "C5": "ca2fb2b917bc4906",
+  "C6": "bbb6d4992c42482f"
+ },
+ "questions": [
+  {
+   "id": "G-001",
+   "category": "corpus_stats",
+   "language": "en",
+   "corpus": "C1",
+   "question": "How many documents, tokens, distinct word types, and sentences does this corpus contain?",
+   "trap": false,
+   "tools": [
+    {
+     "name": "get_corpus_overview",
+     "args": {
+      "corpus": "C1"
+     },
+     "ok": true,
+     "result": {
+      "corpus_id": "b978e05762c146d3",
+      "name": "EN-all",
+      "language": "en",
+      "genre": "mixed",
+      "text_side": {
+       "document_count": 3,
+       "token_count": 384,
+       "type_count": 257,
+       "sentence_count": 27
+      },
+      "vision_side": {
+       "image_set_count": 0,
+       "image_count": 0,
+       "image_sets": []
+      },
+      "note": ""
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "documents",
+      "value": 3,
+      "tol": 1e-06
+     },
+     {
+      "label": "tokens",
+      "value": 384,
+      "tol": 1e-06
+     },
+     {
+      "label": "types",
+      "value": 257,
+      "tol": 1e-06
+     },
+     {
+      "label": "sentences",
+      "value": 27,
+      "tol": 1e-06
+     }
+    ],
+    "strings": [],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-002",
+   "category": "corpus_stats",
+   "language": "ar",
+   "corpus": "C4",
+   "question": "كم مستنداً وكم كلمة وكم نوعاً وكم جملة في هذا المحتوى؟",
+   "trap": false,
+   "tools": [
+    {
+     "name": "get_corpus_overview",
+     "args": {
+      "corpus": "C4"
+     },
+     "ok": true,
+     "result": {
+      "corpus_id": "e7de99d8b8ff4e9e",
+      "name": "AR-all",
+      "language": "ar",
+      "genre": "mixed",
+      "text_side": {
+       "document_count": 4,
+       "token_count": 233,
+       "type_count": 199,
+       "sentence_count": 19
+      },
+      "vision_side": {
+       "image_set_count": 0,
+       "image_count": 0,
+       "image_sets": []
+      },
+      "note": ""
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "documents",
+      "value": 4,
+      "tol": 1e-06
+     },
+     {
+      "label": "tokens",
+      "value": 233,
+      "tol": 1e-06
+     },
+     {
+      "label": "types",
+      "value": 199,
+      "tol": 1e-06
+     },
+     {
+      "label": "sentences",
+      "value": 19,
+      "tol": 1e-06
+     }
+    ],
+    "strings": [],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-003",
+   "category": "corpus_stats",
+   "language": "en",
+   "corpus": "C1",
+   "question": "What are the total tokens and total types, and how often does the most frequent word occur?",
+   "trap": false,
+   "tools": [
+    {
+     "name": "get_frequency",
+     "args": {
+      "corpus": "C1",
+      "unit": "word",
+      "limit": 5
+     },
+     "ok": true,
+     "result": {
+      "unit": "word",
+      "total_tokens": 331,
+      "total_types": 5,
+      "sttr": 0.6042,
+      "top_items": [
+       {
+        "item": "the",
+        "freq": 15,
+        "per_million": 45317.22,
+        "percent": 4.5317,
+        "range": 3,
+        "range_percent": 100.0
+       },
+       {
+        "item": "in",
+        "freq": 9,
+        "per_million": 27190.33,
+        "percent": 2.719,
+        "range": 3,
+        "range_percent": 100.0
+       },
+       {
+        "item": "is",
+        "freq": 9,
+        "per_million": 27190.33,
+        "percent": 2.719,
+        "range": 3,
+        "range_percent": 100.0
+       },
+       {
+        "item": "to",
+        "freq": 9,
+        "per_million": 27190.33,
+        "percent": 2.719,
+        "range": 3,
+        "range_percent": 100.0
+       },
+       {
+        "item": "I",
+        "freq": 8,
+        "per_million": 24169.18,
+        "percent": 2.4169,
+        "range": 1,
+        "range_percent": 33.33
+       }
+      ]
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "total tokens",
+      "value": 331,
+      "tol": 1e-06
+     },
+     {
+      "label": "total types",
+      "value": 5,
+      "tol": 1e-06
+     },
+     {
+      "label": "top word freq",
+      "value": 15,
+      "tol": 1e-06
+     }
+    ],
+    "strings": [
+     {
+      "label": "top word",
+      "value": "the"
+     }
+    ],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-004",
+   "category": "diversity",
+   "language": "en",
+   "corpus": "C1",
+   "question": "What is the type-token ratio (TTR) of this corpus?",
+   "trap": false,
+   "tools": [],
+   "gold": {
+    "numbers": [],
+    "strings": [],
+    "traps": {
+     "no_tool": true
+    }
+   }
+  },
+  {
+   "id": "G-005",
+   "category": "corpus_stats",
+   "language": "ar",
+   "corpus": "C4",
+   "question": "كم عدد الكلمات والأنواع المختلفة في هذا المحتوى؟",
+   "trap": false,
+   "tools": [
+    {
+     "name": "get_frequency",
+     "args": {
+      "corpus": "C4",
+      "unit": "word",
+      "limit": 1
+     },
+     "ok": true,
+     "result": {
+      "unit": "word",
+      "total_tokens": 233,
+      "total_types": 1,
+      "sttr": 0.7768,
+      "top_items": [
+       {
+        "item": "في",
+        "freq": 11,
+        "per_million": 47210.3,
+        "percent": 4.721,
+        "range": 4,
+        "range_percent": 100.0
+       }
+      ]
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "total tokens",
+      "value": 233,
+      "tol": 1e-06
+     },
+     {
+      "label": "total types",
+      "value": 1,
+      "tol": 1e-06
+     }
+    ],
+    "strings": [],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-006",
+   "category": "corpus_stats",
+   "language": "en",
+   "corpus": "C2",
+   "question": "For the learner corpus: how many tokens and how many types?",
+   "trap": false,
+   "tools": [
+    {
+     "name": "get_frequency",
+     "args": {
+      "corpus": "C2",
+      "unit": "word",
+      "limit": 1
+     },
+     "ok": true,
+     "result": {
+      "unit": "word",
+      "total_tokens": 105,
+      "total_types": 1,
+      "sttr": 0.5905,
+      "top_items": [
+       {
+        "item": "I",
+        "freq": 8,
+        "per_million": 76190.48,
+        "percent": 7.619,
+        "range": 1,
+        "range_percent": 100.0
+       }
+      ]
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "tokens",
+      "value": 105,
+      "tol": 1e-06
+     },
+     {
+      "label": "types",
+      "value": 1,
+      "tol": 1e-06
+     }
+    ],
+    "strings": [],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-007",
+   "category": "keyness",
+   "language": "en",
+   "corpus": "C2",
+   "question": "Which word is the single strongest positive keyword of this corpus compared with the press corpus, and how many tokens does each corpus have? Use the reference corpus ID given in the context.",
+   "trap": false,
+   "tools": [
+    {
+     "name": "compute_keyness",
+     "args": {
+      "corpus": "C2",
+      "reference": "C3",
+      "limit": 10
+     },
+     "ok": true,
+     "result": {
+      "target_corpus_id": "139b5f9f002b4730",
+      "reference_corpus_id": "287e79a486d44b5b",
+      "N1": 35,
+      "N2": 32,
+      "positive_keywords": [
+       {
+        "term": "i",
+        "f1": 8,
+        "f2": 0,
+        "log_likelihood": 11.380219077489372,
+        "chi_square": 8.306053268765135,
+        "log_ratio": 3.8707169830550336,
+        "pct_diff": 1362.857142857143,
+        "simple_maths": 228572.42857142855,
+        "odds_ratio": 20.09090909090909,
+        "p_ll": 0.000742,
+        "q_bh": 0.006681
+       },
+       {
+        "term": "goal",
+        "f1": 6,
+        "f2": 0,
+        "log_likelihood": 8.330993404202019,
+        "chi_square": 6.025292740046839,
+        "log_ratio": 3.4556794837761897,
+        "pct_diff": 997.1428571428571,
+        "simple_maths": 171429.57142857142,
+        "odds_ratio": 14.322033898305085,
+        "p_ll": 0.003897,
+        "q_bh": 0.007698
+       },
+       {
+        "term": "is",
+        "f1": 5,
+        "f2": 0,
+        "log_likelihood": 6.861625848268458,
+        "chi_square": 4.9400921658986165,
+        "log_ratio": 3.192645077942396,
+        "pct_diff": 814.2857142857142,
+        "simple_maths": 142858.14285714284,
+        "odds_ratio": 11.721311475409836,
+        "p_ll": 0.008807,
+        "q_bh": 0.008807
+       },
+       {
+        "term": "to",
+        "f1": 5,
+        "f2": 0,
+        "log_likelihood": 6.861625848268458,
+        "chi_square": 4.9400921658986165,
+        "log_ratio": 3.192645077942396,
+        "pct_diff": 814.2857142857142,
+        "simple_maths": 142858.14285714284,
+        "odds_ratio": 11.721311475409836,
+        "p_ll": 0.008807,
+        "q_bh": 0.008807
+       },
+       {
+        "term": "my",
+        "f1": 5,
+        "f2": 0,
+        "log_likelihood": 6.861625848268458,
+        "chi_square": 4.9400921658986165,
+        "log_ratio": 3.192645077942396,
+        "pct_diff": 814.2857142857142,
+        "simple_maths": 142858.14285714284,
+        "odds_ratio": 11.721311475409836,
+        "p_ll": 0.008807,
+        "q_bh": 0.008807
+       }
+      ],
+      "negative_keywords": [
+       {
+        "term": "in",
+        "f1": 0,
+        "f2": 6,
+        "log_likelihood": 9.516121767180039,
+        "chi_square": 7.20799180327869,
+        "log_ratio": -3.714245517666123,
+        "pct_diff": -100.0,
+        "simple_maths": 5.333304889040592e-06,
+        "odds_ratio": 0.05742145178764897,
+        "p_ll": 0.002037,
+        "q_bh": 0.007698
+       },
+       {
+        "term": "the",
+        "f1": 6,
+        "f2": 16,
+        "log_likelihood": 8.391806881151465,
+        "chi_square": 8.183088023088024,
+        "log_ratio": -1.5443205162238103,
+        "pct_diff": -65.71428571428571,
+        "simple_maths": 0.34285845714022856,
+        "odds_ratio": 0.20689655172413793,
+        "p_ll": 0.003769,
+        "q_bh": 0.007698
+       },
+       {
+        "term": "a",
+        "f1": 0,
+        "f2": 5,
+        "log_likelihood": 7.832240237849364,
+        "chi_square": 5.909778225806453,
+        "log_ratio": -3.451211111832329,
+        "pct_diff": -100.0,
+        "simple_maths": 6.3999590402621425e-06,
+        "odds_ratio": 0.07042253521126761,
+        "p_ll": 0.005132,
+        "q_bh": 0.007698
+       },
+       {
+        "term": "and",
+        "f1": 0,
+        "f2": 5,
+        "log_likelihood": 7.832240237849364,
+        "chi_square": 5.909778225806453,
+        "log_ratio": -3.451211111832329,
+        "pct_diff": -100.0,
+        "simple_maths": 6.3999590402621425e-06,
+        "odds_ratio": 0.07042253521126761,
+        "p_ll": 0.005132,
+        "q_bh": 0.007698
+       }
+      ]
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "N1",
+      "value": 35,
+      "tol": 1e-06
+     },
+     {
+      "label": "N2",
+      "value": 32,
+      "tol": 1e-06
+     }
+    ],
+    "strings": [
+     {
+      "label": "top positive keyword",
+      "value": "i"
+     }
+    ],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-008",
+   "category": "keyness",
+   "language": "en",
+   "corpus": "C2",
+   "question": "How many positive keywords and how many negative keywords does the keyness comparison report (vs the press corpus)?",
+   "trap": false,
+   "tools": [
+    {
+     "name": "compute_keyness",
+     "args": {
+      "corpus": "C2",
+      "reference": "C3",
+      "limit": 10
+     },
+     "ok": true,
+     "result": {
+      "target_corpus_id": "139b5f9f002b4730",
+      "reference_corpus_id": "287e79a486d44b5b",
+      "N1": 35,
+      "N2": 32,
+      "positive_keywords": [
+       {
+        "term": "i",
+        "f1": 8,
+        "f2": 0,
+        "log_likelihood": 11.380219077489372,
+        "chi_square": 8.306053268765135,
+        "log_ratio": 3.8707169830550336,
+        "pct_diff": 1362.857142857143,
+        "simple_maths": 228572.42857142855,
+        "odds_ratio": 20.09090909090909,
+        "p_ll": 0.000742,
+        "q_bh": 0.006681
+       },
+       {
+        "term": "goal",
+        "f1": 6,
+        "f2": 0,
+        "log_likelihood": 8.330993404202019,
+        "chi_square": 6.025292740046839,
+        "log_ratio": 3.4556794837761897,
+        "pct_diff": 997.1428571428571,
+        "simple_maths": 171429.57142857142,
+        "odds_ratio": 14.322033898305085,
+        "p_ll": 0.003897,
+        "q_bh": 0.007698
+       },
+       {
+        "term": "is",
+        "f1": 5,
+        "f2": 0,
+        "log_likelihood": 6.861625848268458,
+        "chi_square": 4.9400921658986165,
+        "log_ratio": 3.192645077942396,
+        "pct_diff": 814.2857142857142,
+        "simple_maths": 142858.14285714284,
+        "odds_ratio": 11.721311475409836,
+        "p_ll": 0.008807,
+        "q_bh": 0.008807
+       },
+       {
+        "term": "to",
+        "f1": 5,
+        "f2": 0,
+        "log_likelihood": 6.861625848268458,
+        "chi_square": 4.9400921658986165,
+        "log_ratio": 3.192645077942396,
+        "pct_diff": 814.2857142857142,
+        "simple_maths": 142858.14285714284,
+        "odds_ratio": 11.721311475409836,
+        "p_ll": 0.008807,
+        "q_bh": 0.008807
+       },
+       {
+        "term": "my",
+        "f1": 5,
+        "f2": 0,
+        "log_likelihood": 6.861625848268458,
+        "chi_square": 4.9400921658986165,
+        "log_ratio": 3.192645077942396,
+        "pct_diff": 814.2857142857142,
+        "simple_maths": 142858.14285714284,
+        "odds_ratio": 11.721311475409836,
+        "p_ll": 0.008807,
+        "q_bh": 0.008807
+       }
+      ],
+      "negative_keywords": [
+       {
+        "term": "in",
+        "f1": 0,
+        "f2": 6,
+        "log_likelihood": 9.516121767180039,
+        "chi_square": 7.20799180327869,
+        "log_ratio": -3.714245517666123,
+        "pct_diff": -100.0,
+        "simple_maths": 5.333304889040592e-06,
+        "odds_ratio": 0.05742145178764897,
+        "p_ll": 0.002037,
+        "q_bh": 0.007698
+       },
+       {
+        "term": "the",
+        "f1": 6,
+        "f2": 16,
+        "log_likelihood": 8.391806881151465,
+        "chi_square": 8.183088023088024,
+        "log_ratio": -1.5443205162238103,
+        "pct_diff": -65.71428571428571,
+        "simple_maths": 0.34285845714022856,
+        "odds_ratio": 0.20689655172413793,
+        "p_ll": 0.003769,
+        "q_bh": 0.007698
+       },
+       {
+        "term": "a",
+        "f1": 0,
+        "f2": 5,
+        "log_likelihood": 7.832240237849364,
+        "chi_square": 5.909778225806453,
+        "log_ratio": -3.451211111832329,
+        "pct_diff": -100.0,
+        "simple_maths": 6.3999590402621425e-06,
+        "odds_ratio": 0.07042253521126761,
+        "p_ll": 0.005132,
+        "q_bh": 0.007698
+       },
+       {
+        "term": "and",
+        "f1": 0,
+        "f2": 5,
+        "log_likelihood": 7.832240237849364,
+        "chi_square": 5.909778225806453,
+        "log_ratio": -3.451211111832329,
+        "pct_diff": -100.0,
+        "simple_maths": 6.3999590402621425e-06,
+        "odds_ratio": 0.07042253521126761,
+        "p_ll": 0.005132,
+        "q_bh": 0.007698
+       }
+      ]
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "positive keywords",
+      "value": 5,
+      "tol": 0
+     },
+     {
+      "label": "negative keywords",
+      "value": 4,
+      "tol": 0
+     }
+    ],
+    "strings": [],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-009",
+   "category": "keyness",
+   "language": "en",
+   "corpus": "C2",
+   "question": "For the word 'goal': what are its log ratio and percent difference (%DIFF) in the keyness table vs the press corpus?",
+   "trap": false,
+   "tools": [
+    {
+     "name": "compute_keyness",
+     "args": {
+      "corpus": "C2",
+      "reference": "C3",
+      "limit": 50
+     },
+     "ok": true,
+     "result": {
+      "target_corpus_id": "139b5f9f002b4730",
+      "reference_corpus_id": "287e79a486d44b5b",
+      "N1": 35,
+      "N2": 32,
+      "positive_keywords": [
+       {
+        "term": "i",
+        "f1": 8,
+        "f2": 0,
+        "log_likelihood": 11.380219077489372,
+        "chi_square": 8.306053268765135,
+        "log_ratio": 3.8707169830550336,
+        "pct_diff": 1362.857142857143,
+        "simple_maths": 228572.42857142855,
+        "odds_ratio": 20.09090909090909,
+        "p_ll": 0.000742,
+        "q_bh": 0.006681
+       },
+       {
+        "term": "goal",
+        "f1": 6,
+        "f2": 0,
+        "log_likelihood": 8.330993404202019,
+        "chi_square": 6.025292740046839,
+        "log_ratio": 3.4556794837761897,
+        "pct_diff": 997.1428571428571,
+        "simple_maths": 171429.57142857142,
+        "odds_ratio": 14.322033898305085,
+        "p_ll": 0.003897,
+        "q_bh": 0.007698
+       },
+       {
+        "term": "is",
+        "f1": 5,
+        "f2": 0,
+        "log_likelihood": 6.861625848268458,
+        "chi_square": 4.9400921658986165,
+        "log_ratio": 3.192645077942396,
+        "pct_diff": 814.2857142857142,
+        "simple_maths": 142858.14285714284,
+        "odds_ratio": 11.721311475409836,
+        "p_ll": 0.008807,
+        "q_bh": 0.008807
+       },
+       {
+        "term": "to",
+        "f1": 5,
+        "f2": 0,
+        "log_likelihood": 6.861625848268458,
+        "chi_square": 4.9400921658986165,
+        "log_ratio": 3.192645077942396,
+        "pct_diff": 814.2857142857142,
+        "simple_maths": 142858.14285714284,
+        "odds_ratio": 11.721311475409836,
+        "p_ll": 0.008807,
+        "q_bh": 0.008807
+       },
+       {
+        "term": "my",
+        "f1": 5,
+        "f2": 0,
+        "log_likelihood": 6.861625848268458,
+        "chi_square": 4.9400921658986165,
+        "log_ratio": 3.192645077942396,
+        "pct_diff": 814.2857142857142,
+        "simple_maths": 142858.14285714284,
+        "odds_ratio": 11.721311475409836,
+        "p_ll": 0.008807,
+        "q_bh": 0.008807
+       }
+      ],
+      "negative_keywords": [
+       {
+        "term": "in",
+        "f1": 0,
+        "f2": 6,
+        "log_likelihood": 9.516121767180039,
+        "chi_square": 7.20799180327869,
+        "log_ratio": -3.714245517666123,
+        "pct_diff": -100.0,
+        "simple_maths": 5.333304889040592e-06,
+        "odds_ratio": 0.05742145178764897,
+        "p_ll": 0.002037,
+        "q_bh": 0.007698
+       },
+       {
+        "term": "the",
+        "f1": 6,
+        "f2": 16,
+        "log_likelihood": 8.391806881151465,
+        "chi_square": 8.183088023088024,
+        "log_ratio": -1.5443205162238103,
+        "pct_diff": -65.71428571428571,
+        "simple_maths": 0.34285845714022856,
+        "odds_ratio": 0.20689655172413793,
+        "p_ll": 0.003769,
+        "q_bh": 0.007698
+       },
+       {
+        "term": "a",
+        "f1": 0,
+        "f2": 5,
+        "log_likelihood": 7.832240237849364,
+        "chi_square": 5.909778225806453,
+        "log_ratio": -3.451211111832329,
+        "pct_diff": -100.0,
+        "simple_maths": 6.3999590402621425e-06,
+        "odds_ratio": 0.07042253521126761,
+        "p_ll": 0.005132,
+        "q_bh": 0.007698
+       },
+       {
+        "term": "and",
+        "f1": 0,
+        "f2": 5,
+        "log_likelihood": 7.832240237849364,
+        "chi_square": 5.909778225806453,
+        "log_ratio": -3.451211111832329,
+        "pct_diff": -100.0,
+        "simple_maths": 6.3999590402621425e-06,
+        "odds_ratio": 0.07042253521126761,
+        "p_ll": 0.005132,
+        "q_bh": 0.007698
+       }
+      ]
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "log_ratio",
+      "value": 3.4556794837761897,
+      "tol": 1e-06
+     },
+     {
+      "label": "pct_diff",
+      "value": 997.1428571428571,
+      "tol": 1e-06
+     }
+    ],
+    "strings": [],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-010",
+   "category": "keyness",
+   "language": "en",
+   "corpus": "C2",
+   "question": "For 'goal': what are the exact p-value (p_ll) and the Benjamini-Hochberg q-value, and is it significant at q < 0.05?",
+   "trap": false,
+   "tools": [
+    {
+     "name": "compute_keyness",
+     "args": {
+      "corpus": "C2",
+      "reference": "C3",
+      "limit": 50
+     },
+     "ok": true,
+     "result": {
+      "target_corpus_id": "139b5f9f002b4730",
+      "reference_corpus_id": "287e79a486d44b5b",
+      "N1": 35,
+      "N2": 32,
+      "positive_keywords": [
+       {
+        "term": "i",
+        "f1": 8,
+        "f2": 0,
+        "log_likelihood": 11.380219077489372,
+        "chi_square": 8.306053268765135,
+        "log_ratio": 3.8707169830550336,
+        "pct_diff": 1362.857142857143,
+        "simple_maths": 228572.42857142855,
+        "odds_ratio": 20.09090909090909,
+        "p_ll": 0.000742,
+        "q_bh": 0.006681
+       },
+       {
+        "term": "goal",
+        "f1": 6,
+        "f2": 0,
+        "log_likelihood": 8.330993404202019,
+        "chi_square": 6.025292740046839,
+        "log_ratio": 3.4556794837761897,
+        "pct_diff": 997.1428571428571,
+        "simple_maths": 171429.57142857142,
+        "odds_ratio": 14.322033898305085,
+        "p_ll": 0.003897,
+        "q_bh": 0.007698
+       },
+       {
+        "term": "is",
+        "f1": 5,
+        "f2": 0,
+        "log_likelihood": 6.861625848268458,
+        "chi_square": 4.9400921658986165,
+        "log_ratio": 3.192645077942396,
+        "pct_diff": 814.2857142857142,
+        "simple_maths": 142858.14285714284,
+        "odds_ratio": 11.721311475409836,
+        "p_ll": 0.008807,
+        "q_bh": 0.008807
+       },
+       {
+        "term": "to",
+        "f1": 5,
+        "f2": 0,
+        "log_likelihood": 6.861625848268458,
+        "chi_square": 4.9400921658986165,
+        "log_ratio": 3.192645077942396,
+        "pct_diff": 814.2857142857142,
+        "simple_maths": 142858.14285714284,
+        "odds_ratio": 11.721311475409836,
+        "p_ll": 0.008807,
+        "q_bh": 0.008807
+       },
+       {
+        "term": "my",
+        "f1": 5,
+        "f2": 0,
+        "log_likelihood": 6.861625848268458,
+        "chi_square": 4.9400921658986165,
+        "log_ratio": 3.192645077942396,
+        "pct_diff": 814.2857142857142,
+        "simple_maths": 142858.14285714284,
+        "odds_ratio": 11.721311475409836,
+        "p_ll": 0.008807,
+        "q_bh": 0.008807
+       }
+      ],
+      "negative_keywords": [
+       {
+        "term": "in",
+        "f1": 0,
+        "f2": 6,
+        "log_likelihood": 9.516121767180039,
+        "chi_square": 7.20799180327869,
+        "log_ratio": -3.714245517666123,
+        "pct_diff": -100.0,
+        "simple_maths": 5.333304889040592e-06,
+        "odds_ratio": 0.05742145178764897,
+        "p_ll": 0.002037,
+        "q_bh": 0.007698
+       },
+       {
+        "term": "the",
+        "f1": 6,
+        "f2": 16,
+        "log_likelihood": 8.391806881151465,
+        "chi_square": 8.183088023088024,
+        "log_ratio": -1.5443205162238103,
+        "pct_diff": -65.71428571428571,
+        "simple_maths": 0.34285845714022856,
+        "odds_ratio": 0.20689655172413793,
+        "p_ll": 0.003769,
+        "q_bh": 0.007698
+       },
+       {
+        "term": "a",
+        "f1": 0,
+        "f2": 5,
+        "log_likelihood": 7.832240237849364,
+        "chi_square": 5.909778225806453,
+        "log_ratio": -3.451211111832329,
+        "pct_diff": -100.0,
+        "simple_maths": 6.3999590402621425e-06,
+        "odds_ratio": 0.07042253521126761,
+        "p_ll": 0.005132,
+        "q_bh": 0.007698
+       },
+       {
+        "term": "and",
+        "f1": 0,
+        "f2": 5,
+        "log_likelihood": 7.832240237849364,
+        "chi_square": 5.909778225806453,
+        "log_ratio": -3.451211111832329,
+        "pct_diff": -100.0,
+        "simple_maths": 6.3999590402621425e-06,
+        "odds_ratio": 0.07042253521126761,
+        "p_ll": 0.005132,
+        "q_bh": 0.007698
+       }
+      ]
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "p_ll",
+      "value": 0.003897,
+      "tol": 1e-06
+     },
+     {
+      "label": "q_bh",
+      "value": 0.007698,
+      "tol": 1e-06
+     }
+    ],
+    "strings": [],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-011",
+   "category": "keyness",
+   "language": "en",
+   "corpus": "C2",
+   "question": "What is the strongest negative keyword of the learner corpus vs the press corpus, and what is its log ratio?",
+   "trap": false,
+   "tools": [
+    {
+     "name": "compute_keyness",
+     "args": {
+      "corpus": "C2",
+      "reference": "C3",
+      "limit": 10
+     },
+     "ok": true,
+     "result": {
+      "target_corpus_id": "139b5f9f002b4730",
+      "reference_corpus_id": "287e79a486d44b5b",
+      "N1": 35,
+      "N2": 32,
+      "positive_keywords": [
+       {
+        "term": "i",
+        "f1": 8,
+        "f2": 0,
+        "log_likelihood": 11.380219077489372,
+        "chi_square": 8.306053268765135,
+        "log_ratio": 3.8707169830550336,
+        "pct_diff": 1362.857142857143,
+        "simple_maths": 228572.42857142855,
+        "odds_ratio": 20.09090909090909,
+        "p_ll": 0.000742,
+        "q_bh": 0.006681
+       },
+       {
+        "term": "goal",
+        "f1": 6,
+        "f2": 0,
+        "log_likelihood": 8.330993404202019,
+        "chi_square": 6.025292740046839,
+        "log_ratio": 3.4556794837761897,
+        "pct_diff": 997.1428571428571,
+        "simple_maths": 171429.57142857142,
+        "odds_ratio": 14.322033898305085,
+        "p_ll": 0.003897,
+        "q_bh": 0.007698
+       },
+       {
+        "term": "is",
+        "f1": 5,
+        "f2": 0,
+        "log_likelihood": 6.861625848268458,
+        "chi_square": 4.9400921658986165,
+        "log_ratio": 3.192645077942396,
+        "pct_diff": 814.2857142857142,
+        "simple_maths": 142858.14285714284,
+        "odds_ratio": 11.721311475409836,
+        "p_ll": 0.008807,
+        "q_bh": 0.008807
+       },
+       {
+        "term": "to",
+        "f1": 5,
+        "f2": 0,
+        "log_likelihood": 6.861625848268458,
+        "chi_square": 4.9400921658986165,
+        "log_ratio": 3.192645077942396,
+        "pct_diff": 814.2857142857142,
+        "simple_maths": 142858.14285714284,
+        "odds_ratio": 11.721311475409836,
+        "p_ll": 0.008807,
+        "q_bh": 0.008807
+       },
+       {
+        "term": "my",
+        "f1": 5,
+        "f2": 0,
+        "log_likelihood": 6.861625848268458,
+        "chi_square": 4.9400921658986165,
+        "log_ratio": 3.192645077942396,
+        "pct_diff": 814.2857142857142,
+        "simple_maths": 142858.14285714284,
+        "odds_ratio": 11.721311475409836,
+        "p_ll": 0.008807,
+        "q_bh": 0.008807
+       }
+      ],
+      "negative_keywords": [
+       {
+        "term": "in",
+        "f1": 0,
+        "f2": 6,
+        "log_likelihood": 9.516121767180039,
+        "chi_square": 7.20799180327869,
+        "log_ratio": -3.714245517666123,
+        "pct_diff": -100.0,
+        "simple_maths": 5.333304889040592e-06,
+        "odds_ratio": 0.05742145178764897,
+        "p_ll": 0.002037,
+        "q_bh": 0.007698
+       },
+       {
+        "term": "the",
+        "f1": 6,
+        "f2": 16,
+        "log_likelihood": 8.391806881151465,
+        "chi_square": 8.183088023088024,
+        "log_ratio": -1.5443205162238103,
+        "pct_diff": -65.71428571428571,
+        "simple_maths": 0.34285845714022856,
+        "odds_ratio": 0.20689655172413793,
+        "p_ll": 0.003769,
+        "q_bh": 0.007698
+       },
+       {
+        "term": "a",
+        "f1": 0,
+        "f2": 5,
+        "log_likelihood": 7.832240237849364,
+        "chi_square": 5.909778225806453,
+        "log_ratio": -3.451211111832329,
+        "pct_diff": -100.0,
+        "simple_maths": 6.3999590402621425e-06,
+        "odds_ratio": 0.07042253521126761,
+        "p_ll": 0.005132,
+        "q_bh": 0.007698
+       },
+       {
+        "term": "and",
+        "f1": 0,
+        "f2": 5,
+        "log_likelihood": 7.832240237849364,
+        "chi_square": 5.909778225806453,
+        "log_ratio": -3.451211111832329,
+        "pct_diff": -100.0,
+        "simple_maths": 6.3999590402621425e-06,
+        "odds_ratio": 0.07042253521126761,
+        "p_ll": 0.005132,
+        "q_bh": 0.007698
+       }
+      ]
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "its log_ratio",
+      "value": -3.714245517666123,
+      "tol": 1e-06
+     }
+    ],
+    "strings": [
+     {
+      "label": "top negative keyword",
+      "value": "in"
+     }
+    ],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-012",
+   "category": "keyness",
+   "language": "en",
+   "corpus": "C3",
+   "question": "Comparing this press corpus with the bundled BE06 written-English reference, what is the top positive keyword and what is N1?",
+   "trap": false,
+   "tools": [],
+   "gold": {
+    "numbers": [],
+    "strings": [],
+    "traps": {
+     "no_tool": true
+    }
+   }
+  },
+  {
+   "id": "G-013",
+   "category": "keyness",
+   "language": "en",
+   "corpus": "C2",
+   "question": "Is the word 'the' listed as a positive keyword of the learner corpus? If it appears in the table, what is its log ratio?",
+   "trap": false,
+   "tools": [
+    {
+     "name": "compute_keyness",
+     "args": {
+      "corpus": "C2",
+      "reference": "C3",
+      "limit": 50
+     },
+     "ok": true,
+     "result": {
+      "target_corpus_id": "139b5f9f002b4730",
+      "reference_corpus_id": "287e79a486d44b5b",
+      "N1": 35,
+      "N2": 32,
+      "positive_keywords": [
+       {
+        "term": "i",
+        "f1": 8,
+        "f2": 0,
+        "log_likelihood": 11.380219077489372,
+        "chi_square": 8.306053268765135,
+        "log_ratio": 3.8707169830550336,
+        "pct_diff": 1362.857142857143,
+        "simple_maths": 228572.42857142855,
+        "odds_ratio": 20.09090909090909,
+        "p_ll": 0.000742,
+        "q_bh": 0.006681
+       },
+       {
+        "term": "goal",
+        "f1": 6,
+        "f2": 0,
+        "log_likelihood": 8.330993404202019,
+        "chi_square": 6.025292740046839,
+        "log_ratio": 3.4556794837761897,
+        "pct_diff": 997.1428571428571,
+        "simple_maths": 171429.57142857142,
+        "odds_ratio": 14.322033898305085,
+        "p_ll": 0.003897,
+        "q_bh": 0.007698
+       },
+       {
+        "term": "is",
+        "f1": 5,
+        "f2": 0,
+        "log_likelihood": 6.861625848268458,
+        "chi_square": 4.9400921658986165,
+        "log_ratio": 3.192645077942396,
+        "pct_diff": 814.2857142857142,
+        "simple_maths": 142858.14285714284,
+        "odds_ratio": 11.721311475409836,
+        "p_ll": 0.008807,
+        "q_bh": 0.008807
+       },
+       {
+        "term": "to",
+        "f1": 5,
+        "f2": 0,
+        "log_likelihood": 6.861625848268458,
+        "chi_square": 4.9400921658986165,
+        "log_ratio": 3.192645077942396,
+        "pct_diff": 814.2857142857142,
+        "simple_maths": 142858.14285714284,
+        "odds_ratio": 11.721311475409836,
+        "p_ll": 0.008807,
+        "q_bh": 0.008807
+       },
+       {
+        "term": "my",
+        "f1": 5,
+        "f2": 0,
+        "log_likelihood": 6.861625848268458,
+        "chi_square": 4.9400921658986165,
+        "log_ratio": 3.192645077942396,
+        "pct_diff": 814.2857142857142,
+        "simple_maths": 142858.14285714284,
+        "odds_ratio": 11.721311475409836,
+        "p_ll": 0.008807,
+        "q_bh": 0.008807
+       }
+      ],
+      "negative_keywords": [
+       {
+        "term": "in",
+        "f1": 0,
+        "f2": 6,
+        "log_likelihood": 9.516121767180039,
+        "chi_square": 7.20799180327869,
+        "log_ratio": -3.714245517666123,
+        "pct_diff": -100.0,
+        "simple_maths": 5.333304889040592e-06,
+        "odds_ratio": 0.05742145178764897,
+        "p_ll": 0.002037,
+        "q_bh": 0.007698
+       },
+       {
+        "term": "the",
+        "f1": 6,
+        "f2": 16,
+        "log_likelihood": 8.391806881151465,
+        "chi_square": 8.183088023088024,
+        "log_ratio": -1.5443205162238103,
+        "pct_diff": -65.71428571428571,
+        "simple_maths": 0.34285845714022856,
+        "odds_ratio": 0.20689655172413793,
+        "p_ll": 0.003769,
+        "q_bh": 0.007698
+       },
+       {
+        "term": "a",
+        "f1": 0,
+        "f2": 5,
+        "log_likelihood": 7.832240237849364,
+        "chi_square": 5.909778225806453,
+        "log_ratio": -3.451211111832329,
+        "pct_diff": -100.0,
+        "simple_maths": 6.3999590402621425e-06,
+        "odds_ratio": 0.07042253521126761,
+        "p_ll": 0.005132,
+        "q_bh": 0.007698
+       },
+       {
+        "term": "and",
+        "f1": 0,
+        "f2": 5,
+        "log_likelihood": 7.832240237849364,
+        "chi_square": 5.909778225806453,
+        "log_ratio": -3.451211111832329,
+        "pct_diff": -100.0,
+        "simple_maths": 6.3999590402621425e-06,
+        "odds_ratio": 0.07042253521126761,
+        "p_ll": 0.005132,
+        "q_bh": 0.007698
+       }
+      ]
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [],
+    "strings": [],
+    "traps": {
+     "absent": [
+      "row for 'the'"
+     ]
+    }
+   }
+  },
+  {
+   "id": "G-014",
+   "category": "keyness",
+   "language": "en",
+   "corpus": "C2",
+   "question": "What is the third word listed among the positive keywords of the learner corpus vs the press corpus?",
+   "trap": false,
+   "tools": [
+    {
+     "name": "compute_keyness",
+     "args": {
+      "corpus": "C2",
+      "reference": "C3",
+      "limit": 10
+     },
+     "ok": true,
+     "result": {
+      "target_corpus_id": "139b5f9f002b4730",
+      "reference_corpus_id": "287e79a486d44b5b",
+      "N1": 35,
+      "N2": 32,
+      "positive_keywords": [
+       {
+        "term": "i",
+        "f1": 8,
+        "f2": 0,
+        "log_likelihood": 11.380219077489372,
+        "chi_square": 8.306053268765135,
+        "log_ratio": 3.8707169830550336,
+        "pct_diff": 1362.857142857143,
+        "simple_maths": 228572.42857142855,
+        "odds_ratio": 20.09090909090909,
+        "p_ll": 0.000742,
+        "q_bh": 0.006681
+       },
+       {
+        "term": "goal",
+        "f1": 6,
+        "f2": 0,
+        "log_likelihood": 8.330993404202019,
+        "chi_square": 6.025292740046839,
+        "log_ratio": 3.4556794837761897,
+        "pct_diff": 997.1428571428571,
+        "simple_maths": 171429.57142857142,
+        "odds_ratio": 14.322033898305085,
+        "p_ll": 0.003897,
+        "q_bh": 0.007698
+       },
+       {
+        "term": "is",
+        "f1": 5,
+        "f2": 0,
+        "log_likelihood": 6.861625848268458,
+        "chi_square": 4.9400921658986165,
+        "log_ratio": 3.192645077942396,
+        "pct_diff": 814.2857142857142,
+        "simple_maths": 142858.14285714284,
+        "odds_ratio": 11.721311475409836,
+        "p_ll": 0.008807,
+        "q_bh": 0.008807
+       },
+       {
+        "term": "to",
+        "f1": 5,
+        "f2": 0,
+        "log_likelihood": 6.861625848268458,
+        "chi_square": 4.9400921658986165,
+        "log_ratio": 3.192645077942396,
+        "pct_diff": 814.2857142857142,
+        "simple_maths": 142858.14285714284,
+        "odds_ratio": 11.721311475409836,
+        "p_ll": 0.008807,
+        "q_bh": 0.008807
+       },
+       {
+        "term": "my",
+        "f1": 5,
+        "f2": 0,
+        "log_likelihood": 6.861625848268458,
+        "chi_square": 4.9400921658986165,
+        "log_ratio": 3.192645077942396,
+        "pct_diff": 814.2857142857142,
+        "simple_maths": 142858.14285714284,
+        "odds_ratio": 11.721311475409836,
+        "p_ll": 0.008807,
+        "q_bh": 0.008807
+       }
+      ],
+      "negative_keywords": [
+       {
+        "term": "in",
+        "f1": 0,
+        "f2": 6,
+        "log_likelihood": 9.516121767180039,
+        "chi_square": 7.20799180327869,
+        "log_ratio": -3.714245517666123,
+        "pct_diff": -100.0,
+        "simple_maths": 5.333304889040592e-06,
+        "odds_ratio": 0.05742145178764897,
+        "p_ll": 0.002037,
+        "q_bh": 0.007698
+       },
+       {
+        "term": "the",
+        "f1": 6,
+        "f2": 16,
+        "log_likelihood": 8.391806881151465,
+        "chi_square": 8.183088023088024,
+        "log_ratio": -1.5443205162238103,
+        "pct_diff": -65.71428571428571,
+        "simple_maths": 0.34285845714022856,
+        "odds_ratio": 0.20689655172413793,
+        "p_ll": 0.003769,
+        "q_bh": 0.007698
+       },
+       {
+        "term": "a",
+        "f1": 0,
+        "f2": 5,
+        "log_likelihood": 7.832240237849364,
+        "chi_square": 5.909778225806453,
+        "log_ratio": -3.451211111832329,
+        "pct_diff": -100.0,
+        "simple_maths": 6.3999590402621425e-06,
+        "odds_ratio": 0.07042253521126761,
+        "p_ll": 0.005132,
+        "q_bh": 0.007698
+       },
+       {
+        "term": "and",
+        "f1": 0,
+        "f2": 5,
+        "log_likelihood": 7.832240237849364,
+        "chi_square": 5.909778225806453,
+        "log_ratio": -3.451211111832329,
+        "pct_diff": -100.0,
+        "simple_maths": 6.3999590402621425e-06,
+        "odds_ratio": 0.07042253521126761,
+        "p_ll": 0.005132,
+        "q_bh": 0.007698
+       }
+      ]
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [],
+    "strings": [
+     {
+      "label": "third positive keyword",
+      "value": "is"
+     }
+    ],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-015",
+   "category": "keyness",
+   "language": "en",
+   "corpus": "C2",
+   "question": "Which is larger, the target or the reference token count, and what are the two counts (N1 and N2)?",
+   "trap": false,
+   "tools": [
+    {
+     "name": "compute_keyness",
+     "args": {
+      "corpus": "C2",
+      "reference": "C3",
+      "limit": 1
+     },
+     "ok": true,
+     "result": {
+      "target_corpus_id": "139b5f9f002b4730",
+      "reference_corpus_id": "287e79a486d44b5b",
+      "N1": 35,
+      "N2": 32,
+      "positive_keywords": [
+       {
+        "term": "i",
+        "f1": 8,
+        "f2": 0,
+        "log_likelihood": 11.380219077489372,
+        "chi_square": 8.306053268765135,
+        "log_ratio": 3.8707169830550336,
+        "pct_diff": 1362.857142857143,
+        "simple_maths": 228572.42857142855,
+        "odds_ratio": 20.09090909090909,
+        "p_ll": 0.000742,
+        "q_bh": 0.006681
+       }
+      ],
+      "negative_keywords": [
+       {
+        "term": "in",
+        "f1": 0,
+        "f2": 6,
+        "log_likelihood": 9.516121767180039,
+        "chi_square": 7.20799180327869,
+        "log_ratio": -3.714245517666123,
+        "pct_diff": -100.0,
+        "simple_maths": 5.333304889040592e-06,
+        "odds_ratio": 0.05742145178764897,
+        "p_ll": 0.002037,
+        "q_bh": 0.007698
+       }
+      ]
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "N1",
+      "value": 35,
+      "tol": 1e-06
+     },
+     {
+      "label": "N2",
+      "value": 32,
+      "tol": 1e-06
+     }
+    ],
+    "strings": [],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-016",
+   "category": "keyness",
+   "language": "en",
+   "corpus": "C2",
+   "question": "Is the word 'my' among the positive keywords of the learner corpus vs the press corpus?",
+   "trap": false,
+   "tools": [
+    {
+     "name": "compute_keyness",
+     "args": {
+      "corpus": "C2",
+      "reference": "C3",
+      "limit": 100
+     },
+     "ok": true,
+     "result": {
+      "target_corpus_id": "139b5f9f002b4730",
+      "reference_corpus_id": "287e79a486d44b5b",
+      "N1": 35,
+      "N2": 32,
+      "positive_keywords": [
+       {
+        "term": "i",
+        "f1": 8,
+        "f2": 0,
+        "log_likelihood": 11.380219077489372,
+        "chi_square": 8.306053268765135,
+        "log_ratio": 3.8707169830550336,
+        "pct_diff": 1362.857142857143,
+        "simple_maths": 228572.42857142855,
+        "odds_ratio": 20.09090909090909,
+        "p_ll": 0.000742,
+        "q_bh": 0.006681
+       },
+       {
+        "term": "goal",
+        "f1": 6,
+        "f2": 0,
+        "log_likelihood": 8.330993404202019,
+        "chi_square": 6.025292740046839,
+        "log_ratio": 3.4556794837761897,
+        "pct_diff": 997.1428571428571,
+        "simple_maths": 171429.57142857142,
+        "odds_ratio": 14.322033898305085,
+        "p_ll": 0.003897,
+        "q_bh": 0.007698
+       },
+       {
+        "term": "is",
+        "f1": 5,
+        "f2": 0,
+        "log_likelihood": 6.861625848268458,
+        "chi_square": 4.9400921658986165,
+        "log_ratio": 3.192645077942396,
+        "pct_diff": 814.2857142857142,
+        "simple_maths": 142858.14285714284,
+        "odds_ratio": 11.721311475409836,
+        "p_ll": 0.008807,
+        "q_bh": 0.008807
+       },
+       {
+        "term": "to",
+        "f1": 5,
+        "f2": 0,
+        "log_likelihood": 6.861625848268458,
+        "chi_square": 4.9400921658986165,
+        "log_ratio": 3.192645077942396,
+        "pct_diff": 814.2857142857142,
+        "simple_maths": 142858.14285714284,
+        "odds_ratio": 11.721311475409836,
+        "p_ll": 0.008807,
+        "q_bh": 0.008807
+       },
+       {
+        "term": "my",
+        "f1": 5,
+        "f2": 0,
+        "log_likelihood": 6.861625848268458,
+        "chi_square": 4.9400921658986165,
+        "log_ratio": 3.192645077942396,
+        "pct_diff": 814.2857142857142,
+        "simple_maths": 142858.14285714284,
+        "odds_ratio": 11.721311475409836,
+        "p_ll": 0.008807,
+        "q_bh": 0.008807
+       }
+      ],
+      "negative_keywords": [
+       {
+        "term": "in",
+        "f1": 0,
+        "f2": 6,
+        "log_likelihood": 9.516121767180039,
+        "chi_square": 7.20799180327869,
+        "log_ratio": -3.714245517666123,
+        "pct_diff": -100.0,
+        "simple_maths": 5.333304889040592e-06,
+        "odds_ratio": 0.05742145178764897,
+        "p_ll": 0.002037,
+        "q_bh": 0.007698
+       },
+       {
+        "term": "the",
+        "f1": 6,
+        "f2": 16,
+        "log_likelihood": 8.391806881151465,
+        "chi_square": 8.183088023088024,
+        "log_ratio": -1.5443205162238103,
+        "pct_diff": -65.71428571428571,
+        "simple_maths": 0.34285845714022856,
+        "odds_ratio": 0.20689655172413793,
+        "p_ll": 0.003769,
+        "q_bh": 0.007698
+       },
+       {
+        "term": "a",
+        "f1": 0,
+        "f2": 5,
+        "log_likelihood": 7.832240237849364,
+        "chi_square": 5.909778225806453,
+        "log_ratio": -3.451211111832329,
+        "pct_diff": -100.0,
+        "simple_maths": 6.3999590402621425e-06,
+        "odds_ratio": 0.07042253521126761,
+        "p_ll": 0.005132,
+        "q_bh": 0.007698
+       },
+       {
+        "term": "and",
+        "f1": 0,
+        "f2": 5,
+        "log_likelihood": 7.832240237849364,
+        "chi_square": 5.909778225806453,
+        "log_ratio": -3.451211111832329,
+        "pct_diff": -100.0,
+        "simple_maths": 6.3999590402621425e-06,
+        "odds_ratio": 0.07042253521126761,
+        "p_ll": 0.005132,
+        "q_bh": 0.007698
+       }
+      ]
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [],
+    "strings": [],
+    "traps": {
+     "present": [
+      "row for 'my'"
+     ]
+    }
+   }
+  },
+  {
+   "id": "G-017",
+   "category": "dispersion",
+   "language": "en",
+   "corpus": "C1",
+   "question": "What are Gries' DP and Juilland's D for the word 'algorithm' across the documents?",
+   "trap": false,
+   "tools": [
+    {
+     "name": "get_dispersion",
+     "args": {
+      "corpus": "C1",
+      "term": "algorithm"
+     },
+     "ok": true,
+     "result": {
+      "term": "algorithm",
+      "juillands_d": 0.0,
+      "gries_dp": 0.6193,
+      "per_part_freqs": [
+       0,
+       4,
+       0
+      ]
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "DP",
+      "value": 0.6193,
+      "tol": 1e-06
+     },
+     {
+      "label": "Juilland's D",
+      "value": 0.0,
+      "tol": 1e-06
+     }
+    ],
+    "strings": [],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-018",
+   "category": "dispersion",
+   "language": "en",
+   "corpus": "C1",
+   "question": "In which parts does 'algorithm' occur, and how many times in each part?",
+   "trap": false,
+   "tools": [
+    {
+     "name": "get_dispersion",
+     "args": {
+      "corpus": "C1",
+      "term": "algorithm"
+     },
+     "ok": true,
+     "result": {
+      "term": "algorithm",
+      "juillands_d": 0.0,
+      "gries_dp": 0.6193,
+      "per_part_freqs": [
+       0,
+       4,
+       0
+      ]
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "per-part frequencies",
+      "value": [
+       0.0,
+       4.0,
+       0.0
+      ],
+      "tol": 1e-06
+     }
+    ],
+    "strings": [],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-019",
+   "category": "dispersion",
+   "language": "en",
+   "corpus": "C1",
+   "question": "What is the DP-norm of the word 'goal', and what is its range percent across documents?",
+   "trap": false,
+   "tools": [],
+   "gold": {
+    "numbers": [],
+    "strings": [],
+    "traps": {
+     "no_tool": true
+    }
+   }
+  },
+  {
+   "id": "G-020",
+   "category": "dispersion",
+   "language": "en",
+   "corpus": "C1",
+   "question": "What is Juilland's D for 'the'?",
+   "trap": false,
+   "tools": [
+    {
+     "name": "get_dispersion",
+     "args": {
+      "corpus": "C1",
+      "term": "the"
+     },
+     "ok": true,
+     "result": {
+      "term": "the",
+      "juillands_d": 0.8797,
+      "gries_dp": 0.107,
+      "per_part_freqs": [
+       9,
+       7,
+       6
+      ]
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "Juilland's D",
+      "value": 0.8797,
+      "tol": 1e-06
+     }
+    ],
+    "strings": [],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-021",
+   "category": "dispersion",
+   "language": "en",
+   "corpus": "C1",
+   "question": "The word 'theatre' occurs only once in the whole corpus. What DP does the engine report for it?",
+   "trap": false,
+   "tools": [
+    {
+     "name": "get_dispersion",
+     "args": {
+      "corpus": "C1",
+      "term": "theatre"
+     },
+     "ok": true,
+     "result": {
+      "term": "theatre",
+      "juillands_d": 0.0,
+      "gries_dp": 0.6979,
+      "per_part_freqs": [
+       1,
+       0,
+       0
+      ]
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "DP",
+      "value": 0.6979,
+      "tol": 1e-06
+     }
+    ],
+    "strings": [],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-022",
+   "category": "dispersion",
+   "language": "en",
+   "corpus": "C1",
+   "question": "What is DP for 'goal' at word level and at lemma level?",
+   "trap": false,
+   "tools": [
+    {
+     "name": "get_dispersion",
+     "args": {
+      "corpus": "C1",
+      "term": "goal",
+      "level": "word"
+     },
+     "ok": true,
+     "result": {
+      "term": "goal",
+      "juillands_d": 0.0,
+      "gries_dp": 0.6828,
+      "per_part_freqs": [
+       0,
+       0,
+       6
+      ]
+     }
+    },
+    {
+     "name": "get_dispersion",
+     "args": {
+      "corpus": "C1",
+      "term": "goal",
+      "level": "lemma"
+     },
+     "ok": true,
+     "result": {
+      "term": "goal",
+      "juillands_d": 0.0,
+      "gries_dp": 0.6828,
+      "per_part_freqs": [
+       0,
+       0,
+       6
+      ]
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "DP word",
+      "value": 0.6828,
+      "tol": 1e-06
+     },
+     {
+      "label": "DP lemma",
+      "value": 0.6828,
+      "tol": 1e-06
+     }
+    ],
+    "strings": [],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-023",
+   "category": "dispersion",
+   "language": "en",
+   "corpus": "C1",
+   "question": "For 'council': how often does it occur in each part (document)?",
+   "trap": false,
+   "tools": [
+    {
+     "name": "get_dispersion",
+     "args": {
+      "corpus": "C1",
+      "term": "council"
+     },
+     "ok": true,
+     "result": {
+      "term": "council",
+      "juillands_d": 0.0,
+      "gries_dp": 0.6979,
+      "per_part_freqs": [
+       4,
+       0,
+       0
+      ]
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "per-part frequencies",
+      "value": [
+       4.0,
+       0.0,
+       0.0
+      ],
+      "tol": 1e-06
+     }
+    ],
+    "strings": [],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-024",
+   "category": "diversity",
+   "language": "en",
+   "corpus": "C1",
+   "question": "What are the MATTR and MTLD values for this corpus?",
+   "trap": false,
+   "tools": [],
+   "gold": {
+    "numbers": [],
+    "strings": [],
+    "traps": {
+     "no_tool": true
+    }
+   }
+  },
+  {
+   "id": "G-025",
+   "category": "diversity",
+   "language": "en",
+   "corpus": "C1",
+   "question": "What is Guiraud's Root TTR for this corpus?",
+   "trap": false,
+   "tools": [],
+   "gold": {
+    "numbers": [],
+    "strings": [],
+    "traps": {
+     "no_tool": true
+    }
+   }
+  },
+  {
+   "id": "G-026",
+   "category": "diversity",
+   "language": "en",
+   "corpus": "C2",
+   "question": "What is the TTR of the learner corpus?",
+   "trap": false,
+   "tools": [],
+   "gold": {
+    "numbers": [],
+    "strings": [],
+    "traps": {
+     "no_tool": true
+    }
+   }
+  },
+  {
+   "id": "G-027",
+   "category": "diversity",
+   "language": "ar",
+   "corpus": "C4",
+   "question": "ما قيمة STTR لهذا المحتوى؟",
+   "trap": false,
+   "tools": [
+    {
+     "name": "get_frequency",
+     "args": {
+      "corpus": "C4",
+      "unit": "word",
+      "limit": 1
+     },
+     "ok": true,
+     "result": {
+      "unit": "word",
+      "total_tokens": 233,
+      "total_types": 1,
+      "sttr": 0.7768,
+      "top_items": [
+       {
+        "item": "في",
+        "freq": 11,
+        "per_million": 47210.3,
+        "percent": 4.721,
+        "range": 4,
+        "range_percent": 100.0
+       }
+      ]
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "STTR",
+      "value": 0.7768,
+      "tol": 1e-06
+     }
+    ],
+    "strings": [],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-028",
+   "category": "diversity",
+   "language": "en",
+   "corpus": "C2",
+   "question": "What is the MTLD of the learner corpus?",
+   "trap": false,
+   "tools": [],
+   "gold": {
+    "numbers": [],
+    "strings": [],
+    "traps": {
+     "no_tool": true
+    }
+   }
+  },
+  {
+   "id": "G-029",
+   "category": "diversity",
+   "language": "en",
+   "corpus": "C2",
+   "question": "What is the STTR of the learner corpus?",
+   "trap": false,
+   "tools": [
+    {
+     "name": "get_frequency",
+     "args": {
+      "corpus": "C2",
+      "unit": "word",
+      "limit": 1
+     },
+     "ok": true,
+     "result": {
+      "unit": "word",
+      "total_tokens": 105,
+      "total_types": 1,
+      "sttr": 0.5905,
+      "top_items": [
+       {
+        "item": "I",
+        "freq": 8,
+        "per_million": 76190.48,
+        "percent": 7.619,
+        "range": 1,
+        "range_percent": 100.0
+       }
+      ]
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "STTR",
+      "value": 0.5905,
+      "tol": 1e-06
+     }
+    ],
+    "strings": [],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-030",
+   "category": "collocation",
+   "language": "en",
+   "corpus": "C1",
+   "question": "What is the strongest collocate of 'park' by mutual information (window 5), what is its MI score, and how many times do they co-occur (O)?",
+   "trap": false,
+   "tools": [
+    {
+     "name": "compute_collocations",
+     "args": {
+      "corpus": "C1",
+      "node": "park",
+      "window": 5,
+      "min_freq": 1
+     },
+     "ok": true,
+     "result": {
+      "node": "park",
+      "window": 5,
+      "measures": [
+       "mi",
+       "t_score",
+       "log_likelihood",
+       "dice",
+       "log_dice",
+       "chi_square",
+       "delta_p",
+       "fisher"
+      ],
+      "top_collocates": [
+       {
+        "collocate": "the",
+        "O": 4,
+        "fx": 4,
+        "fy": 22,
+        "N": 331,
+        "mi": 3.9113,
+        "t_score": 1.8671,
+        "log_likelihood": 22.4159,
+        "dice": 0.3077,
+        "log_dice": 12.2996,
+        "chi_square": 56.8691,
+        "chi2_min_expected": 0.2659,
+        "fisher": 1.5e-05,
+        "delta_p_y_given_x": 0.945,
+        "delta_p_x_given_y": 0.1818
+       },
+       {
+        "collocate": "Riverfront",
+        "O": 2,
+        "fx": 4,
+        "fy": 2,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 1.3971,
+        "log_likelihood": 18.8786,
+        "dice": 0.6667,
+        "log_dice": 13.415,
+        "chi_square": 164.4939,
+        "chi2_min_expected": 0.0242,
+        "fisher": 0.00011,
+        "delta_p_y_given_x": 0.5,
+        "delta_p_x_given_y": 0.9939
+       },
+       {
+        "collocate": "Council",
+        "O": 2,
+        "fx": 4,
+        "fy": 4,
+        "N": 331,
+        "mi": 5.3707,
+        "t_score": 1.38,
+        "log_likelihood": 13.3579,
+        "dice": 0.5,
+        "log_dice": 13.0,
+        "chi_square": 80.7379,
+        "chi2_min_expected": 0.0483,
+        "fisher": 0.000654,
+        "delta_p_y_given_x": 0.4939,
+        "delta_p_x_given_y": 0.4939
+       },
+       {
+        "collocate": "will",
+        "O": 2,
+        "fx": 4,
+        "fy": 5,
+        "N": 331,
+        "mi": 5.0488,
+        "t_score": 1.3715,
+        "log_likelihood": 12.1852,
+        "dice": 0.4444,
+        "log_dice": 12.8301,
+        "chi_square": 63.9886,
+        "chi2_min_expected": 0.0604,
+        "fisher": 0.001085,
+        "delta_p_y_given_x": 0.4908,
+        "delta_p_x_given_y": 0.3939
+       },
+       {
+        "collocate": "a",
+        "O": 2,
+        "fx": 4,
+        "fy": 8,
+        "N": 331,
+        "mi": 4.3707,
+        "t_score": 1.3459,
+        "log_likelihood": 9.9551,
+        "dice": 0.3333,
+        "log_dice": 12.415,
+        "chi_square": 38.8695,
+        "chi2_min_expected": 0.0967,
+        "fisher": 0.003002,
+        "delta_p_y_given_x": 0.4817,
+        "delta_p_x_given_y": 0.2438
+       },
+       {
+        "collocate": "Approves",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "approved",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "new",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "on",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "Tuesday",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "by",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "member",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "Dana",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "Reyes",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "include",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "playgrounds",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "mayor",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "replied",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "pay",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "itself",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       }
+      ]
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "MI",
+      "value": 3.9113,
+      "tol": 1e-06
+     },
+     {
+      "label": "O",
+      "value": 4,
+      "tol": 1e-06
+     }
+    ],
+    "strings": [
+     {
+      "label": "top collocate",
+      "value": "the"
+     }
+    ],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-031",
+   "category": "collocation",
+   "language": "en",
+   "corpus": "C1",
+   "question": "For the node 'river', what is the Log-Dice score of the top-ranked collocate?",
+   "trap": false,
+   "tools": [
+    {
+     "name": "compute_collocations",
+     "args": {
+      "corpus": "C1",
+      "node": "river",
+      "window": 5,
+      "min_freq": 1
+     },
+     "ok": true,
+     "result": {
+      "node": "river",
+      "window": 5,
+      "measures": [
+       "mi",
+       "t_score",
+       "log_likelihood",
+       "dice",
+       "log_dice",
+       "chi_square",
+       "delta_p",
+       "fisher"
+      ],
+      "top_collocates": [
+       {
+        "collocate": "Residents",
+        "O": 1,
+        "fx": 1,
+        "fy": 1,
+        "N": 331,
+        "mi": 8.3707,
+        "t_score": 0.997,
+        "log_likelihood": 13.6012,
+        "dice": 1.0,
+        "log_dice": 14.0,
+        "chi_square": 331.0,
+        "chi2_min_expected": 0.003,
+        "fisher": 0.003021,
+        "delta_p_y_given_x": 1.0,
+        "delta_p_x_given_y": 1.0
+       },
+       {
+        "collocate": "along",
+        "O": 1,
+        "fx": 1,
+        "fy": 1,
+        "N": 331,
+        "mi": 8.3707,
+        "t_score": 0.997,
+        "log_likelihood": 13.6012,
+        "dice": 1.0,
+        "log_dice": 14.0,
+        "chi_square": 331.0,
+        "chi2_min_expected": 0.003,
+        "fisher": 0.003021,
+        "delta_p_y_given_x": 1.0,
+        "delta_p_x_given_y": 1.0
+       },
+       {
+        "collocate": "asked",
+        "O": 1,
+        "fx": 1,
+        "fy": 1,
+        "N": 331,
+        "mi": 8.3707,
+        "t_score": 0.997,
+        "log_likelihood": 13.6012,
+        "dice": 1.0,
+        "log_dice": 14.0,
+        "chi_square": 331.0,
+        "chi2_min_expected": 0.003,
+        "fisher": 0.003021,
+        "delta_p_y_given_x": 1.0,
+        "delta_p_x_given_y": 1.0
+       },
+       {
+        "collocate": "more",
+        "O": 1,
+        "fx": 1,
+        "fy": 1,
+        "N": 331,
+        "mi": 8.3707,
+        "t_score": 0.997,
+        "log_likelihood": 13.6012,
+        "dice": 1.0,
+        "log_dice": 14.0,
+        "chi_square": 331.0,
+        "chi2_min_expected": 0.003,
+        "fisher": 0.003021,
+        "delta_p_y_given_x": 1.0,
+        "delta_p_x_given_y": 1.0
+       },
+       {
+        "collocate": "green",
+        "O": 1,
+        "fx": 1,
+        "fy": 1,
+        "N": 331,
+        "mi": 8.3707,
+        "t_score": 0.997,
+        "log_likelihood": 13.6012,
+        "dice": 1.0,
+        "log_dice": 14.0,
+        "chi_square": 331.0,
+        "chi2_min_expected": 0.003,
+        "fisher": 0.003021,
+        "delta_p_y_given_x": 1.0,
+        "delta_p_x_given_y": 1.0
+       },
+       {
+        "collocate": "have",
+        "O": 1,
+        "fx": 1,
+        "fy": 2,
+        "N": 331,
+        "mi": 7.3707,
+        "t_score": 0.994,
+        "log_likelihood": 10.8286,
+        "dice": 0.6667,
+        "log_dice": 13.415,
+        "chi_square": 164.9985,
+        "chi2_min_expected": 0.006,
+        "fisher": 0.006042,
+        "delta_p_y_given_x": 0.997,
+        "delta_p_x_given_y": 0.5
+       },
+       {
+        "collocate": "for",
+        "O": 1,
+        "fx": 1,
+        "fy": 4,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.9909,
+        "delta_p_x_given_y": 0.25
+       },
+       {
+        "collocate": "the",
+        "O": 1,
+        "fx": 1,
+        "fy": 22,
+        "N": 331,
+        "mi": 3.9113,
+        "t_score": 0.9335,
+        "log_likelihood": 5.4653,
+        "dice": 0.087,
+        "log_dice": 10.4764,
+        "chi_square": 14.088,
+        "chi2_min_expected": 0.0665,
+        "fisher": 0.066465,
+        "delta_p_y_given_x": 0.9364,
+        "delta_p_x_given_y": 0.0455
+       }
+      ]
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "log_dice",
+      "value": 14.0,
+      "tol": 1e-06
+     }
+    ],
+    "strings": [],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-032",
+   "category": "collocation",
+   "language": "en",
+   "corpus": "C1",
+   "question": "How many distinct collocates does 'goal' have within a window of 5?",
+   "trap": false,
+   "tools": [
+    {
+     "name": "compute_collocations",
+     "args": {
+      "corpus": "C1",
+      "node": "goal",
+      "window": 5,
+      "min_freq": 1
+     },
+     "ok": true,
+     "result": {
+      "node": "goal",
+      "window": 5,
+      "measures": [
+       "mi",
+       "t_score",
+       "log_likelihood",
+       "dice",
+       "log_dice",
+       "chi_square",
+       "delta_p",
+       "fisher"
+      ],
+      "top_collocates": [
+       {
+        "collocate": "My",
+        "O": 5,
+        "fx": 6,
+        "fy": 5,
+        "N": 331,
+        "mi": 6.0488,
+        "t_score": 2.4125,
+        "log_likelihood": 46.4442,
+        "dice": 1.0909,
+        "log_dice": 14.1255,
+        "chi_square": 274.9872,
+        "chi2_min_expected": 0.0906,
+        "fisher": 0.0,
+        "delta_p_y_given_x": 1.0031,
+        "delta_p_x_given_y": 1.2
+       },
+       {
+        "collocate": "the",
+        "O": 6,
+        "fx": 6,
+        "fy": 22,
+        "N": 331,
+        "mi": 3.9113,
+        "t_score": 2.2867,
+        "log_likelihood": 34.233,
+        "dice": 0.4286,
+        "log_dice": 12.7776,
+        "chi_square": 85.8285,
+        "chi2_min_expected": 0.3988,
+        "fisher": 0.0,
+        "delta_p_y_given_x": 0.9508,
+        "delta_p_x_given_y": 0.2727
+       },
+       {
+        "collocate": "in",
+        "O": 5,
+        "fx": 6,
+        "fy": 10,
+        "N": 331,
+        "mi": 4.7857,
+        "t_score": 2.155,
+        "log_likelihood": 32.6122,
+        "dice": 0.625,
+        "log_dice": 13.3219,
+        "chi_square": 134.5271,
+        "chi2_min_expected": 0.1813,
+        "fisher": 0.0,
+        "delta_p_y_given_x": 0.8179,
+        "delta_p_x_given_y": 0.4969
+       },
+       {
+        "collocate": "to",
+        "O": 4,
+        "fx": 6,
+        "fy": 9,
+        "N": 331,
+        "mi": 4.6158,
+        "t_score": 1.9184,
+        "log_likelihood": 23.3364,
+        "dice": 0.5333,
+        "log_dice": 13.0931,
+        "chi_square": 94.4719,
+        "chi2_min_expected": 0.1631,
+        "fisher": 4e-06,
+        "delta_p_y_given_x": 0.6513,
+        "delta_p_x_given_y": 0.4382
+       },
+       {
+        "collocate": "University",
+        "O": 2,
+        "fx": 6,
+        "fy": 2,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 1.7111,
+        "log_likelihood": 16.7856,
+        "dice": 0.75,
+        "log_dice": 13.585,
+        "chi_square": 108.9919,
+        "chi2_min_expected": 0.0363,
+        "fisher": 0.000275,
+        "delta_p_y_given_x": 0.5031,
+        "delta_p_x_given_y": 1.4909
+       },
+       {
+        "collocate": "but",
+        "O": 2,
+        "fx": 6,
+        "fy": 2,
+        "N": 331,
+        "mi": 5.7857,
+        "t_score": 1.3886,
+        "log_likelihood": 16.7856,
+        "dice": 0.5,
+        "log_dice": 13.0,
+        "chi_square": 108.9919,
+        "chi2_min_expected": 0.0363,
+        "fisher": 0.000275,
+        "delta_p_y_given_x": 0.3333,
+        "delta_p_x_given_y": 0.9878
+       },
+       {
+        "collocate": "is",
+        "O": 3,
+        "fx": 6,
+        "fy": 9,
+        "N": 331,
+        "mi": 4.2008,
+        "t_score": 1.6379,
+        "log_likelihood": 14.53,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 51.6448,
+        "chi2_min_expected": 0.1631,
+        "fisher": 0.000269,
+        "delta_p_y_given_x": 0.4815,
+        "delta_p_x_given_y": 0.324
+       },
+       {
+        "collocate": "goal",
+        "O": 2,
+        "fx": 6,
+        "fy": 6,
+        "N": 331,
+        "mi": 4.2008,
+        "t_score": 1.3373,
+        "log_likelihood": 9.2459,
+        "dice": 0.3333,
+        "log_dice": 12.415,
+        "chi_square": 34.112,
+        "chi2_min_expected": 0.1088,
+        "fisher": 0.003988,
+        "delta_p_y_given_x": 0.321,
+        "delta_p_x_given_y": 0.321
+       },
+       {
+        "collocate": "many",
+        "O": 1,
+        "fx": 6,
+        "fy": 1,
+        "N": 331,
+        "mi": 5.7857,
+        "t_score": 0.9819,
+        "log_likelihood": 8.1945,
+        "dice": 0.2857,
+        "log_dice": 12.1926,
+        "chi_square": 54.3308,
+        "chi2_min_expected": 0.0181,
+        "fisher": 0.018127,
+        "delta_p_y_given_x": 0.1667,
+        "delta_p_x_given_y": 0.9848
+       },
+       {
+        "collocate": "future",
+        "O": 1,
+        "fx": 6,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.7857,
+        "t_score": 1.4014,
+        "log_likelihood": 8.1945,
+        "dice": 0.5714,
+        "log_dice": 13.1926,
+        "chi_square": 54.3308,
+        "chi2_min_expected": 0.0181,
+        "fisher": 0.018127,
+        "delta_p_y_given_x": 0.3364,
+        "delta_p_x_given_y": 1.9879
+       },
+       {
+        "collocate": "pass",
+        "O": 1,
+        "fx": 6,
+        "fy": 1,
+        "N": 331,
+        "mi": 5.7857,
+        "t_score": 0.9819,
+        "log_likelihood": 8.1945,
+        "dice": 0.2857,
+        "log_dice": 12.1926,
+        "chi_square": 54.3308,
+        "chi2_min_expected": 0.0181,
+        "fisher": 0.018127,
+        "delta_p_y_given_x": 0.1667,
+        "delta_p_x_given_y": 0.9848
+       },
+       {
+        "collocate": "exams",
+        "O": 1,
+        "fx": 6,
+        "fy": 1,
+        "N": 331,
+        "mi": 5.7857,
+        "t_score": 0.9819,
+        "log_likelihood": 8.1945,
+        "dice": 0.2857,
+        "log_dice": 12.1926,
+        "chi_square": 54.3308,
+        "chi2_min_expected": 0.0181,
+        "fisher": 0.018127,
+        "delta_p_y_given_x": 0.1667,
+        "delta_p_x_given_y": 0.9848
+       },
+       {
+        "collocate": "clear",
+        "O": 1,
+        "fx": 6,
+        "fy": 1,
+        "N": 331,
+        "mi": 5.7857,
+        "t_score": 0.9819,
+        "log_likelihood": 8.1945,
+        "dice": 0.2857,
+        "log_dice": 12.1926,
+        "chi_square": 54.3308,
+        "chi2_min_expected": 0.0181,
+        "fisher": 0.018127,
+        "delta_p_y_given_x": 0.1667,
+        "delta_p_x_given_y": 0.9848
+       },
+       {
+        "collocate": "want",
+        "O": 1,
+        "fx": 6,
+        "fy": 1,
+        "N": 331,
+        "mi": 5.7857,
+        "t_score": 0.9819,
+        "log_likelihood": 8.1945,
+        "dice": 0.2857,
+        "log_dice": 12.1926,
+        "chi_square": 54.3308,
+        "chi2_min_expected": 0.0181,
+        "fisher": 0.018127,
+        "delta_p_y_given_x": 0.1667,
+        "delta_p_x_given_y": 0.9848
+       },
+       {
+        "collocate": "work",
+        "O": 1,
+        "fx": 6,
+        "fy": 1,
+        "N": 331,
+        "mi": 5.7857,
+        "t_score": 0.9819,
+        "log_likelihood": 8.1945,
+        "dice": 0.2857,
+        "log_dice": 12.1926,
+        "chi_square": 54.3308,
+        "chi2_min_expected": 0.0181,
+        "fisher": 0.018127,
+        "delta_p_y_given_x": 0.1667,
+        "delta_p_x_given_y": 0.9848
+       },
+       {
+        "collocate": "hard",
+        "O": 1,
+        "fx": 6,
+        "fy": 1,
+        "N": 331,
+        "mi": 5.7857,
+        "t_score": 0.9819,
+        "log_likelihood": 8.1945,
+        "dice": 0.2857,
+        "log_dice": 12.1926,
+        "chi_square": 54.3308,
+        "chi2_min_expected": 0.0181,
+        "fisher": 0.018127,
+        "delta_p_y_given_x": 0.1667,
+        "delta_p_x_given_y": 0.9848
+       },
+       {
+        "collocate": "achieve",
+        "O": 1,
+        "fx": 6,
+        "fy": 1,
+        "N": 331,
+        "mi": 5.7857,
+        "t_score": 0.9819,
+        "log_likelihood": 8.1945,
+        "dice": 0.2857,
+        "log_dice": 12.1926,
+        "chi_square": 54.3308,
+        "chi2_min_expected": 0.0181,
+        "fisher": 0.018127,
+        "delta_p_y_given_x": 0.1667,
+        "delta_p_x_given_y": 0.9848
+       },
+       {
+        "collocate": "family",
+        "O": 1,
+        "fx": 6,
+        "fy": 1,
+        "N": 331,
+        "mi": 5.7857,
+        "t_score": 0.9819,
+        "log_likelihood": 8.1945,
+        "dice": 0.2857,
+        "log_dice": 12.1926,
+        "chi_square": 54.3308,
+        "chi2_min_expected": 0.0181,
+        "fisher": 0.018127,
+        "delta_p_y_given_x": 0.1667,
+        "delta_p_x_given_y": 0.9848
+       },
+       {
+        "collocate": "proud",
+        "O": 1,
+        "fx": 6,
+        "fy": 1,
+        "N": 331,
+        "mi": 5.7857,
+        "t_score": 0.9819,
+        "log_likelihood": 8.1945,
+        "dice": 0.2857,
+        "log_dice": 12.1926,
+        "chi_square": 54.3308,
+        "chi2_min_expected": 0.0181,
+        "fisher": 0.018127,
+        "delta_p_y_given_x": 0.1667,
+        "delta_p_x_given_y": 0.9848
+       },
+       {
+        "collocate": "I",
+        "O": 2,
+        "fx": 6,
+        "fy": 8,
+        "N": 331,
+        "mi": 3.7857,
+        "t_score": 1.3117,
+        "log_likelihood": 7.9364,
+        "dice": 0.2857,
+        "log_dice": 12.1926,
+        "chi_square": 24.765,
+        "chi2_min_expected": 0.145,
+        "fisher": 0.007323,
+        "delta_p_y_given_x": 0.3149,
+        "delta_p_x_given_y": 0.2376
+       }
+      ]
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "number of collocates",
+      "value": 20,
+      "tol": 0
+     }
+    ],
+    "strings": [],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-033",
+   "category": "collocation",
+   "language": "en",
+   "corpus": "C1",
+   "question": "What is the t-score of the top collocate of 'council', and how many times do they co-occur?",
+   "trap": false,
+   "tools": [
+    {
+     "name": "compute_collocations",
+     "args": {
+      "corpus": "C1",
+      "node": "council",
+      "window": 5,
+      "min_freq": 1
+     },
+     "ok": true,
+     "result": {
+      "node": "council",
+      "window": 5,
+      "measures": [
+       "mi",
+       "t_score",
+       "log_likelihood",
+       "dice",
+       "log_dice",
+       "chi_square",
+       "delta_p",
+       "fisher"
+      ],
+      "top_collocates": [
+       {
+        "collocate": "The",
+        "O": 4,
+        "fx": 4,
+        "fy": 22,
+        "N": 331,
+        "mi": 3.9113,
+        "t_score": 1.8671,
+        "log_likelihood": 22.4159,
+        "dice": 0.3077,
+        "log_dice": 12.2996,
+        "chi_square": 56.8691,
+        "chi2_min_expected": 0.2659,
+        "fisher": 1.5e-05,
+        "delta_p_y_given_x": 0.945,
+        "delta_p_x_given_y": 0.1818
+       },
+       {
+        "collocate": "City",
+        "O": 2,
+        "fx": 4,
+        "fy": 2,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 1.3971,
+        "log_likelihood": 18.8786,
+        "dice": 0.6667,
+        "log_dice": 13.415,
+        "chi_square": 164.4939,
+        "chi2_min_expected": 0.0242,
+        "fisher": 0.00011,
+        "delta_p_y_given_x": 0.5,
+        "delta_p_x_given_y": 0.9939
+       },
+       {
+        "collocate": "Riverfront",
+        "O": 2,
+        "fx": 4,
+        "fy": 2,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 1.3971,
+        "log_likelihood": 18.8786,
+        "dice": 0.6667,
+        "log_dice": 13.415,
+        "chi_square": 164.4939,
+        "chi2_min_expected": 0.0242,
+        "fisher": 0.00011,
+        "delta_p_y_given_x": 0.5,
+        "delta_p_x_given_y": 0.9939
+       },
+       {
+        "collocate": "Park",
+        "O": 2,
+        "fx": 4,
+        "fy": 4,
+        "N": 331,
+        "mi": 5.3707,
+        "t_score": 1.38,
+        "log_likelihood": 13.3579,
+        "dice": 0.5,
+        "log_dice": 13.0,
+        "chi_square": 80.7379,
+        "chi2_min_expected": 0.0483,
+        "fisher": 0.000654,
+        "delta_p_y_given_x": 0.4939,
+        "delta_p_x_given_y": 0.4939
+       },
+       {
+        "collocate": "Approves",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "approved",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "new",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "member",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "Dana",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "Reyes",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "review",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "progress",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "every",
+        "O": 1,
+        "fx": 4,
+        "fy": 2,
+        "N": 331,
+        "mi": 5.3707,
+        "t_score": 0.9758,
+        "log_likelihood": 6.3482,
+        "dice": 0.3333,
+        "log_dice": 12.415,
+        "chi_square": 40.1236,
+        "chi2_min_expected": 0.0242,
+        "fisher": 0.024059,
+        "delta_p_y_given_x": 0.2469,
+        "delta_p_x_given_y": 0.4909
+       },
+       {
+        "collocate": "six",
+        "O": 1,
+        "fx": 4,
+        "fy": 2,
+        "N": 331,
+        "mi": 5.3707,
+        "t_score": 0.9758,
+        "log_likelihood": 6.3482,
+        "dice": 0.3333,
+        "log_dice": 12.415,
+        "chi_square": 40.1236,
+        "chi2_min_expected": 0.0242,
+        "fisher": 0.024059,
+        "delta_p_y_given_x": 0.2469,
+        "delta_p_x_given_y": 0.4909
+       },
+       {
+        "collocate": "said",
+        "O": 1,
+        "fx": 4,
+        "fy": 3,
+        "N": 331,
+        "mi": 4.7857,
+        "t_score": 0.9637,
+        "log_likelihood": 5.3201,
+        "dice": 0.2857,
+        "log_dice": 12.1926,
+        "chi_square": 26.1702,
+        "chi2_min_expected": 0.0363,
+        "fisher": 0.035925,
+        "delta_p_y_given_x": 0.2439,
+        "delta_p_x_given_y": 0.3242
+       },
+       {
+        "collocate": "will",
+        "O": 1,
+        "fx": 4,
+        "fy": 5,
+        "N": 331,
+        "mi": 4.0488,
+        "t_score": 0.9396,
+        "log_likelihood": 4.172,
+        "dice": 0.2222,
+        "log_dice": 11.8301,
+        "chi_square": 15.016,
+        "chi2_min_expected": 0.0604,
+        "fisher": 0.059331,
+        "delta_p_y_given_x": 0.2378,
+        "delta_p_x_given_y": 0.1908
+       }
+      ]
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "t-score",
+      "value": 1.8671,
+      "tol": 1e-06
+     },
+     {
+      "label": "O",
+      "value": 4,
+      "tol": 1e-06
+     }
+    ],
+    "strings": [],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-034",
+   "category": "collocation",
+   "language": "en",
+   "corpus": "C1",
+   "question": "For the top collocate of 'park': what are fx (collocate frequency) and fy, and what is N?",
+   "trap": false,
+   "tools": [
+    {
+     "name": "compute_collocations",
+     "args": {
+      "corpus": "C1",
+      "node": "park",
+      "window": 5,
+      "min_freq": 1
+     },
+     "ok": true,
+     "result": {
+      "node": "park",
+      "window": 5,
+      "measures": [
+       "mi",
+       "t_score",
+       "log_likelihood",
+       "dice",
+       "log_dice",
+       "chi_square",
+       "delta_p",
+       "fisher"
+      ],
+      "top_collocates": [
+       {
+        "collocate": "the",
+        "O": 4,
+        "fx": 4,
+        "fy": 22,
+        "N": 331,
+        "mi": 3.9113,
+        "t_score": 1.8671,
+        "log_likelihood": 22.4159,
+        "dice": 0.3077,
+        "log_dice": 12.2996,
+        "chi_square": 56.8691,
+        "chi2_min_expected": 0.2659,
+        "fisher": 1.5e-05,
+        "delta_p_y_given_x": 0.945,
+        "delta_p_x_given_y": 0.1818
+       },
+       {
+        "collocate": "Riverfront",
+        "O": 2,
+        "fx": 4,
+        "fy": 2,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 1.3971,
+        "log_likelihood": 18.8786,
+        "dice": 0.6667,
+        "log_dice": 13.415,
+        "chi_square": 164.4939,
+        "chi2_min_expected": 0.0242,
+        "fisher": 0.00011,
+        "delta_p_y_given_x": 0.5,
+        "delta_p_x_given_y": 0.9939
+       },
+       {
+        "collocate": "Council",
+        "O": 2,
+        "fx": 4,
+        "fy": 4,
+        "N": 331,
+        "mi": 5.3707,
+        "t_score": 1.38,
+        "log_likelihood": 13.3579,
+        "dice": 0.5,
+        "log_dice": 13.0,
+        "chi_square": 80.7379,
+        "chi2_min_expected": 0.0483,
+        "fisher": 0.000654,
+        "delta_p_y_given_x": 0.4939,
+        "delta_p_x_given_y": 0.4939
+       },
+       {
+        "collocate": "will",
+        "O": 2,
+        "fx": 4,
+        "fy": 5,
+        "N": 331,
+        "mi": 5.0488,
+        "t_score": 1.3715,
+        "log_likelihood": 12.1852,
+        "dice": 0.4444,
+        "log_dice": 12.8301,
+        "chi_square": 63.9886,
+        "chi2_min_expected": 0.0604,
+        "fisher": 0.001085,
+        "delta_p_y_given_x": 0.4908,
+        "delta_p_x_given_y": 0.3939
+       },
+       {
+        "collocate": "a",
+        "O": 2,
+        "fx": 4,
+        "fy": 8,
+        "N": 331,
+        "mi": 4.3707,
+        "t_score": 1.3459,
+        "log_likelihood": 9.9551,
+        "dice": 0.3333,
+        "log_dice": 12.415,
+        "chi_square": 38.8695,
+        "chi2_min_expected": 0.0967,
+        "fisher": 0.003002,
+        "delta_p_y_given_x": 0.4817,
+        "delta_p_x_given_y": 0.2438
+       },
+       {
+        "collocate": "Approves",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "approved",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "new",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "on",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "Tuesday",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "by",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "member",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "Dana",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "Reyes",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "include",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "playgrounds",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "mayor",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "replied",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "pay",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "itself",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       }
+      ]
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "fx",
+      "value": 4,
+      "tol": 1e-06
+     },
+     {
+      "label": "fy",
+      "value": 22,
+      "tol": 1e-06
+     },
+     {
+      "label": "N",
+      "value": 331,
+      "tol": 1e-06
+     }
+    ],
+    "strings": [],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-035",
+   "category": "collocation",
+   "language": "en",
+   "corpus": "C1",
+   "question": "How many collocates does 'park' have with window 2, and how many with window 5?",
+   "trap": false,
+   "tools": [
+    {
+     "name": "compute_collocations",
+     "args": {
+      "corpus": "C1",
+      "node": "park",
+      "window": 2,
+      "min_freq": 1
+     },
+     "ok": true,
+     "result": {
+      "node": "park",
+      "window": 2,
+      "measures": [
+       "mi",
+       "t_score",
+       "log_likelihood",
+       "dice",
+       "log_dice",
+       "chi_square",
+       "delta_p",
+       "fisher"
+      ],
+      "top_collocates": [
+       {
+        "collocate": "Riverfront",
+        "O": 2,
+        "fx": 4,
+        "fy": 2,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 1.3971,
+        "log_likelihood": 18.8786,
+        "dice": 0.6667,
+        "log_dice": 13.415,
+        "chi_square": 164.4939,
+        "chi2_min_expected": 0.0242,
+        "fisher": 0.00011,
+        "delta_p_y_given_x": 0.5,
+        "delta_p_x_given_y": 0.9939
+       },
+       {
+        "collocate": "will",
+        "O": 2,
+        "fx": 4,
+        "fy": 5,
+        "N": 331,
+        "mi": 5.0488,
+        "t_score": 1.3715,
+        "log_likelihood": 12.1852,
+        "dice": 0.4444,
+        "log_dice": 12.8301,
+        "chi_square": 63.9886,
+        "chi2_min_expected": 0.0604,
+        "fisher": 0.001085,
+        "delta_p_y_given_x": 0.4908,
+        "delta_p_x_given_y": 0.3939
+       },
+       {
+        "collocate": "Approves",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "new",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "on",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "include",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "pay",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "project",
+        "O": 1,
+        "fx": 4,
+        "fy": 2,
+        "N": 331,
+        "mi": 5.3707,
+        "t_score": 0.9758,
+        "log_likelihood": 6.3482,
+        "dice": 0.3333,
+        "log_dice": 12.415,
+        "chi_square": 40.1236,
+        "chi2_min_expected": 0.0242,
+        "fisher": 0.024059,
+        "delta_p_y_given_x": 0.2469,
+        "delta_p_x_given_y": 0.4909
+       },
+       {
+        "collocate": "the",
+        "O": 2,
+        "fx": 4,
+        "fy": 22,
+        "N": 331,
+        "mi": 2.9113,
+        "t_score": 1.2262,
+        "log_likelihood": 5.7263,
+        "dice": 0.1538,
+        "log_dice": 11.2996,
+        "chi_square": 12.2649,
+        "chi2_min_expected": 0.2659,
+        "fisher": 0.023365,
+        "delta_p_y_given_x": 0.4388,
+        "delta_p_x_given_y": 0.0844
+       },
+       {
+        "collocate": "said",
+        "O": 1,
+        "fx": 4,
+        "fy": 3,
+        "N": 331,
+        "mi": 4.7857,
+        "t_score": 0.9637,
+        "log_likelihood": 5.3201,
+        "dice": 0.2857,
+        "log_dice": 12.1926,
+        "chi_square": 26.1702,
+        "chi2_min_expected": 0.0363,
+        "fisher": 0.035925,
+        "delta_p_y_given_x": 0.2439,
+        "delta_p_x_given_y": 0.3242
+       },
+       {
+        "collocate": "that",
+        "O": 1,
+        "fx": 4,
+        "fy": 4,
+        "N": 331,
+        "mi": 4.3707,
+        "t_score": 0.9517,
+        "log_likelihood": 4.6589,
+        "dice": 0.25,
+        "log_dice": 12.0,
+        "chi_square": 19.197,
+        "chi2_min_expected": 0.0483,
+        "fisher": 0.047682,
+        "delta_p_y_given_x": 0.2408,
+        "delta_p_x_given_y": 0.2408
+       }
+      ]
+     }
+    },
+    {
+     "name": "compute_collocations",
+     "args": {
+      "corpus": "C1",
+      "node": "park",
+      "window": 5,
+      "min_freq": 1
+     },
+     "ok": true,
+     "result": {
+      "node": "park",
+      "window": 5,
+      "measures": [
+       "mi",
+       "t_score",
+       "log_likelihood",
+       "dice",
+       "log_dice",
+       "chi_square",
+       "delta_p",
+       "fisher"
+      ],
+      "top_collocates": [
+       {
+        "collocate": "the",
+        "O": 4,
+        "fx": 4,
+        "fy": 22,
+        "N": 331,
+        "mi": 3.9113,
+        "t_score": 1.8671,
+        "log_likelihood": 22.4159,
+        "dice": 0.3077,
+        "log_dice": 12.2996,
+        "chi_square": 56.8691,
+        "chi2_min_expected": 0.2659,
+        "fisher": 1.5e-05,
+        "delta_p_y_given_x": 0.945,
+        "delta_p_x_given_y": 0.1818
+       },
+       {
+        "collocate": "Riverfront",
+        "O": 2,
+        "fx": 4,
+        "fy": 2,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 1.3971,
+        "log_likelihood": 18.8786,
+        "dice": 0.6667,
+        "log_dice": 13.415,
+        "chi_square": 164.4939,
+        "chi2_min_expected": 0.0242,
+        "fisher": 0.00011,
+        "delta_p_y_given_x": 0.5,
+        "delta_p_x_given_y": 0.9939
+       },
+       {
+        "collocate": "Council",
+        "O": 2,
+        "fx": 4,
+        "fy": 4,
+        "N": 331,
+        "mi": 5.3707,
+        "t_score": 1.38,
+        "log_likelihood": 13.3579,
+        "dice": 0.5,
+        "log_dice": 13.0,
+        "chi_square": 80.7379,
+        "chi2_min_expected": 0.0483,
+        "fisher": 0.000654,
+        "delta_p_y_given_x": 0.4939,
+        "delta_p_x_given_y": 0.4939
+       },
+       {
+        "collocate": "will",
+        "O": 2,
+        "fx": 4,
+        "fy": 5,
+        "N": 331,
+        "mi": 5.0488,
+        "t_score": 1.3715,
+        "log_likelihood": 12.1852,
+        "dice": 0.4444,
+        "log_dice": 12.8301,
+        "chi_square": 63.9886,
+        "chi2_min_expected": 0.0604,
+        "fisher": 0.001085,
+        "delta_p_y_given_x": 0.4908,
+        "delta_p_x_given_y": 0.3939
+       },
+       {
+        "collocate": "a",
+        "O": 2,
+        "fx": 4,
+        "fy": 8,
+        "N": 331,
+        "mi": 4.3707,
+        "t_score": 1.3459,
+        "log_likelihood": 9.9551,
+        "dice": 0.3333,
+        "log_dice": 12.415,
+        "chi_square": 38.8695,
+        "chi2_min_expected": 0.0967,
+        "fisher": 0.003002,
+        "delta_p_y_given_x": 0.4817,
+        "delta_p_x_given_y": 0.2438
+       },
+       {
+        "collocate": "Approves",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "approved",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "new",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "on",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "Tuesday",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "by",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "member",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "Dana",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "Reyes",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "include",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "playgrounds",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "mayor",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "replied",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "pay",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "itself",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       }
+      ]
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "collocates window 2",
+      "value": 11,
+      "tol": 0
+     },
+     {
+      "label": "collocates window 5",
+      "value": 20,
+      "tol": 0
+     }
+    ],
+    "strings": [],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-036",
+   "category": "ngrams",
+   "language": "en",
+   "corpus": "C1",
+   "question": "What is the most frequent 3-gram in this corpus, and how often does it occur?",
+   "trap": false,
+   "tools": [
+    {
+     "name": "get_ngrams",
+     "args": {
+      "corpus": "C1",
+      "n": 3,
+      "min_freq": 2,
+      "min_range": 1,
+      "limit": 5
+     },
+     "ok": true,
+     "result": {
+      "n": 3,
+      "total_tokens": 331,
+      "top_ngrams": [
+       {
+        "ngram": "the park will",
+        "freq": 2,
+        "per_million": 6042.3,
+        "range": 1,
+        "range_percent": 33.33
+       }
+      ],
+      "min_freq": 2,
+      "min_range": 1
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "freq",
+      "value": 2,
+      "tol": 1e-06
+     }
+    ],
+    "strings": [
+     {
+      "label": "top 3-gram",
+      "value": "the park will"
+     }
+    ],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-037",
+   "category": "ngrams",
+   "language": "en",
+   "corpus": "C1",
+   "question": "What is the most frequent 2-gram, and what is its frequency?",
+   "trap": false,
+   "tools": [
+    {
+     "name": "get_ngrams",
+     "args": {
+      "corpus": "C1",
+      "n": 2,
+      "min_freq": 2,
+      "min_range": 1,
+      "limit": 5
+     },
+     "ok": true,
+     "result": {
+      "n": 2,
+      "total_tokens": 331,
+      "top_ngrams": [
+       {
+        "ngram": "said the",
+        "freq": 2,
+        "per_million": 6042.3,
+        "range": 1,
+        "range_percent": 33.33
+       },
+       {
+        "ngram": "the park",
+        "freq": 2,
+        "per_million": 6042.3,
+        "range": 1,
+        "range_percent": 33.33
+       },
+       {
+        "ngram": "park will",
+        "freq": 2,
+        "per_million": 6042.3,
+        "range": 1,
+        "range_percent": 33.33
+       },
+       {
+        "ngram": "that the",
+        "freq": 2,
+        "per_million": 6042.3,
+        "range": 2,
+        "range_percent": 66.67
+       },
+       {
+        "ngram": "is to",
+        "freq": 2,
+        "per_million": 6042.3,
+        "range": 1,
+        "range_percent": 33.33
+       }
+      ],
+      "min_freq": 2,
+      "min_range": 1
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "freq",
+      "value": 2,
+      "tol": 1e-06
+     }
+    ],
+    "strings": [
+     {
+      "label": "top 2-gram",
+      "value": "said the"
+     }
+    ],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-038",
+   "category": "ngrams",
+   "language": "en",
+   "corpus": "C1",
+   "question": "How many different 2-grams occur in at least two different documents (range at least 2)?",
+   "trap": false,
+   "tools": [
+    {
+     "name": "get_ngrams",
+     "args": {
+      "corpus": "C1",
+      "n": 2,
+      "min_freq": 2,
+      "min_range": 2,
+      "limit": 50
+     },
+     "ok": true,
+     "result": {
+      "n": 2,
+      "total_tokens": 331,
+      "top_ngrams": [
+       {
+        "ngram": "that the",
+        "freq": 2,
+        "per_million": 6042.3,
+        "range": 2,
+        "range_percent": 66.67
+       }
+      ],
+      "min_freq": 2,
+      "min_range": 2
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "2-grams with range >= 2",
+      "value": 1,
+      "tol": 0
+     }
+    ],
+    "strings": [],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-039",
+   "category": "ngrams",
+   "language": "en",
+   "corpus": "C1",
+   "question": "What frequency does the engine report for the 2-gram 'the park' (min frequency 2)?",
+   "trap": false,
+   "tools": [
+    {
+     "name": "get_ngrams",
+     "args": {
+      "corpus": "C1",
+      "n": 2,
+      "min_freq": 2,
+      "min_range": 1,
+      "limit": 100
+     },
+     "ok": true,
+     "result": {
+      "n": 2,
+      "total_tokens": 331,
+      "top_ngrams": [
+       {
+        "ngram": "said the",
+        "freq": 2,
+        "per_million": 6042.3,
+        "range": 1,
+        "range_percent": 33.33
+       },
+       {
+        "ngram": "the park",
+        "freq": 2,
+        "per_million": 6042.3,
+        "range": 1,
+        "range_percent": 33.33
+       },
+       {
+        "ngram": "park will",
+        "freq": 2,
+        "per_million": 6042.3,
+        "range": 1,
+        "range_percent": 33.33
+       },
+       {
+        "ngram": "that the",
+        "freq": 2,
+        "per_million": 6042.3,
+        "range": 2,
+        "range_percent": 66.67
+       },
+       {
+        "ngram": "is to",
+        "freq": 2,
+        "per_million": 6042.3,
+        "range": 1,
+        "range_percent": 33.33
+       },
+       {
+        "ngram": "goal is",
+        "freq": 2,
+        "per_million": 6042.3,
+        "range": 1,
+        "range_percent": 33.33
+       },
+       {
+        "ngram": "and I",
+        "freq": 2,
+        "per_million": 6042.3,
+        "range": 1,
+        "range_percent": 33.33
+       },
+       {
+        "ngram": "the algorithm",
+        "freq": 2,
+        "per_million": 6042.3,
+        "range": 1,
+        "range_percent": 33.33
+       }
+      ],
+      "min_freq": 2,
+      "min_range": 1
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "freq of 'the park'",
+      "value": 2,
+      "tol": 1e-06
+     }
+    ],
+    "strings": [],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-040",
+   "category": "kwic",
+   "language": "en",
+   "corpus": "C1",
+   "question": "How many hits does 'park' have, and what is the line_id of the first hit?",
+   "trap": false,
+   "tools": [
+    {
+     "name": "search_concordance",
+     "args": {
+      "corpus": "C1",
+      "query": "park",
+      "window": 5,
+      "limit": 10
+     },
+     "ok": true,
+     "result": {
+      "total_matches": 4,
+      "query": {
+       "q": "park",
+       "level": "word",
+       "window": 5,
+       "case_sensitive": false,
+       "regex": false
+      },
+      "lines": [
+       {
+        "line_id": "5e2edc3942cc425b:0:4",
+        "document": "en_news.txt",
+        "left": "City Council Approves Riverfront",
+        "node": "Park",
+        "right": "",
+        "pos": "PROPN",
+        "lemma": "Park"
+       },
+       {
+        "line_id": "5e2edc3942cc425b:1:7",
+        "document": "en_news.txt",
+        "left": "council approved the new riverfront",
+        "node": "park",
+        "right": "project on Tuesday by a",
+        "pos": "NOUN",
+        "lemma": "park"
+       },
+       {
+        "line_id": "5e2edc3942cc425b:4:6",
+        "document": "en_news.txt",
+        "left": "member Dana Reyes said the",
+        "node": "park",
+        "right": "will include two playgrounds ,",
+        "pos": "NOUN",
+        "lemma": "park"
+       },
+       {
+        "line_id": "5e2edc3942cc425b:6:5",
+        "document": "en_news.txt",
+        "left": "The mayor replied that the",
+        "node": "park",
+        "right": "will pay for itself through",
+        "pos": "NOUN",
+        "lemma": "park"
+       }
+      ]
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "total hits",
+      "value": 4,
+      "tol": 1e-06
+     }
+    ],
+    "strings": [
+     {
+      "label": "first line_id",
+      "value": "5e2edc3942cc425b:0:4"
+     }
+    ],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-041",
+   "category": "kwic",
+   "language": "en",
+   "corpus": "C1",
+   "question": "How many hits does 'council' have, and in how many different documents do they occur?",
+   "trap": false,
+   "tools": [
+    {
+     "name": "search_concordance",
+     "args": {
+      "corpus": "C1",
+      "query": "council",
+      "window": 5,
+      "limit": 20
+     },
+     "ok": true,
+     "result": {
+      "total_matches": 4,
+      "query": {
+       "q": "council",
+       "level": "word",
+       "window": 5,
+       "case_sensitive": false,
+       "regex": false
+      },
+      "lines": [
+       {
+        "line_id": "5e2edc3942cc425b:0:1",
+        "document": "en_news.txt",
+        "left": "City",
+        "node": "Council",
+        "right": "Approves Riverfront Park",
+        "pos": "PROPN",
+        "lemma": "Council"
+       },
+       {
+        "line_id": "5e2edc3942cc425b:1:2",
+        "document": "en_news.txt",
+        "left": "The city",
+        "node": "council",
+        "right": "approved the new riverfront park",
+        "pos": "NOUN",
+        "lemma": "council"
+       },
+       {
+        "line_id": "5e2edc3942cc425b:4:0",
+        "document": "en_news.txt",
+        "left": "",
+        "node": "Council",
+        "right": "member Dana Reyes said the",
+        "pos": "PROPN",
+        "lemma": "Council"
+       },
+       {
+        "line_id": "5e2edc3942cc425b:8:1",
+        "document": "en_news.txt",
+        "left": "The",
+        "node": "council",
+        "right": "will review progress every six",
+        "pos": "NOUN",
+        "lemma": "council"
+       }
+      ]
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "total hits",
+      "value": 4,
+      "tol": 1e-06
+     },
+     {
+      "label": "distinct documents",
+      "value": 1,
+      "tol": 0
+     }
+    ],
+    "strings": [],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-042",
+   "category": "kwic",
+   "language": "en",
+   "corpus": "C2",
+   "question": "Compare the lemma 'go' with the exact word form 'go' in the learner corpus: how many hits does each have?",
+   "trap": false,
+   "tools": [
+    {
+     "name": "search_concordance",
+     "args": {
+      "corpus": "C2",
+      "query": "go",
+      "level": "lemma",
+      "window": 3,
+      "limit": 20
+     },
+     "ok": true,
+     "result": {
+      "total_matches": 1,
+      "query": {
+       "q": "go",
+       "level": "lemma",
+       "window": 3,
+       "case_sensitive": false,
+       "regex": false
+      },
+      "lines": [
+       {
+        "line_id": "9555558fe0bf47b7:3:4",
+        "document": "en_learner.txt",
+        "left": "year I was",
+        "node": "go",
+        "right": "to the library",
+        "pos": "VERB",
+        "lemma": "go"
+       }
+      ]
+     }
+    },
+    {
+     "name": "search_concordance",
+     "args": {
+      "corpus": "C2",
+      "query": "go",
+      "level": "word",
+      "window": 3,
+      "limit": 20
+     },
+     "ok": true,
+     "result": {
+      "total_matches": 1,
+      "query": {
+       "q": "go",
+       "level": "word",
+       "window": 3,
+       "case_sensitive": false,
+       "regex": false
+      },
+      "lines": [
+       {
+        "line_id": "9555558fe0bf47b7:3:4",
+        "document": "en_learner.txt",
+        "left": "year I was",
+        "node": "go",
+        "right": "to the library",
+        "pos": "VERB",
+        "lemma": "go"
+       }
+      ]
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "lemma hits",
+      "value": 1,
+      "tol": 1e-06
+     },
+     {
+      "label": "word hits",
+      "value": 1,
+      "tol": 1e-06
+     }
+    ],
+    "strings": [],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-043",
+   "category": "kwic",
+   "language": "en",
+   "corpus": "C1",
+   "question": "How many hits does 'council' have in the press subcorpus, and how many in the full corpus? Use the corpus IDs given in the context.",
+   "trap": false,
+   "tools": [
+    {
+     "name": "search_concordance",
+     "args": {
+      "corpus": "C3",
+      "query": "council",
+      "window": 3,
+      "limit": 20
+     },
+     "ok": true,
+     "result": {
+      "total_matches": 4,
+      "query": {
+       "q": "council",
+       "level": "word",
+       "window": 3,
+       "case_sensitive": false,
+       "regex": false
+      },
+      "lines": [
+       {
+        "line_id": "f74e9c17e4c348fb:0:1",
+        "document": "en_news.txt",
+        "left": "City",
+        "node": "Council",
+        "right": "Approves Riverfront Park",
+        "pos": "PROPN",
+        "lemma": "Council"
+       },
+       {
+        "line_id": "f74e9c17e4c348fb:1:2",
+        "document": "en_news.txt",
+        "left": "The city",
+        "node": "council",
+        "right": "approved the new",
+        "pos": "NOUN",
+        "lemma": "council"
+       },
+       {
+        "line_id": "f74e9c17e4c348fb:4:0",
+        "document": "en_news.txt",
+        "left": "",
+        "node": "Council",
+        "right": "member Dana Reyes",
+        "pos": "PROPN",
+        "lemma": "Council"
+       },
+       {
+        "line_id": "f74e9c17e4c348fb:8:1",
+        "document": "en_news.txt",
+        "left": "The",
+        "node": "council",
+        "right": "will review progress",
+        "pos": "NOUN",
+        "lemma": "council"
+       }
+      ]
+     }
+    },
+    {
+     "name": "search_concordance",
+     "args": {
+      "corpus": "C1",
+      "query": "council",
+      "window": 3,
+      "limit": 20
+     },
+     "ok": true,
+     "result": {
+      "total_matches": 4,
+      "query": {
+       "q": "council",
+       "level": "word",
+       "window": 3,
+       "case_sensitive": false,
+       "regex": false
+      },
+      "lines": [
+       {
+        "line_id": "5e2edc3942cc425b:0:1",
+        "document": "en_news.txt",
+        "left": "City",
+        "node": "Council",
+        "right": "Approves Riverfront Park",
+        "pos": "PROPN",
+        "lemma": "Council"
+       },
+       {
+        "line_id": "5e2edc3942cc425b:1:2",
+        "document": "en_news.txt",
+        "left": "The city",
+        "node": "council",
+        "right": "approved the new",
+        "pos": "NOUN",
+        "lemma": "council"
+       },
+       {
+        "line_id": "5e2edc3942cc425b:4:0",
+        "document": "en_news.txt",
+        "left": "",
+        "node": "Council",
+        "right": "member Dana Reyes",
+        "pos": "PROPN",
+        "lemma": "Council"
+       },
+       {
+        "line_id": "5e2edc3942cc425b:8:1",
+        "document": "en_news.txt",
+        "left": "The",
+        "node": "council",
+        "right": "will review progress",
+        "pos": "NOUN",
+        "lemma": "council"
+       }
+      ]
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "press hits",
+      "value": 4,
+      "tol": 1e-06
+     },
+     {
+      "label": "full-corpus hits",
+      "value": 4,
+      "tol": 1e-06
+     }
+    ],
+    "strings": [],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-044",
+   "category": "kwic",
+   "language": "ar",
+   "corpus": "C4",
+   "question": "كم نتيجة لكلمة المشروع في هذا المحتوى، وما معرّف أول نتيجة (line_id)؟",
+   "trap": false,
+   "tools": [
+    {
+     "name": "search_concordance",
+     "args": {
+      "corpus": "C4",
+      "query": "المشروع",
+      "window": 5,
+      "limit": 10
+     },
+     "ok": true,
+     "result": {
+      "total_matches": 2,
+      "query": {
+       "q": "المشروع",
+       "level": "word",
+       "window": 5,
+       "case_sensitive": false,
+       "regex": false
+      },
+      "lines": [
+       {
+        "line_id": "088a89a349d64128:2:3",
+        "document": "ar_msa.txt",
+        "left": "وقال الوزير إن",
+        "node": "المشروع",
+        "right": "سيبدأ في شهر أيلول المقبل",
+        "pos": "NOUN",
+        "lemma": "مَشْرُوع"
+       },
+       {
+        "line_id": "088a89a349d64128:7:14",
+        "document": "ar_msa.txt",
+        "left": "سيقدم تفاصيل أدق عن نتائج",
+        "node": "المشروع",
+        "right": "",
+        "pos": "NOUN",
+        "lemma": "مَشْرُوع"
+       }
+      ]
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "total hits",
+      "value": 2,
+      "tol": 1e-06
+     }
+    ],
+    "strings": [
+     {
+      "label": "first line_id",
+      "value": "088a89a349d64128:2:3"
+     }
+    ],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-045",
+   "category": "kwic",
+   "language": "en",
+   "corpus": "C2",
+   "question": "What is the line_id of the second hit for 'goal' in the learner corpus, and how many hits are there in total?",
+   "trap": false,
+   "tools": [
+    {
+     "name": "search_concordance",
+     "args": {
+      "corpus": "C2",
+      "query": "goal",
+      "window": 3,
+      "limit": 20
+     },
+     "ok": true,
+     "result": {
+      "total_matches": 6,
+      "query": {
+       "q": "goal",
+       "level": "word",
+       "window": 3,
+       "case_sensitive": false,
+       "regex": false
+      },
+      "lines": [
+       {
+        "line_id": "9555558fe0bf47b7:0:1",
+        "document": "en_learner.txt",
+        "left": "My",
+        "node": "Goal",
+        "right": "in University My",
+        "pos": "PROPN",
+        "lemma": "Goal"
+       },
+       {
+        "line_id": "9555558fe0bf47b7:0:6",
+        "document": "en_learner.txt",
+        "left": "University My goal",
+        "node": "in",
+        "right": "university is to",
+        "pos": "ADP",
+        "lemma": "in"
+       },
+       {
+        "line_id": "9555558fe0bf47b7:1:3",
+        "document": "en_learner.txt",
+        "left": "I have many",
+        "node": "goal",
+        "right": "for the future",
+        "pos": "NOUN",
+        "lemma": "goal"
+       },
+       {
+        "line_id": "9555558fe0bf47b7:1:11",
+        "document": "en_learner.txt",
+        "left": "but the first",
+        "node": "goal",
+        "right": "is to pass",
+        "pos": "NOUN",
+        "lemma": "goal"
+       },
+       {
+        "line_id": "9555558fe0bf47b7:6:4",
+        "document": "en_learner.txt",
+        "left": "conclusion , my",
+        "node": "goal",
+        "right": "is clear :",
+        "pos": "NOUN",
+        "lemma": "goal"
+       },
+       {
+        "line_id": "9555558fe0bf47b7:7:7",
+        "document": "en_learner.txt",
+        "left": "to achieve the",
+        "node": "goal",
+        "right": "and make my",
+        "pos": "NOUN",
+        "lemma": "goal"
+       }
+      ]
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "total",
+      "value": 6,
+      "tol": 1e-06
+     }
+    ],
+    "strings": [
+     {
+      "label": "second line_id",
+      "value": "9555558fe0bf47b7:0:6"
+     }
+    ],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-046",
+   "category": "kwic",
+   "language": "en",
+   "corpus": "C1",
+   "question": "How many hits does 'riverfront' have, and how many hits does 'river' have?",
+   "trap": false,
+   "tools": [
+    {
+     "name": "search_concordance",
+     "args": {
+      "corpus": "C1",
+      "query": "riverfront",
+      "window": 3,
+      "limit": 10
+     },
+     "ok": true,
+     "result": {
+      "total_matches": 2,
+      "query": {
+       "q": "riverfront",
+       "level": "word",
+       "window": 3,
+       "case_sensitive": false,
+       "regex": false
+      },
+      "lines": [
+       {
+        "line_id": "5e2edc3942cc425b:0:3",
+        "document": "en_news.txt",
+        "left": "City Council Approves",
+        "node": "Riverfront",
+        "right": "Park",
+        "pos": "PROPN",
+        "lemma": "Riverfront"
+       },
+       {
+        "line_id": "5e2edc3942cc425b:1:6",
+        "document": "en_news.txt",
+        "left": "approved the new",
+        "node": "riverfront",
+        "right": "park project on",
+        "pos": "NOUN",
+        "lemma": "riverfront"
+       }
+      ]
+     }
+    },
+    {
+     "name": "search_concordance",
+     "args": {
+      "corpus": "C1",
+      "query": "river",
+      "window": 3,
+      "limit": 10
+     },
+     "ok": true,
+     "result": {
+      "total_matches": 1,
+      "query": {
+       "q": "river",
+       "level": "word",
+       "window": 3,
+       "case_sensitive": false,
+       "regex": false
+      },
+      "lines": [
+       {
+        "line_id": "5e2edc3942cc425b:3:3",
+        "document": "en_news.txt",
+        "left": "Residents along the",
+        "node": "river",
+        "right": "have asked for",
+        "pos": "NOUN",
+        "lemma": "river"
+       }
+      ]
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "'riverfront' hits",
+      "value": 2,
+      "tol": 1e-06
+     },
+     {
+      "label": "'river' hits",
+      "value": 1,
+      "tol": 1e-06
+     }
+    ],
+    "strings": [],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-047",
+   "category": "cql",
+   "language": "en",
+   "corpus": "C1",
+   "question": "Using CQL, how many hits does the query [lemma=\"algorithm\"] return?",
+   "trap": false,
+   "tools": [
+    {
+     "name": "search_cql",
+     "args": {
+      "corpus": "C1",
+      "query": "[lemma=\"algorithm\"]",
+      "window": 3
+     },
+     "ok": true,
+     "result": {
+      "mode": "cql",
+      "query": "[lemma=\"algorithm\"]",
+      "parsed": "[lemma=\"algorithm\"]",
+      "within": "document",
+      "total": 4,
+      "total_capped": false,
+      "lines": [
+       {
+        "line_id": "d6708cea380343f5:2:7",
+        "document": "en_academic.txt",
+        "left": "automatically ; the",
+        "node": "algorithm",
+        "right": "may therefore misclassify",
+        "pos": "PROPN",
+        "lemma": "algorithm"
+       },
+       {
+        "line_id": "d6708cea380343f5:3:1",
+        "document": "en_academic.txt",
+        "left": "The",
+        "node": "algorithm",
+        "right": "clearly outperforms simple",
+        "pos": "PROPN",
+        "lemma": "algorithm"
+       },
+       {
+        "line_id": "d6708cea380343f5:4:6",
+        "document": "en_academic.txt",
+        "left": "that the proposed",
+        "node": "algorithm",
+        "right": "converges after six",
+        "pos": "PROPN",
+        "lemma": "algorithm"
+       },
+       {
+        "line_id": "d6708cea380343f5:8:3",
+        "document": "en_academic.txt",
+        "left": "Second , the",
+        "node": "algorithm",
+        "right": "is sensitive to",
+        "pos": "PROPN",
+        "lemma": "algorithm"
+       }
+      ]
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "total hits",
+      "value": 4,
+      "tol": 1e-06
+     }
+    ],
+    "strings": [],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-048",
+   "category": "cql",
+   "language": "en",
+   "corpus": "C1",
+   "question": "How many case-insensitive CQL hits does the query \"park\" %c return?",
+   "trap": false,
+   "tools": [
+    {
+     "name": "search_cql",
+     "args": {
+      "corpus": "C1",
+      "query": "\"park\" %c",
+      "window": 3
+     },
+     "ok": true,
+     "result": {
+      "mode": "cql",
+      "query": "\"park\" %c",
+      "parsed": "\"park\"%c",
+      "within": "document",
+      "total": 4,
+      "total_capped": false,
+      "lines": [
+       {
+        "line_id": "5e2edc3942cc425b:0:4",
+        "document": "en_news.txt",
+        "left": "Council Approves Riverfront",
+        "node": "Park",
+        "right": "",
+        "pos": "PROPN",
+        "lemma": "Park"
+       },
+       {
+        "line_id": "5e2edc3942cc425b:1:7",
+        "document": "en_news.txt",
+        "left": "the new riverfront",
+        "node": "park",
+        "right": "project on Tuesday",
+        "pos": "NOUN",
+        "lemma": "park"
+       },
+       {
+        "line_id": "5e2edc3942cc425b:4:6",
+        "document": "en_news.txt",
+        "left": "Reyes said the",
+        "node": "park",
+        "right": "will include two",
+        "pos": "NOUN",
+        "lemma": "park"
+       },
+       {
+        "line_id": "5e2edc3942cc425b:6:5",
+        "document": "en_news.txt",
+        "left": "replied that the",
+        "node": "park",
+        "right": "will pay for",
+        "pos": "NOUN",
+        "lemma": "park"
+       }
+      ]
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "total hits",
+      "value": 4,
+      "tol": 1e-06
+     }
+    ],
+    "strings": [],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-049",
+   "category": "cql",
+   "language": "en",
+   "corpus": "C1",
+   "question": "How many hits does the CQL query [lemma=\"new\"] []{0,2} \"park\" return?",
+   "trap": false,
+   "tools": [
+    {
+     "name": "search_cql",
+     "args": {
+      "corpus": "C1",
+      "query": "[lemma=\"new\"] []{0,2} \"park\"",
+      "window": 3
+     },
+     "ok": true,
+     "result": {
+      "mode": "cql",
+      "query": "[lemma=\"new\"] []{0,2} \"park\"",
+      "parsed": "[lemma=\"new\"] []{0,2} \"park\"",
+      "within": "document",
+      "total": 1,
+      "total_capped": false,
+      "lines": [
+       {
+        "line_id": "5e2edc3942cc425b:1:5",
+        "document": "en_news.txt",
+        "left": "council approved the",
+        "node": "new riverfront park",
+        "right": "project on Tuesday",
+        "pos": "ADJ",
+        "lemma": "new"
+       }
+      ]
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "total hits",
+      "value": 1,
+      "tol": 1e-06
+     }
+    ],
+    "strings": [],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-050",
+   "category": "cql",
+   "language": "en",
+   "corpus": "C1",
+   "question": "For the word 'council': does the hit count change between the CQL scope \"within sentence\" and \"within document\"? Give both totals.",
+   "trap": false,
+   "tools": [
+    {
+     "name": "search_cql",
+     "args": {
+      "corpus": "C1",
+      "query": "\"council\" within sentence",
+      "window": 3
+     },
+     "ok": true,
+     "result": {
+      "mode": "cql",
+      "query": "\"council\" within sentence",
+      "parsed": "\"council\" within sentence",
+      "within": "sentence",
+      "total": 2,
+      "total_capped": false,
+      "lines": [
+       {
+        "line_id": "5e2edc3942cc425b:1:2",
+        "document": "en_news.txt",
+        "left": "The city",
+        "node": "council",
+        "right": "approved the new",
+        "pos": "NOUN",
+        "lemma": "council"
+       },
+       {
+        "line_id": "5e2edc3942cc425b:8:1",
+        "document": "en_news.txt",
+        "left": "The",
+        "node": "council",
+        "right": "will review progress",
+        "pos": "NOUN",
+        "lemma": "council"
+       }
+      ]
+     }
+    },
+    {
+     "name": "search_cql",
+     "args": {
+      "corpus": "C1",
+      "query": "\"council\" within document",
+      "window": 3
+     },
+     "ok": true,
+     "result": {
+      "mode": "cql",
+      "query": "\"council\" within document",
+      "parsed": "\"council\"",
+      "within": "document",
+      "total": 2,
+      "total_capped": false,
+      "lines": [
+       {
+        "line_id": "5e2edc3942cc425b:1:2",
+        "document": "en_news.txt",
+        "left": "The city",
+        "node": "council",
+        "right": "approved the new",
+        "pos": "NOUN",
+        "lemma": "council"
+       },
+       {
+        "line_id": "5e2edc3942cc425b:8:1",
+        "document": "en_news.txt",
+        "left": "The",
+        "node": "council",
+        "right": "will review progress",
+        "pos": "NOUN",
+        "lemma": "council"
+       }
+      ]
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "within sentence",
+      "value": 2,
+      "tol": 1e-06
+     },
+     {
+      "label": "within document",
+      "value": 2,
+      "tol": 1e-06
+     }
+    ],
+    "strings": [],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-051",
+   "category": "cql",
+   "language": "en",
+   "corpus": "C1",
+   "question": "Run the CQL query [[[broken and tell me how many hits it returns.",
+   "trap": false,
+   "tools": [
+    {
+     "name": "search_cql",
+     "args": {
+      "corpus": "C1",
+      "query": "[[[broken",
+      "window": 3
+     },
+     "ok": false,
+     "error": "position 1: expected an attribute name (word, lemma, pos, xpos, rel, morph, root, pattern)"
+    }
+   ],
+   "gold": {
+    "numbers": [],
+    "strings": [],
+    "traps": {
+     "error": true
+    }
+   }
+  },
+  {
+   "id": "G-052",
+   "category": "cql",
+   "language": "en",
+   "corpus": "C1",
+   "question": "How many hits does the CQL query \"study\" []{0,2} \"science\" return?",
+   "trap": false,
+   "tools": [
+    {
+     "name": "search_cql",
+     "args": {
+      "corpus": "C1",
+      "query": "\"study\" []{0,2} \"science\"",
+      "window": 3
+     },
+     "ok": true,
+     "result": {
+      "mode": "cql",
+      "query": "\"study\" []{0,2} \"science\"",
+      "parsed": "\"study\" []{0,2} \"science\"",
+      "within": "document",
+      "total": 1,
+      "total_capped": false,
+      "lines": [
+       {
+        "line_id": "b7217548d5a7465d:0:11",
+        "document": "en_learner.txt",
+        "left": "is to study",
+        "node": "study computer science",
+        "right": "",
+        "pos": "VERB",
+        "lemma": "study"
+       }
+      ]
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "total hits",
+      "value": 1,
+      "tol": 1e-06
+     }
+    ],
+    "strings": [],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-053",
+   "category": "sentiment",
+   "language": "en",
+   "corpus": "C1",
+   "question": "How many sentences of this corpus are classified positive, negative, and neutral?",
+   "trap": false,
+   "tools": [
+    {
+     "name": "sentiment",
+     "args": {
+      "corpus": "C1"
+     },
+     "ok": true,
+     "result": {
+      "total_sentences": 27,
+      "positive": 5,
+      "negative": 1,
+      "neutral": 21,
+      "avg_score": 0.074
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "positive",
+      "value": 5,
+      "tol": 1e-06
+     },
+     {
+      "label": "negative",
+      "value": 1,
+      "tol": 1e-06
+     },
+     {
+      "label": "neutral",
+      "value": 21,
+      "tol": 1e-06
+     }
+    ],
+    "strings": [],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-054",
+   "category": "sentiment",
+   "language": "en",
+   "corpus": "C1",
+   "question": "What is the average sentiment score of the corpus, and how many sentences were analysed?",
+   "trap": false,
+   "tools": [
+    {
+     "name": "sentiment",
+     "args": {
+      "corpus": "C1"
+     },
+     "ok": true,
+     "result": {
+      "total_sentences": 27,
+      "positive": 5,
+      "negative": 1,
+      "neutral": 21,
+      "avg_score": 0.074
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "avg score",
+      "value": 0.074,
+      "tol": 1e-06
+     },
+     {
+      "label": "sentences",
+      "value": 27,
+      "tol": 1e-06
+     }
+    ],
+    "strings": [],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-055",
+   "category": "sentiment",
+   "language": "en",
+   "corpus": "C6",
+   "question": "For the parallel English corpus: how many sentences are positive, and what is the average sentiment score?",
+   "trap": false,
+   "tools": [
+    {
+     "name": "sentiment",
+     "args": {
+      "corpus": "C6"
+     },
+     "ok": true,
+     "result": {
+      "total_sentences": 4,
+      "positive": 0,
+      "negative": 0,
+      "neutral": 4,
+      "avg_score": 0.0
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "positive",
+      "value": 0,
+      "tol": 1e-06
+     },
+     {
+      "label": "avg score",
+      "value": 0.0,
+      "tol": 1e-06
+     }
+    ],
+    "strings": [],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-056",
+   "category": "sentiment",
+   "language": "ar",
+   "corpus": "C4",
+   "question": "كم جملة إيجابية وسلبية ومحايدة في هذا المحتوى؟",
+   "trap": false,
+   "tools": [
+    {
+     "name": "sentiment",
+     "args": {
+      "corpus": "C4"
+     },
+     "ok": true,
+     "result": {
+      "total_sentences": 19,
+      "positive": 2,
+      "negative": 1,
+      "neutral": 16,
+      "avg_score": 0.026
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "positive",
+      "value": 2,
+      "tol": 1e-06
+     },
+     {
+      "label": "negative",
+      "value": 1,
+      "tol": 1e-06
+     },
+     {
+      "label": "neutral",
+      "value": 16,
+      "tol": 1e-06
+     }
+    ],
+    "strings": [],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-057",
+   "category": "sentiment",
+   "language": "en",
+   "corpus": "C2",
+   "question": "For the learner essay corpus: how many positive, negative, and neutral sentences are there?",
+   "trap": false,
+   "tools": [
+    {
+     "name": "sentiment",
+     "args": {
+      "corpus": "C2"
+     },
+     "ok": true,
+     "result": {
+      "total_sentences": 8,
+      "positive": 3,
+      "negative": 0,
+      "neutral": 5,
+      "avg_score": 0.188
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "positive",
+      "value": 3,
+      "tol": 1e-06
+     },
+     {
+      "label": "negative",
+      "value": 0,
+      "tol": 1e-06
+     },
+     {
+      "label": "neutral",
+      "value": 5,
+      "tol": 1e-06
+     }
+    ],
+    "strings": [],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-058",
+   "category": "register",
+   "language": "ar",
+   "corpus": "C4",
+   "question": "تصنيف السجلات (فصحى كلاسيكية، فصحى عصرية، لهجة) لنصٍّ معيّن: ما توزيع النص الآتي؟ «أعلنت الوزارة عن مشروع جديد لتطوير التعليم الرقمي في المدارس الحكومية.»",
+   "trap": false,
+   "tools": [
+    {
+     "name": "arabic_register",
+     "args": {
+      "text": "أعلنت الوزارة عن مشروع جديد لتطوير التعليم الرقمي في المدارس الحكومية."
+     },
+     "ok": true,
+     "result": {
+      "register_distribution": {
+       "classical": 0.0,
+       "msa": 1.0,
+       "dialectal": 0.0
+      }
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "classical",
+      "value": 0.0,
+      "tol": 1e-06
+     },
+     {
+      "label": "msa",
+      "value": 1.0,
+      "tol": 1e-06
+     },
+     {
+      "label": "dialectal",
+      "value": 0.0,
+      "tol": 1e-06
+     }
+    ],
+    "strings": [],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-059",
+   "category": "register",
+   "language": "ar",
+   "corpus": "C4",
+   "question": "ما التصنيف السائد لنص «كان الملوك يجتمعون في هذا الموضع يتفاوضون في شؤون الرعية. وقد قال الحكيم: إنّ عدل السلطان أصل عمارة البلاد»؟",
+   "trap": false,
+   "tools": [
+    {
+     "name": "arabic_register",
+     "args": {
+      "text": "كان الملوك يجتمعون في هذا الموضع يتفاوضون في شؤون الرعية. وقد قال الحكيم: إنّ عدل السلطان أصل عمارة البلاد"
+     },
+     "ok": true,
+     "result": {
+      "register_distribution": {
+       "classical": 0.75,
+       "msa": 0.25,
+       "dialectal": 0.0
+      }
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "classical",
+      "value": 0.75,
+      "tol": 1e-06
+     },
+     {
+      "label": "msa",
+      "value": 0.25,
+      "tol": 1e-06
+     },
+     {
+      "label": "dialectal",
+      "value": 0.0,
+      "tol": 1e-06
+     }
+    ],
+    "strings": [],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-060",
+   "category": "register",
+   "language": "ar",
+   "corpus": "C4",
+   "question": "للهجة: ما توزيع السجلات لنص «ليش ما رح تيجي معنا على البحرية؟ الشو كان حلو كتير مبارح»؟",
+   "trap": false,
+   "tools": [
+    {
+     "name": "arabic_register",
+     "args": {
+      "text": "ليش ما رح تيجي معنا على البحرية؟ الشو كان حلو كتير مبارح"
+     },
+     "ok": true,
+     "result": {
+      "register_distribution": {
+       "classical": 0.333,
+       "msa": 0.333,
+       "dialectal": 0.333
+      }
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "classical",
+      "value": 0.333,
+      "tol": 1e-06
+     },
+     {
+      "label": "msa",
+      "value": 0.333,
+      "tol": 1e-06
+     },
+     {
+      "label": "dialectal",
+      "value": 0.333,
+      "tol": 1e-06
+     }
+    ],
+    "strings": [],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-061",
+   "category": "register",
+   "language": "ar",
+   "corpus": "C4",
+   "question": "نص بلا علامات ترقيم: ما توزيع السجلات لنص «ذهب الطلاب إلى المكتبة في الصباح الباكر قرأوا القصة ثم كتبوا ملخصاً قصيراً عنها»؟",
+   "trap": false,
+   "tools": [
+    {
+     "name": "arabic_register",
+     "args": {
+      "text": "ذهب الطلاب إلى المكتبة في الصباح الباكر قرأوا القصة ثم كتبوا ملخصاً قصيراً عنها"
+     },
+     "ok": true,
+     "result": {
+      "register_distribution": {
+       "classical": 0.0,
+       "msa": 1.0,
+       "dialectal": 0.0
+      }
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "classical",
+      "value": 0.0,
+      "tol": 1e-06
+     },
+     {
+      "label": "msa",
+      "value": 1.0,
+      "tol": 1e-06
+     },
+     {
+      "label": "dialectal",
+      "value": 0.0,
+      "tol": 1e-06
+     }
+    ],
+    "strings": [],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-062",
+   "category": "register",
+   "language": "ar",
+   "corpus": "C4",
+   "question": "ما التصنيف السائد لنص «سافر التاجر العجوز إلى الساحل كل ربيع.»؟",
+   "trap": false,
+   "tools": [
+    {
+     "name": "arabic_register",
+     "args": {
+      "text": "سافر التاجر العجوز إلى الساحل كل ربيع."
+     },
+     "ok": true,
+     "result": {
+      "register_distribution": {
+       "classical": 0.0,
+       "msa": 1.0,
+       "dialectal": 0.0
+      }
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "classical",
+      "value": 0.0,
+      "tol": 1e-06
+     },
+     {
+      "label": "msa",
+      "value": 1.0,
+      "tol": 1e-06
+     },
+     {
+      "label": "dialectal",
+      "value": 0.0,
+      "tol": 1e-06
+     }
+    ],
+    "strings": [],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-063",
+   "category": "arabic_tools",
+   "language": "ar",
+   "corpus": "C4",
+   "question": "ما تصنيف اللهجة لهذا النص؟ «ليش ما رح تيجي معنا على البحرية؟ الشو كان حلو كتير مبارح، وهويك الجو منعش.»",
+   "trap": false,
+   "tools": [
+    {
+     "name": "arabic_dialect_id",
+     "args": {
+      "text": "ليش ما رح تيجي معنا على البحرية؟ الشو كان حلو كتير مبارح، وهويك الجو منعش."
+     },
+     "ok": true,
+     "result": {
+      "dialect_distribution": {
+       "dialect_distribution": {
+        "msa": 0.0007170484258037945,
+        "egy": 0.0024675895358600044,
+        "glf": 0.0023610946103347517,
+        "lev": 0.9944542674280016
+       }
+      }
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "egy",
+      "value": 0.0024675895358600044,
+      "tol": 1e-06
+     },
+     {
+      "label": "glf",
+      "value": 0.0023610946103347517,
+      "tol": 1e-06
+     },
+     {
+      "label": "lev",
+      "value": 0.9944542674280016,
+      "tol": 1e-06
+     }
+    ],
+    "strings": [],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-064",
+   "category": "arabic_tools",
+   "language": "ar",
+   "corpus": "C4",
+   "question": "ما تصنيف اللهجة لنص «أعلنت الوزارة عن مشروع جديد لتطوير التعليم الرقمي في المدارس الحكومية.»؟",
+   "trap": false,
+   "tools": [
+    {
+     "name": "arabic_dialect_id",
+     "args": {
+      "text": "أعلنت الوزارة عن مشروع جديد لتطوير التعليم الرقمي في المدارس الحكومية."
+     },
+     "ok": true,
+     "result": {
+      "dialect_distribution": {
+       "dialect_distribution": {
+        "msa": 0.45418850360592744,
+        "egy": 0.15262960302093256,
+        "glf": 0.11429192051311023,
+        "lev": 0.2788899728600298
+       }
+      }
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "msa",
+      "value": 0.45418850360592744,
+      "tol": 1e-06
+     },
+     {
+      "label": "egy",
+      "value": 0.15262960302093256,
+      "tol": 1e-06
+     },
+     {
+      "label": "glf",
+      "value": 0.11429192051311023,
+      "tol": 1e-06
+     },
+     {
+      "label": "lev",
+      "value": 0.2788899728600298,
+      "tol": 1e-06
+     }
+    ],
+    "strings": [],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-065",
+   "category": "arabic_tools",
+   "language": "ar",
+   "corpus": "C4",
+   "question": "استخرج جذور الكلمات في العبارة: «الطلاب يقرأون القصة» — كم جذاذة (root) مختلفة يعيدها المحرك؟",
+   "trap": false,
+   "tools": [
+    {
+     "name": "arabic_roots",
+     "args": {
+      "text": "الطلاب يقرأون القصة"
+     },
+     "ok": true,
+     "result": {
+      "roots": [
+       {
+        "token": "الطلاب",
+        "root": "ط.ل.ب",
+        "pattern": "ال1ُ2ّا3",
+        "lemma": "طالِب",
+        "pos": "noun",
+        "buckwalter": "AlTlAb"
+       },
+       {
+        "token": "يقرأون",
+        "root": "ق.ر.#",
+        "pattern": "يَ1ْ2َأُونَ",
+        "lemma": "قَرَأ",
+        "pos": "verb",
+        "buckwalter": "yqr>wn"
+       },
+       {
+        "token": "القصة",
+        "root": "ق.ص.ص",
+        "pattern": "ال1َ2َّة",
+        "lemma": "قَصَّة",
+        "pos": "noun",
+        "buckwalter": "AlqSp"
+       }
+      ]
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "distinct roots",
+      "value": 3,
+      "tol": 0
+     }
+    ],
+    "strings": [],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-066",
+   "category": "arabic_tools",
+   "language": "ar",
+   "corpus": "C4",
+   "question": "كم رمزاً (token) يحلل محرك التشكيل للنص: «قال الوزير إن المشروع سيبدأ»؟ وما الجذر الأول المُعاد؟",
+   "trap": false,
+   "tools": [
+    {
+     "name": "arabic_morphology",
+     "args": {
+      "text": "قال الوزير إن المشروع سيبدأ",
+      "dialect": "msa"
+     },
+     "ok": true,
+     "result": {
+      "backend": "camel",
+      "detected_dialect": "msa",
+      "token_count": 5,
+      "top_tokens": [
+       {
+        "text": "قال",
+        "root": "ق.#.ل",
+        "pattern": "1ا3َ",
+        "lemma": "قال",
+        "pos": "verb",
+        "buckwalter": "qAl"
+       },
+       {
+        "text": "الوزير",
+        "root": "#.ز.ر",
+        "pattern": "الوَ2ِي3",
+        "lemma": "وَزِير",
+        "pos": "noun",
+        "buckwalter": "Alwzyr"
+       },
+       {
+        "text": "إن",
+        "root": "#.ن",
+        "pattern": "أَ2ْ",
+        "lemma": "أَنْ",
+        "pos": "conj_sub",
+        "buckwalter": "<n"
+       },
+       {
+        "text": "المشروع",
+        "root": "ش.ر.ع",
+        "pattern": "المَ1ْ2ُو3",
+        "lemma": "مَشْرُوع",
+        "pos": "noun",
+        "buckwalter": "Alm$rwE"
+       },
+       {
+        "text": "سيبدأ",
+        "root": "ب.د.د",
+        "pattern": "سَيَ1ُ2ّا",
+        "lemma": "بَدّ",
+        "pos": "verb",
+        "buckwalter": "sybd>"
+       }
+      ]
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "token count",
+      "value": 5,
+      "tol": 1e-06
+     }
+    ],
+    "strings": [
+     {
+      "label": "first root",
+      "value": "ق.#.ل"
+     }
+    ],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-067",
+   "category": "discourse",
+   "language": "en",
+   "corpus": "C1",
+   "question": "Using the Hyland (2005) metadiscourse analysis, how many tokens does the corpus have, and which metadiscourse category is the most frequent?",
+   "trap": false,
+   "tools": [
+    {
+     "name": "discourse_analysis",
+     "args": {
+      "corpus": "C1"
+     },
+     "ok": true,
+     "result": {
+      "taxonomy": "Hyland 2005",
+      "total_tokens": 331,
+      "categories": {
+       "interactional.self_mentions": {
+        "freq": 9,
+        "per_million": 27190.33,
+        "examples": [
+         {
+          "cue": "my",
+          "evidence_id": "b7217548d5a7465d:0:0",
+          "sentence_preview": "my goal in university my goal in university is to study computer science ."
+         },
+         {
+          "cue": "my",
+          "evidence_id": "b7217548d5a7465d:0:5",
+          "sentence_preview": "my goal in university my goal in university is to study computer science ."
+         },
+         {
+          "cue": "me",
+          "evidence_id": "b7217548d5a7465d:2:3",
+          "sentence_preview": "my teacher said me that practice is important , and i am agree with him ."
+         },
+         {
+          "cue": "my",
+          "evidence_id": "b7217548d5a7465d:2:0",
+          "sentence_preview": "my teacher said me that practice is important , and i am agree with him ."
+         },
+         {
+          "cue": "my",
+          "evidence_id": "b7217548d5a7465d:6:3",
+          "sentence_preview": "in conclusion , my goal is clear : i want to be a good engineer ."
+         }
+        ],
+        "dp": 0.349
+       },
+       "interactional.hedges": {
+        "freq": 7,
+        "per_million": 21148.04,
+        "examples": [
+         {
+          "cue": "suggest",
+          "evidence_id": "d6708cea380343f5:1:2",
+          "sentence_preview": "we may suggest , following hyland , that hedges are a key interactional resource ."
+         },
+         {
+          "cue": "may",
+          "evidence_id": "d6708cea380343f5:1:1",
+          "sentence_preview": "we may suggest , following hyland , that hedges are a key interactional resource ."
+         },
+         {
+          "cue": "may",
+          "evidence_id": "d6708cea380343f5:2:8",
+          "sentence_preview": "the corpus was tagged automatically ; the algorithm may therefore misclassify rare patterns , and we treat such results "
+         },
+         {
+          "cue": "perhaps",
+          "evidence_id": "d6708cea380343f5:5:0",
+          "sentence_preview": "perhaps the most striking result concerns lexical bundles : they cluster in introductions rather than conclusions ."
+         },
+         {
+          "cue": "suggest",
+          "evidence_id": "d6708cea380343f5:6:1",
+          "sentence_preview": "we suggest two explanations ."
+         }
+        ],
+        "dp": 0.619
+       },
+       "interactive.frame_markers": {
+        "freq": 4,
+        "per_million": 12084.59,
+        "examples": [
+         {
+          "cue": "first",
+          "evidence_id": "b7217548d5a7465d:1:10",
+          "sentence_preview": "i have many goal for the future , but the first goal is to pass the exams ."
+         },
+         {
+          "cue": "in conclusion",
+          "evidence_id": "b7217548d5a7465d:6:0",
+          "sentence_preview": "in conclusion , my goal is clear : i want to be a good engineer ."
+         },
+         {
+          "cue": "first",
+          "evidence_id": "d6708cea380343f5:7:0",
+          "sentence_preview": "first , writers may hedge claims in results sections to soften evaluation ."
+         },
+         {
+          "cue": "second",
+          "evidence_id": "d6708cea380343f5:8:0",
+          "sentence_preview": "second , the algorithm is sensitive to genre , and academic prose shows the strongest effect ."
+         }
+        ],
+        "dp": 0.302
+       },
+       "interactive.transitions": {
+        "freq": 2,
+        "per_million": 6042.3,
+        "examples": [
+         {
+          "cue": "therefore",
+          "evidence_id": "d6708cea380343f5:2:9",
+          "sentence_preview": "the corpus was tagged automatically ; the algorithm may therefore misclassify rare patterns , and we treat such results "
+         },
+         {
+          "cue": "rather",
+          "evidence_id": "d6708cea380343f5:5:13",
+          "sentence_preview": "perhaps the most striking result concerns lexical bundles : they cluster in introductions rather than conclusions ."
+         }
+        ],
+        "dp": 0.619
+       },
+       "interactional.boosters": {
+        "freq": 2,
+        "per_million": 6042.3,
+        "examples": [
+         {
+          "cue": "clearly",
+          "evidence_id": "d6708cea380343f5:3:2",
+          "sentence_preview": "the algorithm clearly outperforms simple frequency counts ."
+         },
+         {
+          "cue": "clearly",
+          "evidence_id": "d6708cea380343f5:9:0",
+          "sentence_preview": "clearly , further testing across disciplines is needed before any firm conclusion may be drawn ."
+         }
+        ],
+        "dp": 0.619
+       }
+      }
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "total tokens",
+      "value": 331,
+      "tol": 1e-06
+     }
+    ],
+    "strings": [
+     {
+      "label": "most frequent category",
+      "value": "interactional.self_mentions"
+     }
+    ],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-068",
+   "category": "discourse",
+   "language": "en",
+   "corpus": "C1",
+   "question": "In the Hyland (2005) analysis, what is the raw frequency of the hedges category, and what is its per-million rate?",
+   "trap": false,
+   "tools": [
+    {
+     "name": "discourse_analysis",
+     "args": {
+      "corpus": "C1"
+     },
+     "ok": true,
+     "result": {
+      "taxonomy": "Hyland 2005",
+      "total_tokens": 331,
+      "categories": {
+       "interactional.self_mentions": {
+        "freq": 9,
+        "per_million": 27190.33,
+        "examples": [
+         {
+          "cue": "my",
+          "evidence_id": "b7217548d5a7465d:0:0",
+          "sentence_preview": "my goal in university my goal in university is to study computer science ."
+         },
+         {
+          "cue": "my",
+          "evidence_id": "b7217548d5a7465d:0:5",
+          "sentence_preview": "my goal in university my goal in university is to study computer science ."
+         },
+         {
+          "cue": "me",
+          "evidence_id": "b7217548d5a7465d:2:3",
+          "sentence_preview": "my teacher said me that practice is important , and i am agree with him ."
+         },
+         {
+          "cue": "my",
+          "evidence_id": "b7217548d5a7465d:2:0",
+          "sentence_preview": "my teacher said me that practice is important , and i am agree with him ."
+         },
+         {
+          "cue": "my",
+          "evidence_id": "b7217548d5a7465d:6:3",
+          "sentence_preview": "in conclusion , my goal is clear : i want to be a good engineer ."
+         }
+        ],
+        "dp": 0.349
+       },
+       "interactional.hedges": {
+        "freq": 7,
+        "per_million": 21148.04,
+        "examples": [
+         {
+          "cue": "suggest",
+          "evidence_id": "d6708cea380343f5:1:2",
+          "sentence_preview": "we may suggest , following hyland , that hedges are a key interactional resource ."
+         },
+         {
+          "cue": "may",
+          "evidence_id": "d6708cea380343f5:1:1",
+          "sentence_preview": "we may suggest , following hyland , that hedges are a key interactional resource ."
+         },
+         {
+          "cue": "may",
+          "evidence_id": "d6708cea380343f5:2:8",
+          "sentence_preview": "the corpus was tagged automatically ; the algorithm may therefore misclassify rare patterns , and we treat such results "
+         },
+         {
+          "cue": "perhaps",
+          "evidence_id": "d6708cea380343f5:5:0",
+          "sentence_preview": "perhaps the most striking result concerns lexical bundles : they cluster in introductions rather than conclusions ."
+         },
+         {
+          "cue": "suggest",
+          "evidence_id": "d6708cea380343f5:6:1",
+          "sentence_preview": "we suggest two explanations ."
+         }
+        ],
+        "dp": 0.619
+       },
+       "interactive.frame_markers": {
+        "freq": 4,
+        "per_million": 12084.59,
+        "examples": [
+         {
+          "cue": "first",
+          "evidence_id": "b7217548d5a7465d:1:10",
+          "sentence_preview": "i have many goal for the future , but the first goal is to pass the exams ."
+         },
+         {
+          "cue": "in conclusion",
+          "evidence_id": "b7217548d5a7465d:6:0",
+          "sentence_preview": "in conclusion , my goal is clear : i want to be a good engineer ."
+         },
+         {
+          "cue": "first",
+          "evidence_id": "d6708cea380343f5:7:0",
+          "sentence_preview": "first , writers may hedge claims in results sections to soften evaluation ."
+         },
+         {
+          "cue": "second",
+          "evidence_id": "d6708cea380343f5:8:0",
+          "sentence_preview": "second , the algorithm is sensitive to genre , and academic prose shows the strongest effect ."
+         }
+        ],
+        "dp": 0.302
+       },
+       "interactive.transitions": {
+        "freq": 2,
+        "per_million": 6042.3,
+        "examples": [
+         {
+          "cue": "therefore",
+          "evidence_id": "d6708cea380343f5:2:9",
+          "sentence_preview": "the corpus was tagged automatically ; the algorithm may therefore misclassify rare patterns , and we treat such results "
+         },
+         {
+          "cue": "rather",
+          "evidence_id": "d6708cea380343f5:5:13",
+          "sentence_preview": "perhaps the most striking result concerns lexical bundles : they cluster in introductions rather than conclusions ."
+         }
+        ],
+        "dp": 0.619
+       },
+       "interactional.boosters": {
+        "freq": 2,
+        "per_million": 6042.3,
+        "examples": [
+         {
+          "cue": "clearly",
+          "evidence_id": "d6708cea380343f5:3:2",
+          "sentence_preview": "the algorithm clearly outperforms simple frequency counts ."
+         },
+         {
+          "cue": "clearly",
+          "evidence_id": "d6708cea380343f5:9:0",
+          "sentence_preview": "clearly , further testing across disciplines is needed before any firm conclusion may be drawn ."
+         }
+        ],
+        "dp": 0.619
+       }
+      }
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "hedges freq",
+      "value": 7,
+      "tol": 1e-06
+     },
+     {
+      "label": "hedges per million",
+      "value": 21148.04,
+      "tol": 1e-06
+     }
+    ],
+    "strings": [],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-069",
+   "category": "discourse",
+   "language": "en",
+   "corpus": "C1",
+   "question": "In the Hyland (2005) analysis, what is the raw frequency of the boosters category?",
+   "trap": false,
+   "tools": [
+    {
+     "name": "discourse_analysis",
+     "args": {
+      "corpus": "C1"
+     },
+     "ok": true,
+     "result": {
+      "taxonomy": "Hyland 2005",
+      "total_tokens": 331,
+      "categories": {
+       "interactional.self_mentions": {
+        "freq": 9,
+        "per_million": 27190.33,
+        "examples": [
+         {
+          "cue": "my",
+          "evidence_id": "b7217548d5a7465d:0:0",
+          "sentence_preview": "my goal in university my goal in university is to study computer science ."
+         },
+         {
+          "cue": "my",
+          "evidence_id": "b7217548d5a7465d:0:5",
+          "sentence_preview": "my goal in university my goal in university is to study computer science ."
+         },
+         {
+          "cue": "me",
+          "evidence_id": "b7217548d5a7465d:2:3",
+          "sentence_preview": "my teacher said me that practice is important , and i am agree with him ."
+         },
+         {
+          "cue": "my",
+          "evidence_id": "b7217548d5a7465d:2:0",
+          "sentence_preview": "my teacher said me that practice is important , and i am agree with him ."
+         },
+         {
+          "cue": "my",
+          "evidence_id": "b7217548d5a7465d:6:3",
+          "sentence_preview": "in conclusion , my goal is clear : i want to be a good engineer ."
+         }
+        ],
+        "dp": 0.349
+       },
+       "interactional.hedges": {
+        "freq": 7,
+        "per_million": 21148.04,
+        "examples": [
+         {
+          "cue": "suggest",
+          "evidence_id": "d6708cea380343f5:1:2",
+          "sentence_preview": "we may suggest , following hyland , that hedges are a key interactional resource ."
+         },
+         {
+          "cue": "may",
+          "evidence_id": "d6708cea380343f5:1:1",
+          "sentence_preview": "we may suggest , following hyland , that hedges are a key interactional resource ."
+         },
+         {
+          "cue": "may",
+          "evidence_id": "d6708cea380343f5:2:8",
+          "sentence_preview": "the corpus was tagged automatically ; the algorithm may therefore misclassify rare patterns , and we treat such results "
+         },
+         {
+          "cue": "perhaps",
+          "evidence_id": "d6708cea380343f5:5:0",
+          "sentence_preview": "perhaps the most striking result concerns lexical bundles : they cluster in introductions rather than conclusions ."
+         },
+         {
+          "cue": "suggest",
+          "evidence_id": "d6708cea380343f5:6:1",
+          "sentence_preview": "we suggest two explanations ."
+         }
+        ],
+        "dp": 0.619
+       },
+       "interactive.frame_markers": {
+        "freq": 4,
+        "per_million": 12084.59,
+        "examples": [
+         {
+          "cue": "first",
+          "evidence_id": "b7217548d5a7465d:1:10",
+          "sentence_preview": "i have many goal for the future , but the first goal is to pass the exams ."
+         },
+         {
+          "cue": "in conclusion",
+          "evidence_id": "b7217548d5a7465d:6:0",
+          "sentence_preview": "in conclusion , my goal is clear : i want to be a good engineer ."
+         },
+         {
+          "cue": "first",
+          "evidence_id": "d6708cea380343f5:7:0",
+          "sentence_preview": "first , writers may hedge claims in results sections to soften evaluation ."
+         },
+         {
+          "cue": "second",
+          "evidence_id": "d6708cea380343f5:8:0",
+          "sentence_preview": "second , the algorithm is sensitive to genre , and academic prose shows the strongest effect ."
+         }
+        ],
+        "dp": 0.302
+       },
+       "interactive.transitions": {
+        "freq": 2,
+        "per_million": 6042.3,
+        "examples": [
+         {
+          "cue": "therefore",
+          "evidence_id": "d6708cea380343f5:2:9",
+          "sentence_preview": "the corpus was tagged automatically ; the algorithm may therefore misclassify rare patterns , and we treat such results "
+         },
+         {
+          "cue": "rather",
+          "evidence_id": "d6708cea380343f5:5:13",
+          "sentence_preview": "perhaps the most striking result concerns lexical bundles : they cluster in introductions rather than conclusions ."
+         }
+        ],
+        "dp": 0.619
+       },
+       "interactional.boosters": {
+        "freq": 2,
+        "per_million": 6042.3,
+        "examples": [
+         {
+          "cue": "clearly",
+          "evidence_id": "d6708cea380343f5:3:2",
+          "sentence_preview": "the algorithm clearly outperforms simple frequency counts ."
+         },
+         {
+          "cue": "clearly",
+          "evidence_id": "d6708cea380343f5:9:0",
+          "sentence_preview": "clearly , further testing across disciplines is needed before any firm conclusion may be drawn ."
+         }
+        ],
+        "dp": 0.619
+       }
+      }
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "boosters freq",
+      "value": 2,
+      "tol": 1e-06
+     }
+    ],
+    "strings": [],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-070",
+   "category": "pos_grammar",
+   "language": "en",
+   "corpus": "C1",
+   "question": "What is the total token count of the POS analysis, and which POS tag is the most frequent?",
+   "trap": false,
+   "tools": [
+    {
+     "name": "get_pos_analysis",
+     "args": {
+      "corpus": "C1"
+     },
+     "ok": true,
+     "result": {
+      "total_tokens": 331,
+      "distribution_top": [
+       {
+        "pos": "NOUN",
+        "freq": 81,
+        "percent": 24.471
+       },
+       {
+        "pos": "VERB",
+        "freq": 44,
+        "percent": 13.293
+       },
+       {
+        "pos": "DET",
+        "freq": 34,
+        "percent": 10.272
+       },
+       {
+        "pos": "ADJ",
+        "freq": 27,
+        "percent": 8.157
+       },
+       {
+        "pos": "AUX",
+        "freq": 26,
+        "percent": 7.855
+       },
+       {
+        "pos": "ADP",
+        "freq": 25,
+        "percent": 7.553
+       },
+       {
+        "pos": "PROPN",
+        "freq": 21,
+        "percent": 6.344
+       },
+       {
+        "pos": "PRON",
+        "freq": 21,
+        "percent": 6.344
+       },
+       {
+        "pos": "ADV",
+        "freq": 15,
+        "percent": 4.532
+       },
+       {
+        "pos": "NUM",
+        "freq": 12,
+        "percent": 3.625
+       }
+      ],
+      "pos_ngrams_top": [
+       {
+        "pattern": "DET NOUN",
+        "freq": 20
+       },
+       {
+        "pattern": "ADJ NOUN",
+        "freq": 17
+       },
+       {
+        "pattern": "NOUN AUX",
+        "freq": 16
+       },
+       {
+        "pattern": "AUX VERB",
+        "freq": 14
+       },
+       {
+        "pattern": "NOUN ADP",
+        "freq": 11
+       },
+       {
+        "pattern": "NOUN NOUN",
+        "freq": 10
+       },
+       {
+        "pattern": "NOUN VERB",
+        "freq": 9
+       },
+       {
+        "pattern": "ADP NOUN",
+        "freq": 9
+       },
+       {
+        "pattern": "VERB DET",
+        "freq": 8
+       },
+       {
+        "pattern": "DET ADJ",
+        "freq": 7
+       },
+       {
+        "pattern": "VERB ADP",
+        "freq": 7
+       },
+       {
+        "pattern": "PRON VERB",
+        "freq": 7
+       },
+       {
+        "pattern": "PROPN PROPN",
+        "freq": 6
+       },
+       {
+        "pattern": "NUM NOUN",
+        "freq": 6
+       },
+       {
+        "pattern": "NOUN CCONJ",
+        "freq": 6
+       },
+       {
+        "pattern": "PART VERB",
+        "freq": 6
+       },
+       {
+        "pattern": "ADP DET",
+        "freq": 5
+       },
+       {
+        "pattern": "VERB NOUN",
+        "freq": 5
+       },
+       {
+        "pattern": "VERB ADJ",
+        "freq": 5
+       },
+       {
+        "pattern": "PRON AUX",
+        "freq": 5
+       }
+      ]
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "total tokens",
+      "value": 331,
+      "tol": 1e-06
+     }
+    ],
+    "strings": [
+     {
+      "label": "most frequent POS",
+      "value": "NOUN"
+     }
+    ],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-071",
+   "category": "pos_grammar",
+   "language": "en",
+   "corpus": "C1",
+   "question": "How many NOUN tokens does the POS analysis report?",
+   "trap": false,
+   "tools": [
+    {
+     "name": "get_pos_analysis",
+     "args": {
+      "corpus": "C1"
+     },
+     "ok": true,
+     "result": {
+      "total_tokens": 331,
+      "distribution_top": [
+       {
+        "pos": "NOUN",
+        "freq": 81,
+        "percent": 24.471
+       },
+       {
+        "pos": "VERB",
+        "freq": 44,
+        "percent": 13.293
+       },
+       {
+        "pos": "DET",
+        "freq": 34,
+        "percent": 10.272
+       },
+       {
+        "pos": "ADJ",
+        "freq": 27,
+        "percent": 8.157
+       },
+       {
+        "pos": "AUX",
+        "freq": 26,
+        "percent": 7.855
+       },
+       {
+        "pos": "ADP",
+        "freq": 25,
+        "percent": 7.553
+       },
+       {
+        "pos": "PROPN",
+        "freq": 21,
+        "percent": 6.344
+       },
+       {
+        "pos": "PRON",
+        "freq": 21,
+        "percent": 6.344
+       },
+       {
+        "pos": "ADV",
+        "freq": 15,
+        "percent": 4.532
+       },
+       {
+        "pos": "NUM",
+        "freq": 12,
+        "percent": 3.625
+       }
+      ],
+      "pos_ngrams_top": [
+       {
+        "pattern": "DET NOUN",
+        "freq": 20
+       },
+       {
+        "pattern": "ADJ NOUN",
+        "freq": 17
+       },
+       {
+        "pattern": "NOUN AUX",
+        "freq": 16
+       },
+       {
+        "pattern": "AUX VERB",
+        "freq": 14
+       },
+       {
+        "pattern": "NOUN ADP",
+        "freq": 11
+       },
+       {
+        "pattern": "NOUN NOUN",
+        "freq": 10
+       },
+       {
+        "pattern": "NOUN VERB",
+        "freq": 9
+       },
+       {
+        "pattern": "ADP NOUN",
+        "freq": 9
+       },
+       {
+        "pattern": "VERB DET",
+        "freq": 8
+       },
+       {
+        "pattern": "DET ADJ",
+        "freq": 7
+       },
+       {
+        "pattern": "VERB ADP",
+        "freq": 7
+       },
+       {
+        "pattern": "PRON VERB",
+        "freq": 7
+       },
+       {
+        "pattern": "PROPN PROPN",
+        "freq": 6
+       },
+       {
+        "pattern": "NUM NOUN",
+        "freq": 6
+       },
+       {
+        "pattern": "NOUN CCONJ",
+        "freq": 6
+       },
+       {
+        "pattern": "PART VERB",
+        "freq": 6
+       },
+       {
+        "pattern": "ADP DET",
+        "freq": 5
+       },
+       {
+        "pattern": "VERB NOUN",
+        "freq": 5
+       },
+       {
+        "pattern": "VERB ADJ",
+        "freq": 5
+       },
+       {
+        "pattern": "PRON AUX",
+        "freq": 5
+       }
+      ]
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "NOUN count",
+      "value": 81,
+      "tol": 1e-06
+     }
+    ],
+    "strings": [],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-072",
+   "category": "pos_grammar",
+   "language": "en",
+   "corpus": "C1",
+   "question": "According to the grammar audit, how many passive-voice constructions are there in the corpus?",
+   "trap": false,
+   "tools": [
+    {
+     "name": "grammar_query",
+     "args": {
+      "corpus": "C1",
+      "patterns": [
+       "passive_voice"
+      ]
+     },
+     "ok": true,
+     "result": {
+      "counts": {
+       "passive_voice": 6
+      },
+      "examples": {
+       "passive_voice": [
+        {
+         "pattern": "passive_voice",
+         "doc": "5e2edc3942cc425b",
+         "sent": 2,
+         "verb": "expected",
+         "verb_lemma": "expect",
+         "aux": "is",
+         "evidence_id": "5e2edc3942cc425b:2:8"
+        },
+        {
+         "pattern": "passive_voice",
+         "doc": "b7217548d5a7465d",
+         "sent": 2,
+         "verb": "agree",
+         "verb_lemma": "agree",
+         "aux": "am",
+         "evidence_id": "b7217548d5a7465d:2:11"
+        },
+        {
+         "pattern": "passive_voice",
+         "doc": "b7217548d5a7465d",
+         "sent": 3,
+         "verb": "go",
+         "verb_lemma": "go",
+         "aux": "was",
+         "evidence_id": "b7217548d5a7465d:3:3"
+        },
+        {
+         "pattern": "passive_voice",
+         "doc": "d6708cea380343f5",
+         "sent": 2,
+         "verb": "tagged",
+         "verb_lemma": "tag",
+         "aux": "was",
+         "evidence_id": "d6708cea380343f5:2:2"
+        },
+        {
+         "pattern": "passive_voice",
+         "doc": "d6708cea380343f5",
+         "sent": 9,
+         "verb": "needed",
+         "verb_lemma": "need",
+         "aux": "is",
+         "evidence_id": "d6708cea380343f5:9:6"
+        },
+        {
+         "pattern": "passive_voice",
+         "doc": "d6708cea380343f5",
+         "sent": 9,
+         "verb": "drawn",
+         "verb_lemma": "draw",
+         "aux": "be",
+         "evidence_id": "d6708cea380343f5:9:13"
+        }
+       ]
+      }
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "passive count",
+      "value": 6,
+      "tol": 1e-06
+     }
+    ],
+    "strings": [],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-073",
+   "category": "trap",
+   "language": "en",
+   "corpus": "C1",
+   "question": "How many hits does the word 'zebra' have in this corpus?",
+   "trap": true,
+   "tools": [
+    {
+     "name": "search_concordance",
+     "args": {
+      "corpus": "C1",
+      "query": "zebra",
+      "window": 3,
+      "limit": 10
+     },
+     "ok": true,
+     "result": {
+      "total_matches": 0,
+      "query": {
+       "q": "zebra",
+       "level": "word",
+       "window": 3,
+       "case_sensitive": false,
+       "regex": false
+      },
+      "lines": []
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "total hits",
+      "value": 0,
+      "tol": 0
+     }
+    ],
+    "strings": [],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-074",
+   "category": "trap",
+   "language": "ar",
+   "corpus": "C4",
+   "question": "كم نتيجة لكلمة «زرافة» في هذا المحتوى؟",
+   "trap": true,
+   "tools": [
+    {
+     "name": "search_concordance",
+     "args": {
+      "corpus": "C4",
+      "query": "زرافة",
+      "window": 3,
+      "limit": 10
+     },
+     "ok": true,
+     "result": {
+      "total_matches": 0,
+      "query": {
+       "q": "زرافة",
+       "level": "word",
+       "window": 3,
+       "case_sensitive": false,
+       "regex": false
+      },
+      "lines": []
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "total hits",
+      "value": 0,
+      "tol": 0
+     }
+    ],
+    "strings": [],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-075",
+   "category": "trap",
+   "language": "en",
+   "corpus": "C2",
+   "question": "What is the log ratio of the word 'zebra' in the keyness table vs the press corpus?",
+   "trap": false,
+   "tools": [
+    {
+     "name": "compute_keyness",
+     "args": {
+      "corpus": "C2",
+      "reference": "C3",
+      "limit": 100
+     },
+     "ok": true,
+     "result": {
+      "target_corpus_id": "139b5f9f002b4730",
+      "reference_corpus_id": "287e79a486d44b5b",
+      "N1": 35,
+      "N2": 32,
+      "positive_keywords": [
+       {
+        "term": "i",
+        "f1": 8,
+        "f2": 0,
+        "log_likelihood": 11.380219077489372,
+        "chi_square": 8.306053268765135,
+        "log_ratio": 3.8707169830550336,
+        "pct_diff": 1362.857142857143,
+        "simple_maths": 228572.42857142855,
+        "odds_ratio": 20.09090909090909,
+        "p_ll": 0.000742,
+        "q_bh": 0.006681
+       },
+       {
+        "term": "goal",
+        "f1": 6,
+        "f2": 0,
+        "log_likelihood": 8.330993404202019,
+        "chi_square": 6.025292740046839,
+        "log_ratio": 3.4556794837761897,
+        "pct_diff": 997.1428571428571,
+        "simple_maths": 171429.57142857142,
+        "odds_ratio": 14.322033898305085,
+        "p_ll": 0.003897,
+        "q_bh": 0.007698
+       },
+       {
+        "term": "is",
+        "f1": 5,
+        "f2": 0,
+        "log_likelihood": 6.861625848268458,
+        "chi_square": 4.9400921658986165,
+        "log_ratio": 3.192645077942396,
+        "pct_diff": 814.2857142857142,
+        "simple_maths": 142858.14285714284,
+        "odds_ratio": 11.721311475409836,
+        "p_ll": 0.008807,
+        "q_bh": 0.008807
+       },
+       {
+        "term": "to",
+        "f1": 5,
+        "f2": 0,
+        "log_likelihood": 6.861625848268458,
+        "chi_square": 4.9400921658986165,
+        "log_ratio": 3.192645077942396,
+        "pct_diff": 814.2857142857142,
+        "simple_maths": 142858.14285714284,
+        "odds_ratio": 11.721311475409836,
+        "p_ll": 0.008807,
+        "q_bh": 0.008807
+       },
+       {
+        "term": "my",
+        "f1": 5,
+        "f2": 0,
+        "log_likelihood": 6.861625848268458,
+        "chi_square": 4.9400921658986165,
+        "log_ratio": 3.192645077942396,
+        "pct_diff": 814.2857142857142,
+        "simple_maths": 142858.14285714284,
+        "odds_ratio": 11.721311475409836,
+        "p_ll": 0.008807,
+        "q_bh": 0.008807
+       }
+      ],
+      "negative_keywords": [
+       {
+        "term": "in",
+        "f1": 0,
+        "f2": 6,
+        "log_likelihood": 9.516121767180039,
+        "chi_square": 7.20799180327869,
+        "log_ratio": -3.714245517666123,
+        "pct_diff": -100.0,
+        "simple_maths": 5.333304889040592e-06,
+        "odds_ratio": 0.05742145178764897,
+        "p_ll": 0.002037,
+        "q_bh": 0.007698
+       },
+       {
+        "term": "the",
+        "f1": 6,
+        "f2": 16,
+        "log_likelihood": 8.391806881151465,
+        "chi_square": 8.183088023088024,
+        "log_ratio": -1.5443205162238103,
+        "pct_diff": -65.71428571428571,
+        "simple_maths": 0.34285845714022856,
+        "odds_ratio": 0.20689655172413793,
+        "p_ll": 0.003769,
+        "q_bh": 0.007698
+       },
+       {
+        "term": "a",
+        "f1": 0,
+        "f2": 5,
+        "log_likelihood": 7.832240237849364,
+        "chi_square": 5.909778225806453,
+        "log_ratio": -3.451211111832329,
+        "pct_diff": -100.0,
+        "simple_maths": 6.3999590402621425e-06,
+        "odds_ratio": 0.07042253521126761,
+        "p_ll": 0.005132,
+        "q_bh": 0.007698
+       },
+       {
+        "term": "and",
+        "f1": 0,
+        "f2": 5,
+        "log_likelihood": 7.832240237849364,
+        "chi_square": 5.909778225806453,
+        "log_ratio": -3.451211111832329,
+        "pct_diff": -100.0,
+        "simple_maths": 6.3999590402621425e-06,
+        "odds_ratio": 0.07042253521126761,
+        "p_ll": 0.005132,
+        "q_bh": 0.007698
+       }
+      ]
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [],
+    "strings": [],
+    "traps": {
+     "absent": [
+      "row for 'zebra'"
+     ]
+    }
+   }
+  },
+  {
+   "id": "G-076",
+   "category": "trap",
+   "language": "en",
+   "corpus": "C1",
+   "question": "Run the CQL query '[[[not-a-query' and report the number of hits.",
+   "trap": false,
+   "tools": [
+    {
+     "name": "search_cql",
+     "args": {
+      "corpus": "C1",
+      "query": "[[[not-a-query",
+      "window": 3
+     },
+     "ok": false,
+     "error": "position 6: unexpected character '-'"
+    }
+   ],
+   "gold": {
+    "numbers": [],
+    "strings": [],
+    "traps": {
+     "error": true
+    }
+   }
+  },
+  {
+   "id": "G-077",
+   "category": "trap",
+   "language": "en",
+   "corpus": "C1",
+   "question": "What is the Flesch reading-ease score of this corpus?",
+   "trap": false,
+   "tools": [],
+   "gold": {
+    "numbers": [],
+    "strings": [],
+    "traps": {
+     "no_tool": true
+    }
+   }
+  },
+  {
+   "id": "G-078",
+   "category": "trap",
+   "language": "en",
+   "corpus": "C1",
+   "question": "How many unique trilateral roots does the English corpus have according to the Arabic morphology engine?",
+   "trap": false,
+   "tools": [],
+   "gold": {
+    "numbers": [],
+    "strings": [],
+    "traps": {
+     "no_tool": true
+    }
+   }
+  },
+  {
+   "id": "G-079",
+   "category": "trap",
+   "language": "en",
+   "corpus": "C1",
+   "question": "How many 8-grams occur at least twice in this corpus?",
+   "trap": true,
+   "tools": [
+    {
+     "name": "get_ngrams",
+     "args": {
+      "corpus": "C1",
+      "n": 8,
+      "min_freq": 2,
+      "min_range": 1,
+      "limit": 50
+     },
+     "ok": true,
+     "result": {
+      "n": 8,
+      "total_tokens": 331,
+      "top_ngrams": [],
+      "min_freq": 2,
+      "min_range": 1
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "8-gram rows",
+      "value": 0,
+      "tol": 0
+     }
+    ],
+    "strings": [],
+    "traps": {}
+   }
+  },
+  {
+   "id": "G-080",
+   "category": "trap",
+   "language": "en",
+   "corpus": "C1",
+   "question": "How many collocates does 'zebra' have within a window of 5?",
+   "trap": true,
+   "tools": [
+    {
+     "name": "compute_collocations",
+     "args": {
+      "corpus": "C1",
+      "node": "zebra",
+      "window": 5,
+      "min_freq": 1
+     },
+     "ok": true,
+     "result": {
+      "node": "zebra",
+      "window": 5,
+      "measures": [
+       "mi",
+       "t_score",
+       "log_likelihood",
+       "dice",
+       "log_dice",
+       "chi_square",
+       "delta_p",
+       "fisher"
+      ],
+      "top_collocates": []
+     }
+    }
+   ],
+   "gold": {
+    "numbers": [
+     {
+      "label": "collocate rows",
+      "value": 0,
+      "tol": 0
+     }
+    ],
+    "strings": [],
+    "traps": {}
+   }
+  }
+ ]
+}

@@ -1,0 +1,72 @@
+{
+ "_meta": {
+  "description": "Fixed evaluation snapshot for the grounding harness. Original texts authored for CorpusMind (no third-party licence). Any edit to these files invalidates the frozen gold and MUST trigger a rebuild + review.",
+  "discipline": "Do not edit texts after gold freeze; the scorer verifies hashes at run time.",
+  "total_bytes": 4786
+ },
+ "documents": [
+  {
+   "file": "en_news.txt",
+   "language": "en",
+   "role": "news-style press text",
+   "bytes": 579,
+   "sha256": "2de994e8e50dd7f14e33df69c8327fb76cf7c9c90877c3e4603b28c1297c94f9"
+  },
+  {
+   "file": "en_academic.txt",
+   "language": "en",
+   "role": "academic prose with hedges/boosters",
+   "bytes": 878,
+   "sha256": "e4c45639c311f6d533113f97c0a73d8a3abe99e32ee0e9ace4e68b0275c329c8"
+  },
+  {
+   "file": "en_learner.txt",
+   "language": "en",
+   "role": "learner essay with grammatical errors",
+   "bytes": 525,
+   "sha256": "7343c83132570299d4bc7bcb91f4c9e93bb9dbc68f2851533b882bb03140133c"
+  },
+  {
+   "file": "ar_msa.txt",
+   "language": "ar",
+   "role": "MSA news-style text, mixed punctuation",
+   "bytes": 851,
+   "sha256": "29dd5871b9b44be838350583fe8c375173376ddd06d94781efa6fa81cc80c40d"
+  },
+  {
+   "file": "ar_classical.txt",
+   "language": "ar",
+   "role": "classical-style prose markers",
+   "bytes": 558,
+   "sha256": "29ef1a2abfb28d8dd35c1066c15a04af88f2c2fa57cfbf31726aa497a5aee42d"
+  },
+  {
+   "file": "ar_dialect.txt",
+   "language": "ar",
+   "role": "Levantine dialect dialogue",
+   "bytes": 467,
+   "sha256": "5d0a95cd5914b86ccff0f93242134279cba0f7141c3a2e71e02e9659a7b54b13"
+  },
+  {
+   "file": "ar_nopunct.txt",
+   "language": "ar",
+   "role": "Arabic text without terminal punctuation",
+   "bytes": 427,
+   "sha256": "6062f14bad04f0f29c28bd9e6619724bc0a9d09a9ea55e2e24bf606ac38ccabb"
+  },
+  {
+   "file": "en_parallel.txt",
+   "language": "en",
+   "role": "parallel text (EN side) for Gale-Church",
+   "bytes": 200,
+   "sha256": "cc4914be7d98d4c9540c298ef9d18ea3502a595a147f35c95a5c36c60661ca82"
+  },
+  {
+   "file": "ar_parallel.txt",
+   "language": "ar",
+   "role": "parallel text (AR side) for Gale-Church",
+   "bytes": 301,
+   "sha256": "468cc499fff7885787781d2b8dacfe9aa7cbc89d7861067f754f67fd76b85880"
+  }
+ ]
+}

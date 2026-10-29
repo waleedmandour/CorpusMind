@@ -1,0 +1,7 @@
+Hedging and Boosting in Academic Prose
+
+This study examines cohesion in academic writing using a 50,000-word reference corpus. We may suggest, following Hyland, that hedges are a key interactional resource. The corpus was tagged automatically; the algorithm may therefore misclassify rare patterns, and we treat such results with caution.
+
+The algorithm clearly outperforms simple frequency counts. Table 2 shows that the proposed algorithm converges after six iterations. Perhaps the most striking result concerns lexical bundles: they cluster in introductions rather than conclusions.
+
+We suggest two explanations. First, writers may hedge claims in results sections to soften evaluation. Second, the algorithm is sensitive to genre, and academic prose shows the strongest effect. Clearly, further testing across disciplines is needed before any firm conclusion may be drawn.

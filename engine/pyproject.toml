@@ -166,6 +166,7 @@ ignore = [
   "B008",   # function-call-in-default-argument — FastAPI Depends() pattern is correct
   "N803",   # invalid-argument-name — many of our SQL column names use PascalCase (Token, etc.) intentionally
   "N806",   # non-lowercase-variable-in-function — same reason (ORM class names used as variables)
+  "N802",   # function-name-should-lowercase — eval/questions.py uses single-letter gold-spec helpers (N, S, C, D…) matching the linguistic notation in the paper
   "E741",   # ambiguous-variable-name — used in math-heavy code matching the literature (e.g. N, R, C)
   "RUF002", # ambiguous-unicode-character-docstring — we use Unicode math symbols (², ·, Σ) intentionally in METHODOLOGY
   "RUF003", # ambiguous-unicode-character-comment — same
