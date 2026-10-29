@@ -305,6 +305,7 @@ jobs:
     if: github.event_name == 'workflow_dispatch' && inputs.commit_results
     permissions:
       contents: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
 
@@ -319,10 +320,28 @@ jobs:
             --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
             --commit "${{ github.sha }}"
 
-      - name: Commit snapshot
+      - name: Push snapshot branch (main is protected — direct pushes are declined)
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          BRANCH="bench/snapshot-run-${{ github.run_id }}"
+          git checkout -b "$BRANCH"
           git add benchmarks/results
-          git commit -m "bench: results snapshot from run ${{ github.run_id }} (commit ${{ github.sha }})"
-          git push
+          git commit -m "bench: results snapshot from run ${{ github.run_id }} (tested commit ${{ github.sha }})"
+          git push origin "$BRANCH"
+          echo "branch=$BRANCH" >> "$GITHUB_ENV"
+
+      - name: Open snapshot PR
+        env:
+          SNAPSHOT_BRANCH: bench/snapshot-run-${{ github.run_id }}
+        run: |
+          BODY="Automated results snapshot from run ${{ github.run_id }} (tested commit ${{ github.sha }}). Data-only commit: artifacts + sha256 manifest under benchmarks/results/. Merge to make the citable snapshot visible on main."
+          jq -n --arg t "bench: results snapshot run ${{ github.run_id }}" \
+                --arg h "$SNAPSHOT_BRANCH" --arg b "$BODY" \
+                '{title:$t, head:$h, base:"main", body:$b}' > /tmp/pr.json
+          curl -sf -X POST \
+            -H "Authorization: Bearer ${{ github.token }}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/pulls" \
+            -d @/tmp/pr.json > /dev/null \
+            || echo "::notice::snapshot PR not created (may already exist)"
