@@ -36,6 +36,7 @@ from stats.measures import (
     log_likelihood_2x2,
     mutual_information,
     p_value_ll,
+    split_keywords_by_direction,
     t_score,
 )
 from storage.models import AnnotationVersion, Corpus, Document, Token
@@ -1700,18 +1701,24 @@ async def compute_keyness(
         r.measures["p_ll"] = round(p, 6)
         r.measures["q_bh"] = round(q, 6)
 
-    # Sort by log_likelihood descending
+    # Sort by log_likelihood descending, then split via the shared helper —
+    # G² is unsigned, so the direction comes from the SIGNED effect size
+    # (log_ratio), never from the sign of log_likelihood.
     rows.sort(key=lambda r: r.measures.get("log_likelihood", 0.0), reverse=True)
-
-    positive = [r for r in rows if r.measures.get("log_ratio", 0) > 0][:limit]
-    negative = [r for r in rows if r.measures.get("log_ratio", 0) < 0][:limit]
+    positive, negative = split_keywords_by_direction(
+        [
+            (r, r.measures.get("log_likelihood", 0.0), r.measures.get("log_ratio", 0.0))
+            for r in rows
+        ],
+        limit=limit,
+    )
 
     return KeynessResult(
         target_corpus_id=target_corpus_id,
         reference_corpus_id=reference_corpus_id,
         measures=measures,
-        positive_keywords=[{"term": r.term, "f1": r.f1, "f2": r.f2, **r.measures} for r in positive],
-        negative_keywords=[{"term": r.term, "f1": r.f1, "f2": r.f2, **r.measures} for r in negative],
+        positive_keywords=positive,
+        negative_keywords=negative,
         N1=N1,
         N2=N2,
         warnings=(

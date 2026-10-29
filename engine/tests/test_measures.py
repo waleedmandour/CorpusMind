@@ -28,6 +28,7 @@ from stats.measures import (
     p_value_ll,
     pct_diff,
     simple_maths,
+    split_keywords_by_direction,
     sttr,
     t_score,
     type_token_ratio,
@@ -230,6 +231,55 @@ def test_compute_keyness_row_carries_all_measures():
     row = compute_keyness_row("test", f1=100, f2=10, N1=10000, N2=10000)
     expected_keys = {"log_likelihood", "chi_square", "log_ratio", "pct_diff", "simple_maths", "odds_ratio"}
     assert set(row.measures.keys()) == expected_keys
+
+
+def test_split_keywords_by_direction_uses_signed_effect_size() -> None:
+    """v2.0.0 §1: G² is UNSIGNED — the positive/negative split must follow
+    the signed effect size (log_ratio), not the sign of log_likelihood.
+    Hand-derived effect sizes for these exact tables (N1=50_000, N2=1_000_000):
+    over_used  (f1=200, f2=100): log2((200/50000)/(100/1e6)) = log2(40)  ≈ +5.32
+    under_used (f1=5,   f2=400): log2((5/50000)/(400/1e6))   = log2(1/4) = −2.0
+    same_rate  (f1=50,  f2=1000): 1000 pm vs 1000 pm          = 0.0
+    """
+    rows = [
+        compute_keyness_row("over_used", 200, 100, 50_000, 1_000_000),
+        compute_keyness_row("under_used", 5, 400, 50_000, 1_000_000),
+        compute_keyness_row("same_rate", 50, 1000, 50_000, 1_000_000),
+    ]
+    assert rows[0].measures["log_ratio"] == pytest.approx(math.log2(40), abs=1e-9)
+    assert rows[1].measures["log_ratio"] == pytest.approx(-2.0, abs=1e-9)
+    assert rows[2].measures["log_ratio"] == 0.0
+    triples = sorted(
+        ((r, r.measures["log_likelihood"], r.measures["log_ratio"]) for r in rows),
+        key=lambda t: t[1],
+        reverse=True,
+    )
+    positive, negative = split_keywords_by_direction(triples, limit=10)
+    assert [e["term"] for e in positive] == ["over_used"]
+    assert [e["term"] for e in negative] == ["under_used"]
+    # log_ratio == 0 appears in NEITHER list
+    assert "same_rate" not in {e["term"] for e in positive + negative}
+    # Entries keep the pipelines' response shape
+    assert {"term", "f1", "f2", "log_ratio"} <= set(positive[0])
+
+
+def test_split_keywords_by_direction_truncates_to_limit() -> None:
+    """Both lists are truncated to `limit` AFTER the BH step (which callers
+    run over ALL tested terms before splitting)."""
+    rows = [
+        compute_keyness_row("big_over", 400, 50, 50_000, 1_000_000),
+        compute_keyness_row("small_over", 100, 100, 50_000, 1_000_000),
+        compute_keyness_row("under", 5, 400, 50_000, 1_000_000),
+    ]
+    triples = sorted(
+        ((r, r.measures["log_likelihood"], r.measures["log_ratio"]) for r in rows),
+        key=lambda t: t[1],
+        reverse=True,
+    )
+    positive, negative = split_keywords_by_direction(triples, limit=1)
+    # big_over has by far the largest G² (400 vs 21.4 expected in target)
+    assert [e["term"] for e in positive] == ["big_over"]
+    assert [e["term"] for e in negative] == ["under"]
 
 
 # --------------------------------------------------------------------------- #

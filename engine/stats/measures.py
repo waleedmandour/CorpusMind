@@ -16,7 +16,9 @@ Conventions (matching the mission):
 from __future__ import annotations
 
 import math
+from collections.abc import Sequence
 from dataclasses import dataclass
+from typing import Any
 
 # --------------------------------------------------------------------------- #
 # Collocation measures
@@ -282,6 +284,34 @@ def compute_keyness_row(
         "odds_ratio": odds_ratio_haldane(f1, f2, N1, N2),
     }
     return KeynessRow(term=term, f1=f1, f2=f2, N1=N1, N2=N2, measures=measures)
+
+
+def split_keywords_by_direction(
+    rows: Sequence[tuple[KeynessRow, float, float]],
+    *,
+    limit: int,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Split fully-scored keyness rows into positive/negative keyword dicts.
+
+    `rows` are (row, log_likelihood, log_ratio) triples read from the FULL
+    measure battery (before any requested measure-subset filtering) and
+    already sorted by log_likelihood descending. G² is UNSIGNED, so the
+    positive/negative direction must come from the signed effect size
+    (log_ratio, Hardie 2014): positive = log_ratio > 0, negative =
+    log_ratio < 0, and a term with log_ratio == 0 appears in neither list.
+    Both lists keep the log_likelihood-descending order and are truncated
+    to `limit` — callers run the Benjamini–Hochberg step over ALL tested
+    terms before this split, so truncation here never affects q_bh.
+    """
+    positive: list[dict[str, Any]] = []
+    negative: list[dict[str, Any]] = []
+    for row, _ll, lr in rows:
+        entry: dict[str, Any] = {"term": row.term, "f1": row.f1, "f2": row.f2, **row.measures}
+        if lr > 0:
+            positive.append(entry)
+        elif lr < 0:
+            negative.append(entry)
+    return positive[:limit], negative[:limit]
 
 
 def p_value_ll(ll: float) -> float:
