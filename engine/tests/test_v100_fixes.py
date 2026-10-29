@@ -76,7 +76,7 @@ def test_assistant_prompt_prompts_tool_use_not_refusal():
 
 def test_assistant_prompt_logdice_scale() -> None:
     """F3: the prompt must describe the real LogDice scale (14 + log2(Dice),
-    max 14) — not the phantom '-15 to 0' range. v2.0.0 §5a: the unsourced
+    max 14) — not the fabricated '-15 to 0' range. v2.0.0 §5a: the unsourced
     '>= 7 strong, 4-7 moderate, < 4 weak' thresholds are gone too — Rychlý
     (2008) defines the score, not interpretation bands, and the assistant
     repeated them as fact."""
@@ -84,7 +84,7 @@ def test_assistant_prompt_logdice_scale() -> None:
     src = prompt if prompt else Path("ai/assistant.py").read_text(encoding="utf-8")
     assert "max 14" in src, "prompt must state LogDice max 14 (14 + log2(Dice))"
     assert "14 + log2(Dice)" in src, "prompt must give the LogDice formula"
-    assert "-15 to 0" not in src, "phantom LogDice range '-15 to 0' must be gone"
+    assert "-15 to 0" not in src, "fabricated LogDice range '-15 to 0' must be gone"
     assert "4-7" not in src, "unsourced LogDice band '4-7 moderate' must be gone"
     assert "strong, 4-7" not in src, "unsourced LogDice bands must be gone"
     assert "universal cut-off" in src, "prompt must say there is no universal LogDice cut-off"

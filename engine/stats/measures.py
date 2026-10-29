@@ -404,10 +404,12 @@ def gries_dp(observed: list[int], sizes: list[int] | None = None) -> float:
 
 
 def gries_dp_norm(observed: list[int], sizes: list[int] | None = None) -> float:
-    """DP-norm = DP / (1 − min(sᵢ))  (Gries 2008) — bounded in [0, 1] for any
-    part sizes, because max DP = 1 − min(sᵢ) (the item concentrated entirely in
-    the smallest part). For equal-sized parts (min(sᵢ) = 1/n) this coincides
-    with the familiar DP·n/(n−1). Returns plain DP when n < 2.
+    """DP-norm = DP / (1 − min(sᵢ))  (Lijffijt & Gries 2012; Gries 2020, Eq. 13)
+    — bounded in [0, 1] for any part sizes, because max DP = 1 − min(sᵢ) (the
+    item concentrated entirely in the smallest part). For equal-sized parts
+    (min(sᵢ) = 1/n) this coincides with the familiar DP·n/(n−1) — the form
+    Gries (2008) proposed, valid only for equal-sized parts. Returns plain
+    DP when n < 2.
 
     Zero-size parts (empty documents) are excluded from the minimum: DP is
     maximal when ALL occurrences sit in the smallest part, and a part with no
