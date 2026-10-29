@@ -52,8 +52,12 @@ on:
         type: boolean
         default: false
       grounding_provider:
-        description: "Provider name passed to eval.run_grounding (ollama | cloud | lmstudio)"
+        description: "Provider registry name passed to eval.run_grounding (ollama | cloud | lmstudio)"
         default: "cloud"
+        required: false
+      cloud_vendor:
+        description: "Cloud VENDOR for CORPUSMIND_CLOUD_PROVIDER (anthropic | openai | gemini | custom | none) — distinct from the registry name above"
+        default: "gemini"
         required: false
       grounding_model:
         description: "Model id for the provider"
@@ -220,7 +224,7 @@ jobs:
     timeout-minutes: 90
     if: github.event_name == 'workflow_dispatch' && inputs.run_grounding
     env:
-      CORPUSMIND_CLOUD_PROVIDER: ${{ inputs.grounding_provider }}
+      CORPUSMIND_CLOUD_PROVIDER: ${{ inputs.cloud_vendor || 'gemini' }}
       CORPUSMIND_CLOUD_API_KEY: ${{ secrets.CORPUSMIND_CLOUD_API_KEY }}
       CORPUSMIND_CLOUD_DEFAULT_MODEL: ${{ inputs.grounding_model }}
       CORPUSMIND_CLOUD_BASE_URL: ${{ secrets.CORPUSMIND_CLOUD_BASE_URL }}
