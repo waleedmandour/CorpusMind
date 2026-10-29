@@ -180,6 +180,7 @@ jobs:
       - name: Intrinsic evaluation (PA + NP, full dev)
         working-directory: engine
         run: |
+          mkdir -p ../benchmarks/out
           python -m eval.segmentation_araseg --data /tmp/araseg/PA/dev.jsonl \
             --task PA --out ../benchmarks/out/seg_intrinsic_PA.json
           python -m eval.segmentation_araseg --data /tmp/araseg/NP/dev.jsonl \
