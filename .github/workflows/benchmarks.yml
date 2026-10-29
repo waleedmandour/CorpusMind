@@ -63,6 +63,10 @@ on:
         description: "Model id for the provider"
         default: ""
         required: false
+      grounding_pause:
+        description: "Seconds to sleep before each question (rate-limit pacing; 7.0 fits free-tier Gemini ~10 RPM)"
+        default: "7"
+        required: false
       commit_results:
         description: "Commit artifacts to benchmarks/results/ (data-only commit)"
         type: boolean
@@ -280,15 +284,18 @@ jobs:
         if: steps.guard.outputs.available == 'true'
         working-directory: engine
         run: |
+          mkdir -p eval/runs
           python -m eval.run_grounding \
             --provider "${{ inputs.grounding_provider }}" \
             ${{ inputs.grounding_model && format('--model {0}', inputs.grounding_model) || '' }} \
-            --out runs/paper_run.json
+            --pause "${{ inputs.grounding_pause || '7' }}" \
+            --rate-retries 4 \
+            --out eval/runs/paper_run.json
 
       - name: Score the run
         if: steps.guard.outputs.available == 'true'
         working-directory: engine
-        run: python -m eval.score runs/paper_run.json --out runs/paper_report.json --verbose
+        run: python -m eval.score eval/runs/paper_run.json --out eval/runs/paper_report.json --verbose
 
       - name: Upload report
         if: steps.guard.outputs.available == 'true'

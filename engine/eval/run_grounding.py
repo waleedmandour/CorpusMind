@@ -48,6 +48,8 @@ async def run(
     model: str | None,
     only: list[str] | None,
     out: Path | None,
+    pause: float = 0.0,
+    rate_retries: int = 0,
 ) -> dict[str, Any]:
     problems = validate_bank()
     if problems:
@@ -69,9 +71,35 @@ async def run(
                 payload["provider"] = provider
             if model:
                 payload["model"] = model
+            if pause > 0:
+                await asyncio.sleep(pause)
             t0 = time.monotonic()
             try:
                 r = await client.post("/api/v1/ai/chat", json=payload, timeout=300.0)
+                # Harness-level rate-limit recovery. The engine's own retry
+                # policy (3 attempts, exponential backoff, Retry-After capped
+                # at 15 s) is right for an interactive chat turn, but a
+                # free-tier cloud quota window (e.g. Gemini ~10 RPM) outlives
+                # it: a 429 returned to THIS loop means the engine already
+                # exhausted its budget. Re-POSTing the same question after a
+                # longer wait is safe (the sweep is read-only), and the wait
+                # honours Retry-After when the gateway sends one.
+                attempt = 0
+                while r.status_code in (429, 503) and attempt < rate_retries:
+                    retry_after = 0.0
+                    raw = r.headers.get("retry-after", "")
+                    try:
+                        retry_after = max(0.0, float(raw.strip())) if raw else 0.0
+                    except ValueError:
+                        retry_after = 0.0
+                    wait = min(max(retry_after, 20.0 * (2 ** attempt)), 90.0)
+                    attempt += 1
+                    print(
+                        f"[{i}/{len(questions)}] {q['id']} -> HTTP {r.status_code}; "
+                        f"rate-retry {attempt}/{rate_retries} in {wait:.0f}s"
+                    )
+                    await asyncio.sleep(wait)
+                    r = await client.post("/api/v1/ai/chat", json=payload, timeout=300.0)
                 if r.status_code >= 400:
                     entry = {"id": q["id"], "answer": "", "http_status": r.status_code,
                              "error": r.text[:300]}
@@ -97,6 +125,8 @@ async def run(
             "provider": provider,
             "model": model,
             "question_count": len(results),
+            "pause_s": pause,
+            "rate_retries": rate_retries,
         },
         "results": results,
     }
@@ -113,11 +143,16 @@ def main() -> None:
     ap.add_argument("--model", default=None)
     ap.add_argument("--only", nargs="*", help="run only these question ids")
     ap.add_argument("--out", default=None, help="output path (default eval/runs/grounding_run_<ts>.json)")
+    ap.add_argument("--pause", type=float, default=0.0,
+                    help="seconds to sleep BEFORE each question (rate-limit pacing; 7.0 fits free-tier Gemini ~10 RPM)")
+    ap.add_argument("--rate-retries", type=int, default=0,
+                    help="harness-level re-POSTs on HTTP 429/503 (waits 20/40/80s, Retry-After honoured, 90s cap)")
     args = ap.parse_args()
     out = Path(args.out) if args.out else _RUNS_DIR / (
         "grounding_run_" + datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ") + ".json"
     )
-    asyncio.run(run(args.provider, args.model, args.only, out))
+    asyncio.run(run(args.provider, args.model, args.only, out,
+                    pause=args.pause, rate_retries=args.rate_retries))
 
 
 if __name__ == "__main__":
