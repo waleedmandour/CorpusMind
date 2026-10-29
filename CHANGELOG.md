@@ -8,6 +8,42 @@ once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
 ## [Unreleased]
 
+### Fixed — Arabic sentence segmentation (engine semantics; sentence counts change)
+
+Three principled rules from the measured AraSEG PA-dev error budget
+(FP 2,894 / FN 4,926 after the evaluator alignment fix in 2.0.0's benchmark
+battery), changing `nlp.arabic.pipeline.split_arabic_sentences`:
+
+- **Terminal-run collapse** — a run of terminal marks separated by whitespace
+  (` . . . ` ellipsis, masked-word dots, `!!!`, `؟!`) now ends ONE sentence
+  instead of one boundary per mark (UAX #14 SB4a/SB8 practice; NLTK punkt
+  does the same). AraSEG PA dev: false positives 2,894 → 1,081, micro
+  precision 0.736 → 0.877.
+- **`؛` demoted from terminal to clause-level** — it no longer ends a
+  sentence: the PA-dev gold ends a sentence at only 90/349 `؛` (26%), and MSA
+  punctuation norms treat `؛` as "separating units more strongly than ، but
+  less finally than a full stop" (Yagi, Cogent Arts & Humanities, 2024).
+  Newlines always break as before.
+- **Quote-parity guard (pySBD-class)** — ؟/!/. inside an unclosed quotation
+  (reported speech) no longer end a sentence mid-quotation; the suppressed
+  terminal closes the sentence at the closing quote instead. One unmatched
+  quote cannot leak suppression past a newline.
+
+Measured on the AraSEG dev splits (checksum-pinned, same evaluator as the
+`benchmarks` battery): PA micro-F1 0.673 → **0.709** (precision 0.736 → 0.877,
+recall 0.621 → 0.595), NP 0.528 → **0.556**. Sentence counts in existing
+Arabic corpora shift slightly; KWIC context, collocation windows, CQL
+`within sentence`, per-sentence sentiment, CAF and Gale–Church sentence
+indices change accordingly. No statistical golden values are affected
+(frequency, dispersion and keyness are sentence-independent).
+
+### Fixed — Benchmarks
+
+- The `grounding` job's dispatch input no longer conflates the cloud **vendor**
+  (`CORPUSMIND_CLOUD_PROVIDER` literal: anthropic | openai | gemini | custom)
+  with the provider **registry name** passed to `eval.run_grounding`
+  (ollama | cloud | lmstudio); dispatching with `cloud` previously failed
+  Settings validation at boot.
 ### Fixed
 
 - **Assistant chat no longer dies on the first transient provider hiccup**
