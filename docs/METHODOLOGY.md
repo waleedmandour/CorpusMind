@@ -307,7 +307,7 @@ document lengths. When part sizes are unavailable it falls back to uniform
 **References:**
 
 - Gries, S. Th. (2008). Dispersions and adjusted frequencies in corpora. *International Journal of Corpus Linguistics*, 13(4), 403–437.
-- Lijffijt, J., & Gries, S. Th. (2012). Correction to "Dispersions and adjusted frequencies in corpora". *International Journal of Corpus Linguistics*. [AUTHOR TO CONFIRM volume/pages — see https://www.stgries.info/research/2012_JL-STG_DispersionCorrection_IJCL.pdf]
+- Lijffijt, J., & Gries, S. Th. (2012). Correction to Stefan Th. Gries' "Dispersions and adjusted frequencies in corpora" (IJCL 13:4 (2008), 403–437). *International Journal of Corpus Linguistics*, 17(1), 147–149. https://doi.org/10.1075/ijcl.17.1.08lij
 - Gries, S. Th. (2020). Analyzing dispersion. In M. Paquot & S. Th. Gries (Eds.), *A Practical Handbook of Corpus Linguistics* (p. 99 ff.). Springer. https://doi.org/10.1007/978-3-030-46216-1_5
 
 ---

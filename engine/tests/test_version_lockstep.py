@@ -18,7 +18,7 @@ v1.2.14 metadata truth-up coverage: the cff version check now also matches
 the indented preferred-citation version (it previously escaped the
 top-level-only regex), plus four README guards — release badge, "Current
 release" line, README DOI vs cff DOI, and the claimed backend test count
-(never overstated against the static def count).
+(never overstated against the static def + async def count).
 """
 
 import json
@@ -141,12 +141,12 @@ def test_readme_doi_matches_cff_doi() -> None:
 
 def test_readme_test_count_not_overstated() -> None:
     readme = (_REPO_ROOT / "README.md").read_text(encoding="utf-8")
-    m = re.search(r"(\d+)\+ backend test functions", readme)
+    m = re.search(r"(\d+)\+ backend tests", readme)
     if m:
         actual = sum(
             1
             for p in (_ENGINE_ROOT / "tests").glob("test_*.py")
             for line in p.read_text(encoding="utf-8").splitlines()
-            if line.strip().startswith("def test_")
+            if line.strip().startswith(("def test_", "async def test_"))
         )
         assert int(m.group(1)) <= actual

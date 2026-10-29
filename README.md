@@ -69,8 +69,7 @@ maintained as **CorpusMind Lens** at
 this repository ships only the CorpusMind text-analysis app.
 
 **Both apps:** a web app + a Tauri 2 desktop shell (CorpusMind here,
-CorpusMind Lens in its own repo), 330+ backend test functions (800+ test
-cases via parametrization), ruff-clean,
+CorpusMind Lens in its own repo), 850+ backend tests, ruff-clean,
 self-hosted Docker image. The two apps connect via the versioned
 Companion-Mode API when both are installed.
 
@@ -334,7 +333,7 @@ serious validity bug, so this is treated as a release-blocking test category.
 | Odds Ratio | Keyness effect size | `(f1 · (N2−f2)) / (f2 · (N1−f1))` |
 | Juilland's D | Dispersion | `1 − (CV / sqrt(n−1))` across n parts |
 | Gries' DP (2008) | Dispersion | `0.5 · Σ |observed_proportionᵢ − expected_proportionᵢ|` |
-| Gries' DP-norm (Lijffijt & Gries 2012; Gries 2020) | Dispersion | DP / (1 − min(sᵢ)); equals DP·n/(n−1) for equal parts |
+| Gries' DP-norm (Lijffijt & Gries 2012; Gries 2020) | Dispersion | `DP / (1 − min(sᵢ))`; equals `DP·n/(n−1)` for equal parts |
 | STTR | Lexical variation | TTR over fixed-size chunks, averaged |
 | HD-D (McCarthy & Jarvis 2010) | Lexical diversity | (Σ_types (1 − P(X=0))) / 42, P(X=0) hypergeometric |
 

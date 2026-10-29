@@ -15,7 +15,9 @@ once 1.0 ships. Until then, expect breaking changes between 0.x releases.
   all-distinct tokens: **42.0 → 1.0**). The per-type aggregation changed as
   well, so old values are **NOT recoverable by dividing by 42** (worked
   example from the remediation audit: old 28.346 → old/42 = 0.675, but the
-  correct standard value on the same sample is 0.749).
+  correct standard value on the same sample is 0.749; reproducible with a
+  2,000-token Zipf sample — token for rank r drawn with weight 1/r,
+  vocabulary 1,000, seed 42).
 - **DP-norm** uses `DP / (1 − min(sᵢ))`. Old values were wrong for UNEQUAL
   parts: 1.2 → 1.0 for [10,0,0] over parts 20/40/40; 1.8 → 1.0 for [10,0]
   over 10/90. Equal-sized-part results are unchanged. Versions ≤ 1.2.14
