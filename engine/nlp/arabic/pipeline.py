@@ -919,6 +919,10 @@ _ARABIC_DIGITS = set("٠١٢٣٤٥٦٧٨٩0123456789")
 
 # Quote styles: opening char -> its closing char. ' and " are self-paired.
 _QUOTE_PAIRS = {"«": "»", "“": "”", "‹": "›", "‘": "’", "﴿": "﴾", '"': '"', "'": "'"}
+# closer char -> its opener (keyed lookups only — source-guard 1 forbids
+# positional list indexing in engine code, so parity is tracked as per-style
+# open counters instead of a stack peek)
+_QUOTE_CLOSERS = {close: open_ for open_, close in _QUOTE_PAIRS.items()}
 
 
 def split_arabic_sentences(text: str) -> list[str]:
@@ -937,8 +941,8 @@ def split_arabic_sentences(text: str) -> list[str]:
         return []
     chunks: list[str] = []
     buf: list[str] = []
-    quote_stack: list[str] = []
-    terminal_in_quote = False  # a suppressed terminal inside the open quote
+    quote_depth: dict[str, int] = {}  # opener char -> open count (keyed, guard-1 clean)
+    terminal_in_quote = False  # a suppressed terminal inside the open quote(s)
     n = len(text)
 
     def flush() -> None:
@@ -949,24 +953,28 @@ def split_arabic_sentences(text: str) -> list[str]:
 
     for i, ch in enumerate(text):
         buf.append(ch)
-        if quote_stack and ch == _QUOTE_PAIRS[quote_stack[-1]]:
-            # ch is the expected closer of the innermost open quote
-            quote_stack.pop()
-            if not quote_stack and terminal_in_quote:
-                nxt = text[i + 1] if i + 1 < n else ""
-                if nxt == "" or nxt.isspace():
-                    # QuoteGuard: the terminal inside the quote ends the
-                    # sentence at the closing quote, not inside it
-                    flush()
-                    terminal_in_quote = False
-            continue
+        if ch in _QUOTE_CLOSERS:
+            opener = _QUOTE_CLOSERS[ch]
+            if quote_depth.get(opener, 0) > 0:
+                quote_depth[opener] -= 1
+                if not any(quote_depth.values()) and terminal_in_quote:
+                    nxt = text[i + 1] if i + 1 < n else ""
+                    if nxt == "" or nxt.isspace():
+                        # QuoteGuard: the terminal inside the quote ends the
+                        # sentence at the closing quote, not inside it
+                        flush()
+                        terminal_in_quote = False
+                continue
+            if ch not in _QUOTE_PAIRS:
+                continue  # stray closer for a non-self-paired style — literal
+            # self-paired char (' or ") with nothing open acts as an opener
         if ch in _QUOTE_PAIRS:
-            quote_stack.append(ch)
+            quote_depth[ch] = quote_depth.get(ch, 0) + 1
             continue
         if ch == "\n":
-            # a newline always ends a sentence; it also resets an unclosed
-            # quote so one stray quote cannot leak suppression across lines
-            quote_stack.clear()
+            # a newline always ends a sentence; it also resets unclosed
+            # quotes so one stray quote cannot leak suppression across lines
+            quote_depth.clear()
             terminal_in_quote = False
             flush()
             continue
@@ -978,7 +986,7 @@ def split_arabic_sentences(text: str) -> list[str]:
             if prev_digit and next_char in _ARABIC_DIGITS:
                 # decimal number like 3.4 — not a sentence boundary
                 continue
-        if quote_stack:
+        if any(quote_depth.values()):
             terminal_in_quote = True
             continue
         # terminal-run collapse: wait for the LAST terminal of the run
