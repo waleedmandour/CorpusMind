@@ -15,11 +15,11 @@ learner CAF sentence stats, Gale-Church alignment).
 
 Protocol (mirrors the shared task): segmentation = binary classification of
 "does a sentence boundary follow token t". We detokenize each document's
-gold token list with single spaces, run the splitter, re-count tokens per
-predicted chunk, and compare the predicted boundary bitstring against the
-gold one. Metrics per document: boundary precision / recall / F1, then the
-macro average across documents (the shared task convention); micro totals
-are reported as a secondary view.
+gold token list, run the splitter, and map every predicted boundary back to
+the exact gold token it follows via a per-character owner index (see
+``predict_boundaries``). Metrics per document: boundary precision / recall /
+F1, then the macro average across documents (the shared task convention);
+micro totals are reported as a secondary view.
 
 Data is NOT vendored: point --data at a local copy of the shared-task files
 (JSONL with doc_id/tokens/labels, as published on HF; one document per
@@ -62,24 +62,67 @@ def load_documents(path: Path, limit: int | None = None) -> list[dict[str, Any]]
 def predict_boundaries(tokens: list[str]) -> list[int]:
     """Run the engine splitter on the detokenized text and return the
     predicted boundary bitstring (1 = boundary follows this token).
+
+    Alignment is by an explicit per-character owner map, not by re-counting
+    whitespace tokens: the detokenized text is built once with, for every
+    character, the gold token index that owns it, and each predicted chunk
+    boundary is credited to the gold token owning the chunk's last character.
+    Re-counting ``chunk.split()`` is WRONG here because AraSEG streams
+    contain bare ``'\\n'`` marker tokens (4,844 in the PA dev set alone);
+    joining them as words makes ``text.split()`` yield fewer tokens than the
+    gold list and shifts every subsequent boundary (this produced the bogus
+    micro-F1 0.107 on PA in run 40913999140).
+
+    A whitespace-only gold token is emitted as one real ``'\\n'`` character
+    owned by that token: the engine's splitter treats a newline as a
+    terminal, so paragraph breaks that AraSEG encodes as ``'\\n'`` markers
+    are legitimate split cues. In the PA dev set the gold boundary sits on
+    the content token *before* the marker in 100% of cases, which is exactly
+    where the owner map credits it. The marker token itself can therefore
+    only be a predicted boundary when the gold puts one there (156 bare
+    blank-line markers in PA do) — those are reported as misses, a documented
+    ceiling of 1.2% of gold boundaries.
+
     The document end is a boundary (AraSEG convention: label bitstrings end
-    in 1), so the final chunk always closes with a boundary bit."""
+    in 1), so the final content token always closes with a boundary bit."""
     from nlp.arabic.pipeline import split_arabic_sentences
 
-    text = " ".join(tokens)
-    chunks = split_arabic_sentences(text)
-    bits: list[int] = []
-    for i, chunk in enumerate(chunks):
-        n_chunk_tokens = len(chunk.split())
-        bits.extend([0] * n_chunk_tokens)
-        if i < len(chunks) - 1 and bits:
-            bits[-1] = 1
-    if bits:
-        bits[-1] = 1
-    # guard: length drift from whitespace quirks — pad/trim to token count
-    if len(bits) < len(tokens):
-        bits.extend([0] * (len(tokens) - len(bits)))
-    return bits[: len(tokens)]
+    parts: list[str] = []
+    owner: list[int | None] = []  # per character of `text`: gold token index
+    for idx, tok in enumerate(tokens):
+        if idx:
+            parts.append(" ")
+            owner.append(None)
+        if not tok.strip():
+            # AraSEG line-break marker: a real newline the engine may split on
+            parts.append("\n")
+            owner.append(idx)
+        else:
+            parts.append(tok)
+            owner.extend([idx] * len(tok))
+    text = "".join(parts)
+
+    bits = [0] * len(tokens)
+
+    def credit(char_pos: int) -> None:
+        """Credit the boundary after `char_pos` to its owning gold token."""
+        j = min(char_pos, len(owner) - 1)
+        while j >= 0 and (owner[j] is None or text[j].isspace()):
+            j -= 1
+        if j >= 0 and owner[j] is not None:
+            bits[owner[j]] = 1  # type: ignore[index]
+
+    cursor = 0
+    for chunk in split_arabic_sentences(text):
+        # chunks are stripped, consecutive slices of `text`; skip the
+        # whitespace the splitter consumed between them
+        while cursor < len(text) and text[cursor].isspace():
+            cursor += 1
+        end = cursor + len(chunk)
+        credit(end - 1)
+        cursor = end
+    credit(len(text) - 1)  # document end is a boundary
+    return bits
 
 
 def prf1(pred_bits: list[int], gold_bits: list[int]) -> dict[str, float]:
