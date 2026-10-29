@@ -264,7 +264,7 @@ jobs:
           camel_data -i morphology-db-msa-r13
           camel_data -i dialectid-model6
 
-      - name: Install pinned spaCy model (must match grounding gold _meta: 3.8.0)
+      - name: Install pinned spaCy model (must match grounding gold _meta = 3.8.0)
         if: steps.guard.outputs.available == 'true'
         # NOT `python -m spacy download` — that installs the latest build and
         # would drift from the frozen gold's recorded model version (the gold
