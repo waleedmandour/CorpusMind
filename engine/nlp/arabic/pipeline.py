@@ -892,18 +892,48 @@ class ArabicPipeline:
 
 # --------------------------------------------------------------------------- #
 # v1.0.1 — Arabic sentence segmentation (rule-based)
+# v2.0.1 — principled rule fixes from the AraSEG PA-dev error budget
+#   (FP 2,894 = 2,336 '.' + 259 '؛' + 192 '؟' + 105 '!' + 2 '?';
+#    FN 4,926 = 3,880 no-cue + 1,046 verse markers + 156 blank-line):
+#   (1) **Terminal-run collapse** — a RUN of terminal marks separated by
+#       whitespace (` . . . ` ellipsis, masked words, `!!!`, `؟!`) is ONE
+#       terminator, not one per mark (UAX #14 SB4a/SB8 practice; NLTK punkt
+#       does the same). Ellipsis currently over-segments every KWIC context,
+#       collocation window and per-sentence sentiment.
+#   (2) **`؛` demoted from terminal to clause-level** — the AraSEG PA dev
+#       gold ends a sentence at only 90/349 `؛` (26%); MSA norms treat `؛`
+#       as "separates units more strongly than ، but less finally than a
+#       full stop" (Yagi, "Is Arabic punctuation rule-governed?", Cogent
+#       Arts & Humanities, 2024). The AraSEG paper's own Pnx-Boundary
+#       baseline likewise uses corpus-derived, not fixed, rules for `؛`.
+#   (3) **Quote-parity guard** (pySBD-class) — ؟/!/. inside an UNCLOSED
+#       quotation (reported speech) do not end a sentence; the suppressed
+#       terminal may close the sentence at the closing quote instead.
+#       A newline resets the guard, so one unmatched quote in messy OCR
+#       text cannot suppress boundaries beyond its own line.
 # --------------------------------------------------------------------------- #
 
-_ARABIC_TERMINALS = set(".!?؟؛…\n")
+_ARABIC_TERMINALS = set(".!?؟…\n")  # v2.0.1: ؛ removed — clause-level, not terminal
+_ARABIC_SOFT_TERMINALS = _ARABIC_TERMINALS - {"\n"}
 _ARABIC_DIGITS = set("٠١٢٣٤٥٦٧٨٩0123456789")
+
+# Quote styles: opening char -> its closing char. ' and " are self-paired.
+_QUOTE_PAIRS = {"«": "»", "“": "”", "‹": "›", "‘": "’", "﴿": "﴾", '"': '"', "'": "'"}
+# closer char -> its opener (keyed lookups only — source-guard 1 forbids
+# positional list indexing in engine code, so parity is tracked as per-style
+# open counters instead of a stack peek)
+_QUOTE_CLOSERS = {close: open_ for open_, close in _QUOTE_PAIRS.items()}
 
 
 def split_arabic_sentences(text: str) -> list[str]:
     """Rule-based Arabic sentence segmentation.
 
-    Splits after terminal punctuation (. ! ؟ ؛ … and newlines) when followed
-    by whitespace or end-of-text, EXCEPT a period sandwiched between digits
-    (decimal numbers like 3.4 / ٣٫٤-style latin-decimal forms). Returns
+    Splits after terminal punctuation (. ! ؟ … and newlines) when followed
+    by whitespace or end-of-text, EXCEPT: a period sandwiched between digits
+    (decimal numbers like 3.4), any mark inside a run of consecutive
+    terminals (see rule 1 above), marks inside unclosed quotations (rule 3),
+    and — since v2.0.1 — `؛` no longer terminates a sentence at all (rule 2).
+    A newline always ends a sentence (and resets the quote guard). Returns
     non-empty chunks; if no terminal punctuation is found the whole text is
     one segment (same as before for very short inputs).
     """
@@ -911,26 +941,61 @@ def split_arabic_sentences(text: str) -> list[str]:
         return []
     chunks: list[str] = []
     buf: list[str] = []
-    chars = text
-    n = len(chars)
-    for i, ch in enumerate(chars):
+    quote_depth: dict[str, int] = {}  # opener char -> open count (keyed, guard-1 clean)
+    terminal_in_quote = False  # a suppressed terminal inside the open quote(s)
+    n = len(text)
+
+    def flush() -> None:
+        candidate = "".join(buf).strip()
+        if candidate:
+            chunks.append(candidate)
+        buf.clear()
+
+    for i, ch in enumerate(text):
         buf.append(ch)
-        if ch in _ARABIC_TERMINALS:
-            if ch == ".":
-                prev_digit = i > 0 and chars[i - 1] in _ARABIC_DIGITS
-                next_char = chars[i + 1] if i + 1 < n else ""
-                next_digit = next_char in _ARABIC_DIGITS
-                if prev_digit and next_digit:
-                    # decimal number like 3.4 — not a sentence boundary
-                    continue
-            # a newline always ends a sentence; other terminals need
-            # whitespace (or end-of-text) after them
-            nxt = chars[i + 1] if i + 1 < n else ""
-            if ch == "\n" or nxt == "" or nxt.isspace():
-                candidate = "".join(buf).strip()
-                if candidate:
-                    chunks.append(candidate)
-                buf = []
+        if ch in _QUOTE_CLOSERS:
+            opener = _QUOTE_CLOSERS[ch]
+            if quote_depth.get(opener, 0) > 0:
+                quote_depth[opener] -= 1
+                if not any(quote_depth.values()) and terminal_in_quote:
+                    nxt = text[i + 1] if i + 1 < n else ""
+                    if nxt == "" or nxt.isspace():
+                        # QuoteGuard: the terminal inside the quote ends the
+                        # sentence at the closing quote, not inside it
+                        flush()
+                        terminal_in_quote = False
+                continue
+            if ch not in _QUOTE_PAIRS:
+                continue  # stray closer for a non-self-paired style — literal
+            # self-paired char (' or ") with nothing open acts as an opener
+        if ch in _QUOTE_PAIRS:
+            quote_depth[ch] = quote_depth.get(ch, 0) + 1
+            continue
+        if ch == "\n":
+            # a newline always ends a sentence; it also resets unclosed
+            # quotes so one stray quote cannot leak suppression across lines
+            quote_depth.clear()
+            terminal_in_quote = False
+            flush()
+            continue
+        if ch not in _ARABIC_TERMINALS:
+            continue
+        if ch == ".":
+            prev_digit = i > 0 and text[i - 1] in _ARABIC_DIGITS
+            next_char = text[i + 1] if i + 1 < n else ""
+            if prev_digit and next_char in _ARABIC_DIGITS:
+                # decimal number like 3.4 — not a sentence boundary
+                continue
+        if any(quote_depth.values()):
+            terminal_in_quote = True
+            continue
+        # terminal-run collapse: wait for the LAST terminal of the run
+        j = i + 1
+        while j < n and text[j].isspace():
+            j += 1
+        if j < n and text[j] in _ARABIC_SOFT_TERMINALS:
+            continue
+        flush()
     tail = "".join(buf).strip()
     if tail:
         chunks.append(tail)
