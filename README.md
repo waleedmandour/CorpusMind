@@ -443,6 +443,7 @@ If you use CorpusMind in your research, please cite it as:
 stable across releases and always resolves to the latest version deposited on
 Zenodo; it is also the v2.0.0 version record, the first deposit of this
 family. Version DOIs pin a single deposit:
+v2.0.1 → [10.5281/zenodo.23785435](https://doi.org/10.5281/zenodo.23785435);
 v2.0.0 → [10.5281/zenodo.23216073](https://doi.org/10.5281/zenodo.23216073)
 (same record — first of the family);
 v1.2.10 → [10.5281/zenodo.23052753](https://doi.org/10.5281/zenodo.23052753);
