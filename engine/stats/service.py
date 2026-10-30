@@ -711,7 +711,10 @@ async def compute_frequency(
             total_tokens += 1
             agg[component] = agg.get(component, 0) + 1
             docs.setdefault(component, set()).add(tok.document_id)
-        ordered = sorted(agg.items(), key=lambda kv: kv[1], reverse=True)
+        # Boot-stable order: freq desc then feature ascending (a stable
+        # sort would keep the scan order for ties, and the scan follows
+        # document_id — a fresh hex per boot).
+        ordered = sorted(agg.items(), key=lambda kv: (-kv[1], kv[0]))
         agg_rows = [(item, freq, len(docs.get(item, ()))) for item, freq in ordered]
         total_types = len(agg_rows)
 
@@ -1090,7 +1093,10 @@ def _colloc_scan_core(
         if b < 0 or c < 0 or d < 0:
             continue
 
-        display = surfaces[key].most_common(1)[0][0]
+        # Most frequent surface form; ties break lexicographically —
+        # most_common(1) tie order follows the row scan order, which
+        # follows document_id (fresh hex per boot).
+        display = min(surfaces[key].items(), key=lambda kv: (-kv[1], kv[0]))[0]
         row: dict[str, Any] = {"collocate": display, "O": a, "fx": fx, "fy": fy, "N": N}
         if "mi" in measures:
             row["mi"] = round(mutual_information(O=o, R=fx, C=fy, N=N), 4)
@@ -1121,7 +1127,11 @@ def _colloc_scan_core(
 
     def _sort_key(r: dict[str, Any]) -> float:
         return r.get("log_likelihood", 0.0) or r.get("mi", 0.0) or float(r.get("O", 0))
-    candidates.sort(key=_sort_key, reverse=True)
+    # Boot-stable order (gold-diff G-032, 2026-10-30): a stable sort keeps
+    # the PRE-sort order for measure ties, and that order follows the token
+    # scan — document_id is a fresh hex per boot. Measure desc, then
+    # collocate ascending.
+    candidates.sort(key=lambda r: (-_sort_key(r), str(r.get("collocate", ""))))
 
     if skipped_stop and stopword_set:
         warnings.append(f"{skipped_stop} collocate tokens were excluded as stopwords.")
@@ -2007,7 +2017,14 @@ async def compute_group_frequency(
     totals: Counter = Counter()
     for g in groups:
         totals.update(freqs[g])
-    top_items = [item for item, _ in totals.most_common(limit) if totals[item] >= min_freq]
+    # Boot-stable order: count desc then item ascending (most_common() tie
+    # order follows per-group dict insertion, which follows document_id —
+    # a fresh hex per boot). Filter first, then truncate.
+    top_items = [
+        item
+        for item, _ in sorted(totals.items(), key=lambda kv: (-kv[1], kv[0]))
+        if totals[item] >= min_freq
+    ][:limit]
 
     rows = []
     for item in top_items:
