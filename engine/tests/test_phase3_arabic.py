@@ -574,6 +574,14 @@ async def test_health_stays_responsive_during_analysis(client, monkeypatch):
     answer promptly (v1.2.11). Before the fix the analysis ran ON the event
     loop and /health latency equalled the analysis duration.
 
+    Hardening note (post run 41043135020): the bound is a best-of-3 probe
+    with a 2.5s per-probe ceiling, not a single 1.5s shot. The worker thread
+    holds the GIL between bytecode steps, so on a loaded 2-core CI runner a
+    legitimate probe can overshoot a tight bound (that run flaked at 1.70s
+    with no regression), while a genuinely blocked loop keeps /health
+    latency at the remaining-analysis scale — seconds, growing with the
+    text — and additionally trips the still-running guard below.
+
     This test must NOT be skipped where camel_tools + data exist - the
     skipif guard above only skips genuinely unprovisioned machines.
     """
@@ -586,37 +594,52 @@ async def test_health_stays_responsive_during_analysis(client, monkeypatch):
             "says otherwise; refusing to run this regression test as a "
             "no-op. Install: camel_data -i morphology-db-msa-r13"
         )
-    # ~64k tokens: even on a warm cache this takes seconds, guaranteeing the
-    # health probe overlaps a still-running analysis. v1.2.11 follow-up: the
-    # interactive route now caps input at 50k tokens (413 beyond) — this
-    # regression test raises the cap for its own request only; the cap
-    # behaviour itself is covered by test_analyze_inline_token_cap_413.
+    # ~96k tokens: the analysis must stay clearly BUSY for longer than the
+    # worst-case probe budget below (3 x ~2.5s), so a loaded-runner probe
+    # spike can never outlive the analysis and turn the still-running guard
+    # into a false failure. The route's own 120s hard deadline is raised for
+    # this request only — a loaded CI runner must never 504 the analysis
+    # mid-test just because the suite is running hot.
+    # v1.2.11 follow-up: the interactive route now caps input at 50k tokens
+    # (413 beyond) — this regression test raises the cap for its own request
+    # only; the cap behaviour itself is covered by test_analyze_inline_token_cap_413.
     from api import arabic as arabic_routes
 
     monkeypatch.setattr(arabic_routes, "ARABIC_INLINE_MAX_TOKENS", 10_000_000)
-    big_text = " ".join(["الطلاب يدرسون في المكتبة الكبيرة ويقرأون الكتب"] * 8000)
+    monkeypatch.setattr(arabic_routes, "ARABIC_TIMEOUT_S", 600.0)
+    big_text = " ".join(["الطلاب يدرسون في المكتبة الكبيرة ويقرأون الكتب"] * 16000)
     analyze_task = _asyncio.create_task(
         client.post("/api/v1/arabic/analyze", json={"text": big_text, "dialect": "msa"})
     )
     # Let the analysis request reach the engine and start hogging time
     await _asyncio.sleep(0.2)
-    t0 = _time.perf_counter()
-    health = await client.get("/api/v1/health")
-    health_s = _time.perf_counter() - t0
-    assert health.status_code == 200
-    # Remaining analysis time AFTER the health probe completed: if the loop
-    # were blocked by the analysis, the probe could only return once the
-    # analysis was already done, leaving ~0s here.
-    analysis_r = await analyze_task
-    analysis_s = _time.perf_counter() - t0 - health_s
-    assert analysis_r.status_code == 200
-    # The overlap must be real, otherwise the assertion below is vacuous.
-    assert analysis_s > 0.3, (
-        f"analysis had only {analysis_s:.2f}s of work left after the health "
-        f"probe returned ({health_s:.2f}s); enlarge the text"
+    # Best-of-3 probe budget: transient GIL/runner-load spikes (legit, see
+    # the docstring) retry, while a blocked loop fails every attempt at the
+    # remaining-analysis scale.
+    probe_s: list[float] = []
+    status = 0
+    for _ in range(3):
+        p0 = _time.perf_counter()
+        resp = await client.get("/api/v1/health")
+        probe_s.append(_time.perf_counter() - p0)
+        status = resp.status_code
+        if status == 200 and probe_s[-1] < 2.5:
+            break
+    assert status == 200
+    # Non-vacuous overlap: the analysis must still be running when probing
+    # ends. If the loop were blocked by the analysis, the first probe could
+    # only return once the analysis was already done.
+    assert not analyze_task.done(), (
+        "analysis already finished while /health was probed - the overlap "
+        "this test guards is gone (text too short or machine too loaded)"
     )
+    analysis_r = await analyze_task
+    assert analysis_r.status_code == 200
     # The loop must never be blocked for the whole analysis any more.
-    assert health_s < 1.5, (
-        f"/health took {health_s:.2f}s while analysis ran for "
-        f"{analysis_s:.2f}s - CPU-bound work is back on the event loop"
+    best_s = min(probe_s)
+    probes_str = ", ".join(f"{s:.2f}" for s in probe_s)
+    assert best_s < 2.5, (
+        f"/health best of {len(probe_s)} probes took {best_s:.2f}s "
+        f"(probes: {probes_str}) while the analysis was "
+        f"still running - CPU-bound work is back on the event loop"
     )
