@@ -67,7 +67,7 @@ def _evidence_position(evidence_id: str) -> tuple[int, int]:
     return s, i
 
 
-def _cue_example_key(e: dict) -> tuple:
+def _cue_example_key(e: dict[str, Any]) -> tuple[str, int, int, str]:
     """Boot-stable sort key for a cue/SFG/USAS example dict."""
     return (
         str(e.get("cue", "")),
@@ -76,7 +76,7 @@ def _cue_example_key(e: dict) -> tuple:
     )
 
 
-def _grammar_example_key(m: dict) -> tuple:
+def _grammar_example_key(m: dict[str, Any]) -> tuple[int, int, tuple[tuple[str, str], ...]]:
     """Boot-stable sort key for a grammar-detector match (doc excluded)."""
     stable = tuple(sorted((k, str(v)) for k, v in m.items() if k not in ("doc", "evidence_id")))
     return (*_evidence_position(str(m.get("evidence_id", ""))), stable)

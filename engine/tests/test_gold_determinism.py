@@ -13,14 +13,16 @@ applied AFTER a content sort, never during collection.
 """
 from __future__ import annotations
 
+import io
 import os
+from collections.abc import AsyncIterator
 
 import pytest
 from httpx import ASGITransport, AsyncClient
 
 os.environ["CORPUSMIND_DB_URL"] = "sqlite+aiosqlite:///:memory:"
 os.environ["CORPUSMIND_DATA_DIR"] = "/tmp/cm-test-data"
-from app.settings import get_settings  # noqa: E402
+from app.settings import get_settings
 
 get_settings.cache_clear()
 
@@ -31,7 +33,7 @@ TIE_TEXT = b"A b c d. A b e f. X y z w. X y q r."
 
 
 @pytest.fixture
-async def client():
+async def client() -> AsyncIterator[AsyncClient]:
     from app.main import app
     from storage.session import dispose_db
 
@@ -45,16 +47,16 @@ async def _setup_corpus(client: AsyncClient, content: bytes, name: str = "Det") 
     r = await client.post("/api/v1/projects", json={"name": name, "language": "en"})
     pid = r.json()["id"]
     r = await client.post(f"/api/v1/projects/{pid}/corpora", json={"name": "C", "language": "en"})
-    cid = r.json()["id"]
+    cid = str(r.json()["id"])
     await client.post(
         f"/api/v1/corpora/{cid}/documents",
-        files={"files": ("test.txt", __import__("io").BytesIO(content), "text/plain")},
+        files={"files": ("test.txt", io.BytesIO(content), "text/plain")},
     )
     return cid
 
 
 @pytest.mark.asyncio
-async def test_ngram_tie_order_and_truncation(client):
+async def test_ngram_tie_order_and_truncation(client: AsyncClient) -> None:
     cid = await _setup_corpus(client, TIE_TEXT)
     r = await client.post(
         f"/api/v1/corpora/{cid}/ngrams", json={"n": 2, "min_freq": 2, "min_range": 1, "limit": 50}
@@ -75,7 +77,7 @@ async def test_ngram_tie_order_and_truncation(client):
 
 
 @pytest.mark.asyncio
-async def test_ngram_rows_full_order_property(client):
+async def test_ngram_rows_full_order_property(client: AsyncClient) -> None:
     content = b"The quick brown fox jumps. The lazy dog sleeps. The quick cat runs. A cat naps."
     cid = await _setup_corpus(client, content, name="Det2")
     r = await client.post(
@@ -87,7 +89,7 @@ async def test_ngram_rows_full_order_property(client):
 
 
 @pytest.mark.asyncio
-async def test_pos_ngrams_order_property(client):
+async def test_pos_ngrams_order_property(client: AsyncClient) -> None:
     content = b"The cat sat. The dog ran. The bird flew. A cat sleeps."
     cid = await _setup_corpus(client, content, name="Det3")
     r = await client.post(
@@ -102,7 +104,7 @@ async def test_pos_ngrams_order_property(client):
 
 
 @pytest.mark.asyncio
-async def test_grammar_examples_sorted_and_capped(client):
+async def test_grammar_examples_sorted_and_capped(client: AsyncClient) -> None:
     content = (
         b"The dog was bitten by a snake. The man walked home. "
         b"The cake was eaten by the kids. The song was sung loudly. "
@@ -122,7 +124,7 @@ async def test_grammar_examples_sorted_and_capped(client):
 
 
 @pytest.mark.asyncio
-async def test_discourse_examples_sorted_and_capped(client):
+async def test_discourse_examples_sorted_and_capped(client: AsyncClient) -> None:
     # "my" (possessive_determiner) appears many times → more candidates
     # than the default limit_examples=5, so the cap is exercised.
     content = (
