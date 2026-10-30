@@ -146,17 +146,27 @@ grounding score by construction (honest `no_tool` traps):
 2. ~~Canonical manuscript snapshot~~ — **DONE** (run 40970859593, snapshot v3; #37).
    Manuscript cites the **version DOI of the release evaluated**:
    `10.5281/zenodo.23785435` (v2.0.1); concept DOI `10.5281/zenodo.23216073`.
-3. **Full gold diff in CI** — add a rebuild-all-80 + diff-vs-frozen job; run before
-   any grounding re-run (and after any further splitter change). If the Arabic
-   sentence-scoped questions shifted, re-freeze the gold as a reviewed PR.
-4. **Grounding rows** — fix the pass-2 cloud bug (flatten tool results, never replay
-   bare tool messages; mock-server regression test), then run the **local Ollama
-   row** (primary), then the **Gemini row** only with a paid key.
+3. ~~**Full gold diff in CI**~~ — **DONE, and it earned its keep** (#42 gate;
+   #43 re-freeze; #44 second round): the first run found the frozen gold BOTH
+   stale (G-002 19→18, G-056 16→15) and unstable (keyness/cue hash order);
+   a fresh-boot re-run then exposed a second entropy source (tied rows and
+   example caps inheriting the per-boot `document_id` hex order — G-037's
+   `top 2-gram` was boot luck). Deterministic tie-breaks + re-frozen gold;
+   gate green on two fresh-boot rebuilds. The gate runs on every PR touching
+   eval/splitter paths.
+4. ~~**Grounding rows**~~ — **DONE for the primary row** (#41 flattening fix +
+   mock regression test, verified against real Gemini in the probe; #44
+   determinism). **Primary (local-first) row recorded**: Ollama `qwen2.5:1.5b`,
+   full bank, pass_rate **0.1375** (CI95 0.0625–0.2125), hallucination 0.65 —
+   see `benchmarks/README.md` results snapshots. **Gemini full row: pending a
+   PAID key** (free tier 20 RPD < the ~160+ calls the bank needs); the probe
+   row stands in for the cloud path until then.
 5. Tier 2 CAMeLBERT data pack (installer + ingest switch + battery "neural" tier).
 6. Tier 3 verse-marker rule behind register detection (use-case motivated; see §4).
-7. **Release storage cleanup** — the manifest (`docs/release_retirement_manifest.csv`,
-   302 installers, 67.9 GB, 49 releases; exclusions v2.0.0, v2.0.1,
-   reference-mirrors-v1) is correct. Say **"apply"** once the docs+chore PR that
-   introduces it merges — and note that **release-asset deletion is irreversible**
-   (no trash/restore on GitHub).
+7. ~~**Release storage cleanup**~~ — **APPLIED** (2026-10-30, after #40 merged):
+   fresh dry-run matched `docs/release_retirement_manifest.csv` exactly (440
+   rows), then 302 installers (67.9 GB) deleted across 49 releases, 0
+   failures; superseded banners added. Verified post-state: only the 12
+   v2.0.0/v2.0.1 installers remain; 138 kept assets (guides, web zips,
+   checksums) and `reference-mirrors-v1` untouched.
 8. Grounding tool-coverage pass (§5) + gold re-freeze + provider-in-the-loop runs.

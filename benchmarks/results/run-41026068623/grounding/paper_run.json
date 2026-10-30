@@ -1,0 +1,86 @@
+{
+ "meta": {
+  "created_utc": "2026-10-30T08:40:44+00:00",
+  "provider": "cloud",
+  "model": "gemini-3.8-flash",
+  "question_count": 3,
+  "pause_s": 7.0,
+  "rate_retries": 4,
+  "cloud_reasoning_effort": "low",
+  "cloud_chat_timeout_s": 240.0,
+  "chat_deadline_s": 300.0,
+  "harness_timeout_s": 600.0
+ },
+ "results": [
+  {
+   "id": "G-004",
+   "answer": "Based on the corpus statistics and tool output, here are the calculations for the **Type-Token Ratio (TTR)** of the active corpus (**EN-all**, ID: `f0cb80fb183143fd`):\n\n### 1. Overall Corpus TTR (from Corpus Snapshot)\nAccording to the corpus snapshot:\n* **Total Types:** 257\n* **Total Tokens:** 384\n\n$$\\text{TTR} = \\frac{257}{384} \\approx 0.6693 \\text{ (or } 66.93\\%)$$\n\n---\n\n### 2. Standardized Type-Token Ratio (STTR)\nFrom the `get_frequency` tool results:\n* **STTR:** `0.6042` (or **60.42%**)\n\n*(Note: Standardized TTR calculates the average TTR across standardized segments to control for corpus length differences).*",
+   "grounded": true,
+   "tool_calls": [
+    {
+     "name": "get_frequency",
+     "args": {
+      "corpus_id": "f0cb80fb183143fd",
+      "unit": "word"
+     },
+     "ok": true
+    }
+   ],
+   "evidence": [
+    {
+     "kind": "tool_result",
+     "ref": "tool:get_frequency:1",
+     "snippet": "{\"unit\": \"word\", \"total_tokens\": 331, \"total_types\": 20, \"sttr\": 0.6042, \"top_items\": [{\"item\": \"the\", \"freq\": 15, \"per_million\": 45317.22, \"percent\": 4.5317, \"range\": 3, \"range_percent\": 100.0}, {\"item\": \"in\", \"freq\": 9, \"per_million\": 27190.33, \"percent\": 2.719, \"range\": 3, \"range_percent\": 100.0}, {\"item\": \"is\", \"freq\": 9, \"per_million\": 27190.33, \"percent\": 2.719, \"range\": 3, \"range_percent\": 100.0}, {\"item\": \"to\", \"freq\": 9, \"per_million\": 27190.33, \"percent\": 2.719, \"range\": 3, \"range_perc"
+    }
+   ],
+   "elapsed_ms": 298889,
+   "wall_ms": 300183
+  },
+  {
+   "id": "G-040",
+   "answer": "Based on the results from the **`search_concordance`** tool:\n\n- **Total hits:** The query for `'park'` returned **4 hits** (`total_matches: 4`).\n- **First hit `line_id`:** The `line_id` of the first match is **`8cca0c0d09554f90:0:4`** (appearing in document `en_news.txt` as *\"City Council Approves Riverfront **Park**\"*).",
+   "grounded": true,
+   "tool_calls": [
+    {
+     "name": "search_concordance",
+     "args": {
+      "corpus_id": "f0cb80fb183143fd",
+      "query": "park"
+     },
+     "ok": true
+    }
+   ],
+   "evidence": [
+    {
+     "kind": "concordance_line",
+     "ref": "line:8cca0c0d09554f90:0:4",
+     "snippet": "City Council Approves Riverfront [Park] "
+    },
+    {
+     "kind": "concordance_line",
+     "ref": "line:8cca0c0d09554f90:1:7",
+     "snippet": "council approved the new riverfront [park] project on Tuesday by a"
+    },
+    {
+     "kind": "concordance_line",
+     "ref": "line:8cca0c0d09554f90:4:6",
+     "snippet": "member Dana Reyes said the [park] will include two playgrounds ,"
+    },
+    {
+     "kind": "concordance_line",
+     "ref": "line:8cca0c0d09554f90:6:5",
+     "snippet": "The mayor replied that the [park] will pay for itself through"
+    }
+   ],
+   "elapsed_ms": 271767,
+   "wall_ms": 286892
+  },
+  {
+   "id": "G-073",
+   "answer": "",
+   "http_status": 504,
+   "error": "{\"detail\":\"Assistant turn exceeded the 300s deadline. Retry with a simpler query, fewer tool calls, or switch to a smaller model. If this happens often, set CORPUSMIND_CHAT_TIMEOUT_S to raise the budget.\",\"error\":\"chat_timeout\",\"timeout_s\":300.0}",
+   "wall_ms": 300176
+  }
+ ]
+}
