@@ -8,6 +8,31 @@ once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
 ## [Unreleased]
 
+### Added — full gold-diff CI gate + a local-Ollama grounding row
+
+- `eval.gold_diff`: rebuilds the WHOLE 80-question bank in-process and diffs
+  every gold value (and frozen tool result) against the committed gold —
+  exit 1, human-readable table + JSON report on any difference. The
+  previous live check rebuilt only G-001 + G-003 (both English, neither
+  sentence-scoped), so "frozen gold unaffected" was never actually
+  established for the Arabic sentence-scoped questions (G-044, G-056,
+  G-074, possibly G-002), whose values shift when the splitter changes.
+  A non-empty diff is a reviewed event: re-freeze the gold in a reviewed
+  PR (report attached) or fix the rebuild — never the gold.
+- `benchmarks.yml` gains a `gold-diff` job: runs on every PR touching
+  `engine/eval/**` / `engine/nlp/arabic/**` (i.e. again after ANY further
+  splitter change) and on dispatch (`run_gold_diff=true`); installs the
+  pinned spaCy model + CAMeL data so the rebuild matches the gold's
+  recorded provenance.
+- The grounding job now supports a LOCAL ollama row: when
+  `grounding_provider=ollama` it installs/starts Ollama on the runner and
+  pulls the model (default `qwen2.5:1.5b`) — no provider key, no quota;
+  this is the fidelity table's primary row, fitting the local-first pitch.
+  The cloud guard only requires the API key for non-local providers. New
+  dispatch inputs: `grounding_timeout` (harness per-question HTTP timeout,
+  default 600), `grounding_chat_deadline_s` (engine chat deadline, default
+  300), `reasoning_effort` (default `low`, cloud only).
+
 ### Fixed — grounded pass 2 against strict cloud backends (flatten, don't replay)
 
 Product bug, not a Gemini quirk: OpenAI's chat-completions contract requires
