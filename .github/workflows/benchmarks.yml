@@ -71,6 +71,23 @@ on:
         description: "Space/comma-separated question ids to run (empty = full 80-question bank)"
         default: ""
         required: false
+      grounding_timeout:
+        description: "Per-question HTTP timeout seconds for the harness (600 fits cloud reasoning models)"
+        default: "600"
+        required: false
+      grounding_chat_deadline_s:
+        description: "Engine chat-turn deadline seconds (CORPUSMIND_CHAT_TIMEOUT_S; 300 fits cloud reasoning models)"
+        default: "300"
+        required: false
+      reasoning_effort:
+        description: "Opt-in reasoning_effort for cloud chats (low fits Gemini 3.x; empty = field not sent; inert for ollama)"
+        default: "low"
+        required: false
+      run_gold_diff:
+        description: "Run the full gold diff (rebuild all 80 golds vs frozen — also runs automatically on PRs touching eval/splitter paths)"
+        type: boolean
+        default: false
+        required: false
       debug_raw:
         description: "Include raw provider bodies in error diagnostics (CORPUSMIND_DEBUG_RAW=1)"
         type: boolean
@@ -229,7 +246,70 @@ jobs:
           if-no-files-found: error
 
   # -----------------------------------------------------------------------
-  # 3. Assistant grounding fidelity (OPTIONAL — needs a real provider)
+  # 3. Full gold diff — rebuild ALL grounding golds vs the frozen file
+  # -----------------------------------------------------------------------
+  # "Frozen gold unaffected" is only ever established by rebuilding the
+  # whole bank: the old live test covered G-001 + G-003 only, both English,
+  # neither sentence-scoped. The Arabic sentence-scoped questions (G-044,
+  # G-056, G-074, possibly G-002) recompute sentence counts, so splitter
+  # changes can shift their frozen values silently. This job is the gate
+  # every grounding re-run (and every splitter change) must pass. A
+  # non-empty diff is a REVIEWED event: re-freeze the gold in a reviewed PR
+  # (report attached) or fix the rebuild — never the gold.
+  gold-diff:
+    name: Gold diff (rebuild all vs frozen)
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    if: (github.event_name == 'workflow_dispatch' && inputs.run_gold_diff) || github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: engine/pyproject.toml
+
+      - name: Install engine + CAMeL Tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e "./engine[dev]" python-multipart cryptography
+          pip install camel-tools docopt pyrsistent muddler emoji
+
+      - name: Cache CAMeL Tools data
+        uses: actions/cache@v4
+        with:
+          path: ~/.camel_tools
+          key: ${{ runner.os }}-camel-tools-data-${{ hashFiles('engine/pyproject.toml') }}
+
+      - name: Download CAMeL morphology + dialect data
+        run: |
+          camel_data -i morphology-db-msa-r13
+          camel_data -i dialectid-model6
+
+      - name: Install pinned spaCy model (must match the frozen gold _meta = 3.8.0)
+        # The gold's English token counts were produced WITH this model; a
+        # different/absent model changes ingest tokenization and would show
+        # up as false gold diffs.
+        run: pip install "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl"
+
+      - name: Rebuild all 80 golds and diff vs frozen
+        working-directory: engine
+        run: |
+          mkdir -p ../benchmarks/out
+          python -m eval.gold_diff --out ../benchmarks/out/gold_diff.json
+
+      - name: Upload gold-diff report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gold-diff
+          path: benchmarks/out/gold_diff.json
+          if-no-files-found: error
+
+  # -----------------------------------------------------------------------
+  # 4. Assistant grounding fidelity (OPTIONAL — needs a real provider)
   # -----------------------------------------------------------------------
   grounding:
     name: Grounding fidelity (provider-in-the-loop)
@@ -241,6 +321,13 @@ jobs:
       CORPUSMIND_CLOUD_API_KEY: ${{ secrets.CORPUSMIND_CLOUD_API_KEY }}
       CORPUSMIND_CLOUD_DEFAULT_MODEL: ${{ inputs.grounding_model }}
       CORPUSMIND_CLOUD_BASE_URL: ${{ secrets.CORPUSMIND_CLOUD_BASE_URL }}
+      # post-v2.0.1: the cloud-turn settings, recorded in every run manifest.
+      # Gemini 3.x cannot turn thinking off — reasoning_effort=low keeps a
+      # grounded tool round inside the chat deadline; the deadline itself is
+      # raised from 180s (G-040 died at exactly 180s on pass 1).
+      CORPUSMIND_CHAT_TIMEOUT_S: ${{ inputs.grounding_chat_deadline_s || '300' }}
+      CORPUSMIND_CLOUD_REASONING_EFFORT: ${{ inputs.reasoning_effort || 'low' }}
+      CORPUSMIND_CLOUD_CHAT_TIMEOUT_S: "240"
       # Diagnostics (opt-in via the debug_raw input): a provider-integration
       # bug (8x "unexpected response shape" in run 40953800717) is
       # undiagnosable from logs while the engine withholds raw bodies. Raw
@@ -250,15 +337,46 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Guard — is a provider key configured?
+      - name: Guard — does the selected provider have what it needs?
         id: guard
         run: |
-          if [ -z "${{ secrets.CORPUSMIND_CLOUD_API_KEY }}" ]; then
+          PROVIDER="${{ inputs.grounding_provider || 'cloud' }}"
+          if [ "$PROVIDER" = "ollama" ]; then
+            # Local-first primary row: no provider key, no quota.
+            echo "available=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::grounding run on LOCAL ollama (${{ inputs.grounding_model || 'qwen2.5:1.5b' }}) — no provider key needed"
+          elif [ -z "${{ secrets.CORPUSMIND_CLOUD_API_KEY }}" ]; then
             echo "available=false" >> "$GITHUB_OUTPUT"
             echo "::notice::grounding run skipped — set repo secrets CORPUSMIND_CLOUD_API_KEY (and optionally CORPUSMIND_CLOUD_BASE_URL), then dispatch again with run_grounding=true"
           else
             echo "available=true" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Install Ollama (local provider row only)
+        if: steps.guard.outputs.available == 'true' && (inputs.grounding_provider || 'cloud') == 'ollama'
+        run: |
+          curl -fsSL https://ollama.com/install.sh | sh
+          ollama --version
+
+      - name: Start Ollama server (local provider row only)
+        if: steps.guard.outputs.available == 'true' && (inputs.grounding_provider || 'cloud') == 'ollama'
+        run: |
+          if ! curl -sf http://127.0.0.1:11434/api/tags > /dev/null; then
+            nohup ollama serve > /tmp/ollama.log 2>&1 &
+            for i in $(seq 1 60); do
+              curl -sf http://127.0.0.1:11434/api/tags > /dev/null && break
+              sleep 2
+            done
+          fi
+          curl -sf http://127.0.0.1:11434/api/tags > /dev/null \
+            || { cat /tmp/ollama.log; exit 1; }
+
+      - name: Pull the local model (local provider row only)
+        if: steps.guard.outputs.available == 'true' && (inputs.grounding_provider || 'cloud') == 'ollama'
+        run: |
+          MODEL="${{ inputs.grounding_model || 'qwen2.5:1.5b' }}"
+          ollama pull "$MODEL"
+          ollama ls
 
       - name: Set up Python 3.12
         if: steps.guard.outputs.available == 'true'
@@ -306,10 +424,11 @@ jobs:
             ONLY_ARGS="--only $(echo '${{ inputs.grounding_only }}' | tr ',' ' ')"
           fi
           python -m eval.run_grounding \
-            --provider "${{ inputs.grounding_provider }}" \
+            --provider "${{ inputs.grounding_provider || 'cloud' }}" \
             ${{ inputs.grounding_model && format('--model {0}', inputs.grounding_model) || '' }} \
             --pause "${{ inputs.grounding_pause || '7' }}" \
             --rate-retries 4 \
+            --timeout "${{ inputs.grounding_timeout || '600' }}" \
             $ONLY_ARGS \
             --out eval/runs/paper_run.json
 
@@ -327,7 +446,7 @@ jobs:
           if-no-files-found: error
 
   # -----------------------------------------------------------------------
-  # 4. Results snapshot (OPTIONAL — data-only commit for the manuscript)
+  # 5. Results snapshot (OPTIONAL — data-only commit for the manuscript)
   # -----------------------------------------------------------------------
   results-snapshot:
     name: Commit results snapshot
