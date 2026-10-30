@@ -204,7 +204,7 @@ class _ScriptedProvider:
     async def list_models(self) -> list[str]:
         return [self.default_model]
 
-    async def chat(self, messages: Any, model: Any = None, temperature: float = 0.2, tools: Any = None) -> Any:
+    async def chat(self, messages: Any, model: Any = None, temperature: float = 0.2, tools: Any = None, timeout: float | None = None) -> Any:
         from ai.providers import ChatResponse
 
         if any(m.role == "tool" for m in messages):
