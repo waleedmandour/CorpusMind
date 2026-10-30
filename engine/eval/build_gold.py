@@ -30,6 +30,26 @@ from typing import Any
 
 _GOLD_PATH = Path(__file__).parent / "data" / "gold" / "grounding_gold.json"
 
+# Unstable-token masking (post-v2.0.1): tool outputs embed per-boot hex ids
+# (corpus_id, document_id, target_corpus_id — assigned fresh by every
+# prepare_corpora() ingest). Frozen verbatim, they made the gold file
+# churn on every rebuild and made line_id gold strings unscoreable (the
+# scorer's literal _contains can never match a fresh boot's ids). Masking
+# 8+ hex-char word tokens to "<id>" at freeze time keeps line_id
+# sentence/word indices ("<id>:0:4") while making the file boot-stable.
+# Numbers are untouched (ids are hex strings, not numeric values).
+_HEX_ID = re.compile(r"\b[0-9a-f]{8,}\b")
+
+
+def _mask_unstable(value: Any) -> Any:
+    if isinstance(value, str):
+        return _HEX_ID.sub("<id>", value)
+    if isinstance(value, dict):
+        return {k: _mask_unstable(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_mask_unstable(v) for v in value]
+    return value
+
 
 @asynccontextmanager
 async def boot_engine(db_url: str = "sqlite+aiosqlite:///:memory:") -> AsyncIterator[Any]:
@@ -433,7 +453,8 @@ async def build(only: list[str] | None = None) -> dict[str, Any]:
                         f"{q['id']}: trap question resolved to non-zero gold {nonzero} — rewrite the question"
                     )
                     continue
-            entry["gold"] = gold
+            entry["gold"] = _mask_unstable(gold)
+            entry["tools"] = _mask_unstable(frozen_tools)
             problems = cross_check(entry, {"tools": frozen_tools})
             if problems:
                 build_errors.extend(problems)

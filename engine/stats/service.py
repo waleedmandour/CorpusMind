@@ -1703,8 +1703,13 @@ async def compute_keyness(
 
     # Sort by log_likelihood descending, then split via the shared helper —
     # G² is unsigned, so the direction comes from the SIGNED effect size
-    # (log_ratio), never from the sign of log_likelihood.
-    rows.sort(key=lambda r: r.measures.get("log_likelihood", 0.0), reverse=True)
+    # (log_ratio), never from the sign of log_likelihood. Ties break by
+    # term ascending — a plain reverse sort is stable on the PRE-sort
+    # order, which for equal G² comes from hash-randomized dict iteration
+    # (observed: the same corpus produced 'i goal to my is' vs
+    # 'i goal is to my' across PYTHONHASHSEED values), so frozen gold
+    # values like "third positive keyword" were not reproducible.
+    rows.sort(key=lambda r: (-r.measures.get("log_likelihood", 0.0), r.term))
     positive, negative = split_keywords_by_direction(
         [
             (r, r.measures.get("log_likelihood", 0.0), r.measures.get("log_ratio", 0.0))

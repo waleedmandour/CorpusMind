@@ -1,9 +1,9 @@
 {
  "_meta": {
   "description": "Frozen grounding gold for the fixed snapshot corpus. Produced ONCE by eval/build_gold.py from the engine's own tool registry; every numeric answer the assistant gives is scored against these values. Do not regenerate silently: a rebuild must be reviewed like any golden-file change (see measures_v2.json discipline). Tool outputs are frozen verbatim as provenance.",
-  "engine_version": "2.0.0",
-  "git_commit": "1457736",
-  "created_utc": "2026-10-29T13:12:01+00:00",
+  "engine_version": "2.0.1",
+  "git_commit": "e0307f7",
+  "created_utc": "2026-10-30T07:54:09+00:00",
   "spacy_model": {
    "en_core_web_sm": "3.8.0"
   },
@@ -74,12 +74,12 @@
   "question_count": 80
  },
  "corpus_map": {
-  "C1": "b978e05762c146d3",
-  "C2": "139b5f9f002b4730",
-  "C3": "287e79a486d44b5b",
-  "C4": "e7de99d8b8ff4e9e",
-  "C5": "ca2fb2b917bc4906",
-  "C6": "bbb6d4992c42482f"
+  "C1": "00fd4e706b124b56",
+  "C2": "c9cb4766f9474c42",
+  "C3": "29476eceeea74cec",
+  "C4": "8bef672fcecf47ff",
+  "C5": "b541d056ff3640f2",
+  "C6": "849dd1e901ad4774"
  },
  "questions": [
   {
@@ -97,7 +97,7 @@
      },
      "ok": true,
      "result": {
-      "corpus_id": "b978e05762c146d3",
+      "corpus_id": "<id>",
       "name": "EN-all",
       "language": "en",
       "genre": "mixed",
@@ -158,7 +158,7 @@
      },
      "ok": true,
      "result": {
-      "corpus_id": "e7de99d8b8ff4e9e",
+      "corpus_id": "<id>",
       "name": "AR-all",
       "language": "ar",
       "genre": "mixed",
@@ -166,7 +166,7 @@
        "document_count": 4,
        "token_count": 233,
        "type_count": 199,
-       "sentence_count": 19
+       "sentence_count": 18
       },
       "vision_side": {
        "image_set_count": 0,
@@ -196,7 +196,7 @@
      },
      {
       "label": "sentences",
-      "value": 19,
+      "value": 18,
       "tol": 1e-06
      }
     ],
@@ -432,8 +432,8 @@
      },
      "ok": true,
      "result": {
-      "target_corpus_id": "139b5f9f002b4730",
-      "reference_corpus_id": "287e79a486d44b5b",
+      "target_corpus_id": "<id>",
+      "reference_corpus_id": "<id>",
       "N1": 35,
       "N2": 32,
       "positive_keywords": [
@@ -477,7 +477,7 @@
         "q_bh": 0.008807
        },
        {
-        "term": "to",
+        "term": "my",
         "f1": 5,
         "f2": 0,
         "log_likelihood": 6.861625848268458,
@@ -490,7 +490,7 @@
         "q_bh": 0.008807
        },
        {
-        "term": "my",
+        "term": "to",
         "f1": 5,
         "f2": 0,
         "log_likelihood": 6.861625848268458,
@@ -599,8 +599,8 @@
      },
      "ok": true,
      "result": {
-      "target_corpus_id": "139b5f9f002b4730",
-      "reference_corpus_id": "287e79a486d44b5b",
+      "target_corpus_id": "<id>",
+      "reference_corpus_id": "<id>",
       "N1": 35,
       "N2": 32,
       "positive_keywords": [
@@ -644,7 +644,7 @@
         "q_bh": 0.008807
        },
        {
-        "term": "to",
+        "term": "my",
         "f1": 5,
         "f2": 0,
         "log_likelihood": 6.861625848268458,
@@ -657,7 +657,7 @@
         "q_bh": 0.008807
        },
        {
-        "term": "my",
+        "term": "to",
         "f1": 5,
         "f2": 0,
         "log_likelihood": 6.861625848268458,
@@ -761,8 +761,8 @@
      },
      "ok": true,
      "result": {
-      "target_corpus_id": "139b5f9f002b4730",
-      "reference_corpus_id": "287e79a486d44b5b",
+      "target_corpus_id": "<id>",
+      "reference_corpus_id": "<id>",
       "N1": 35,
       "N2": 32,
       "positive_keywords": [
@@ -806,7 +806,7 @@
         "q_bh": 0.008807
        },
        {
-        "term": "to",
+        "term": "my",
         "f1": 5,
         "f2": 0,
         "log_likelihood": 6.861625848268458,
@@ -819,7 +819,7 @@
         "q_bh": 0.008807
        },
        {
-        "term": "my",
+        "term": "to",
         "f1": 5,
         "f2": 0,
         "log_likelihood": 6.861625848268458,
@@ -923,8 +923,8 @@
      },
      "ok": true,
      "result": {
-      "target_corpus_id": "139b5f9f002b4730",
-      "reference_corpus_id": "287e79a486d44b5b",
+      "target_corpus_id": "<id>",
+      "reference_corpus_id": "<id>",
       "N1": 35,
       "N2": 32,
       "positive_keywords": [
@@ -968,7 +968,7 @@
         "q_bh": 0.008807
        },
        {
-        "term": "to",
+        "term": "my",
         "f1": 5,
         "f2": 0,
         "log_likelihood": 6.861625848268458,
@@ -981,7 +981,7 @@
         "q_bh": 0.008807
        },
        {
-        "term": "my",
+        "term": "to",
         "f1": 5,
         "f2": 0,
         "log_likelihood": 6.861625848268458,
@@ -1085,8 +1085,8 @@
      },
      "ok": true,
      "result": {
-      "target_corpus_id": "139b5f9f002b4730",
-      "reference_corpus_id": "287e79a486d44b5b",
+      "target_corpus_id": "<id>",
+      "reference_corpus_id": "<id>",
       "N1": 35,
       "N2": 32,
       "positive_keywords": [
@@ -1130,7 +1130,7 @@
         "q_bh": 0.008807
        },
        {
-        "term": "to",
+        "term": "my",
         "f1": 5,
         "f2": 0,
         "log_likelihood": 6.861625848268458,
@@ -1143,7 +1143,7 @@
         "q_bh": 0.008807
        },
        {
-        "term": "my",
+        "term": "to",
         "f1": 5,
         "f2": 0,
         "log_likelihood": 6.861625848268458,
@@ -1263,8 +1263,8 @@
      },
      "ok": true,
      "result": {
-      "target_corpus_id": "139b5f9f002b4730",
-      "reference_corpus_id": "287e79a486d44b5b",
+      "target_corpus_id": "<id>",
+      "reference_corpus_id": "<id>",
       "N1": 35,
       "N2": 32,
       "positive_keywords": [
@@ -1308,7 +1308,7 @@
         "q_bh": 0.008807
        },
        {
-        "term": "to",
+        "term": "my",
         "f1": 5,
         "f2": 0,
         "log_likelihood": 6.861625848268458,
@@ -1321,7 +1321,7 @@
         "q_bh": 0.008807
        },
        {
-        "term": "my",
+        "term": "to",
         "f1": 5,
         "f2": 0,
         "log_likelihood": 6.861625848268458,
@@ -1418,8 +1418,8 @@
      },
      "ok": true,
      "result": {
-      "target_corpus_id": "139b5f9f002b4730",
-      "reference_corpus_id": "287e79a486d44b5b",
+      "target_corpus_id": "<id>",
+      "reference_corpus_id": "<id>",
       "N1": 35,
       "N2": 32,
       "positive_keywords": [
@@ -1463,7 +1463,7 @@
         "q_bh": 0.008807
        },
        {
-        "term": "to",
+        "term": "my",
         "f1": 5,
         "f2": 0,
         "log_likelihood": 6.861625848268458,
@@ -1476,7 +1476,7 @@
         "q_bh": 0.008807
        },
        {
-        "term": "my",
+        "term": "to",
         "f1": 5,
         "f2": 0,
         "log_likelihood": 6.861625848268458,
@@ -1574,8 +1574,8 @@
      },
      "ok": true,
      "result": {
-      "target_corpus_id": "139b5f9f002b4730",
-      "reference_corpus_id": "287e79a486d44b5b",
+      "target_corpus_id": "<id>",
+      "reference_corpus_id": "<id>",
       "N1": 35,
       "N2": 32,
       "positive_keywords": [
@@ -1645,8 +1645,8 @@
      },
      "ok": true,
      "result": {
-      "target_corpus_id": "139b5f9f002b4730",
-      "reference_corpus_id": "287e79a486d44b5b",
+      "target_corpus_id": "<id>",
+      "reference_corpus_id": "<id>",
       "N1": 35,
       "N2": 32,
       "positive_keywords": [
@@ -1690,7 +1690,7 @@
         "q_bh": 0.008807
        },
        {
-        "term": "to",
+        "term": "my",
         "f1": 5,
         "f2": 0,
         "log_likelihood": 6.861625848268458,
@@ -1703,7 +1703,7 @@
         "q_bh": 0.008807
        },
        {
-        "term": "my",
+        "term": "to",
         "f1": 5,
         "f2": 0,
         "log_likelihood": 6.861625848268458,
@@ -4823,7 +4823,7 @@
       },
       "lines": [
        {
-        "line_id": "5e2edc3942cc425b:0:4",
+        "line_id": "<id>:0:4",
         "document": "en_news.txt",
         "left": "City Council Approves Riverfront",
         "node": "Park",
@@ -4832,7 +4832,7 @@
         "lemma": "Park"
        },
        {
-        "line_id": "5e2edc3942cc425b:1:7",
+        "line_id": "<id>:1:7",
         "document": "en_news.txt",
         "left": "council approved the new riverfront",
         "node": "park",
@@ -4841,7 +4841,7 @@
         "lemma": "park"
        },
        {
-        "line_id": "5e2edc3942cc425b:4:6",
+        "line_id": "<id>:4:6",
         "document": "en_news.txt",
         "left": "member Dana Reyes said the",
         "node": "park",
@@ -4850,7 +4850,7 @@
         "lemma": "park"
        },
        {
-        "line_id": "5e2edc3942cc425b:6:5",
+        "line_id": "<id>:6:5",
         "document": "en_news.txt",
         "left": "The mayor replied that the",
         "node": "park",
@@ -4873,7 +4873,7 @@
     "strings": [
      {
       "label": "first line_id",
-      "value": "5e2edc3942cc425b:0:4"
+      "value": "<id>:0:4"
      }
     ],
     "traps": {}
@@ -4907,7 +4907,7 @@
       },
       "lines": [
        {
-        "line_id": "5e2edc3942cc425b:0:1",
+        "line_id": "<id>:0:1",
         "document": "en_news.txt",
         "left": "City",
         "node": "Council",
@@ -4916,7 +4916,7 @@
         "lemma": "Council"
        },
        {
-        "line_id": "5e2edc3942cc425b:1:2",
+        "line_id": "<id>:1:2",
         "document": "en_news.txt",
         "left": "The city",
         "node": "council",
@@ -4925,7 +4925,7 @@
         "lemma": "council"
        },
        {
-        "line_id": "5e2edc3942cc425b:4:0",
+        "line_id": "<id>:4:0",
         "document": "en_news.txt",
         "left": "",
         "node": "Council",
@@ -4934,7 +4934,7 @@
         "lemma": "Council"
        },
        {
-        "line_id": "5e2edc3942cc425b:8:1",
+        "line_id": "<id>:8:1",
         "document": "en_news.txt",
         "left": "The",
         "node": "council",
@@ -4992,7 +4992,7 @@
       },
       "lines": [
        {
-        "line_id": "9555558fe0bf47b7:3:4",
+        "line_id": "<id>:3:4",
         "document": "en_learner.txt",
         "left": "year I was",
         "node": "go",
@@ -5024,7 +5024,7 @@
       },
       "lines": [
        {
-        "line_id": "9555558fe0bf47b7:3:4",
+        "line_id": "<id>:3:4",
         "document": "en_learner.txt",
         "left": "year I was",
         "node": "go",
@@ -5081,7 +5081,7 @@
       },
       "lines": [
        {
-        "line_id": "f74e9c17e4c348fb:0:1",
+        "line_id": "<id>:0:1",
         "document": "en_news.txt",
         "left": "City",
         "node": "Council",
@@ -5090,7 +5090,7 @@
         "lemma": "Council"
        },
        {
-        "line_id": "f74e9c17e4c348fb:1:2",
+        "line_id": "<id>:1:2",
         "document": "en_news.txt",
         "left": "The city",
         "node": "council",
@@ -5099,7 +5099,7 @@
         "lemma": "council"
        },
        {
-        "line_id": "f74e9c17e4c348fb:4:0",
+        "line_id": "<id>:4:0",
         "document": "en_news.txt",
         "left": "",
         "node": "Council",
@@ -5108,7 +5108,7 @@
         "lemma": "Council"
        },
        {
-        "line_id": "f74e9c17e4c348fb:8:1",
+        "line_id": "<id>:8:1",
         "document": "en_news.txt",
         "left": "The",
         "node": "council",
@@ -5139,7 +5139,7 @@
       },
       "lines": [
        {
-        "line_id": "5e2edc3942cc425b:0:1",
+        "line_id": "<id>:0:1",
         "document": "en_news.txt",
         "left": "City",
         "node": "Council",
@@ -5148,7 +5148,7 @@
         "lemma": "Council"
        },
        {
-        "line_id": "5e2edc3942cc425b:1:2",
+        "line_id": "<id>:1:2",
         "document": "en_news.txt",
         "left": "The city",
         "node": "council",
@@ -5157,7 +5157,7 @@
         "lemma": "council"
        },
        {
-        "line_id": "5e2edc3942cc425b:4:0",
+        "line_id": "<id>:4:0",
         "document": "en_news.txt",
         "left": "",
         "node": "Council",
@@ -5166,7 +5166,7 @@
         "lemma": "Council"
        },
        {
-        "line_id": "5e2edc3942cc425b:8:1",
+        "line_id": "<id>:8:1",
         "document": "en_news.txt",
         "left": "The",
         "node": "council",
@@ -5223,7 +5223,7 @@
       },
       "lines": [
        {
-        "line_id": "088a89a349d64128:2:3",
+        "line_id": "<id>:2:3",
         "document": "ar_msa.txt",
         "left": "وقال الوزير إن",
         "node": "المشروع",
@@ -5232,7 +5232,7 @@
         "lemma": "مَشْرُوع"
        },
        {
-        "line_id": "088a89a349d64128:7:14",
+        "line_id": "<id>:6:14",
         "document": "ar_msa.txt",
         "left": "سيقدم تفاصيل أدق عن نتائج",
         "node": "المشروع",
@@ -5255,7 +5255,7 @@
     "strings": [
      {
       "label": "first line_id",
-      "value": "088a89a349d64128:2:3"
+      "value": "<id>:2:3"
      }
     ],
     "traps": {}
@@ -5289,7 +5289,7 @@
       },
       "lines": [
        {
-        "line_id": "9555558fe0bf47b7:0:1",
+        "line_id": "<id>:0:1",
         "document": "en_learner.txt",
         "left": "My",
         "node": "Goal",
@@ -5298,7 +5298,7 @@
         "lemma": "Goal"
        },
        {
-        "line_id": "9555558fe0bf47b7:0:6",
+        "line_id": "<id>:0:6",
         "document": "en_learner.txt",
         "left": "University My goal",
         "node": "in",
@@ -5307,7 +5307,7 @@
         "lemma": "in"
        },
        {
-        "line_id": "9555558fe0bf47b7:1:3",
+        "line_id": "<id>:1:3",
         "document": "en_learner.txt",
         "left": "I have many",
         "node": "goal",
@@ -5316,7 +5316,7 @@
         "lemma": "goal"
        },
        {
-        "line_id": "9555558fe0bf47b7:1:11",
+        "line_id": "<id>:1:11",
         "document": "en_learner.txt",
         "left": "but the first",
         "node": "goal",
@@ -5325,7 +5325,7 @@
         "lemma": "goal"
        },
        {
-        "line_id": "9555558fe0bf47b7:6:4",
+        "line_id": "<id>:6:4",
         "document": "en_learner.txt",
         "left": "conclusion , my",
         "node": "goal",
@@ -5334,7 +5334,7 @@
         "lemma": "goal"
        },
        {
-        "line_id": "9555558fe0bf47b7:7:7",
+        "line_id": "<id>:7:7",
         "document": "en_learner.txt",
         "left": "to achieve the",
         "node": "goal",
@@ -5357,7 +5357,7 @@
     "strings": [
      {
       "label": "second line_id",
-      "value": "9555558fe0bf47b7:0:6"
+      "value": "<id>:0:6"
      }
     ],
     "traps": {}
@@ -5391,7 +5391,7 @@
       },
       "lines": [
        {
-        "line_id": "5e2edc3942cc425b:0:3",
+        "line_id": "<id>:0:3",
         "document": "en_news.txt",
         "left": "City Council Approves",
         "node": "Riverfront",
@@ -5400,7 +5400,7 @@
         "lemma": "Riverfront"
        },
        {
-        "line_id": "5e2edc3942cc425b:1:6",
+        "line_id": "<id>:1:6",
         "document": "en_news.txt",
         "left": "approved the new",
         "node": "riverfront",
@@ -5431,7 +5431,7 @@
       },
       "lines": [
        {
-        "line_id": "5e2edc3942cc425b:3:3",
+        "line_id": "<id>:3:3",
         "document": "en_news.txt",
         "left": "Residents along the",
         "node": "river",
@@ -5485,7 +5485,7 @@
       "total_capped": false,
       "lines": [
        {
-        "line_id": "d6708cea380343f5:2:7",
+        "line_id": "<id>:2:7",
         "document": "en_academic.txt",
         "left": "automatically ; the",
         "node": "algorithm",
@@ -5494,7 +5494,7 @@
         "lemma": "algorithm"
        },
        {
-        "line_id": "d6708cea380343f5:3:1",
+        "line_id": "<id>:3:1",
         "document": "en_academic.txt",
         "left": "The",
         "node": "algorithm",
@@ -5503,7 +5503,7 @@
         "lemma": "algorithm"
        },
        {
-        "line_id": "d6708cea380343f5:4:6",
+        "line_id": "<id>:4:6",
         "document": "en_academic.txt",
         "left": "that the proposed",
         "node": "algorithm",
@@ -5512,7 +5512,7 @@
         "lemma": "algorithm"
        },
        {
-        "line_id": "d6708cea380343f5:8:3",
+        "line_id": "<id>:8:3",
         "document": "en_academic.txt",
         "left": "Second , the",
         "node": "algorithm",
@@ -5561,7 +5561,7 @@
       "total_capped": false,
       "lines": [
        {
-        "line_id": "5e2edc3942cc425b:0:4",
+        "line_id": "<id>:0:4",
         "document": "en_news.txt",
         "left": "Council Approves Riverfront",
         "node": "Park",
@@ -5570,7 +5570,7 @@
         "lemma": "Park"
        },
        {
-        "line_id": "5e2edc3942cc425b:1:7",
+        "line_id": "<id>:1:7",
         "document": "en_news.txt",
         "left": "the new riverfront",
         "node": "park",
@@ -5579,7 +5579,7 @@
         "lemma": "park"
        },
        {
-        "line_id": "5e2edc3942cc425b:4:6",
+        "line_id": "<id>:4:6",
         "document": "en_news.txt",
         "left": "Reyes said the",
         "node": "park",
@@ -5588,7 +5588,7 @@
         "lemma": "park"
        },
        {
-        "line_id": "5e2edc3942cc425b:6:5",
+        "line_id": "<id>:6:5",
         "document": "en_news.txt",
         "left": "replied that the",
         "node": "park",
@@ -5637,7 +5637,7 @@
       "total_capped": false,
       "lines": [
        {
-        "line_id": "5e2edc3942cc425b:1:5",
+        "line_id": "<id>:1:5",
         "document": "en_news.txt",
         "left": "council approved the",
         "node": "new riverfront park",
@@ -5686,7 +5686,7 @@
       "total_capped": false,
       "lines": [
        {
-        "line_id": "5e2edc3942cc425b:1:2",
+        "line_id": "<id>:1:2",
         "document": "en_news.txt",
         "left": "The city",
         "node": "council",
@@ -5695,7 +5695,7 @@
         "lemma": "council"
        },
        {
-        "line_id": "5e2edc3942cc425b:8:1",
+        "line_id": "<id>:8:1",
         "document": "en_news.txt",
         "left": "The",
         "node": "council",
@@ -5723,7 +5723,7 @@
       "total_capped": false,
       "lines": [
        {
-        "line_id": "5e2edc3942cc425b:1:2",
+        "line_id": "<id>:1:2",
         "document": "en_news.txt",
         "left": "The city",
         "node": "council",
@@ -5732,7 +5732,7 @@
         "lemma": "council"
        },
        {
-        "line_id": "5e2edc3942cc425b:8:1",
+        "line_id": "<id>:8:1",
         "document": "en_news.txt",
         "left": "The",
         "node": "council",
@@ -5813,7 +5813,7 @@
       "total_capped": false,
       "lines": [
        {
-        "line_id": "b7217548d5a7465d:0:11",
+        "line_id": "<id>:0:11",
         "document": "en_learner.txt",
         "left": "is to study",
         "node": "study computer science",
@@ -5977,11 +5977,11 @@
      },
      "ok": true,
      "result": {
-      "total_sentences": 19,
+      "total_sentences": 18,
       "positive": 2,
       "negative": 1,
-      "neutral": 16,
-      "avg_score": 0.026
+      "neutral": 15,
+      "avg_score": 0.028
      }
     }
    ],
@@ -5999,7 +5999,7 @@
      },
      {
       "label": "neutral",
-      "value": 16,
+      "value": 15,
       "tol": 1e-06
      }
     ],
@@ -6539,27 +6539,27 @@
         "examples": [
          {
           "cue": "my",
-          "evidence_id": "b7217548d5a7465d:0:0",
+          "evidence_id": "<id>:0:0",
           "sentence_preview": "my goal in university my goal in university is to study computer science ."
          },
          {
           "cue": "my",
-          "evidence_id": "b7217548d5a7465d:0:5",
+          "evidence_id": "<id>:0:5",
           "sentence_preview": "my goal in university my goal in university is to study computer science ."
          },
          {
           "cue": "me",
-          "evidence_id": "b7217548d5a7465d:2:3",
+          "evidence_id": "<id>:2:3",
           "sentence_preview": "my teacher said me that practice is important , and i am agree with him ."
          },
          {
           "cue": "my",
-          "evidence_id": "b7217548d5a7465d:2:0",
+          "evidence_id": "<id>:2:0",
           "sentence_preview": "my teacher said me that practice is important , and i am agree with him ."
          },
          {
           "cue": "my",
-          "evidence_id": "b7217548d5a7465d:6:3",
+          "evidence_id": "<id>:6:3",
           "sentence_preview": "in conclusion , my goal is clear : i want to be a good engineer ."
          }
         ],
@@ -6570,28 +6570,28 @@
         "per_million": 21148.04,
         "examples": [
          {
+          "cue": "may",
+          "evidence_id": "<id>:1:1",
+          "sentence_preview": "we may suggest , following hyland , that hedges are a key interactional resource ."
+         },
+         {
           "cue": "suggest",
-          "evidence_id": "d6708cea380343f5:1:2",
+          "evidence_id": "<id>:1:2",
           "sentence_preview": "we may suggest , following hyland , that hedges are a key interactional resource ."
          },
          {
           "cue": "may",
-          "evidence_id": "d6708cea380343f5:1:1",
-          "sentence_preview": "we may suggest , following hyland , that hedges are a key interactional resource ."
-         },
-         {
-          "cue": "may",
-          "evidence_id": "d6708cea380343f5:2:8",
+          "evidence_id": "<id>:2:8",
           "sentence_preview": "the corpus was tagged automatically ; the algorithm may therefore misclassify rare patterns , and we treat such results "
          },
          {
           "cue": "perhaps",
-          "evidence_id": "d6708cea380343f5:5:0",
+          "evidence_id": "<id>:5:0",
           "sentence_preview": "perhaps the most striking result concerns lexical bundles : they cluster in introductions rather than conclusions ."
          },
          {
           "cue": "suggest",
-          "evidence_id": "d6708cea380343f5:6:1",
+          "evidence_id": "<id>:6:1",
           "sentence_preview": "we suggest two explanations ."
          }
         ],
@@ -6603,22 +6603,22 @@
         "examples": [
          {
           "cue": "first",
-          "evidence_id": "b7217548d5a7465d:1:10",
+          "evidence_id": "<id>:1:10",
           "sentence_preview": "i have many goal for the future , but the first goal is to pass the exams ."
          },
          {
           "cue": "in conclusion",
-          "evidence_id": "b7217548d5a7465d:6:0",
+          "evidence_id": "<id>:6:0",
           "sentence_preview": "in conclusion , my goal is clear : i want to be a good engineer ."
          },
          {
           "cue": "first",
-          "evidence_id": "d6708cea380343f5:7:0",
+          "evidence_id": "<id>:7:0",
           "sentence_preview": "first , writers may hedge claims in results sections to soften evaluation ."
          },
          {
           "cue": "second",
-          "evidence_id": "d6708cea380343f5:8:0",
+          "evidence_id": "<id>:8:0",
           "sentence_preview": "second , the algorithm is sensitive to genre , and academic prose shows the strongest effect ."
          }
         ],
@@ -6630,12 +6630,12 @@
         "examples": [
          {
           "cue": "therefore",
-          "evidence_id": "d6708cea380343f5:2:9",
+          "evidence_id": "<id>:2:9",
           "sentence_preview": "the corpus was tagged automatically ; the algorithm may therefore misclassify rare patterns , and we treat such results "
          },
          {
           "cue": "rather",
-          "evidence_id": "d6708cea380343f5:5:13",
+          "evidence_id": "<id>:5:13",
           "sentence_preview": "perhaps the most striking result concerns lexical bundles : they cluster in introductions rather than conclusions ."
          }
         ],
@@ -6647,12 +6647,12 @@
         "examples": [
          {
           "cue": "clearly",
-          "evidence_id": "d6708cea380343f5:3:2",
+          "evidence_id": "<id>:3:2",
           "sentence_preview": "the algorithm clearly outperforms simple frequency counts ."
          },
          {
           "cue": "clearly",
-          "evidence_id": "d6708cea380343f5:9:0",
+          "evidence_id": "<id>:9:0",
           "sentence_preview": "clearly , further testing across disciplines is needed before any firm conclusion may be drawn ."
          }
         ],
@@ -6703,27 +6703,27 @@
         "examples": [
          {
           "cue": "my",
-          "evidence_id": "b7217548d5a7465d:0:0",
+          "evidence_id": "<id>:0:0",
           "sentence_preview": "my goal in university my goal in university is to study computer science ."
          },
          {
           "cue": "my",
-          "evidence_id": "b7217548d5a7465d:0:5",
+          "evidence_id": "<id>:0:5",
           "sentence_preview": "my goal in university my goal in university is to study computer science ."
          },
          {
           "cue": "me",
-          "evidence_id": "b7217548d5a7465d:2:3",
+          "evidence_id": "<id>:2:3",
           "sentence_preview": "my teacher said me that practice is important , and i am agree with him ."
          },
          {
           "cue": "my",
-          "evidence_id": "b7217548d5a7465d:2:0",
+          "evidence_id": "<id>:2:0",
           "sentence_preview": "my teacher said me that practice is important , and i am agree with him ."
          },
          {
           "cue": "my",
-          "evidence_id": "b7217548d5a7465d:6:3",
+          "evidence_id": "<id>:6:3",
           "sentence_preview": "in conclusion , my goal is clear : i want to be a good engineer ."
          }
         ],
@@ -6734,28 +6734,28 @@
         "per_million": 21148.04,
         "examples": [
          {
+          "cue": "may",
+          "evidence_id": "<id>:1:1",
+          "sentence_preview": "we may suggest , following hyland , that hedges are a key interactional resource ."
+         },
+         {
           "cue": "suggest",
-          "evidence_id": "d6708cea380343f5:1:2",
+          "evidence_id": "<id>:1:2",
           "sentence_preview": "we may suggest , following hyland , that hedges are a key interactional resource ."
          },
          {
           "cue": "may",
-          "evidence_id": "d6708cea380343f5:1:1",
-          "sentence_preview": "we may suggest , following hyland , that hedges are a key interactional resource ."
-         },
-         {
-          "cue": "may",
-          "evidence_id": "d6708cea380343f5:2:8",
+          "evidence_id": "<id>:2:8",
           "sentence_preview": "the corpus was tagged automatically ; the algorithm may therefore misclassify rare patterns , and we treat such results "
          },
          {
           "cue": "perhaps",
-          "evidence_id": "d6708cea380343f5:5:0",
+          "evidence_id": "<id>:5:0",
           "sentence_preview": "perhaps the most striking result concerns lexical bundles : they cluster in introductions rather than conclusions ."
          },
          {
           "cue": "suggest",
-          "evidence_id": "d6708cea380343f5:6:1",
+          "evidence_id": "<id>:6:1",
           "sentence_preview": "we suggest two explanations ."
          }
         ],
@@ -6767,22 +6767,22 @@
         "examples": [
          {
           "cue": "first",
-          "evidence_id": "b7217548d5a7465d:1:10",
+          "evidence_id": "<id>:1:10",
           "sentence_preview": "i have many goal for the future , but the first goal is to pass the exams ."
          },
          {
           "cue": "in conclusion",
-          "evidence_id": "b7217548d5a7465d:6:0",
+          "evidence_id": "<id>:6:0",
           "sentence_preview": "in conclusion , my goal is clear : i want to be a good engineer ."
          },
          {
           "cue": "first",
-          "evidence_id": "d6708cea380343f5:7:0",
+          "evidence_id": "<id>:7:0",
           "sentence_preview": "first , writers may hedge claims in results sections to soften evaluation ."
          },
          {
           "cue": "second",
-          "evidence_id": "d6708cea380343f5:8:0",
+          "evidence_id": "<id>:8:0",
           "sentence_preview": "second , the algorithm is sensitive to genre , and academic prose shows the strongest effect ."
          }
         ],
@@ -6794,12 +6794,12 @@
         "examples": [
          {
           "cue": "therefore",
-          "evidence_id": "d6708cea380343f5:2:9",
+          "evidence_id": "<id>:2:9",
           "sentence_preview": "the corpus was tagged automatically ; the algorithm may therefore misclassify rare patterns , and we treat such results "
          },
          {
           "cue": "rather",
-          "evidence_id": "d6708cea380343f5:5:13",
+          "evidence_id": "<id>:5:13",
           "sentence_preview": "perhaps the most striking result concerns lexical bundles : they cluster in introductions rather than conclusions ."
          }
         ],
@@ -6811,12 +6811,12 @@
         "examples": [
          {
           "cue": "clearly",
-          "evidence_id": "d6708cea380343f5:3:2",
+          "evidence_id": "<id>:3:2",
           "sentence_preview": "the algorithm clearly outperforms simple frequency counts ."
          },
          {
           "cue": "clearly",
-          "evidence_id": "d6708cea380343f5:9:0",
+          "evidence_id": "<id>:9:0",
           "sentence_preview": "clearly , further testing across disciplines is needed before any firm conclusion may be drawn ."
          }
         ],
@@ -6867,27 +6867,27 @@
         "examples": [
          {
           "cue": "my",
-          "evidence_id": "b7217548d5a7465d:0:0",
+          "evidence_id": "<id>:0:0",
           "sentence_preview": "my goal in university my goal in university is to study computer science ."
          },
          {
           "cue": "my",
-          "evidence_id": "b7217548d5a7465d:0:5",
+          "evidence_id": "<id>:0:5",
           "sentence_preview": "my goal in university my goal in university is to study computer science ."
          },
          {
           "cue": "me",
-          "evidence_id": "b7217548d5a7465d:2:3",
+          "evidence_id": "<id>:2:3",
           "sentence_preview": "my teacher said me that practice is important , and i am agree with him ."
          },
          {
           "cue": "my",
-          "evidence_id": "b7217548d5a7465d:2:0",
+          "evidence_id": "<id>:2:0",
           "sentence_preview": "my teacher said me that practice is important , and i am agree with him ."
          },
          {
           "cue": "my",
-          "evidence_id": "b7217548d5a7465d:6:3",
+          "evidence_id": "<id>:6:3",
           "sentence_preview": "in conclusion , my goal is clear : i want to be a good engineer ."
          }
         ],
@@ -6898,28 +6898,28 @@
         "per_million": 21148.04,
         "examples": [
          {
+          "cue": "may",
+          "evidence_id": "<id>:1:1",
+          "sentence_preview": "we may suggest , following hyland , that hedges are a key interactional resource ."
+         },
+         {
           "cue": "suggest",
-          "evidence_id": "d6708cea380343f5:1:2",
+          "evidence_id": "<id>:1:2",
           "sentence_preview": "we may suggest , following hyland , that hedges are a key interactional resource ."
          },
          {
           "cue": "may",
-          "evidence_id": "d6708cea380343f5:1:1",
-          "sentence_preview": "we may suggest , following hyland , that hedges are a key interactional resource ."
-         },
-         {
-          "cue": "may",
-          "evidence_id": "d6708cea380343f5:2:8",
+          "evidence_id": "<id>:2:8",
           "sentence_preview": "the corpus was tagged automatically ; the algorithm may therefore misclassify rare patterns , and we treat such results "
          },
          {
           "cue": "perhaps",
-          "evidence_id": "d6708cea380343f5:5:0",
+          "evidence_id": "<id>:5:0",
           "sentence_preview": "perhaps the most striking result concerns lexical bundles : they cluster in introductions rather than conclusions ."
          },
          {
           "cue": "suggest",
-          "evidence_id": "d6708cea380343f5:6:1",
+          "evidence_id": "<id>:6:1",
           "sentence_preview": "we suggest two explanations ."
          }
         ],
@@ -6931,22 +6931,22 @@
         "examples": [
          {
           "cue": "first",
-          "evidence_id": "b7217548d5a7465d:1:10",
+          "evidence_id": "<id>:1:10",
           "sentence_preview": "i have many goal for the future , but the first goal is to pass the exams ."
          },
          {
           "cue": "in conclusion",
-          "evidence_id": "b7217548d5a7465d:6:0",
+          "evidence_id": "<id>:6:0",
           "sentence_preview": "in conclusion , my goal is clear : i want to be a good engineer ."
          },
          {
           "cue": "first",
-          "evidence_id": "d6708cea380343f5:7:0",
+          "evidence_id": "<id>:7:0",
           "sentence_preview": "first , writers may hedge claims in results sections to soften evaluation ."
          },
          {
           "cue": "second",
-          "evidence_id": "d6708cea380343f5:8:0",
+          "evidence_id": "<id>:8:0",
           "sentence_preview": "second , the algorithm is sensitive to genre , and academic prose shows the strongest effect ."
          }
         ],
@@ -6958,12 +6958,12 @@
         "examples": [
          {
           "cue": "therefore",
-          "evidence_id": "d6708cea380343f5:2:9",
+          "evidence_id": "<id>:2:9",
           "sentence_preview": "the corpus was tagged automatically ; the algorithm may therefore misclassify rare patterns , and we treat such results "
          },
          {
           "cue": "rather",
-          "evidence_id": "d6708cea380343f5:5:13",
+          "evidence_id": "<id>:5:13",
           "sentence_preview": "perhaps the most striking result concerns lexical bundles : they cluster in introductions rather than conclusions ."
          }
         ],
@@ -6975,12 +6975,12 @@
         "examples": [
          {
           "cue": "clearly",
-          "evidence_id": "d6708cea380343f5:3:2",
+          "evidence_id": "<id>:3:2",
           "sentence_preview": "the algorithm clearly outperforms simple frequency counts ."
          },
          {
           "cue": "clearly",
-          "evidence_id": "d6708cea380343f5:9:0",
+          "evidence_id": "<id>:9:0",
           "sentence_preview": "clearly , further testing across disciplines is needed before any firm conclusion may be drawn ."
          }
         ],
@@ -7362,57 +7362,57 @@
        "passive_voice": [
         {
          "pattern": "passive_voice",
-         "doc": "5e2edc3942cc425b",
+         "doc": "<id>",
          "sent": 2,
          "verb": "expected",
          "verb_lemma": "expect",
          "aux": "is",
-         "evidence_id": "5e2edc3942cc425b:2:8"
+         "evidence_id": "<id>:2:8"
         },
         {
          "pattern": "passive_voice",
-         "doc": "b7217548d5a7465d",
+         "doc": "<id>",
          "sent": 2,
          "verb": "agree",
          "verb_lemma": "agree",
          "aux": "am",
-         "evidence_id": "b7217548d5a7465d:2:11"
+         "evidence_id": "<id>:2:11"
         },
         {
          "pattern": "passive_voice",
-         "doc": "b7217548d5a7465d",
+         "doc": "<id>",
          "sent": 3,
          "verb": "go",
          "verb_lemma": "go",
          "aux": "was",
-         "evidence_id": "b7217548d5a7465d:3:3"
+         "evidence_id": "<id>:3:3"
         },
         {
          "pattern": "passive_voice",
-         "doc": "d6708cea380343f5",
+         "doc": "<id>",
          "sent": 2,
          "verb": "tagged",
          "verb_lemma": "tag",
          "aux": "was",
-         "evidence_id": "d6708cea380343f5:2:2"
+         "evidence_id": "<id>:2:2"
         },
         {
          "pattern": "passive_voice",
-         "doc": "d6708cea380343f5",
+         "doc": "<id>",
          "sent": 9,
          "verb": "needed",
          "verb_lemma": "need",
          "aux": "is",
-         "evidence_id": "d6708cea380343f5:9:6"
+         "evidence_id": "<id>:9:6"
         },
         {
          "pattern": "passive_voice",
-         "doc": "d6708cea380343f5",
+         "doc": "<id>",
          "sent": 9,
          "verb": "drawn",
          "verb_lemma": "draw",
          "aux": "be",
-         "evidence_id": "d6708cea380343f5:9:13"
+         "evidence_id": "<id>:9:13"
         }
        ]
       }
@@ -7532,8 +7532,8 @@
      },
      "ok": true,
      "result": {
-      "target_corpus_id": "139b5f9f002b4730",
-      "reference_corpus_id": "287e79a486d44b5b",
+      "target_corpus_id": "<id>",
+      "reference_corpus_id": "<id>",
       "N1": 35,
       "N2": 32,
       "positive_keywords": [
@@ -7577,7 +7577,7 @@
         "q_bh": 0.008807
        },
        {
-        "term": "to",
+        "term": "my",
         "f1": 5,
         "f2": 0,
         "log_likelihood": 6.861625848268458,
@@ -7590,7 +7590,7 @@
         "q_bh": 0.008807
        },
        {
-        "term": "my",
+        "term": "to",
         "f1": 5,
         "f2": 0,
         "log_likelihood": 6.861625848268458,
