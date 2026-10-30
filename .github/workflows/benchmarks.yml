@@ -314,7 +314,12 @@ jobs:
   grounding:
     name: Grounding fidelity (provider-in-the-loop)
     runs-on: ubuntu-latest
-    timeout-minutes: 150
+    # 360 min = the GitHub-hosted runner cap. Measured on the paid-key probe
+    # (run 41051082943): ~5.3 min per cloud question with reasoning_effort=low
+    # and multi-round tool use (G-040's grounded turn alone: 350 s) — the full
+    # 80-question bank extrapolates to 3.5–7 h, far past the old 150-min
+    # limit, and a mid-run job kill would discard every completed question.
+    timeout-minutes: 360
     if: github.event_name == 'workflow_dispatch' && inputs.run_grounding
     env:
       CORPUSMIND_CLOUD_PROVIDER: ${{ inputs.cloud_vendor || 'gemini' }}
