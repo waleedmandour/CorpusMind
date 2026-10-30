@@ -1,0 +1,97 @@
+{
+ "meta": {
+  "created_utc": "2026-10-30T12:10:07+00:00",
+  "provider": "cloud",
+  "model": "gemini-3.8-flash",
+  "question_count": 3,
+  "pause_s": 2.0,
+  "rate_retries": 4,
+  "cloud_reasoning_effort": "low",
+  "cloud_chat_timeout_s": 240.0,
+  "chat_deadline_s": 600.0,
+  "harness_timeout_s": 600.0
+ },
+ "results": [
+  {
+   "id": "G-004",
+   "answer": "Based on the corpus overview and frequency data for **EN-all** (`497e9f25b1ea404f`):\n\n### 1. Raw Type-Token Ratio (TTR)\nFrom the **Current corpus snapshot** (`get_corpus_overview`):\n- **Total Types ($V$):** 257\n- **Total Tokens ($N$):** 384\n- **Raw TTR:** $\\frac{257}{384} \\approx \\mathbf{0.6693}$ (or **66.93%**)\n\n*(Note: If calculated strictly on non-punctuation word tokens from `get_frequency`, where total tokens = 331, raw TTR varies slightly depending on tokenization criteria).*\n\n---\n\n### 2. Standardized Type-Token Ratio (STTR)\nFrom the **`get_frequency`** tool output:\n- **STTR:** **0.6042** (or **60.42%**)\n\n### Plain-Language Summary\n- **TTR (Type-Token Ratio)** measures lexical diversity by comparing unique words (types) to the total running words (tokens). A raw TTR of ~66.9% indicates a relatively high lexical variety across this short 384-token sample.\n- **STTR (Standardized TTR)** calculates the ratio over fixed-size token chunks to reduce the sensitivity of raw TTR to text length, returning **0.6042**.",
+   "grounded": true,
+   "tool_calls": [
+    {
+     "name": "get_frequency",
+     "args": {
+      "unit": "word",
+      "corpus_id": "497e9f25b1ea404f"
+     },
+     "ok": true
+    }
+   ],
+   "evidence": [
+    {
+     "kind": "tool_result",
+     "ref": "tool:get_frequency:1",
+     "snippet": "{\"unit\": \"word\", \"total_tokens\": 331, \"total_types\": 20, \"sttr\": 0.6042, \"top_items\": [{\"item\": \"the\", \"freq\": 15, \"per_million\": 45317.22, \"percent\": 4.5317, \"range\": 3, \"range_percent\": 100.0}, {\"item\": \"in\", \"freq\": 9, \"per_million\": 27190.33, \"percent\": 2.719, \"range\": 3, \"range_percent\": 100.0}, {\"item\": \"is\", \"freq\": 9, \"per_million\": 27190.33, \"percent\": 2.719, \"range\": 3, \"range_percent\": 100.0}, {\"item\": \"to\", \"freq\": 9, \"per_million\": 27190.33, \"percent\": 2.719, \"range\": 3, \"range_perc"
+    }
+   ],
+   "elapsed_ms": 386450,
+   "wall_ms": 401666
+  },
+  {
+   "id": "G-040",
+   "answer": "Based on the results from the **`search_concordance`** tool for the query `\"park\"`:\n\n- **Total hits:** 4 matches (`total_matches: 4`)\n- **Line ID of the first hit:** `7b4fe62dd05a4c25:0:4` (from document `en_news.txt`: *\"City Council Approves Riverfront [Park]\"*)",
+   "grounded": true,
+   "tool_calls": [
+    {
+     "name": "search_concordance",
+     "args": {
+      "corpus_id": "497e9f25b1ea404f",
+      "query": "park"
+     },
+     "ok": true
+    }
+   ],
+   "evidence": [
+    {
+     "kind": "concordance_line",
+     "ref": "line:7b4fe62dd05a4c25:0:4",
+     "snippet": "City Council Approves Riverfront [Park] "
+    },
+    {
+     "kind": "concordance_line",
+     "ref": "line:7b4fe62dd05a4c25:1:7",
+     "snippet": "council approved the new riverfront [park] project on Tuesday by a"
+    },
+    {
+     "kind": "concordance_line",
+     "ref": "line:7b4fe62dd05a4c25:4:6",
+     "snippet": "member Dana Reyes said the [park] will include two playgrounds ,"
+    },
+    {
+     "kind": "concordance_line",
+     "ref": "line:7b4fe62dd05a4c25:6:5",
+     "snippet": "The mayor replied that the [park] will pay for itself through"
+    }
+   ],
+   "elapsed_ms": 350398,
+   "wall_ms": 365552
+  },
+  {
+   "id": "G-073",
+   "answer": "Based on the results from the **`search_concordance`** tool for the query `\"zebra\"`, the word has **0 hits** (`total_matches: 0`) in the current corpus (**EN-all**, `497e9f25b1ea404f`).",
+   "grounded": true,
+   "tool_calls": [
+    {
+     "name": "search_concordance",
+     "args": {
+      "query": "zebra",
+      "corpus_id": "497e9f25b1ea404f"
+     },
+     "ok": true
+    }
+   ],
+   "evidence": [],
+   "elapsed_ms": 186072,
+   "wall_ms": 186198
+  }
+ ]
+}

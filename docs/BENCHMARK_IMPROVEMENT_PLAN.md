@@ -158,9 +158,17 @@ grounding score by construction (honest `no_tool` traps):
    mock regression test, verified against real Gemini in the probe; #44
    determinism). **Primary (local-first) row recorded**: Ollama `qwen2.5:1.5b`,
    full bank, pass_rate **0.1375** (CI95 0.0625–0.2125), hallucination 0.65 —
-   see `benchmarks/README.md` results snapshots. **Gemini full row: pending a
-   PAID key** (free tier 20 RPD < the ~160+ calls the bank needs); the probe
-   row stands in for the cloud path until then.
+   see `benchmarks/README.md` results snapshots. **Gemini full row: BLOCKED on
+   a billing-enabled key.** The user-supplied key (2026-10-30) delivered a
+   clean 3/3 probe (run 41051082943: G-040 + G-073 PASS, G-004 honest trap,
+   zero quota errors) but turned out to be **free-tier**: the full-bank
+   dispatch (run 41055467044) got G-001 through and then took 79× 429
+   `generate_content_free_tier_requests, limit: 20` (raw body captured by the
+   DEBUG_RAW debug probe 41106016390; the free pool resets midnight Pacific
+   ≈ 07:00 UTC, and 20 RPD < the ~160+ calls the bank needs regardless).
+   Re-dispatch the full row the moment a billing-enabled key is set as
+   `CORPUSMIND_CLOUD_API_KEY`; until then the probe row stands in for the
+   cloud path.
 5. Tier 2 CAMeLBERT data pack (installer + ingest switch + battery "neural" tier).
 6. Tier 3 verse-marker rule behind register detection (use-case motivated; see §4).
 7. ~~**Release storage cleanup**~~ — **APPLIED** (2026-10-30, after #40 merged):
