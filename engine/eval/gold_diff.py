@@ -57,14 +57,16 @@ async def diff(out: Path | None) -> int:
 
     diffs: list[dict[str, str]] = []
     for qid in sorted(set(frozen_by_id) | set(rebuilt)):
-        f, r = frozen_by_id.get(qid), rebuilt.get(qid)
+        f = frozen_by_id.get(qid)
+        r = rebuilt.get(qid)
+        if r is None:
+            diffs.append({"id": qid, "kind": "rebuild_failed",
+                          "field": "-", "frozen": _brief(f["gold"]) if f else "-",
+                          "rebuilt": "-"})
+            continue
         if f is None:
             diffs.append({"id": qid, "kind": "not_in_frozen",
                           "field": "-", "frozen": "-", "rebuilt": _brief(r["gold"])})
-            continue
-        if r is None:
-            diffs.append({"id": qid, "kind": "rebuild_failed",
-                          "field": "-", "frozen": _brief(f["gold"]), "rebuilt": "-"})
             continue
         if r["gold"] != f["gold"]:
             diffs.append({"id": qid, "kind": "gold_diff", "field": "gold",
