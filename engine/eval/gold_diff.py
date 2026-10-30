@@ -29,6 +29,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import re
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
@@ -37,6 +38,26 @@ from typing import Any
 from eval.build_gold import build
 
 _GOLD_PATH = Path(__file__).parent / "data" / "gold" / "grounding_gold.json"
+
+# Unstable-token masking. Two things in tool outputs CANNOT be reproduced
+# byte-for-byte across boots, and comparing them unmasked makes the gate
+# permanently red for the wrong reason:
+#   1. hex ids (corpus_id / document_id / target_corpus_id / ...) — assigned
+#      fresh at every prepare_corpora() ingest;
+#   2. (handled at the engine layer, see stats/service.py) keyness tie order.
+# Masking 8+ hex-char word tokens to "<id>" keeps the SENTENCE/word indices
+# of line_ids ("<id>:0:4") comparable while hiding the per-boot prefix.
+_HEX_ID = re.compile(r"\b[0-9a-f]{8,}\b")
+
+
+def _mask(value: Any) -> Any:
+    if isinstance(value, str):
+        return _HEX_ID.sub("<id>", value)
+    if isinstance(value, dict):
+        return {k: _mask(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_mask(v) for v in value]
+    return value
 
 
 def _brief(value: Any, limit: int = 120) -> str:
@@ -68,10 +89,10 @@ async def diff(out: Path | None) -> int:
             diffs.append({"id": qid, "kind": "not_in_frozen",
                           "field": "-", "frozen": "-", "rebuilt": _brief(r["gold"])})
             continue
-        if r["gold"] != f["gold"]:
+        if _mask(r["gold"]) != _mask(f["gold"]):
             diffs.append({"id": qid, "kind": "gold_diff", "field": "gold",
                           "frozen": _brief(f["gold"]), "rebuilt": _brief(r["gold"])})
-        if r["tools"] != f["tools"]:
+        if _mask(r["tools"]) != _mask(f["tools"]):
             diffs.append({"id": qid, "kind": "tool_result_diff", "field": "tools",
                           "frozen": f"{len(f['tools'])} tool result(s)",
                           "rebuilt": f"{len(r['tools'])} tool result(s)"})
