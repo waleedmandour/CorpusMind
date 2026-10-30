@@ -36,7 +36,7 @@ import httpx
 
 from ai.resilience import post_with_resilience, stream_with_resilience
 from app.logging import get_logger
-from app.settings import Settings
+from app.settings import DEFAULT_GEMINI_MODEL, Settings
 
 log = get_logger(__name__)
 
@@ -695,17 +695,34 @@ class _OpenAICompatibleProvider(ModelProvider):
         except httpx.HTTPError as e:
             # v1.2.10: same empty-stringify guard as the Ollama chat path —
             # httpx timeouts stringify to an EMPTY message.
+            # post-v2.0.1: with CORPUSMIND_DEBUG_RAW=1, include the upstream
+            # response body in the error so provider 4xx bodies (e.g. a
+            # Gemini OpenAI-compat 400 on the tool-message sequence) reach
+            # the CI logs — raise_for_status() alone drops the body.
+            # Diagnostic only; retry semantics are untouched.
+            detail = ""
+            resp = getattr(e, "response", None)
+            if os.environ.get("CORPUSMIND_DEBUG_RAW") == "1" and resp is not None:
+                try:
+                    detail = f" | body: {resp.text[:500]}"
+                except Exception:
+                    detail = ""
             raise ModelProviderError(
-                f"[{self.name}] chat request failed: {type(e).__name__}: {e}"
+                f"[{self.name}] chat request failed: {type(e).__name__}: {e}{detail}"
             ) from e
 
         data = r.json()
         try:
-            content = data["choices"][0]["message"]["content"]
+            msg = data["choices"][0]["message"]
         except (KeyError, IndexError) as e:
             raise ModelProviderError(
                 f"[{self.name}] unexpected response shape: {_debug_raw(data)}"
             ) from e
+        # post-v2.0.1: a tool-call reply may omit `content` entirely or send
+        # `"content": null` — valid, not a shape error (the Ollama /v1
+        # tool-call path already guards this with the same idiom). Callers
+        # that need the tool calls read them off raw["choices"][0]["message"].
+        content = msg.get("content") or ""
         return ChatResponse(
             content=content, model=data.get("model", payload["model"]), provider=self.name, raw=data
         )
@@ -1814,7 +1831,7 @@ class CloudProvider(_OpenAICompatibleProvider):
         if not self.default_model and settings.cloud_provider == "gemini":
             # Sensible fallback so a bare API key works out of the box;
             # the OpenAI-compat /models listing can still override.
-            self.default_model = "gemini-2.5-flash"
+            self.default_model = DEFAULT_GEMINI_MODEL
         self.auth_header = f"Bearer {settings.cloud_api_key}"
         self._disabled = False
         super().__init__(settings)
