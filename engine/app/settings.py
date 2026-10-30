@@ -74,6 +74,14 @@ class Settings(BaseSettings):
     cloud_api_key: str = ""
     cloud_default_model: str = ""
     cloud_base_url: str = ""  # override for proxies / Azure / Bedrock-compatible gateways
+    # post-v2.0.1: opt-in reasoning_effort sent on every cloud chat request
+    # (OpenAI-compatible `reasoning_effort` field). Gemini 3.x models cannot
+    # turn thinking off, and unbounded thinking blew the grounded tool round
+    # past the chat deadline (G-040, probe 2026-10-30); "low" keeps the round
+    # inside the budget. Empty string (default) = field NOT sent, because
+    # gateways that don't know the field may 400. Non-empty values are sent
+    # verbatim ("minimal" | "low" | "medium" | "high", gateway-dependent).
+    cloud_reasoning_effort: str = ""
 
     # --- Smart Troubleshooting (Gemini) ---
     # Optional. When set, the /api/v1/troubleshoot/interpret endpoint uses

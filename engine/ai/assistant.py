@@ -40,6 +40,19 @@ _CONFIDENCE_CAP_S = float(os.environ.get("CORPUSMIND_CONFIDENCE_TIMEOUT_S", "15"
 # slowest exactly where the answer must not wait on them).
 _LOCAL_PROVIDER_NAMES = {"ollama", "lmstudio"}
 
+# post-v2.0.1: per-attempt timeout for CLOUD tool rounds. The provider
+# default (60 s) is tuned for interactive local models; a cloud reasoning
+# model on pass 1 (tools + thinking) can legitimately need minutes — the
+# probe's G-040 died at 60 s with the round still in flight. Local providers
+# keep the 60 s default (cold-load protection matters there); cloud rounds
+# get CORPUSMIND_CLOUD_CHAT_TIMEOUT_S seconds per attempt (default 240).
+# The endpoint's overall deadline (CORPUSMIND_CHAT_TIMEOUT_S) still caps the
+# whole turn, and the grounding harness records both settings in the run
+# manifest.
+_CLOUD_TOOL_ROUND_TIMEOUT_S = float(
+    os.environ.get("CORPUSMIND_CLOUD_CHAT_TIMEOUT_S", "240")
+)
+
 
 @dataclass
 class Evidence:
@@ -171,6 +184,18 @@ class Assistant:
         if policy == "off":
             return False
         return getattr(provider, "name", "") not in _LOCAL_PROVIDER_NAMES
+
+    def _tool_round_timeout(self) -> float:
+        """Per-attempt timeout for the LLM calls inside a grounded turn.
+
+        Local providers keep the provider default (60 s — cold-load
+        protection); cloud rounds get _CLOUD_TOOL_ROUND_TIMEOUT_S (default
+        240 s) because reasoning models legitimately spend minutes on a
+        tools+thinking pass (G-040 died at 60 s mid-round).
+        """
+        if getattr(self.provider, "name", "") in _LOCAL_PROVIDER_NAMES:
+            return 60.0
+        return _CLOUD_TOOL_ROUND_TIMEOUT_S
 
     async def answer(
         self,
@@ -334,6 +359,7 @@ class Assistant:
                 model=self.model,
                 temperature=0.2,
                 tools=schemas_for_llm(),
+                timeout=self._tool_round_timeout(),
             )
         else:
             # No tools → OllamaProvider uses the more reliable native /api/chat
@@ -366,7 +392,10 @@ class Assistant:
                 auto_calls = await self._auto_ground(messages, user_text, evidence)
                 if auto_calls:
                     tool_calls.extend(auto_calls)
-                    final = await self.provider.chat(messages, model=self.model, temperature=0.2)
+                    final = await self.provider.chat(
+                        messages, model=self.model, temperature=0.2,
+                        timeout=self._tool_round_timeout(),
+                    )
                     content = final.content
             else:
                 # Empirical-looking question but no corpus selected — guide
@@ -384,7 +413,10 @@ class Assistant:
                         ),
                     )
                 )
-                final = await self.provider.chat(messages, model=self.model, temperature=0.2)
+                final = await self.provider.chat(
+                    messages, model=self.model, temperature=0.2,
+                    timeout=self._tool_round_timeout(),
+                )
                 content = final.content
 
         if tool_call_reqs:
@@ -436,7 +468,10 @@ class Assistant:
             # This is important: the second pass just needs the model to
             # synthesize the tool results into a natural-language answer,
             # not to call more tools.
-            final = await self.provider.chat(messages, model=self.model, temperature=0.2)
+            final = await self.provider.chat(
+                messages, model=self.model, temperature=0.2,
+                timeout=self._tool_round_timeout(),
+            )
             content = final.content
 
         elapsed = int((time.perf_counter() - started) * 1000)
