@@ -1,6 +1,6 @@
 # CorpusMind
 
-[![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.21226649-blue)](https://doi.org/10.5281/zenodo.23216073)
+[![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.23216073-blue)](https://doi.org/10.5281/zenodo.23216073)
 [![License: AGPL-3.0-only](https://img.shields.io/badge/License-AGPL--3.0--only-blue.svg)](https://www.gnu.org/licenses/agpl-3.0.html)
 [![GitHub release](https://img.shields.io/badge/release-v2.0.1-blue)](https://github.com/waleedmandour/CorpusMind/releases)
 [![CI](https://github.com/waleedmandour/CorpusMind/actions/workflows/ci.yml/badge.svg)](https://github.com/waleedmandour/CorpusMind/actions/workflows/ci.yml)
@@ -441,16 +441,17 @@ If you use CorpusMind in your research, please cite it as:
 **Versioned DOIs:** The DOI above (10.5281/zenodo.23216073) is the
 *concept DOI* of the Zenodo–GitHub integration (re-linked 2026-10) — it is
 stable across releases and always resolves to the latest version deposited on
-Zenodo; it is also the v2.0.0 version record, the first deposit of this
-family. Version DOIs pin a single deposit:
+Zenodo. It is a concept record, not itself a version record: the family's
+first deposit is v1.2.11-rc1 (2026-10-07; Zenodo API, conceptrecid
+23216073). Version DOIs pin a single deposit:
 v2.0.1 → [10.5281/zenodo.23785435](https://doi.org/10.5281/zenodo.23785435);
-v2.0.0 → [10.5281/zenodo.23216073](https://doi.org/10.5281/zenodo.23216073)
-(same record — first of the family);
+v2.0.0 → [10.5281/zenodo.23763019](https://doi.org/10.5281/zenodo.23763019);
 v1.2.10 → [10.5281/zenodo.23052753](https://doi.org/10.5281/zenodo.23052753);
 v0.1.0 → [10.5281/zenodo.21226650](https://doi.org/10.5281/zenodo.21226650).
-(v1.2.11–v1.2.14 were tagged on GitHub but not deposited; the pre-2026-10
-family's concept DOI, 10.5281/zenodo.21226649, remains valid but resolves to
-v1.2.10.)
+(v1.2.11–v1.2.14 were tagged on GitHub and ARE deposited under the current
+family's concept DOI; the pre-2026-10 family's concept DOI,
+10.5281/zenodo.21226649, remains valid but resolves to
+v1.2.10, its latest deposit.)
 Cite the concept DOI in general; cite a version DOI when you need to
 reproduce results from one specific deposited release.
 
@@ -587,7 +588,7 @@ This is the first stable (1.0) release. It includes all features from the v0.1.x
 - **Web typecheck + build**: passed.
 - **Cargo check**: passes for both `desktop` and `desktop-lens` Tauri shells in CI.
 
-**Download:** https://github.com/waleedmandour/CorpusMind/releases/tag/v1.0.0
+**Download (current):** https://github.com/waleedmandour/CorpusMind/releases/latestv1.0.0
 
 ---
 
@@ -623,7 +624,7 @@ This release ships **CorpusMind Lens**, a separate installable desktop app that 
 - **Web typecheck + build**: passed.
 - **Cargo check**: passes for both `desktop` and `desktop-lens` Tauri shells in CI.
 
-**Download:** https://github.com/waleedmandour/CorpusMind/releases/tag/v0.1.27
+**Download (current):** https://github.com/waleedmandour/CorpusMind/releases/latestv0.1.27
 
 ---
 
@@ -647,7 +648,7 @@ This release ships **CorpusMind Lens**, a separate installable desktop app that 
 - **Ruff**: All checks passed.
 - **Web typecheck + build**: passed.
 
-**Download:** https://github.com/waleedmandour/CorpusMind/releases/tag/v0.1.26
+**Download (current):** https://github.com/waleedmandour/CorpusMind/releases/latestv0.1.26
 
 ---
 
@@ -680,7 +681,7 @@ This release ships **CorpusMind Lens**, a separate installable desktop app that 
 - All 4 CI jobs pass on `v0.1.25` (Engine Python 3.12, Web Node 20, Desktop Rust, License gate).
 - Engine: 110/110 tests pass; ruff clean.
 
-**Download:** https://github.com/waleedmandour/CorpusMind/releases/tag/v0.1.25
+**Download (current):** https://github.com/waleedmandour/CorpusMind/releases/latestv0.1.25
 
 ---
 
@@ -725,4 +726,4 @@ This release ships **CorpusMind Lens**, a separate installable desktop app that 
 - Web: typecheck clean, build clean
 - Desktop: cargo check clean
 
-**Download:** https://github.com/waleedmandour/CorpusMind/releases/tag/v0.1.24
+**Download (current):** https://github.com/waleedmandour/CorpusMind/releases/latestv0.1.24

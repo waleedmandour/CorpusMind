@@ -8,16 +8,18 @@ AraSEG corpus from a local path you provide.
 
 - Paper: Elkholy, Elmadani, Habash & Alhafni (2026), "Arabic Sentence
   Segmentation Across Genres and Punctuation Conditions",
-  EMNLP Findings 2026, arXiv:2606.08025.
+  arXiv preprint arXiv:2606.08025 (v2, 2026-08-31).
 - Repository: https://github.com/mbzuai-nlp/araseg-shared-task-2026
 - Datasets: HF `MBZUAI/AraSeg-2026-Shared-Task-{PA,NoPnx-PA,NP,NoPnx-NP}`
   (splits: train 174 / dev 222 / test 262 documents; 658 docs, 451K words total).
-- Licence: the shared-task **GitHub repo is MIT**, but the **dataset itself is
-  CC BY-SA 4.0** (dataset card; corrected 2026-10-29 — an earlier version of
-  this file wrongly claimed MIT for the data). CC BY-SA imposes no obstacle
-  for research use with attribution; because we fetch rather than vendor, no
-  redistribution happens from this repo. The AraSEG team's released
-  segmentation models (`MBZUAI/sentseg-camelbert-*`) are MIT.
+- Licence: MIT. Verified 2026-10-30 against the live Hugging Face dataset
+  cards — **all four variants (`PA`, `NoPnx-PA`, `NP`, `NoPnx-NP`) carry
+  `license: mit` in their front matter** — and the shared-task GitHub repo
+  (MIT). Correction history: an earlier version of this file claimed MIT,
+  then a 2026-10-29 note switched the claim to CC BY-SA 4.0 "per dataset
+  card"; a re-check of all four live cards on 2026-10-30 found no CC BY-SA
+  statement anywhere, so the licence of record is MIT. The AraSEG team's
+  released segmentation models (`MBZUAI/sentseg-camelbert-*`) are MIT.
 
 ## Format expected by the eval modules
 
