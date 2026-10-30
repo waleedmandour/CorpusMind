@@ -100,7 +100,7 @@ class _RecordingProvider:
     async def list_models(self) -> list[str]:
         return ["llama3.2:3b"]
 
-    async def chat(self, messages, model=None, temperature=0.2, tools=None):
+    async def chat(self, messages, model=None, temperature=0.2, tools=None, timeout=None):
         from ai.providers import ChatResponse
 
         self.calls.append(

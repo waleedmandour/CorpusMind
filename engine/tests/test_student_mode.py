@@ -777,7 +777,7 @@ async def test_student_chat_question_and_response_audited(classroom, monkeypatch
         async def list_models(self):
             return ["llama3.2:3b"]
 
-        async def chat(self, messages, model=None, temperature=0.2, tools=None):
+        async def chat(self, messages, model=None, temperature=0.2, tools=None, timeout=None):
             from ai.providers import ChatResponse
 
             return ChatResponse(

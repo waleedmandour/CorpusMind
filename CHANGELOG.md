@@ -8,6 +8,36 @@ once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
 ## [Unreleased]
 
+### Fixed — grounded pass 2 against strict cloud backends (flatten, don't replay)
+
+Product bug, not a Gemini quirk: OpenAI's chat-completions contract requires
+every `role: "tool"` message to follow an assistant message carrying
+`tool_calls`. The assistant's grounded pass 2 appends bare tool messages
+after a plain placeholder, so strict OpenAI-compatible backends (OpenAI,
+Gemini's OpenAI-compat endpoint, Mistral, …) answered 400 on EVERY grounded
+cloud turn — the 2026-10-30 3-question Gemini probe reproduced it end-to-end
+(G-004: 502 wrapping Gemini's 400). `_OpenAICompatibleProvider` now flattens
+each run of tool messages into one plain user block at the wire layer
+(tool names preserved, the `(tool call)` placeholder dropped); it never
+replays a synthetic `tool_calls` message (Gemini 3.x attaches thought
+signatures to tool calls that a replay would have to echo byte-exactly).
+OllamaProvider's native /api/chat path is untouched — local behavior is
+byte-identical. Regression test: a mock server that ENFORCES the OpenAI
+rule (the old wire shape 400s against it; the new one passes).
+
+### Changed — cloud tool-round timeouts and opt-in reasoning_effort
+
+- Cloud tool rounds get a longer per-attempt timeout
+  (`CORPUSMIND_CLOUD_CHAT_TIMEOUT_S`, default 240 s; local providers keep
+  the 60 s default) — a reasoning model on the tools+thinking pass can
+  legitimately need minutes (the probe's G-040 died at 60 s mid-round). The
+  endpoint's overall deadline (`CORPUSMIND_CHAT_TIMEOUT_S`) still caps the
+  turn.
+- New opt-in `CORPUSMIND_CLOUD_REASONING_EFFORT` setting: when non-empty,
+  cloud chat requests carry the OpenAI-compatible `reasoning_effort` field
+  (e.g. `low` for Gemini 3.x, which cannot turn thinking off). Empty
+  (default) = field not sent — gateways that don't know it may 400.
+
 ### Fixed — Arabic sentence segmentation (quote-guard regression)
 
 A stray self-paired quote (`'` or `"`) opened the v2.0.1 quote-parity guard

@@ -20,6 +20,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import os
 import time
 from datetime import UTC, datetime
 from pathlib import Path
@@ -50,6 +51,7 @@ async def run(
     out: Path | None,
     pause: float = 0.0,
     rate_retries: int = 0,
+    harness_timeout: float = 300.0,
 ) -> dict[str, Any]:
     problems = validate_bank()
     if problems:
@@ -75,7 +77,9 @@ async def run(
                 await asyncio.sleep(pause)
             t0 = time.monotonic()
             try:
-                r = await client.post("/api/v1/ai/chat", json=payload, timeout=300.0)
+                r = await client.post(
+                    "/api/v1/ai/chat", json=payload, timeout=harness_timeout
+                )
                 # Harness-level rate-limit recovery. The engine's own retry
                 # policy (3 attempts, exponential backoff, Retry-After capped
                 # at 15 s) is right for an interactive chat turn, but a
@@ -103,7 +107,9 @@ async def run(
                         f"rate-retry {attempt}/{rate_retries} in {wait:.0f}s"
                     )
                     await asyncio.sleep(wait)
-                    r = await client.post("/api/v1/ai/chat", json=payload, timeout=300.0)
+                    r = await client.post(
+                        "/api/v1/ai/chat", json=payload, timeout=harness_timeout
+                    )
                 if r.status_code >= 400:
                     entry = {"id": q["id"], "answer": "", "http_status": r.status_code,
                              "error": r.text[:300]}
@@ -131,6 +137,15 @@ async def run(
             "question_count": len(results),
             "pause_s": pause,
             "rate_retries": rate_retries,
+            # post-v2.0.1: the cloud-turn settings in force for this run,
+            # recorded so any row of the fidelity table is reproducible
+            # (the assistant reads the same envs; see ai/assistant.py).
+            "cloud_reasoning_effort": os.environ.get("CORPUSMIND_CLOUD_REASONING_EFFORT", ""),
+            "cloud_chat_timeout_s": float(
+                os.environ.get("CORPUSMIND_CLOUD_CHAT_TIMEOUT_S", "240")
+            ),
+            "chat_deadline_s": float(os.environ.get("CORPUSMIND_CHAT_TIMEOUT_S", "180")),
+            "harness_timeout_s": harness_timeout,
         },
         "results": results,
     }
@@ -151,12 +166,15 @@ def main() -> None:
                     help="seconds to sleep BEFORE each question (rate-limit pacing; 7.0 fits free-tier Gemini ~10 RPM)")
     ap.add_argument("--rate-retries", type=int, default=0,
                     help="harness-level re-POSTs on HTTP 429/502/503 (waits 20/40/80s, Retry-After honoured, 90s cap)")
+    ap.add_argument("--timeout", type=float, default=300.0,
+                    help="per-question HTTP timeout in seconds (default 300; use 600 for cloud reasoning models: pass-1 thinking + retries can outlive 300)")
     args = ap.parse_args()
     out = Path(args.out) if args.out else _RUNS_DIR / (
         "grounding_run_" + datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ") + ".json"
     )
     asyncio.run(run(args.provider, args.model, args.only, out,
-                    pause=args.pause, rate_retries=args.rate_retries))
+                    pause=args.pause, rate_retries=args.rate_retries,
+                    harness_timeout=args.timeout))
 
 
 if __name__ == "__main__":

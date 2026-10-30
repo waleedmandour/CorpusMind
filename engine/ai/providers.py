@@ -512,6 +512,80 @@ def _strip_thinking(text: str) -> str:
     return result if result else trimmed
 
 
+def _flatten_tool_history(messages: list[Message]) -> list[Message]:
+    """Flatten role="tool" message runs into ONE plain user message.
+
+    Why (post-v2.0.1, product bug — not a Gemini quirk): OpenAI's
+    /v1/chat/completions contract requires every ``role: "tool"`` message to
+    be a response to a *preceding assistant message carrying tool_calls*,
+    with matching ``tool_call_id``s. Strict backends (OpenAI, Gemini's
+    OpenAI-compat endpoint, Mistral, …) answer 400 otherwise. CorpusMind's
+    assistant loop never satisfies that precondition: it executes tools
+    server-side and appends bare ``Message(role="tool", …)`` entries after a
+    plain assistant placeholder, so grounded pass-2 turns NEVER worked
+    against strict cloud backends (the Gemini probe reproduced it: 400 Bad
+    Request on pass 2, G-004).
+
+    We deliberately do NOT fix this by replaying a real ``tool_calls``
+    assistant message: Gemini 3.x attaches thought signatures to tool calls
+    that we would have to echo back byte-exactly, and the raw call objects
+    differ per gateway. Flattening the tool results into a single user-role
+    text block avoids the entire question and is accepted by every
+    OpenAI-compatible backend.
+
+    Scope: only the OpenAI-compatible wire layer. OllamaProvider's native
+    /api/chat path accepts bare tool messages and is left untouched, so
+    local-first behavior is byte-identical.
+
+    Mechanics: each maximal run of consecutive tool messages becomes one
+    user message ("Corpus tool results …" + ``[tool:<name>] <content>``
+    lines, tool names preserved). A directly-preceding assistant message
+    that carried no content beyond the "(tool call)" placeholder is dropped
+    — it exists only to mark where the tool round began; an assistant
+    message with real interim text is kept.
+    """
+    if not any(m.role == "tool" for m in messages):
+        return messages
+    out: list[Message] = []
+    # Invariant: whether out's last element is the droppable "(tool call)"
+    # placeholder. Tracked explicitly (the source guards forbid positional
+    # tail lookups in registry code — the v1.2.7 USAS bug class).
+    last_is_placeholder = False
+    i = 0
+    n = len(messages)
+    while i < n:
+        m = messages[i]
+        if m.role != "tool":
+            out.append(m)
+            last_is_placeholder = m.role == "assistant" and m.content in ("", "(tool call)")
+            i += 1
+            continue
+        lines: list[str] = []
+        while i < n and messages[i].role == "tool":
+            t = messages[i]
+            label = t.name or "tool"
+            lines.append(f"[tool:{label}] {t.content}")
+            i += 1
+        # Drop the placeholder assistant turn we appended only to mark the
+        # tool round; keep real interim assistant text.
+        if last_is_placeholder and out:
+            out.pop()
+        last_is_placeholder = False
+        out.append(
+            Message(
+                role="user",
+                content=(
+                    "Corpus tool results (executed on the user's behalf):\n\n"
+                    + "\n\n".join(lines)
+                    + "\n\nBase your answer on these real results, name the tools "
+                    "you are citing, and report the actual numbers they returned. "
+                    "Do not add statistics from memory."
+                ),
+            )
+        )
+    return out
+
+
 # --------------------------------------------------------------------------- #
 # Vision-message wire-format helpers (CorpusMind Lens, build step 1)
 # --------------------------------------------------------------------------- #
@@ -651,6 +725,15 @@ class _OpenAICompatibleProvider(ModelProvider):
             h["Authorization"] = self.auth_header
         return h
 
+    def _chat_payload_extras(self) -> dict[str, Any]:
+        """Provider-specific extra /v1/chat/completions payload fields.
+
+        Base implementation: none. CloudProvider overrides this to inject
+        ``reasoning_effort`` when configured — an opt-in setting because
+        gateways that don't know the field may 400 on it.
+        """
+        return {}
+
     async def aclose(self) -> None:
         await self._client.aclose()
 
@@ -666,12 +749,17 @@ class _OpenAICompatibleProvider(ModelProvider):
         json_mode: bool = False,
         max_tokens: int | None = None,
     ) -> ChatResponse:
+        # post-v2.0.1: flatten bare tool-message runs into a plain user
+        # block — see _flatten_tool_history for why (strict OpenAI-compat
+        # backends 400 on a tool message with no preceding tool_calls).
+        wire_messages = _flatten_tool_history(messages)
         payload: dict[str, Any] = {
             "model": model or self.default_model,
-            "messages": [_build_openai_message(m) for m in messages],
+            "messages": [_build_openai_message(m) for m in wire_messages],
             "temperature": temperature,
             "stream": False,
         }
+        payload.update(self._chat_payload_extras())
         if max_tokens:
             payload["max_tokens"] = max_tokens
         if tools:
@@ -738,7 +826,9 @@ class _OpenAICompatibleProvider(ModelProvider):
     ) -> AsyncIterator[str]:
         payload = {
             "model": model or self.default_model,
-            "messages": [_build_openai_message(m) for m in messages],
+            # Same flattening as chat(): the streaming path must uphold the
+            # same wire contract for histories that contain tool results.
+            "messages": [_build_openai_message(m) for m in _flatten_tool_history(messages)],
             "temperature": temperature,
             "stream": True,
         }
@@ -1866,22 +1956,31 @@ class CloudProvider(_OpenAICompatibleProvider):
             h["anthropic-version"] = "2023-06-01"
         return h
 
+    def _chat_payload_extras(self) -> dict[str, Any]:
+        # post-v2.0.1: opt-in reasoning_effort for reasoning-style cloud
+        # models (Gemini 3.x cannot turn thinking OFF; "low" keeps a grounded
+        # tool round inside the chat deadline). Empty setting = field not
+        # sent — gateways that don't know it may 400, so this stays opt-in
+        # via CORPUSMIND_CLOUD_REASONING_EFFORT.
+        effort = (self.settings.cloud_reasoning_effort or "").strip()
+        return {"reasoning_effort": effort} if effort else {}
+
     async def _enforce(self) -> None:
         if self._disabled or self.settings.cloud_disabled_hard:
             raise CloudDisabledError(
                 "Cloud provider is disabled. Enable in Settings → AI → Cloud, and acknowledge the data-leaving-device indicator."
             )
 
-    async def chat(self, *args, **kwargs):  # type: ignore[override]
+    async def chat(self, *args: Any, **kwargs: Any) -> ChatResponse:
         await self._enforce()
         return await super().chat(*args, **kwargs)
 
-    async def stream(self, *args, **kwargs):  # type: ignore[override]
+    async def stream(self, *args: Any, **kwargs: Any) -> AsyncIterator[str]:
         await self._enforce()
         async for chunk in super().stream(*args, **kwargs):
             yield chunk
 
-    async def embed(self, *args, **kwargs):  # type: ignore[override]
+    async def embed(self, *args: Any, **kwargs: Any) -> EmbeddingResponse:
         await self._enforce()
         return await super().embed(*args, **kwargs)
 
