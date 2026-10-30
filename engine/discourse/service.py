@@ -1187,7 +1187,12 @@ def _count_cue_categories(
             if cat_name == "lexical.repetition":
                 continue  # computed separately across sentence pairs
             cat_hit = False
-            for cue in cue_set:
+            # sorted(): a bare set iteration is hash-randomized across
+            # processes, so for a sentence containing two cues ("my" AND
+            # "me") the ORDER of the recorded examples — and therefore the
+            # frozen gold's "Nth example" — was not reproducible. Counts
+            # are order-independent; only the example list needs this.
+            for cue in sorted(cue_set):
                 # Multi-word cues: check if it appears as a substring of the sentence
                 if " " in cue:
                     if cue in sent_lower:

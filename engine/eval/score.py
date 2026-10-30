@@ -60,6 +60,12 @@ def normalize_text(text: str) -> str:
     return re.sub(r"\s+", " ", text.translate(_ARABIC_INDIC)).strip()
 
 
+# post-v2.0.1: 8+ hex-char word tokens are per-boot ids (corpus_id,
+# document_id) — the frozen gold masks them to "<id>" at freeze time
+# (eval/build_gold.py); string matching masks both sides the same way.
+_HEX_ID = re.compile(r"\b[0-9a-f]{8,}\b")
+
+
 def extract_numbers(text: str) -> list[float]:
     """Extract statistic candidates: numbers not embedded in id-like tokens."""
     cleaned = normalize_text(text)
@@ -108,7 +114,10 @@ def _contains(haystack: str, needle: str, language: str) -> bool:
     n = normalize_text(needle)
     if language == "en":
         h, n = h.lower(), n.lower()
-    return n in h
+    # post-v2.0.1: the frozen gold masks per-boot hex ids ("<id>:0:4") while
+    # the answer quotes the run's real ids — mask both sides so a correctly
+    # cited line_id matches its gold modulo the doc-id prefix.
+    return _HEX_ID.sub("<id>", n) in _HEX_ID.sub("<id>", h)
 
 
 def score_question(q: dict[str, Any], run_entry: dict[str, Any] | None) -> dict[str, Any]:

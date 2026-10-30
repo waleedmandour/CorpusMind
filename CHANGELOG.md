@@ -8,6 +8,38 @@ once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
 ## [Unreleased]
 
+### Fixed — harness determinism + grounding gold re-freeze (reviewed)
+
+The first full gold-diff run (rebuild all 80 vs frozen) found the frozen
+gold was BOTH stale and unstable — exactly what the review suspected
+("frozen gold unaffected" had only ever been checked on G-001 + G-003):
+
+- **Stale (real value changes, re-frozen):** the gold was frozen on engine
+  2.0.0, before the Tier-1 Arabic splitter rules landed in v2.0.1. The
+  Arabic sentence-scoped questions shifted: G-002 sentence_count 19 → 18,
+  G-056 sentiment neutral 16 → 15 (total_sentences 19 → 18; positive/
+  negative unchanged). The re-freeze is the reviewable event the harness
+  discipline requires; this commit IS that review.
+- **Unstable (root-caused and fixed):**
+  - keyness keyword order broke ties by pre-sort iteration order, which
+    comes from hash-randomized dict iteration — the same corpus produced
+    `i goal to my is` vs `i goal is to my` across PYTHONHASHSEED values
+    (G-014's "third positive keyword" was not reproducible). Ties now
+    break by term ascending (`stats/service.py`).
+  - discourse cue categories iterated a Python set, so example order for
+    sentences containing two cues ("my" AND "me") was hash-randomized
+    (G-067). Cues are now iterated sorted; counts are order-independent
+    (`discourse/service.py`).
+  - tool outputs embed per-boot hex ids (corpus_id, document_id — assigned
+    fresh at every snapshot ingest). Frozen verbatim, the gold file churned
+    on every rebuild and line_id gold strings could NEVER match a fresh
+    run (the scorer's `_contains` is literal). The freeze now masks 8+
+    hex-char tokens to `<id>` (`eval/build_gold.py`), the scorer masks both
+    sides before string matching (`eval/score.py`), and the gold-diff gate
+    compares masked (`eval/gold_diff.py`).
+- Verified boot-stable: a second full 80-question rebuild after the
+  re-freeze diffs CLEAN against the committed gold.
+
 ### Added — full gold-diff CI gate + a local-Ollama grounding row
 
 - `eval.gold_diff`: rebuilds the WHOLE 80-question bank in-process and diffs
