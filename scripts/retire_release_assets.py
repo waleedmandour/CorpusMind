@@ -11,6 +11,11 @@ DRY RUN IS THE DEFAULT: without --apply the script only writes a CSV manifest
 (tag, asset, size_bytes, downloads, action) and prints the plan. Nothing is
 deleted and no release notes are touched.
 
+The canonical manifest is committed at docs/release_retirement_manifest.csv.
+--apply is a REVIEWED, ONE-WAY operation: GitHub release-asset deletion is
+IRREVERSIBLE (there is no trash/restore). Apply only once the manifest has
+been reviewed and the docs+chore PR that introduces it has merged.
+
 Usage:
     python scripts/retire_release_assets.py                  # dry run
     python scripts/retire_release_assets.py --csv plan.csv   # custom manifest
@@ -101,8 +106,8 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="Retire installer assets from superseded releases")
     ap.add_argument("--apply", action="store_true",
                     help="perform deletions and add banners (default: dry run)")
-    ap.add_argument("--csv", default="release_retirement_manifest.csv",
-                    help="manifest path for the dry run (default: ./release_retirement_manifest.csv)")
+    ap.add_argument("--csv", default="docs/release_retirement_manifest.csv",
+                    help="manifest path for the dry run (default: ./docs/release_retirement_manifest.csv)")
     ap.add_argument("--repo", default=REPO_DEFAULT)
     ap.add_argument("--keep", action="append", default=[],
                     help="additional tags to keep (repeatable)")

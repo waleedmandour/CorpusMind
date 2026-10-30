@@ -83,12 +83,16 @@ run at ArabicNLP 2026 @ EMNLP 2026
 ([mbzuai-nlp/araseg-shared-task-2026](https://github.com/mbzuai-nlp/araseg-shared-task-2026),
 HF `MBZUAI/AraSeg-2026-Shared-Task-{PA,NoPnx-PA,NP,NoPnx-NP}`).
 
-**Data licence: MIT** — verified 2026-10-30 against the live Hugging Face
-dataset cards (all four variants carry `license: mit` in their front matter)
-and the shared-task repo (MIT). An earlier note here and in
-`data/araseg/README.md` claimed CC BY-SA 4.0 for the dataset; no CC BY-SA
-statement exists on any of the four cards or the repo, so MIT stands. The
-data is fetched, not vendored (see `data/araseg/README.md`).
+**Data licence: the dataset cards state MIT** — all four Hugging Face
+variants carry `license: mit` in their front matter, and the shared-task
+repo is MIT (both checked live 2026-10-30). Stated no stronger than the
+sources: the AraSEG paper describes part of the material as BAREC-derived,
+and BAREC-derived material is listed under CC BY-SA 4.0 in the paper's own
+data statement; we did not find that statement on the dataset cards.
+CorpusMind fetches the data for local evaluation and never redistributes
+it. An earlier note here and in `data/araseg/README.md` claimed CC BY-SA
+4.0 for the dataset; no CC BY-SA statement exists on the cards themselves.
+The data is fetched, not vendored (see `data/araseg/README.md`).
 
 **Shared-task release splits** (per the dataset cards): train 174 documents
 (128K words) / dev 222 documents (164K words) / test 262 documents (159K

@@ -12,14 +12,20 @@ AraSEG corpus from a local path you provide.
 - Repository: https://github.com/mbzuai-nlp/araseg-shared-task-2026
 - Datasets: HF `MBZUAI/AraSeg-2026-Shared-Task-{PA,NoPnx-PA,NP,NoPnx-NP}`
   (splits: train 174 / dev 222 / test 262 documents; 658 docs, 451K words total).
-- Licence: MIT. Verified 2026-10-30 against the live Hugging Face dataset
-  cards — **all four variants (`PA`, `NoPnx-PA`, `NP`, `NoPnx-NP`) carry
-  `license: mit` in their front matter** — and the shared-task GitHub repo
-  (MIT). Correction history: an earlier version of this file claimed MIT,
-  then a 2026-10-29 note switched the claim to CC BY-SA 4.0 "per dataset
-  card"; a re-check of all four live cards on 2026-10-30 found no CC BY-SA
-  statement anywhere, so the licence of record is MIT. The AraSEG team's
-  released segmentation models (`MBZUAI/sentseg-camelbert-*`) are MIT.
+- Licence: the dataset cards state MIT. All four Hugging Face variants
+  (`PA`, `NoPnx-PA`, `NP`, `NoPnx-NP`) carry `license: mit` in their front
+  matter, and the shared-task GitHub repo is MIT (both checked live
+  2026-10-30). One caveat, stated no stronger than the sources: the AraSEG
+  paper describes part of the material as BAREC-derived, and BAREC-derived
+  material is listed under CC BY-SA 4.0 in the paper's own data statement —
+  we did not find that statement on the dataset cards, but the cards are
+  not legal advice. CorpusMind only *fetches* this data for local
+  evaluation and never redistributes it, so downstream risk is low.
+  Correction history: an earlier version of this file claimed MIT, then a
+  2026-10-29 note switched the claim to CC BY-SA 4.0 "per dataset card";
+  a re-check of all four live cards on 2026-10-30 found no CC BY-SA
+  statement on the cards themselves. The AraSEG team's released
+  segmentation models (`MBZUAI/sentseg-camelbert-*`) are MIT.
 
 ## Format expected by the eval modules
 
