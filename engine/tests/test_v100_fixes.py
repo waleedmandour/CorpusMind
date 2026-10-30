@@ -416,7 +416,7 @@ def test_cloud_config_request_accepts_gemini_and_custom():
 
 def test_cloud_provider_gemini_defaults():
     from ai.providers import CloudProvider
-    from app.settings import Settings
+    from app.settings import DEFAULT_GEMINI_MODEL, Settings
 
     s = Settings(
         cloud_provider="gemini",
@@ -425,7 +425,7 @@ def test_cloud_provider_gemini_defaults():
     )
     p = CloudProvider(s)
     assert p.base_url == "https://generativelanguage.googleapis.com/v1beta/openai"
-    assert p.default_model == "gemini-2.5-flash"
+    assert p.default_model == DEFAULT_GEMINI_MODEL
     assert p.auth_header == "Bearer test-key"
 
 

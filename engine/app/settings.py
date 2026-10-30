@@ -15,6 +15,12 @@ from typing import Annotated, Any, Literal
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
+# Single source of truth for the Gemini fallback model (post-v2.0.1): used by
+# `gemini_model` below, by CloudProvider's bare-key default in ai/providers.py,
+# and asserted in tests. The web UI (SettingsView.tsx, UserGuideView.tsx)
+# repeats the literal — TSX cannot import a Python constant.
+DEFAULT_GEMINI_MODEL = "gemini-3.8-flash"
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -75,7 +81,7 @@ class Settings(BaseSettings):
     # The key is stored in the engine environment (never exposed to the
     # browser). Get a free key at https://aistudio.google.com/apikey.
     gemini_api_key: str = ""
-    gemini_model: str = "gemini-2.5-flash"
+    gemini_model: str = DEFAULT_GEMINI_MODEL
 
     # --- Reproducibility ---
     enable_methods_export: bool = True

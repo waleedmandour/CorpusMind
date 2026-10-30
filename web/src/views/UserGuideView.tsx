@@ -892,7 +892,7 @@ camel_data -i morphology-db-msa-r13`}</pre>
         </p>
         <pre>{`# In the engine environment (e.g. engine/.env or your shell):
 export CORPUSMIND_GEMINI_API_KEY="your-key-from-aistudio.google.com/apikey"
-export CORPUSMIND_GEMINI_MODEL="gemini-2.5-flash"  # optional, this is the default
+export CORPUSMIND_GEMINI_MODEL="gemini-3.8-flash"  # optional, this is the default
 
 # Then restart the engine:
 corpusmind-engine`}</pre>

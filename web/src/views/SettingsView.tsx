@@ -480,7 +480,7 @@ export function SettingsView() {
           <GeminiKeyInput
             available={troubleshoot.data?.available ?? false}
             source={troubleshoot.data?.source ?? "none"}
-            model={troubleshoot.data?.model ?? "gemini-2.5-flash"}
+            model={troubleshoot.data?.model ?? "gemini-3.8-flash"}
           />
         </div>
       </section>
@@ -1462,7 +1462,7 @@ const CLOUD_PROVIDER_META: Record<CloudProvider, { label: string; hint: string; 
     label: "Google Gemini",
     hint: "Generous free tier. Uses Google's OpenAI-compatible endpoint.",
     keyUrl: "https://aistudio.google.com/apikey",
-    modelPlaceholder: "Model (optional, default gemini-2.5-flash)",
+    modelPlaceholder: "Model (optional, default gemini-3.8-flash)",
   },
   openai: {
     label: "OpenAI",

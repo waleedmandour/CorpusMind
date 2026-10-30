@@ -911,14 +911,25 @@ class ArabicPipeline:
 #       terminal may close the sentence at the closing quote instead.
 #       A newline resets the guard, so one unmatched quote in messy OCR
 #       text cannot suppress boundaries beyond its own line.
+# post-v2.0.1 — quote-guard tightening (regression: a stray self-paired
+#   quote opened the guard with no closer anywhere, disabling every
+#   boundary to end-of-line — e.g. the apostrophe in "Qur'an كاملا. ثم
+#   ذهب. وعاد." yielded 1 sentence instead of 3):
+#   (a) a quote style opens the guard ONLY IF its closer exists LATER ON
+#       THE SAME LINE; otherwise the char is literal (stray '", 27",
+#       unbalanced « from OCR) and cannot suppress the terminals after it;
+#   (b) ASCII ' removed from _QUOTE_PAIRS entirely — apostrophes inside
+#       words (Qur'an, sha'b) are never quote marks in this corpus domain.
+#   The newline reset stays: an unclosed quote cannot leak across lines.
 # --------------------------------------------------------------------------- #
 
 _ARABIC_TERMINALS = set(".!?؟…\n")  # v2.0.1: ؛ removed — clause-level, not terminal
 _ARABIC_SOFT_TERMINALS = _ARABIC_TERMINALS - {"\n"}
 _ARABIC_DIGITS = set("٠١٢٣٤٥٦٧٨٩0123456789")
 
-# Quote styles: opening char -> its closing char. ' and " are self-paired.
-_QUOTE_PAIRS = {"«": "»", "“": "”", "‹": "›", "‘": "’", "﴿": "﴾", '"': '"', "'": "'"}
+# Quote styles: opening char -> its closing char. " is self-paired; ASCII '
+# is deliberately absent (post-v2.0.1): apostrophes never open the guard.
+_QUOTE_PAIRS = {"«": "»", "“": "”", "‹": "›", "‘": "’", "﴿": "﴾", '"': '"'}
 # closer char -> its opener (keyed lookups only — source-guard 1 forbids
 # positional list indexing in engine code, so parity is tracked as per-style
 # open counters instead of a stack peek)
@@ -933,6 +944,9 @@ def split_arabic_sentences(text: str) -> list[str]:
     (decimal numbers like 3.4), any mark inside a run of consecutive
     terminals (see rule 1 above), marks inside unclosed quotations (rule 3),
     and — since v2.0.1 — `؛` no longer terminates a sentence at all (rule 2).
+    A quote opens the guard only if its closer appears LATER ON THE SAME
+    LINE (post-v2.0.1): stray ' / " / « without a closer stay literal and
+    never suppress the terminals after them; ASCII ' never guards at all.
     A newline always ends a sentence (and resets the quote guard). Returns
     non-empty chunks; if no terminal punctuation is found the whole text is
     one segment (same as before for very short inputs).
@@ -967,8 +981,16 @@ def split_arabic_sentences(text: str) -> list[str]:
                 continue
             if ch not in _QUOTE_PAIRS:
                 continue  # stray closer for a non-self-paired style — literal
-            # self-paired char (' or ") with nothing open acts as an opener
+            # self-paired char (") with nothing open acts as an opener
         if ch in _QUOTE_PAIRS:
+            # post-v2.0.1: open the guard only if the closer exists later on
+            # the SAME line — a stray quote (Qur'an, 27", unbalanced «) stays
+            # literal and cannot disable boundaries to end-of-line
+            line_end = text.find("\n", i + 1)
+            if line_end == -1:
+                line_end = n
+            if text.find(_QUOTE_PAIRS[ch], i + 1, line_end) == -1:
+                continue
             quote_depth[ch] = quote_depth.get(ch, 0) + 1
             continue
         if ch == "\n":
