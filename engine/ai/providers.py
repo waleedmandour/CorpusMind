@@ -547,12 +547,17 @@ def _flatten_tool_history(messages: list[Message]) -> list[Message]:
     if not any(m.role == "tool" for m in messages):
         return messages
     out: list[Message] = []
+    # Invariant: whether out's last element is the droppable "(tool call)"
+    # placeholder. Tracked explicitly (the source guards forbid positional
+    # tail lookups in registry code — the v1.2.7 USAS bug class).
+    last_is_placeholder = False
     i = 0
     n = len(messages)
     while i < n:
         m = messages[i]
         if m.role != "tool":
             out.append(m)
+            last_is_placeholder = m.role == "assistant" and m.content in ("", "(tool call)")
             i += 1
             continue
         lines: list[str] = []
@@ -563,8 +568,9 @@ def _flatten_tool_history(messages: list[Message]) -> list[Message]:
             i += 1
         # Drop the placeholder assistant turn we appended only to mark the
         # tool round; keep real interim assistant text.
-        if out and out[-1].role == "assistant" and out[-1].content in ("", "(tool call)"):
+        if last_is_placeholder and out:
             out.pop()
+        last_is_placeholder = False
         out.append(
             Message(
                 role="user",
@@ -1965,16 +1971,16 @@ class CloudProvider(_OpenAICompatibleProvider):
                 "Cloud provider is disabled. Enable in Settings → AI → Cloud, and acknowledge the data-leaving-device indicator."
             )
 
-    async def chat(self, *args, **kwargs):  # type: ignore[override]
+    async def chat(self, *args: Any, **kwargs: Any) -> ChatResponse:
         await self._enforce()
         return await super().chat(*args, **kwargs)
 
-    async def stream(self, *args, **kwargs):  # type: ignore[override]
+    async def stream(self, *args: Any, **kwargs: Any) -> AsyncIterator[str]:
         await self._enforce()
         async for chunk in super().stream(*args, **kwargs):
             yield chunk
 
-    async def embed(self, *args, **kwargs):  # type: ignore[override]
+    async def embed(self, *args: Any, **kwargs: Any) -> EmbeddingResponse:
         await self._enforce()
         return await super().embed(*args, **kwargs)
 
