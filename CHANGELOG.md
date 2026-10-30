@@ -6,6 +6,46 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
+## [Unreleased]
+
+### Fixed — Arabic sentence segmentation (quote-guard regression)
+
+A stray self-paired quote (`'` or `"`) opened the v2.0.1 quote-parity guard
+with no closer anywhere on the line, disabling every sentence boundary to
+end-of-line — e.g. `قرأ الطالب Qur'an كاملا. ثم ذهب. وعاد.` segmented as ONE
+sentence instead of three. Two tightening rules in
+`nlp.arabic.pipeline.split_arabic_sentences`:
+
+- a quote style opens the guard only if its closer exists LATER ON THE SAME
+  LINE; a stray quote (`27"`, unbalanced `«` from OCR) stays literal;
+- ASCII `'` removed from `_QUOTE_PAIRS` entirely — apostrophes inside words
+  (`Qur'an`, `sha'b`) are never quote marks; the newline reset is unchanged.
+
+AraSEG dev re-measure (checksum-pinned, same evaluator): PA micro-F1
+0.7092 → 0.7115, NP 0.5559 → 0.5572. No condition regresses; the test split
+was not touched.
+
+### Fixed — AI provider layer
+
+- `_OpenAICompatibleProvider.chat` no longer fails with "unexpected response
+  shape" when a tool-call reply omits `content` or sends `"content": null` —
+  valid OpenAI-compatible shapes (LM Studio, Gemini's OpenAI-compat endpoint);
+  the Ollama /v1 tool-call path already guarded this with the same idiom.
+- With `CORPUSMIND_DEBUG_RAW=1`, chat errors now include the upstream
+  response body so provider 4xx bodies reach the logs (diagnostic only;
+  retry semantics unchanged).
+
+### Changed — Gemini default model + benchmark workflow inputs
+
+- New single source of truth `DEFAULT_GEMINI_MODEL` in `app/settings.py`
+  (`gemini-3.8-flash`), replacing the repeated `gemini-2.5-flash` fallback in
+  `CloudProvider`, `Settings.gemini_model`, the settings UI, the user guide
+  and the tests.
+- `benchmarks.yml` grounding job gains two dispatch inputs: `grounding_only`
+  (space/comma-separated question ids; empty = the full 80-question bank) and
+  `debug_raw` (default false — raw provider bodies are opt-in diagnostics
+  now, no longer always-on in CI).
+
 ## [2.0.1] — 2026-10-30
 
 ### Fixed — Arabic sentence segmentation (engine semantics; sentence counts change)

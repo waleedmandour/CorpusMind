@@ -67,6 +67,15 @@ on:
         description: "Seconds to sleep before each question (rate-limit pacing; 7.0 fits free-tier Gemini ~10 RPM)"
         default: "7"
         required: false
+      grounding_only:
+        description: "Space/comma-separated question ids to run (empty = full 80-question bank)"
+        default: ""
+        required: false
+      debug_raw:
+        description: "Include raw provider bodies in error diagnostics (CORPUSMIND_DEBUG_RAW=1)"
+        type: boolean
+        default: false
+        required: false
       commit_results:
         description: "Commit artifacts to benchmarks/results/ (data-only commit)"
         type: boolean
@@ -232,11 +241,12 @@ jobs:
       CORPUSMIND_CLOUD_API_KEY: ${{ secrets.CORPUSMIND_CLOUD_API_KEY }}
       CORPUSMIND_CLOUD_DEFAULT_MODEL: ${{ inputs.grounding_model }}
       CORPUSMIND_CLOUD_BASE_URL: ${{ secrets.CORPUSMIND_CLOUD_BASE_URL }}
-      # Diagnostics: a provider-integration bug (8x "unexpected response
-      # shape" in run 40953800717) is undiagnosable from logs while the
-      # engine withholds raw bodies. CI logs are ephemeral and the bank is
-      # public gold — include the raw provider responses.
-      CORPUSMIND_DEBUG_RAW: "1"
+      # Diagnostics (opt-in via the debug_raw input): a provider-integration
+      # bug (8x "unexpected response shape" in run 40953800717) is
+      # undiagnosable from logs while the engine withholds raw bodies. Raw
+      # bodies can embed corpus-derived model output, so they stay OFF by
+      # default and are enabled per-run when triaging a provider issue.
+      CORPUSMIND_DEBUG_RAW: ${{ inputs.debug_raw && '1' || '0' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -285,16 +295,22 @@ jobs:
         # determinism test fails on exactly this drift).
         run: pip install "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl"
 
-      - name: Run the 80-question bank
+      - name: Run the grounding question bank
         if: steps.guard.outputs.available == 'true'
         working-directory: engine
         run: |
           mkdir -p eval/runs
+          ONLY_ARGS=""
+          if [ -n "${{ inputs.grounding_only }}" ]; then
+            # comma- or whitespace-separated ids -> --only expects separate args
+            ONLY_ARGS="--only $(echo '${{ inputs.grounding_only }}' | tr ',' ' ')"
+          fi
           python -m eval.run_grounding \
             --provider "${{ inputs.grounding_provider }}" \
             ${{ inputs.grounding_model && format('--model {0}', inputs.grounding_model) || '' }} \
             --pause "${{ inputs.grounding_pause || '7' }}" \
             --rate-retries 4 \
+            $ONLY_ARGS \
             --out eval/runs/paper_run.json
 
       - name: Score the run
