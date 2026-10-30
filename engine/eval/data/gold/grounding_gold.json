@@ -2,8 +2,8 @@
  "_meta": {
   "description": "Frozen grounding gold for the fixed snapshot corpus. Produced ONCE by eval/build_gold.py from the engine's own tool registry; every numeric answer the assistant gives is scored against these values. Do not regenerate silently: a rebuild must be reviewed like any golden-file change (see measures_v2.json discipline). Tool outputs are frozen verbatim as provenance.",
   "engine_version": "2.0.1",
-  "git_commit": "e0307f7",
-  "created_utc": "2026-10-30T07:54:09+00:00",
+  "git_commit": "afce8fe",
+  "created_utc": "2026-10-30T10:19:53+00:00",
   "spacy_model": {
    "en_core_web_sm": "3.8.0"
   },
@@ -74,12 +74,12 @@
   "question_count": 80
  },
  "corpus_map": {
-  "C1": "00fd4e706b124b56",
-  "C2": "c9cb4766f9474c42",
-  "C3": "29476eceeea74cec",
-  "C4": "8bef672fcecf47ff",
-  "C5": "b541d056ff3640f2",
-  "C6": "849dd1e901ad4774"
+  "C1": "09f48678312f4955",
+  "C2": "dc8307ed12804876",
+  "C3": "12f4e93a382a4783",
+  "C4": "5a1e5257954c4140",
+  "C5": "34d2f14f67b04b71",
+  "C6": "5b6c92f315b24d44"
  },
  "questions": [
   {
@@ -2361,7 +2361,143 @@
         "delta_p_x_given_y": 0.9909
        },
        {
+        "collocate": "Dana",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "Reyes",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "Tuesday",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
         "collocate": "approved",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "by",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "include",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "itself",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "mayor",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "member",
         "O": 1,
         "fx": 4,
         "fy": 1,
@@ -2412,92 +2548,7 @@
         "delta_p_x_given_y": 0.9909
        },
        {
-        "collocate": "Tuesday",
-        "O": 1,
-        "fx": 4,
-        "fy": 1,
-        "N": 331,
-        "mi": 6.3707,
-        "t_score": 0.9879,
-        "log_likelihood": 9.1025,
-        "dice": 0.4,
-        "log_dice": 12.6781,
-        "chi_square": 81.9977,
-        "chi2_min_expected": 0.0121,
-        "fisher": 0.012085,
-        "delta_p_y_given_x": 0.25,
-        "delta_p_x_given_y": 0.9909
-       },
-       {
-        "collocate": "by",
-        "O": 1,
-        "fx": 4,
-        "fy": 1,
-        "N": 331,
-        "mi": 6.3707,
-        "t_score": 0.9879,
-        "log_likelihood": 9.1025,
-        "dice": 0.4,
-        "log_dice": 12.6781,
-        "chi_square": 81.9977,
-        "chi2_min_expected": 0.0121,
-        "fisher": 0.012085,
-        "delta_p_y_given_x": 0.25,
-        "delta_p_x_given_y": 0.9909
-       },
-       {
-        "collocate": "member",
-        "O": 1,
-        "fx": 4,
-        "fy": 1,
-        "N": 331,
-        "mi": 6.3707,
-        "t_score": 0.9879,
-        "log_likelihood": 9.1025,
-        "dice": 0.4,
-        "log_dice": 12.6781,
-        "chi_square": 81.9977,
-        "chi2_min_expected": 0.0121,
-        "fisher": 0.012085,
-        "delta_p_y_given_x": 0.25,
-        "delta_p_x_given_y": 0.9909
-       },
-       {
-        "collocate": "Dana",
-        "O": 1,
-        "fx": 4,
-        "fy": 1,
-        "N": 331,
-        "mi": 6.3707,
-        "t_score": 0.9879,
-        "log_likelihood": 9.1025,
-        "dice": 0.4,
-        "log_dice": 12.6781,
-        "chi_square": 81.9977,
-        "chi2_min_expected": 0.0121,
-        "fisher": 0.012085,
-        "delta_p_y_given_x": 0.25,
-        "delta_p_x_given_y": 0.9909
-       },
-       {
-        "collocate": "Reyes",
-        "O": 1,
-        "fx": 4,
-        "fy": 1,
-        "N": 331,
-        "mi": 6.3707,
-        "t_score": 0.9879,
-        "log_likelihood": 9.1025,
-        "dice": 0.4,
-        "log_dice": 12.6781,
-        "chi_square": 81.9977,
-        "chi2_min_expected": 0.0121,
-        "fisher": 0.012085,
-        "delta_p_y_given_x": 0.25,
-        "delta_p_x_given_y": 0.9909
-       },
-       {
-        "collocate": "include",
+        "collocate": "pay",
         "O": 1,
         "fx": 4,
         "fy": 1,
@@ -2531,58 +2582,7 @@
         "delta_p_x_given_y": 0.9909
        },
        {
-        "collocate": "mayor",
-        "O": 1,
-        "fx": 4,
-        "fy": 1,
-        "N": 331,
-        "mi": 6.3707,
-        "t_score": 0.9879,
-        "log_likelihood": 9.1025,
-        "dice": 0.4,
-        "log_dice": 12.6781,
-        "chi_square": 81.9977,
-        "chi2_min_expected": 0.0121,
-        "fisher": 0.012085,
-        "delta_p_y_given_x": 0.25,
-        "delta_p_x_given_y": 0.9909
-       },
-       {
         "collocate": "replied",
-        "O": 1,
-        "fx": 4,
-        "fy": 1,
-        "N": 331,
-        "mi": 6.3707,
-        "t_score": 0.9879,
-        "log_likelihood": 9.1025,
-        "dice": 0.4,
-        "log_dice": 12.6781,
-        "chi_square": 81.9977,
-        "chi2_min_expected": 0.0121,
-        "fisher": 0.012085,
-        "delta_p_y_given_x": 0.25,
-        "delta_p_x_given_y": 0.9909
-       },
-       {
-        "collocate": "pay",
-        "O": 1,
-        "fx": 4,
-        "fy": 1,
-        "N": 331,
-        "mi": 6.3707,
-        "t_score": 0.9879,
-        "log_likelihood": 9.1025,
-        "dice": 0.4,
-        "log_dice": 12.6781,
-        "chi_square": 81.9977,
-        "chi2_min_expected": 0.0121,
-        "fisher": 0.012085,
-        "delta_p_y_given_x": 0.25,
-        "delta_p_x_given_y": 0.9909
-       },
-       {
-        "collocate": "itself",
         "O": 1,
         "fx": 4,
         "fy": 1,
@@ -2707,7 +2707,7 @@
         "delta_p_x_given_y": 1.0
        },
        {
-        "collocate": "more",
+        "collocate": "green",
         "O": 1,
         "fx": 1,
         "fy": 1,
@@ -2724,7 +2724,7 @@
         "delta_p_x_given_y": 1.0
        },
        {
-        "collocate": "green",
+        "collocate": "more",
         "O": 1,
         "fx": 1,
         "fy": 1,
@@ -2958,7 +2958,7 @@
         "delta_p_x_given_y": 0.324
        },
        {
-        "collocate": "goal",
+        "collocate": "Goal",
         "O": 2,
         "fx": 6,
         "fy": 6,
@@ -2975,7 +2975,7 @@
         "delta_p_x_given_y": 0.321
        },
        {
-        "collocate": "many",
+        "collocate": "achieve",
         "O": 1,
         "fx": 6,
         "fy": 1,
@@ -2992,24 +2992,7 @@
         "delta_p_x_given_y": 0.9848
        },
        {
-        "collocate": "future",
-        "O": 1,
-        "fx": 6,
-        "fy": 1,
-        "N": 331,
-        "mi": 6.7857,
-        "t_score": 1.4014,
-        "log_likelihood": 8.1945,
-        "dice": 0.5714,
-        "log_dice": 13.1926,
-        "chi_square": 54.3308,
-        "chi2_min_expected": 0.0181,
-        "fisher": 0.018127,
-        "delta_p_y_given_x": 0.3364,
-        "delta_p_x_given_y": 1.9879
-       },
-       {
-        "collocate": "pass",
+        "collocate": "clear",
         "O": 1,
         "fx": 6,
         "fy": 1,
@@ -3043,7 +3026,92 @@
         "delta_p_x_given_y": 0.9848
        },
        {
-        "collocate": "clear",
+        "collocate": "family",
+        "O": 1,
+        "fx": 6,
+        "fy": 1,
+        "N": 331,
+        "mi": 5.7857,
+        "t_score": 0.9819,
+        "log_likelihood": 8.1945,
+        "dice": 0.2857,
+        "log_dice": 12.1926,
+        "chi_square": 54.3308,
+        "chi2_min_expected": 0.0181,
+        "fisher": 0.018127,
+        "delta_p_y_given_x": 0.1667,
+        "delta_p_x_given_y": 0.9848
+       },
+       {
+        "collocate": "future",
+        "O": 1,
+        "fx": 6,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.7857,
+        "t_score": 1.4014,
+        "log_likelihood": 8.1945,
+        "dice": 0.5714,
+        "log_dice": 13.1926,
+        "chi_square": 54.3308,
+        "chi2_min_expected": 0.0181,
+        "fisher": 0.018127,
+        "delta_p_y_given_x": 0.3364,
+        "delta_p_x_given_y": 1.9879
+       },
+       {
+        "collocate": "hard",
+        "O": 1,
+        "fx": 6,
+        "fy": 1,
+        "N": 331,
+        "mi": 5.7857,
+        "t_score": 0.9819,
+        "log_likelihood": 8.1945,
+        "dice": 0.2857,
+        "log_dice": 12.1926,
+        "chi_square": 54.3308,
+        "chi2_min_expected": 0.0181,
+        "fisher": 0.018127,
+        "delta_p_y_given_x": 0.1667,
+        "delta_p_x_given_y": 0.9848
+       },
+       {
+        "collocate": "many",
+        "O": 1,
+        "fx": 6,
+        "fy": 1,
+        "N": 331,
+        "mi": 5.7857,
+        "t_score": 0.9819,
+        "log_likelihood": 8.1945,
+        "dice": 0.2857,
+        "log_dice": 12.1926,
+        "chi_square": 54.3308,
+        "chi2_min_expected": 0.0181,
+        "fisher": 0.018127,
+        "delta_p_y_given_x": 0.1667,
+        "delta_p_x_given_y": 0.9848
+       },
+       {
+        "collocate": "pass",
+        "O": 1,
+        "fx": 6,
+        "fy": 1,
+        "N": 331,
+        "mi": 5.7857,
+        "t_score": 0.9819,
+        "log_likelihood": 8.1945,
+        "dice": 0.2857,
+        "log_dice": 12.1926,
+        "chi_square": 54.3308,
+        "chi2_min_expected": 0.0181,
+        "fisher": 0.018127,
+        "delta_p_y_given_x": 0.1667,
+        "delta_p_x_given_y": 0.9848
+       },
+       {
+        "collocate": "proud",
         "O": 1,
         "fx": 6,
         "fy": 1,
@@ -3078,74 +3146,6 @@
        },
        {
         "collocate": "work",
-        "O": 1,
-        "fx": 6,
-        "fy": 1,
-        "N": 331,
-        "mi": 5.7857,
-        "t_score": 0.9819,
-        "log_likelihood": 8.1945,
-        "dice": 0.2857,
-        "log_dice": 12.1926,
-        "chi_square": 54.3308,
-        "chi2_min_expected": 0.0181,
-        "fisher": 0.018127,
-        "delta_p_y_given_x": 0.1667,
-        "delta_p_x_given_y": 0.9848
-       },
-       {
-        "collocate": "hard",
-        "O": 1,
-        "fx": 6,
-        "fy": 1,
-        "N": 331,
-        "mi": 5.7857,
-        "t_score": 0.9819,
-        "log_likelihood": 8.1945,
-        "dice": 0.2857,
-        "log_dice": 12.1926,
-        "chi_square": 54.3308,
-        "chi2_min_expected": 0.0181,
-        "fisher": 0.018127,
-        "delta_p_y_given_x": 0.1667,
-        "delta_p_x_given_y": 0.9848
-       },
-       {
-        "collocate": "achieve",
-        "O": 1,
-        "fx": 6,
-        "fy": 1,
-        "N": 331,
-        "mi": 5.7857,
-        "t_score": 0.9819,
-        "log_likelihood": 8.1945,
-        "dice": 0.2857,
-        "log_dice": 12.1926,
-        "chi_square": 54.3308,
-        "chi2_min_expected": 0.0181,
-        "fisher": 0.018127,
-        "delta_p_y_given_x": 0.1667,
-        "delta_p_x_given_y": 0.9848
-       },
-       {
-        "collocate": "family",
-        "O": 1,
-        "fx": 6,
-        "fy": 1,
-        "N": 331,
-        "mi": 5.7857,
-        "t_score": 0.9819,
-        "log_likelihood": 8.1945,
-        "dice": 0.2857,
-        "log_dice": 12.1926,
-        "chi_square": 54.3308,
-        "chi2_min_expected": 0.0181,
-        "fisher": 0.018127,
-        "delta_p_y_given_x": 0.1667,
-        "delta_p_x_given_y": 0.9848
-       },
-       {
-        "collocate": "proud",
         "O": 1,
         "fx": 6,
         "fy": 1,
@@ -3311,57 +3311,6 @@
         "delta_p_x_given_y": 0.9909
        },
        {
-        "collocate": "approved",
-        "O": 1,
-        "fx": 4,
-        "fy": 1,
-        "N": 331,
-        "mi": 6.3707,
-        "t_score": 0.9879,
-        "log_likelihood": 9.1025,
-        "dice": 0.4,
-        "log_dice": 12.6781,
-        "chi_square": 81.9977,
-        "chi2_min_expected": 0.0121,
-        "fisher": 0.012085,
-        "delta_p_y_given_x": 0.25,
-        "delta_p_x_given_y": 0.9909
-       },
-       {
-        "collocate": "new",
-        "O": 1,
-        "fx": 4,
-        "fy": 1,
-        "N": 331,
-        "mi": 6.3707,
-        "t_score": 0.9879,
-        "log_likelihood": 9.1025,
-        "dice": 0.4,
-        "log_dice": 12.6781,
-        "chi_square": 81.9977,
-        "chi2_min_expected": 0.0121,
-        "fisher": 0.012085,
-        "delta_p_y_given_x": 0.25,
-        "delta_p_x_given_y": 0.9909
-       },
-       {
-        "collocate": "member",
-        "O": 1,
-        "fx": 4,
-        "fy": 1,
-        "N": 331,
-        "mi": 6.3707,
-        "t_score": 0.9879,
-        "log_likelihood": 9.1025,
-        "dice": 0.4,
-        "log_dice": 12.6781,
-        "chi_square": 81.9977,
-        "chi2_min_expected": 0.0121,
-        "fisher": 0.012085,
-        "delta_p_y_given_x": 0.25,
-        "delta_p_x_given_y": 0.9909
-       },
-       {
         "collocate": "Dana",
         "O": 1,
         "fx": 4,
@@ -3396,7 +3345,41 @@
         "delta_p_x_given_y": 0.9909
        },
        {
-        "collocate": "review",
+        "collocate": "approved",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "member",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "new",
         "O": 1,
         "fx": 4,
         "fy": 1,
@@ -3414,6 +3397,23 @@
        },
        {
         "collocate": "progress",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "review",
         "O": 1,
         "fx": 4,
         "fy": 1,
@@ -3652,7 +3652,143 @@
         "delta_p_x_given_y": 0.9909
        },
        {
+        "collocate": "Dana",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "Reyes",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "Tuesday",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
         "collocate": "approved",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "by",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "include",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "itself",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "mayor",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "member",
         "O": 1,
         "fx": 4,
         "fy": 1,
@@ -3703,92 +3839,7 @@
         "delta_p_x_given_y": 0.9909
        },
        {
-        "collocate": "Tuesday",
-        "O": 1,
-        "fx": 4,
-        "fy": 1,
-        "N": 331,
-        "mi": 6.3707,
-        "t_score": 0.9879,
-        "log_likelihood": 9.1025,
-        "dice": 0.4,
-        "log_dice": 12.6781,
-        "chi_square": 81.9977,
-        "chi2_min_expected": 0.0121,
-        "fisher": 0.012085,
-        "delta_p_y_given_x": 0.25,
-        "delta_p_x_given_y": 0.9909
-       },
-       {
-        "collocate": "by",
-        "O": 1,
-        "fx": 4,
-        "fy": 1,
-        "N": 331,
-        "mi": 6.3707,
-        "t_score": 0.9879,
-        "log_likelihood": 9.1025,
-        "dice": 0.4,
-        "log_dice": 12.6781,
-        "chi_square": 81.9977,
-        "chi2_min_expected": 0.0121,
-        "fisher": 0.012085,
-        "delta_p_y_given_x": 0.25,
-        "delta_p_x_given_y": 0.9909
-       },
-       {
-        "collocate": "member",
-        "O": 1,
-        "fx": 4,
-        "fy": 1,
-        "N": 331,
-        "mi": 6.3707,
-        "t_score": 0.9879,
-        "log_likelihood": 9.1025,
-        "dice": 0.4,
-        "log_dice": 12.6781,
-        "chi_square": 81.9977,
-        "chi2_min_expected": 0.0121,
-        "fisher": 0.012085,
-        "delta_p_y_given_x": 0.25,
-        "delta_p_x_given_y": 0.9909
-       },
-       {
-        "collocate": "Dana",
-        "O": 1,
-        "fx": 4,
-        "fy": 1,
-        "N": 331,
-        "mi": 6.3707,
-        "t_score": 0.9879,
-        "log_likelihood": 9.1025,
-        "dice": 0.4,
-        "log_dice": 12.6781,
-        "chi_square": 81.9977,
-        "chi2_min_expected": 0.0121,
-        "fisher": 0.012085,
-        "delta_p_y_given_x": 0.25,
-        "delta_p_x_given_y": 0.9909
-       },
-       {
-        "collocate": "Reyes",
-        "O": 1,
-        "fx": 4,
-        "fy": 1,
-        "N": 331,
-        "mi": 6.3707,
-        "t_score": 0.9879,
-        "log_likelihood": 9.1025,
-        "dice": 0.4,
-        "log_dice": 12.6781,
-        "chi_square": 81.9977,
-        "chi2_min_expected": 0.0121,
-        "fisher": 0.012085,
-        "delta_p_y_given_x": 0.25,
-        "delta_p_x_given_y": 0.9909
-       },
-       {
-        "collocate": "include",
+        "collocate": "pay",
         "O": 1,
         "fx": 4,
         "fy": 1,
@@ -3822,58 +3873,7 @@
         "delta_p_x_given_y": 0.9909
        },
        {
-        "collocate": "mayor",
-        "O": 1,
-        "fx": 4,
-        "fy": 1,
-        "N": 331,
-        "mi": 6.3707,
-        "t_score": 0.9879,
-        "log_likelihood": 9.1025,
-        "dice": 0.4,
-        "log_dice": 12.6781,
-        "chi_square": 81.9977,
-        "chi2_min_expected": 0.0121,
-        "fisher": 0.012085,
-        "delta_p_y_given_x": 0.25,
-        "delta_p_x_given_y": 0.9909
-       },
-       {
         "collocate": "replied",
-        "O": 1,
-        "fx": 4,
-        "fy": 1,
-        "N": 331,
-        "mi": 6.3707,
-        "t_score": 0.9879,
-        "log_likelihood": 9.1025,
-        "dice": 0.4,
-        "log_dice": 12.6781,
-        "chi_square": 81.9977,
-        "chi2_min_expected": 0.0121,
-        "fisher": 0.012085,
-        "delta_p_y_given_x": 0.25,
-        "delta_p_x_given_y": 0.9909
-       },
-       {
-        "collocate": "pay",
-        "O": 1,
-        "fx": 4,
-        "fy": 1,
-        "N": 331,
-        "mi": 6.3707,
-        "t_score": 0.9879,
-        "log_likelihood": 9.1025,
-        "dice": 0.4,
-        "log_dice": 12.6781,
-        "chi_square": 81.9977,
-        "chi2_min_expected": 0.0121,
-        "fisher": 0.012085,
-        "delta_p_y_given_x": 0.25,
-        "delta_p_x_given_y": 0.9909
-       },
-       {
-        "collocate": "itself",
         "O": 1,
         "fx": 4,
         "fy": 1,
@@ -3998,6 +3998,23 @@
         "delta_p_x_given_y": 0.9909
        },
        {
+        "collocate": "include",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
         "collocate": "new",
         "O": 1,
         "fx": 4,
@@ -4016,23 +4033,6 @@
        },
        {
         "collocate": "on",
-        "O": 1,
-        "fx": 4,
-        "fy": 1,
-        "N": 331,
-        "mi": 6.3707,
-        "t_score": 0.9879,
-        "log_likelihood": 9.1025,
-        "dice": 0.4,
-        "log_dice": 12.6781,
-        "chi_square": 81.9977,
-        "chi2_min_expected": 0.0121,
-        "fisher": 0.012085,
-        "delta_p_y_given_x": 0.25,
-        "delta_p_x_given_y": 0.9909
-       },
-       {
-        "collocate": "include",
         "O": 1,
         "fx": 4,
         "fy": 1,
@@ -4262,7 +4262,143 @@
         "delta_p_x_given_y": 0.9909
        },
        {
+        "collocate": "Dana",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "Reyes",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "Tuesday",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
         "collocate": "approved",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "by",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "include",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "itself",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "mayor",
+        "O": 1,
+        "fx": 4,
+        "fy": 1,
+        "N": 331,
+        "mi": 6.3707,
+        "t_score": 0.9879,
+        "log_likelihood": 9.1025,
+        "dice": 0.4,
+        "log_dice": 12.6781,
+        "chi_square": 81.9977,
+        "chi2_min_expected": 0.0121,
+        "fisher": 0.012085,
+        "delta_p_y_given_x": 0.25,
+        "delta_p_x_given_y": 0.9909
+       },
+       {
+        "collocate": "member",
         "O": 1,
         "fx": 4,
         "fy": 1,
@@ -4313,92 +4449,7 @@
         "delta_p_x_given_y": 0.9909
        },
        {
-        "collocate": "Tuesday",
-        "O": 1,
-        "fx": 4,
-        "fy": 1,
-        "N": 331,
-        "mi": 6.3707,
-        "t_score": 0.9879,
-        "log_likelihood": 9.1025,
-        "dice": 0.4,
-        "log_dice": 12.6781,
-        "chi_square": 81.9977,
-        "chi2_min_expected": 0.0121,
-        "fisher": 0.012085,
-        "delta_p_y_given_x": 0.25,
-        "delta_p_x_given_y": 0.9909
-       },
-       {
-        "collocate": "by",
-        "O": 1,
-        "fx": 4,
-        "fy": 1,
-        "N": 331,
-        "mi": 6.3707,
-        "t_score": 0.9879,
-        "log_likelihood": 9.1025,
-        "dice": 0.4,
-        "log_dice": 12.6781,
-        "chi_square": 81.9977,
-        "chi2_min_expected": 0.0121,
-        "fisher": 0.012085,
-        "delta_p_y_given_x": 0.25,
-        "delta_p_x_given_y": 0.9909
-       },
-       {
-        "collocate": "member",
-        "O": 1,
-        "fx": 4,
-        "fy": 1,
-        "N": 331,
-        "mi": 6.3707,
-        "t_score": 0.9879,
-        "log_likelihood": 9.1025,
-        "dice": 0.4,
-        "log_dice": 12.6781,
-        "chi_square": 81.9977,
-        "chi2_min_expected": 0.0121,
-        "fisher": 0.012085,
-        "delta_p_y_given_x": 0.25,
-        "delta_p_x_given_y": 0.9909
-       },
-       {
-        "collocate": "Dana",
-        "O": 1,
-        "fx": 4,
-        "fy": 1,
-        "N": 331,
-        "mi": 6.3707,
-        "t_score": 0.9879,
-        "log_likelihood": 9.1025,
-        "dice": 0.4,
-        "log_dice": 12.6781,
-        "chi_square": 81.9977,
-        "chi2_min_expected": 0.0121,
-        "fisher": 0.012085,
-        "delta_p_y_given_x": 0.25,
-        "delta_p_x_given_y": 0.9909
-       },
-       {
-        "collocate": "Reyes",
-        "O": 1,
-        "fx": 4,
-        "fy": 1,
-        "N": 331,
-        "mi": 6.3707,
-        "t_score": 0.9879,
-        "log_likelihood": 9.1025,
-        "dice": 0.4,
-        "log_dice": 12.6781,
-        "chi_square": 81.9977,
-        "chi2_min_expected": 0.0121,
-        "fisher": 0.012085,
-        "delta_p_y_given_x": 0.25,
-        "delta_p_x_given_y": 0.9909
-       },
-       {
-        "collocate": "include",
+        "collocate": "pay",
         "O": 1,
         "fx": 4,
         "fy": 1,
@@ -4432,58 +4483,7 @@
         "delta_p_x_given_y": 0.9909
        },
        {
-        "collocate": "mayor",
-        "O": 1,
-        "fx": 4,
-        "fy": 1,
-        "N": 331,
-        "mi": 6.3707,
-        "t_score": 0.9879,
-        "log_likelihood": 9.1025,
-        "dice": 0.4,
-        "log_dice": 12.6781,
-        "chi_square": 81.9977,
-        "chi2_min_expected": 0.0121,
-        "fisher": 0.012085,
-        "delta_p_y_given_x": 0.25,
-        "delta_p_x_given_y": 0.9909
-       },
-       {
         "collocate": "replied",
-        "O": 1,
-        "fx": 4,
-        "fy": 1,
-        "N": 331,
-        "mi": 6.3707,
-        "t_score": 0.9879,
-        "log_likelihood": 9.1025,
-        "dice": 0.4,
-        "log_dice": 12.6781,
-        "chi_square": 81.9977,
-        "chi2_min_expected": 0.0121,
-        "fisher": 0.012085,
-        "delta_p_y_given_x": 0.25,
-        "delta_p_x_given_y": 0.9909
-       },
-       {
-        "collocate": "pay",
-        "O": 1,
-        "fx": 4,
-        "fy": 1,
-        "N": 331,
-        "mi": 6.3707,
-        "t_score": 0.9879,
-        "log_likelihood": 9.1025,
-        "dice": 0.4,
-        "log_dice": 12.6781,
-        "chi_square": 81.9977,
-        "chi2_min_expected": 0.0121,
-        "fisher": 0.012085,
-        "delta_p_y_given_x": 0.25,
-        "delta_p_x_given_y": 0.9909
-       },
-       {
-        "collocate": "itself",
         "O": 1,
         "fx": 4,
         "fy": 1,
@@ -4595,14 +4595,21 @@
       "total_tokens": 331,
       "top_ngrams": [
        {
-        "ngram": "said the",
+        "ngram": "and I",
         "freq": 2,
         "per_million": 6042.3,
         "range": 1,
         "range_percent": 33.33
        },
        {
-        "ngram": "the park",
+        "ngram": "goal is",
+        "freq": 2,
+        "per_million": 6042.3,
+        "range": 1,
+        "range_percent": 33.33
+       },
+       {
+        "ngram": "is to",
         "freq": 2,
         "per_million": 6042.3,
         "range": 1,
@@ -4616,14 +4623,7 @@
         "range_percent": 33.33
        },
        {
-        "ngram": "that the",
-        "freq": 2,
-        "per_million": 6042.3,
-        "range": 2,
-        "range_percent": 66.67
-       },
-       {
-        "ngram": "is to",
+        "ngram": "said the",
         "freq": 2,
         "per_million": 6042.3,
         "range": 1,
@@ -4646,7 +4646,7 @@
     "strings": [
      {
       "label": "top 2-gram",
-      "value": "said the"
+      "value": "and I"
      }
     ],
     "traps": {}
@@ -4722,35 +4722,7 @@
       "total_tokens": 331,
       "top_ngrams": [
        {
-        "ngram": "said the",
-        "freq": 2,
-        "per_million": 6042.3,
-        "range": 1,
-        "range_percent": 33.33
-       },
-       {
-        "ngram": "the park",
-        "freq": 2,
-        "per_million": 6042.3,
-        "range": 1,
-        "range_percent": 33.33
-       },
-       {
-        "ngram": "park will",
-        "freq": 2,
-        "per_million": 6042.3,
-        "range": 1,
-        "range_percent": 33.33
-       },
-       {
-        "ngram": "that the",
-        "freq": 2,
-        "per_million": 6042.3,
-        "range": 2,
-        "range_percent": 66.67
-       },
-       {
-        "ngram": "is to",
+        "ngram": "and I",
         "freq": 2,
         "per_million": 6042.3,
         "range": 1,
@@ -4764,14 +4736,42 @@
         "range_percent": 33.33
        },
        {
-        "ngram": "and I",
+        "ngram": "is to",
         "freq": 2,
         "per_million": 6042.3,
         "range": 1,
         "range_percent": 33.33
        },
        {
+        "ngram": "park will",
+        "freq": 2,
+        "per_million": 6042.3,
+        "range": 1,
+        "range_percent": 33.33
+       },
+       {
+        "ngram": "said the",
+        "freq": 2,
+        "per_million": 6042.3,
+        "range": 1,
+        "range_percent": 33.33
+       },
+       {
+        "ngram": "that the",
+        "freq": 2,
+        "per_million": 6042.3,
+        "range": 2,
+        "range_percent": 66.67
+       },
+       {
         "ngram": "the algorithm",
+        "freq": 2,
+        "per_million": 6042.3,
+        "range": 1,
+        "range_percent": 33.33
+       },
+       {
+        "ngram": "the park",
         "freq": 2,
         "per_million": 6042.3,
         "range": 1,
@@ -6538,6 +6538,11 @@
         "per_million": 27190.33,
         "examples": [
          {
+          "cue": "me",
+          "evidence_id": "<id>:2:3",
+          "sentence_preview": "my teacher said me that practice is important , and i am agree with him ."
+         },
+         {
           "cue": "my",
           "evidence_id": "<id>:0:0",
           "sentence_preview": "my goal in university my goal in university is to study computer science ."
@@ -6546,11 +6551,6 @@
           "cue": "my",
           "evidence_id": "<id>:0:5",
           "sentence_preview": "my goal in university my goal in university is to study computer science ."
-         },
-         {
-          "cue": "me",
-          "evidence_id": "<id>:2:3",
-          "sentence_preview": "my teacher said me that practice is important , and i am agree with him ."
          },
          {
           "cue": "my",
@@ -6575,24 +6575,24 @@
           "sentence_preview": "we may suggest , following hyland , that hedges are a key interactional resource ."
          },
          {
-          "cue": "suggest",
-          "evidence_id": "<id>:1:2",
-          "sentence_preview": "we may suggest , following hyland , that hedges are a key interactional resource ."
-         },
-         {
           "cue": "may",
           "evidence_id": "<id>:2:8",
           "sentence_preview": "the corpus was tagged automatically ; the algorithm may therefore misclassify rare patterns , and we treat such results "
          },
          {
+          "cue": "may",
+          "evidence_id": "<id>:7:3",
+          "sentence_preview": "first , writers may hedge claims in results sections to soften evaluation ."
+         },
+         {
+          "cue": "may",
+          "evidence_id": "<id>:9:12",
+          "sentence_preview": "clearly , further testing across disciplines is needed before any firm conclusion may be drawn ."
+         },
+         {
           "cue": "perhaps",
           "evidence_id": "<id>:5:0",
           "sentence_preview": "perhaps the most striking result concerns lexical bundles : they cluster in introductions rather than conclusions ."
-         },
-         {
-          "cue": "suggest",
-          "evidence_id": "<id>:6:1",
-          "sentence_preview": "we suggest two explanations ."
          }
         ],
         "dp": 0.619
@@ -6607,14 +6607,14 @@
           "sentence_preview": "i have many goal for the future , but the first goal is to pass the exams ."
          },
          {
-          "cue": "in conclusion",
-          "evidence_id": "<id>:6:0",
-          "sentence_preview": "in conclusion , my goal is clear : i want to be a good engineer ."
-         },
-         {
           "cue": "first",
           "evidence_id": "<id>:7:0",
           "sentence_preview": "first , writers may hedge claims in results sections to soften evaluation ."
+         },
+         {
+          "cue": "in conclusion",
+          "evidence_id": "<id>:6:0",
+          "sentence_preview": "in conclusion , my goal is clear : i want to be a good engineer ."
          },
          {
           "cue": "second",
@@ -6629,14 +6629,14 @@
         "per_million": 6042.3,
         "examples": [
          {
-          "cue": "therefore",
-          "evidence_id": "<id>:2:9",
-          "sentence_preview": "the corpus was tagged automatically ; the algorithm may therefore misclassify rare patterns , and we treat such results "
-         },
-         {
           "cue": "rather",
           "evidence_id": "<id>:5:13",
           "sentence_preview": "perhaps the most striking result concerns lexical bundles : they cluster in introductions rather than conclusions ."
+         },
+         {
+          "cue": "therefore",
+          "evidence_id": "<id>:2:9",
+          "sentence_preview": "the corpus was tagged automatically ; the algorithm may therefore misclassify rare patterns , and we treat such results "
          }
         ],
         "dp": 0.619
@@ -6702,6 +6702,11 @@
         "per_million": 27190.33,
         "examples": [
          {
+          "cue": "me",
+          "evidence_id": "<id>:2:3",
+          "sentence_preview": "my teacher said me that practice is important , and i am agree with him ."
+         },
+         {
           "cue": "my",
           "evidence_id": "<id>:0:0",
           "sentence_preview": "my goal in university my goal in university is to study computer science ."
@@ -6710,11 +6715,6 @@
           "cue": "my",
           "evidence_id": "<id>:0:5",
           "sentence_preview": "my goal in university my goal in university is to study computer science ."
-         },
-         {
-          "cue": "me",
-          "evidence_id": "<id>:2:3",
-          "sentence_preview": "my teacher said me that practice is important , and i am agree with him ."
          },
          {
           "cue": "my",
@@ -6739,24 +6739,24 @@
           "sentence_preview": "we may suggest , following hyland , that hedges are a key interactional resource ."
          },
          {
-          "cue": "suggest",
-          "evidence_id": "<id>:1:2",
-          "sentence_preview": "we may suggest , following hyland , that hedges are a key interactional resource ."
-         },
-         {
           "cue": "may",
           "evidence_id": "<id>:2:8",
           "sentence_preview": "the corpus was tagged automatically ; the algorithm may therefore misclassify rare patterns , and we treat such results "
          },
          {
+          "cue": "may",
+          "evidence_id": "<id>:7:3",
+          "sentence_preview": "first , writers may hedge claims in results sections to soften evaluation ."
+         },
+         {
+          "cue": "may",
+          "evidence_id": "<id>:9:12",
+          "sentence_preview": "clearly , further testing across disciplines is needed before any firm conclusion may be drawn ."
+         },
+         {
           "cue": "perhaps",
           "evidence_id": "<id>:5:0",
           "sentence_preview": "perhaps the most striking result concerns lexical bundles : they cluster in introductions rather than conclusions ."
-         },
-         {
-          "cue": "suggest",
-          "evidence_id": "<id>:6:1",
-          "sentence_preview": "we suggest two explanations ."
          }
         ],
         "dp": 0.619
@@ -6771,14 +6771,14 @@
           "sentence_preview": "i have many goal for the future , but the first goal is to pass the exams ."
          },
          {
-          "cue": "in conclusion",
-          "evidence_id": "<id>:6:0",
-          "sentence_preview": "in conclusion , my goal is clear : i want to be a good engineer ."
-         },
-         {
           "cue": "first",
           "evidence_id": "<id>:7:0",
           "sentence_preview": "first , writers may hedge claims in results sections to soften evaluation ."
+         },
+         {
+          "cue": "in conclusion",
+          "evidence_id": "<id>:6:0",
+          "sentence_preview": "in conclusion , my goal is clear : i want to be a good engineer ."
          },
          {
           "cue": "second",
@@ -6793,14 +6793,14 @@
         "per_million": 6042.3,
         "examples": [
          {
-          "cue": "therefore",
-          "evidence_id": "<id>:2:9",
-          "sentence_preview": "the corpus was tagged automatically ; the algorithm may therefore misclassify rare patterns , and we treat such results "
-         },
-         {
           "cue": "rather",
           "evidence_id": "<id>:5:13",
           "sentence_preview": "perhaps the most striking result concerns lexical bundles : they cluster in introductions rather than conclusions ."
+         },
+         {
+          "cue": "therefore",
+          "evidence_id": "<id>:2:9",
+          "sentence_preview": "the corpus was tagged automatically ; the algorithm may therefore misclassify rare patterns , and we treat such results "
          }
         ],
         "dp": 0.619
@@ -6866,6 +6866,11 @@
         "per_million": 27190.33,
         "examples": [
          {
+          "cue": "me",
+          "evidence_id": "<id>:2:3",
+          "sentence_preview": "my teacher said me that practice is important , and i am agree with him ."
+         },
+         {
           "cue": "my",
           "evidence_id": "<id>:0:0",
           "sentence_preview": "my goal in university my goal in university is to study computer science ."
@@ -6874,11 +6879,6 @@
           "cue": "my",
           "evidence_id": "<id>:0:5",
           "sentence_preview": "my goal in university my goal in university is to study computer science ."
-         },
-         {
-          "cue": "me",
-          "evidence_id": "<id>:2:3",
-          "sentence_preview": "my teacher said me that practice is important , and i am agree with him ."
          },
          {
           "cue": "my",
@@ -6903,24 +6903,24 @@
           "sentence_preview": "we may suggest , following hyland , that hedges are a key interactional resource ."
          },
          {
-          "cue": "suggest",
-          "evidence_id": "<id>:1:2",
-          "sentence_preview": "we may suggest , following hyland , that hedges are a key interactional resource ."
-         },
-         {
           "cue": "may",
           "evidence_id": "<id>:2:8",
           "sentence_preview": "the corpus was tagged automatically ; the algorithm may therefore misclassify rare patterns , and we treat such results "
          },
          {
+          "cue": "may",
+          "evidence_id": "<id>:7:3",
+          "sentence_preview": "first , writers may hedge claims in results sections to soften evaluation ."
+         },
+         {
+          "cue": "may",
+          "evidence_id": "<id>:9:12",
+          "sentence_preview": "clearly , further testing across disciplines is needed before any firm conclusion may be drawn ."
+         },
+         {
           "cue": "perhaps",
           "evidence_id": "<id>:5:0",
           "sentence_preview": "perhaps the most striking result concerns lexical bundles : they cluster in introductions rather than conclusions ."
-         },
-         {
-          "cue": "suggest",
-          "evidence_id": "<id>:6:1",
-          "sentence_preview": "we suggest two explanations ."
          }
         ],
         "dp": 0.619
@@ -6935,14 +6935,14 @@
           "sentence_preview": "i have many goal for the future , but the first goal is to pass the exams ."
          },
          {
-          "cue": "in conclusion",
-          "evidence_id": "<id>:6:0",
-          "sentence_preview": "in conclusion , my goal is clear : i want to be a good engineer ."
-         },
-         {
           "cue": "first",
           "evidence_id": "<id>:7:0",
           "sentence_preview": "first , writers may hedge claims in results sections to soften evaluation ."
+         },
+         {
+          "cue": "in conclusion",
+          "evidence_id": "<id>:6:0",
+          "sentence_preview": "in conclusion , my goal is clear : i want to be a good engineer ."
          },
          {
           "cue": "second",
@@ -6957,14 +6957,14 @@
         "per_million": 6042.3,
         "examples": [
          {
-          "cue": "therefore",
-          "evidence_id": "<id>:2:9",
-          "sentence_preview": "the corpus was tagged automatically ; the algorithm may therefore misclassify rare patterns , and we treat such results "
-         },
-         {
           "cue": "rather",
           "evidence_id": "<id>:5:13",
           "sentence_preview": "perhaps the most striking result concerns lexical bundles : they cluster in introductions rather than conclusions ."
+         },
+         {
+          "cue": "therefore",
+          "evidence_id": "<id>:2:9",
+          "sentence_preview": "the corpus was tagged automatically ; the algorithm may therefore misclassify rare patterns , and we treat such results "
          }
         ],
         "dp": 0.619
@@ -7050,12 +7050,12 @@
         "percent": 7.553
        },
        {
-        "pos": "PROPN",
+        "pos": "PRON",
         "freq": 21,
         "percent": 6.344
        },
        {
-        "pos": "PRON",
+        "pos": "PROPN",
         "freq": 21,
         "percent": 6.344
        },
@@ -7096,11 +7096,11 @@
         "freq": 10
        },
        {
-        "pattern": "NOUN VERB",
+        "pattern": "ADP NOUN",
         "freq": 9
        },
        {
-        "pattern": "ADP NOUN",
+        "pattern": "NOUN VERB",
         "freq": 9
        },
        {
@@ -7112,15 +7112,15 @@
         "freq": 7
        },
        {
-        "pattern": "VERB ADP",
-        "freq": 7
-       },
-       {
         "pattern": "PRON VERB",
         "freq": 7
        },
        {
-        "pattern": "PROPN PROPN",
+        "pattern": "VERB ADP",
+        "freq": 7
+       },
+       {
+        "pattern": "NOUN CCONJ",
         "freq": 6
        },
        {
@@ -7128,11 +7128,11 @@
         "freq": 6
        },
        {
-        "pattern": "NOUN CCONJ",
+        "pattern": "PART VERB",
         "freq": 6
        },
        {
-        "pattern": "PART VERB",
+        "pattern": "PROPN PROPN",
         "freq": 6
        },
        {
@@ -7140,7 +7140,7 @@
         "freq": 5
        },
        {
-        "pattern": "VERB NOUN",
+        "pattern": "PRON AUX",
         "freq": 5
        },
        {
@@ -7148,7 +7148,7 @@
         "freq": 5
        },
        {
-        "pattern": "PRON AUX",
+        "pattern": "VERB NOUN",
         "freq": 5
        }
       ]
@@ -7220,12 +7220,12 @@
         "percent": 7.553
        },
        {
-        "pos": "PROPN",
+        "pos": "PRON",
         "freq": 21,
         "percent": 6.344
        },
        {
-        "pos": "PRON",
+        "pos": "PROPN",
         "freq": 21,
         "percent": 6.344
        },
@@ -7266,11 +7266,11 @@
         "freq": 10
        },
        {
-        "pattern": "NOUN VERB",
+        "pattern": "ADP NOUN",
         "freq": 9
        },
        {
-        "pattern": "ADP NOUN",
+        "pattern": "NOUN VERB",
         "freq": 9
        },
        {
@@ -7282,15 +7282,15 @@
         "freq": 7
        },
        {
-        "pattern": "VERB ADP",
-        "freq": 7
-       },
-       {
         "pattern": "PRON VERB",
         "freq": 7
        },
        {
-        "pattern": "PROPN PROPN",
+        "pattern": "VERB ADP",
+        "freq": 7
+       },
+       {
+        "pattern": "NOUN CCONJ",
         "freq": 6
        },
        {
@@ -7298,11 +7298,11 @@
         "freq": 6
        },
        {
-        "pattern": "NOUN CCONJ",
+        "pattern": "PART VERB",
         "freq": 6
        },
        {
-        "pattern": "PART VERB",
+        "pattern": "PROPN PROPN",
         "freq": 6
        },
        {
@@ -7310,7 +7310,7 @@
         "freq": 5
        },
        {
-        "pattern": "VERB NOUN",
+        "pattern": "PRON AUX",
         "freq": 5
        },
        {
@@ -7318,7 +7318,7 @@
         "freq": 5
        },
        {
-        "pattern": "PRON AUX",
+        "pattern": "VERB NOUN",
         "freq": 5
        }
       ]
@@ -7364,6 +7364,15 @@
          "pattern": "passive_voice",
          "doc": "<id>",
          "sent": 2,
+         "verb": "tagged",
+         "verb_lemma": "tag",
+         "aux": "was",
+         "evidence_id": "<id>:2:2"
+        },
+        {
+         "pattern": "passive_voice",
+         "doc": "<id>",
+         "sent": 2,
          "verb": "expected",
          "verb_lemma": "expect",
          "aux": "is",
@@ -7386,15 +7395,6 @@
          "verb_lemma": "go",
          "aux": "was",
          "evidence_id": "<id>:3:3"
-        },
-        {
-         "pattern": "passive_voice",
-         "doc": "<id>",
-         "sent": 2,
-         "verb": "tagged",
-         "verb_lemma": "tag",
-         "aux": "was",
-         "evidence_id": "<id>:2:2"
         },
         {
          "pattern": "passive_voice",

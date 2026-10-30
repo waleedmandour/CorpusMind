@@ -8,6 +8,47 @@ once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
 ## [Unreleased]
 
+### Fixed — boot-stable ordering for tied rows and capped examples (second gold-diff round)
+
+The gold-diff gate, re-run locally on a fresh boot after #43, flagged 8
+questions the CI boots had never caught: the SAME corpus produced different
+tool outputs on every boot. #43 killed the PYTHONHASHSEED instability, but a
+second entropy source remained — the token scan follows `document_id`, and
+those hex ids are minted fresh at every ingest. Any `most_common()` /
+stable-sort tie therefore resolved in per-boot random document order, and
+any example cap (`limit_examples`, `limit`) filled with whichever candidates
+that boot's scan happened to surface first:
+
+- **G-037/G-039 (n-grams):** count ties ordered by scan order; the
+  `limit` truncation could even change WHICH tied n-grams were returned.
+  The frozen gold's `top 2-gram` value itself was boot luck.
+- **G-070/G-071 (POS n-grams):** same for POS patterns and the tag
+  distribution.
+- **G-072 (grammar):** `passive_voice` example lists in scan order.
+- **G-067–G-069 (discourse cues):** `sorted(cue_set)` fixed the WITHIN-
+  sentence order (#43), but the sentence stream itself was doc-order —
+  categories with more candidates than `limit_examples` recorded a
+  different subset every boot.
+- Siblings with the identical shape, fixed preemptively: dependency rows +
+  first-3 examples, USAS/SFG/valency/UD-profile distributions and example
+  caps, collocation row order + tied display-form choice, frequency
+  morph-feature rows, and the group-distribution top list.
+
+**Fix convention (matches the #43 keyness rule):** count/measure descending,
+then the content key ascending (`ngram`, `pattern`, `collocate`, `term`,
+`(governor, dependent)`, frame/prep/feature); example lists sort by
+`(cue, sentence position, preview)` — the hex document prefix never
+participates in ordering — and caps are applied AFTER the sort. Covered by
+`tests/test_gold_determinism.py` (5 tests: exact tie order, truncation
+survivor, and order-property assertions).
+
+**Gold re-frozen (the reviewed event):** 14 questions differ — 13 only in
+tool-result provenance (row/example order); exactly ONE gold value changed:
+G-037's `top 2-gram` `said the` → `and I` (freq 2, lexicographically first
+of the freq-2 tie group). Verified boot-stable: two full 80-question
+rebuilds in fresh processes (including a different `PYTHONHASHSEED`) diff
+clean against the re-frozen file.
+
 ### Fixed — harness determinism + grounding gold re-freeze (reviewed)
 
 The first full gold-diff run (rebuild all 80 vs frozen) found the frozen

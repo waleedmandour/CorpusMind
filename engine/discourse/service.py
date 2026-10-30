@@ -48,6 +48,40 @@ class NGramResult:
     min_range: int  # minimum distinct documents required (§8.8 lexical bundles)
 
 
+def _evidence_position(evidence_id: str) -> tuple[int, int]:
+    """(sentence_idx, token_idx) parsed from ``'<doc>:<sent>:<idx>'``.
+
+    The doc prefix is a per-boot hex id, so it must NEVER participate in
+    output ordering — only the content position may.
+    """
+    rest = evidence_id.split(":", 1)[1] if ":" in evidence_id else evidence_id
+    sent, _, idx = rest.partition(":")
+    try:
+        s = int(sent)
+    except ValueError:
+        s = -1
+    try:
+        i = int(idx)
+    except ValueError:
+        i = -1
+    return s, i
+
+
+def _cue_example_key(e: dict) -> tuple:
+    """Boot-stable sort key for a cue/SFG/USAS example dict."""
+    return (
+        str(e.get("cue", "")),
+        *_evidence_position(str(e.get("evidence_id", ""))),
+        str(e.get("sentence_preview", "")),
+    )
+
+
+def _grammar_example_key(m: dict) -> tuple:
+    """Boot-stable sort key for a grammar-detector match (doc excluded)."""
+    stable = tuple(sorted((k, str(v)) for k, v in m.items() if k not in ("doc", "evidence_id")))
+    return (*_evidence_position(str(m.get("evidence_id", ""))), stable)
+
+
 async def compute_ngrams(
     session: AsyncSession,
     corpus_id: str,
@@ -148,8 +182,13 @@ async def compute_ngrams(
                 "range_percent": round((range_count / total_docs * 100) if total_docs else 0.0, 2),
             }
         )
-        if len(rows) >= limit:
-            break
+    # Boot-stable order (gold-diff G-037/G-039, 2026-10-30): most_common()
+    # preserves Counter insertion order for equal counts, and that insertion
+    # order follows document_id — a fresh hex per boot — so the tie order,
+    # AND which tied n-grams survived the limit truncation, differed between
+    # boots. Ties now break by ngram ascending; truncation happens after.
+    rows.sort(key=lambda r: (-r["freq"], r["ngram"]))
+    del rows[limit:]
 
     return NGramResult(
         n=n,
@@ -215,9 +254,11 @@ async def compute_pos_analysis(
     for pos, pos_fine, cnt in dist_rows:
         tag_counter[_tag(pos or "", pos_fine or "")] += cnt
     total = sum(tag_counter.values())
+    # Count-desc, then tag ascending — most_common() tie order follows
+    # SQL group-by order, which is not a stable contract across boots.
     distribution = [
         {"pos": p, "freq": c, "percent": round(c / total * 100, 3) if total else 0}
-        for p, c in tag_counter.most_common()
+        for p, c in sorted(tag_counter.items(), key=lambda kv: (-kv[1], kv[0]))
     ]
 
     # POS n-grams
@@ -248,9 +289,18 @@ async def compute_pos_analysis(
             pattern = " ".join(sent_pos[i : i + n])
             pos_ngram_counter[pattern] += 1
 
-    pos_ngrams = [
-        {"pattern": p, "freq": c} for p, c in pos_ngram_counter.most_common(limit) if c >= min_freq
-    ]
+    # Boot-stable order (gold-diff G-070/G-071, 2026-10-30): the Counter's
+    # insertion order follows document_id (fresh hex per boot), so ties —
+    # and the limit truncation inside tie groups — differed between boots.
+    # Count desc, then pattern ascending; truncate after the sort.
+    pos_ngrams = sorted(
+        (
+            {"pattern": p, "freq": c}
+            for p, c in pos_ngram_counter.items()
+            if c >= min_freq
+        ),
+        key=lambda r: (-r["freq"], r["pattern"]),
+    )[:limit]
 
     return POSResult(
         total_tokens=total, distribution=distribution, pos_ngrams=pos_ngrams, n=n, tagset=tagset
@@ -322,7 +372,7 @@ async def compute_semantic_analysis(
             "freq": c,
             "percent": round(c / matched * 100, 3) if matched else 0,
         }
-        for t, c in tag_counter.most_common(limit)
+        for t, c in sorted(tag_counter.items(), key=lambda kv: (-kv[1], kv[0]))[:limit]
     ]
     unmatched_percent = round((total - matched) / total * 100, 2) if total else 0.0
     return SemanticResult(
@@ -571,9 +621,17 @@ async def compute_grammar_analysis(
                 continue
             matches = detector(sent)
             for m in matches:
-                if len(results[pattern_name]) < limit:
-                    results[pattern_name].append(m)
+                results[pattern_name].append(m)
                 counts[pattern_name] += 1
+
+    # Boot-stable example order (gold-diff G-072, 2026-10-30): the sentence
+    # stream follows document_id — a fresh hex per boot — so which matches
+    # filled the limit cap, and their order, differed between boots. Sort
+    # every pattern's matches by content position before truncating; the
+    # counts above are order-independent.
+    for pattern_name in patterns:
+        results[pattern_name].sort(key=_grammar_example_key)
+        del results[pattern_name][limit:]
 
     return GrammarResult(patterns=results, counts=counts)
 
@@ -615,19 +673,21 @@ async def compute_dependency_analysis(
                 head = sent[head_idx]
                 pair = (head["lemma"], tok["lemma"])
                 pair_counter[pair] += 1
-                if len(examples[pair]) < 3:
-                    examples[pair].append(f"{tok['doc']}:{tok['sent']}:{tok['idx']}")
+                examples[pair].append(f"{tok['doc']}:{tok['sent']}:{tok['idx']}")
 
+    # Boot-stable order (same family as gold-diff G-067..G-072, 2026-10-30):
+    # rows sort by freq desc then (governor, dependent); the first-3
+    # examples per pair sort by sentence position (the doc prefix of the
+    # evidence id is a per-boot hex and must not order output).
     rows = [
         {
             "governor": gov,
             "dependent": dep,
             "relation": relation,
             "freq": freq,
-            "examples": ex,
+            "examples": sorted(examples[(gov, dep)], key=_evidence_position)[:3],
         }
-        for (gov, dep), freq in pair_counter.most_common(limit)
-        for ex in [examples[(gov, dep)]]
+        for (gov, dep), freq in sorted(pair_counter.items(), key=lambda kv: (-kv[1], kv[0]))[:limit]
     ]
 
     return DependencyResult(relation=relation, rows=rows)
@@ -1125,16 +1185,15 @@ def _detect_lexical_cohesion(
             lemma = t["lemma"].lower()
             if t.get("pos") in content_pos and len(lemma) > 2 and lemma in a_lemmas and lemma not in seen:
                 seen.add(lemma)
-                if len(category_examples["lexical.repetition"]) < limit_examples:
-                    category_examples["lexical.repetition"].append(
-                        {
-                            "cue": lemma,
-                            "evidence_id": f"{t['doc']}:{t['sent']}:{t['idx']}",
-                            "sentence_preview": " ".join(
-                                x["text"].lower() for x in b
-                            )[:120],
-                        }
-                    )
+                category_examples["lexical.repetition"].append(
+                    {
+                        "cue": lemma,
+                        "evidence_id": f"{t['doc']}:{t['sent']}:{t['idx']}",
+                        "sentence_preview": " ".join(
+                            x["text"].lower() for x in b
+                        )[:120],
+                    }
+                )
                 category_counts["lexical.repetition"] += 1
                 if category_doc_counts is not None:
                     # attributed to the document of the repeating sentence
@@ -1192,18 +1251,21 @@ def _count_cue_categories(
             # "me") the ORDER of the recorded examples — and therefore the
             # frozen gold's "Nth example" — was not reproducible. Counts
             # are order-independent; only the example list needs this.
+            # (Examples themselves are capped AFTER collection — see the
+            # boot-stable sort at the end of this function: the sentence
+            # stream follows document_id, a fresh hex per boot, so the
+            # FIRST limit_examples matches differed between boots.)
             for cue in sorted(cue_set):
                 # Multi-word cues: check if it appears as a substring of the sentence
                 if " " in cue:
                     if cue in sent_lower:
-                        if len(category_examples[cat_name]) < limit_examples:
-                            category_examples[cat_name].append(
-                                {
-                                    "cue": cue,
-                                    "evidence_id": f"{sent[0]['doc']}:{sent[0]['sent']}:0",
-                                    "sentence_preview": sent_lower[:120],
-                                }
-                            )
+                        category_examples[cat_name].append(
+                            {
+                                "cue": cue,
+                                "evidence_id": f"{sent[0]['doc']}:{sent[0]['sent']}:0",
+                                "sentence_preview": sent_lower[:120],
+                            }
+                        )
                         category_counts[cat_name] += 1
                         category_doc_counts[cat_name][sent[0]["doc"]] += 1
                         cat_hit = True
@@ -1211,14 +1273,13 @@ def _count_cue_categories(
                     # Single-word: match against individual tokens
                     for tok in sent:
                         if tok["text"].lower() == cue:
-                            if len(category_examples[cat_name]) < limit_examples:
-                                category_examples[cat_name].append(
-                                    {
-                                        "cue": cue,
-                                        "evidence_id": f"{tok['doc']}:{tok['sent']}:{tok['idx']}",
-                                        "sentence_preview": sent_lower[:120],
-                                    }
-                                )
+                            category_examples[cat_name].append(
+                                {
+                                    "cue": cue,
+                                    "evidence_id": f"{tok['doc']}:{tok['sent']}:{tok['idx']}",
+                                    "sentence_preview": sent_lower[:120],
+                                }
+                            )
                             category_counts[cat_name] += 1
                             category_doc_counts[cat_name][tok["doc"]] += 1
                             cat_hit = True
@@ -1240,6 +1301,16 @@ def _count_cue_categories(
             category_examples=category_examples,
             category_doc_counts=category_doc_counts,
         )
+
+    # Boot-stable example order (gold-diff G-067..G-069, 2026-10-30): the
+    # sentence stream follows document_id — a fresh hex per boot — so which
+    # candidates filled the limit_examples cap, and their order, differed
+    # between boots whenever a category had more candidates than the cap.
+    # Sort every category's examples by content (cue, sentence position,
+    # preview) before truncating; the counts above are order-independent.
+    for exs in category_examples.values():
+        exs.sort(key=_cue_example_key)
+        del exs[limit_examples:]
 
     return (
         category_counts,
@@ -1486,14 +1557,20 @@ async def _count_usas_tags(
         matched += 1
         tag_counts[tag] += 1
         tag_doc_counts[tag][doc_id] += 1
-        if len(tag_examples[tag]) < limit_examples:
-            tag_examples[tag].append(
-                {
-                    "cue": (lemma or text or "").lower(),
-                    "evidence_id": f"{doc_id}:{sent_idx}:{tok_idx}",
-                    "sentence_preview": "",
-                }
-            )
+        tag_examples[tag].append(
+            {
+                "cue": (lemma or text or "").lower(),
+                "evidence_id": f"{doc_id}:{sent_idx}:{tok_idx}",
+                "sentence_preview": "",
+            }
+        )
+    # Boot-stable example order (same family as gold-diff G-067..G-069,
+    # 2026-10-30): the token stream follows document_id — a fresh hex per
+    # boot — so the first limit_examples matches differed between boots.
+    # Sort by content before truncating.
+    for exs in tag_examples.values():
+        exs.sort(key=_cue_example_key)
+        del exs[limit_examples:]
     return tag_counts, tag_examples, tag_doc_counts, doc_sizes, matched, total_tokens
 
 
@@ -1544,7 +1621,7 @@ async def compute_usas_discourse_analysis(
     dp_by_cat = _per_category_dp(tag_counts, tag_doc_counts, doc_sizes)
 
     categories: dict[str, dict] = {}
-    for tag, count in tag_counts.most_common():
+    for tag, count in sorted(tag_counts.items(), key=lambda kv: (-kv[1], kv[0])):
         per_million = (count / total_tokens * 1_000_000) if total_tokens else 0.0
         categories[tag] = {
             "freq": count,
@@ -1666,7 +1743,7 @@ async def compute_ud_profile(session: AsyncSession, corpus_id: str) -> UDProfile
             "freq": freq,
             "per_million": round(freq / total * 1_000_000, 2) if total else 0.0,
         }
-        for rel, freq in rel_counts.most_common()
+        for rel, freq in sorted(rel_counts.items(), key=lambda kv: (-kv[1], kv[0]))
         if (info := UD_RELATION_INFO.get(rel))
     ]
 
@@ -1682,7 +1759,7 @@ async def compute_ud_profile(session: AsyncSession, corpus_id: str) -> UDProfile
             "freq": freq,
             "percent": round(freq / total * 100, 2) if total else 0.0,
         }
-        for g, freq in group_counts.most_common()
+        for g, freq in sorted(group_counts.items(), key=lambda kv: (-kv[1], kv[0]))
     ]
     return UDProfileResult(total_relations=total, relations=relations, groups=groups)
 
@@ -1769,23 +1846,26 @@ async def compute_valency_frames(
                 continue
             frame = "+".join(sorted(set(slots)))
             frame_counts[frame] += 1
-            if len(frame_examples[frame]) < 3:
-                frame_examples[frame].append(f"{tok['doc']}:{tok['sent']}")
+            frame_examples[frame].append(f"{tok['doc']}:{tok['sent']}")
             if prep:
                 obl_preps[prep] += 1
 
+    # Boot-stable order (same family as gold-diff G-072, 2026-10-30): the
+    # sentence stream follows document_id — a fresh hex per boot — so tie
+    # order and cap membership differed between boots. Count desc, then
+    # frame/prep ascending; examples sorted by sentence position.
     frames = [
         {
             "frame": frame,
             "freq": freq,
             "percent": round(freq / total_heads * 100, 2) if total_heads else 0.0,
-            "examples": frame_examples[frame],
+            "examples": sorted(frame_examples[frame], key=_evidence_position)[:3],
         }
-        for frame, freq in frame_counts.most_common(limit)
+        for frame, freq in sorted(frame_counts.items(), key=lambda kv: (-kv[1], kv[0]))[:limit]
     ]
     obliques = [
         {"prep": prep, "freq": freq}
-        for prep, freq in obl_preps.most_common(10)
+        for prep, freq in sorted(obl_preps.items(), key=lambda kv: (-kv[1], kv[0]))[:10]
     ]
     return ValencyResult(lemma=target, total_occurrences=total_heads, frames=frames, obliques=obliques)
 
@@ -2263,20 +2343,24 @@ def _count_sfg_categories(
             if process:
                 matched_clauses += 1
                 counts[process] += 1
-                if len(examples[process]) < limit_examples:
-                    examples[process].append(
-                        {"cue": (verb.get("lemma") or "").lower(),
-                         "evidence_id": evidence_id,
-                         "sentence_preview": sent_lower[:120]}
-                    )
+                examples[process].append(
+                    {"cue": (verb.get("lemma") or "").lower(),
+                     "evidence_id": evidence_id,
+                     "sentence_preview": sent_lower[:120]}
+                )
             for cat in _clause_modality_categories(sent, verb):
                 counts[cat] += 1
-                if len(examples[cat]) < limit_examples:
-                    examples[cat].append(
-                        {"cue": (verb.get("lemma") or "").lower(),
-                         "evidence_id": evidence_id,
-                         "sentence_preview": sent_lower[:120]}
-                    )
+                examples[cat].append(
+                    {"cue": (verb.get("lemma") or "").lower(),
+                     "evidence_id": evidence_id,
+                     "sentence_preview": sent_lower[:120]}
+                )
+    # Boot-stable example order (same family as gold-diff G-067..G-069,
+    # 2026-10-30): sort by content before truncating — the sentence stream
+    # follows document_id, a fresh hex per boot.
+    for exs in examples.values():
+        exs.sort(key=_cue_example_key)
+        del exs[limit_examples:]
     return counts, examples, total_clauses, matched_clauses
 
 
@@ -2315,7 +2399,7 @@ async def compute_sfg_discourse_analysis(
     )
 
     categories: dict[str, dict] = {}
-    for cat, count in counts.most_common():
+    for cat, count in sorted(counts.items(), key=lambda kv: (-kv[1], kv[0])):
         per_million = (count / total_tokens * 1_000_000) if total_tokens else 0.0
         categories[cat] = {
             "freq": count,
