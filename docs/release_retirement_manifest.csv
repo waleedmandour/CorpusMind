@@ -1,0 +1,441 @@
+tag,asset,size_bytes,downloads,action
+v2.0.1,corpusmind-web-v2.0.1.zip,2395913,3,keep
+v2.0.1,CorpusMind_2.0.1_aarch64.dmg,250002169,2,keep
+v2.0.1,CorpusMind_2.0.1_amd64.AppImage,404027896,2,keep
+v2.0.1,CorpusMind_2.0.1_amd64.deb,371212960,2,keep
+v2.0.1,CorpusMind_2.0.1_x64-setup.exe,217060988,1,keep
+v2.0.1,CorpusMind_2.0.1_x64.dmg,262481875,1,keep
+v2.0.1,CorpusMind_2.0.1_x64_en-US.msi,275643538,1,keep
+v2.0.1,CorpusMind_User_Guide_v2.0.1.pdf,557958,0,keep
+v2.0.1,SHA256SUMS.txt,762,0,keep
+v2.0.0,corpusmind-web-v2.0.0.zip,2395916,2,keep
+v2.0.0,CorpusMind_2.0.0_aarch64.dmg,249725778,2,keep
+v2.0.0,CorpusMind_2.0.0_amd64.AppImage,403810808,2,keep
+v2.0.0,CorpusMind_2.0.0_amd64.deb,370985350,2,keep
+v2.0.0,CorpusMind_2.0.0_x64-setup.exe,216879443,3,keep
+v2.0.0,CorpusMind_2.0.0_x64.dmg,262354789,2,keep
+v2.0.0,CorpusMind_2.0.0_x64_en-US.msi,275465827,2,keep
+v2.0.0,CorpusMind_User_Guide_v2.0.0.pdf,557960,1,keep
+v2.0.0,SHA256SUMS.txt,762,1,keep
+v1.2.14,corpusmind-web-v1.2.14.zip,2395848,2,keep (not an installer)
+v1.2.14,CorpusMind_1.2.14_aarch64.dmg,248437541,7,delete
+v1.2.14,CorpusMind_1.2.14_amd64.AppImage,399378936,4,delete
+v1.2.14,CorpusMind_1.2.14_amd64.deb,366163716,2,delete
+v1.2.14,CorpusMind_1.2.14_x64-setup.exe,216157322,4,delete
+v1.2.14,CorpusMind_1.2.14_x64.dmg,261604075,10,delete
+v1.2.14,CorpusMind_1.2.14_x64_en-US.msi,274299974,2,delete
+v1.2.14,CorpusMind_User_Guide_v1.2.14.pdf,557876,11,keep (not an installer)
+v1.2.14,SHA256SUMS.txt,770,1,keep (not an installer)
+v1.2.14-9,corpusmind-web-v1.2.14-9.zip,2391904,2,keep (not an installer)
+v1.2.14-9,CorpusMind_1.2.14-9_aarch64.dmg,248394096,2,delete
+v1.2.14-9,CorpusMind_1.2.14-9_amd64.AppImage,399358456,2,delete
+v1.2.14-9,CorpusMind_1.2.14-9_amd64.deb,366157482,2,delete
+v1.2.14-9,CorpusMind_1.2.14-9_x64-setup.exe,216191483,4,delete
+v1.2.14-9,CorpusMind_1.2.14-9_x64.dmg,261624267,2,delete
+v1.2.14-9,CorpusMind_1.2.14-9_x64_en-US.msi,274340910,2,delete
+v1.2.14-9,CorpusMind_User_Guide_v1.2.14-9.pdf,557159,1,keep (not an installer)
+v1.2.14-9,SHA256SUMS.txt,684,1,keep (not an installer)
+v1.2.14-11,corpusmind-web-v1.2.14-11.zip,2395852,2,keep (not an installer)
+v1.2.14-11,CorpusMind_1.2.14-11_aarch64.dmg,248426434,3,delete
+v1.2.14-11,CorpusMind_1.2.14-11_amd64.AppImage,399383032,3,delete
+v1.2.14-11,CorpusMind_1.2.14-11_amd64.deb,366171858,2,delete
+v1.2.14-11,CorpusMind_1.2.14-11_x64-setup.exe,216154764,4,delete
+v1.2.14-11,CorpusMind_1.2.14-11_x64.dmg,261585839,3,delete
+v1.2.14-11,CorpusMind_1.2.14-11_x64_en-US.msi,274283593,2,delete
+v1.2.14-11,CorpusMind_User_Guide_v1.2.14-11.pdf,557938,2,keep (not an installer)
+v1.2.14-11,SHA256SUMS.txt,794,3,keep (not an installer)
+v1.2.14-10,corpusmind-web-v1.2.14-10.zip,2391897,2,keep (not an installer)
+v1.2.14-10,CorpusMind_1.2.14-10_aarch64.dmg,248366440,2,delete
+v1.2.14-10,CorpusMind_1.2.14-10_amd64.AppImage,399313400,2,delete
+v1.2.14-10,CorpusMind_1.2.14-10_amd64.deb,366075350,2,delete
+v1.2.14-10,CorpusMind_1.2.14-10_x64-setup.exe,216069888,3,delete
+v1.2.14-10,CorpusMind_1.2.14-10_x64.dmg,261496806,2,delete
+v1.2.14-10,CorpusMind_1.2.14-10_x64_en-US.msi,274197577,2,delete
+v1.2.14-10,CorpusMind_User_Guide_v1.2.14-10.pdf,557129,1,keep (not an installer)
+v1.2.14-10,SHA256SUMS.txt,794,2,keep (not an installer)
+v1.2.14-8,corpusmind-web-v1.2.14-8.zip,2391434,3,keep (not an installer)
+v1.2.14-8,CorpusMind_1.2.14-8_aarch64.dmg,248397320,3,delete
+v1.2.14-8,CorpusMind_1.2.14-8_amd64.AppImage,399358456,4,delete
+v1.2.14-8,CorpusMind_1.2.14-8_amd64.deb,366124584,3,delete
+v1.2.14-8,CorpusMind_1.2.14-8_x64-setup.exe,216198733,4,delete
+v1.2.14-8,CorpusMind_1.2.14-8_x64.dmg,261634831,3,delete
+v1.2.14-8,CorpusMind_1.2.14-8_x64_en-US.msi,274332718,3,delete
+v1.2.14-8,CorpusMind_User_Guide_v1.2.14-8.pdf,556477,1,keep (not an installer)
+v1.2.14-8,SHA256SUMS.txt,786,1,keep (not an installer)
+v1.2.14-7,corpusmind-web-v1.2.14-7.zip,2388543,2,keep (not an installer)
+v1.2.14-7,CorpusMind_1.2.14-7_aarch64.dmg,248413481,2,delete
+v1.2.14-7,CorpusMind_1.2.14-7_amd64.AppImage,399337976,2,delete
+v1.2.14-7,CorpusMind_1.2.14-7_amd64.deb,366107340,2,delete
+v1.2.14-7,CorpusMind_1.2.14-7_x64-setup.exe,216170859,3,delete
+v1.2.14-7,CorpusMind_1.2.14-7_x64.dmg,261610727,2,delete
+v1.2.14-7,CorpusMind_1.2.14-7_x64_en-US.msi,274320430,2,delete
+v1.2.14-7,CorpusMind_User_Guide_v1.2.14-7.pdf,554865,1,keep (not an installer)
+v1.2.14-7,SHA256SUMS.txt,684,2,keep (not an installer)
+v1.2.14-6,corpusmind-web-v1.2.14-6.zip,2376816,2,keep (not an installer)
+v1.2.14-6,CorpusMind_1.2.14-6_aarch64.dmg,248395349,2,delete
+v1.2.14-6,CorpusMind_1.2.14-6_amd64.AppImage,399325688,2,delete
+v1.2.14-6,CorpusMind_1.2.14-6_amd64.deb,366077138,2,delete
+v1.2.14-6,CorpusMind_1.2.14-6_x64-setup.exe,216162318,3,delete
+v1.2.14-6,CorpusMind_1.2.14-6_x64.dmg,261553369,2,delete
+v1.2.14-6,CorpusMind_1.2.14-6_x64_en-US.msi,274328622,2,delete
+v1.2.14-6,CorpusMind_User_Guide_v1.2.14-6.pdf,554865,1,keep (not an installer)
+v1.2.14-6,SHA256SUMS.txt,684,1,keep (not an installer)
+v1.2.14-5,corpusmind-web-v1.2.14-5.zip,2376818,2,keep (not an installer)
+v1.2.14-5,CorpusMind_1.2.14-5_aarch64.dmg,248390877,3,delete
+v1.2.14-5,CorpusMind_1.2.14-5_amd64.AppImage,399317496,3,delete
+v1.2.14-5,CorpusMind_1.2.14-5_amd64.deb,366068712,2,delete
+v1.2.14-5,CorpusMind_1.2.14-5_x64-setup.exe,216142607,5,delete
+v1.2.14-5,CorpusMind_1.2.14-5_x64.dmg,261547244,4,delete
+v1.2.14-5,CorpusMind_1.2.14-5_x64_en-US.msi,274295854,2,delete
+v1.2.14-5,CorpusMind_User_Guide_v1.2.14-5.pdf,554868,3,keep (not an installer)
+v1.2.14-5,SHA256SUMS.txt,684,3,keep (not an installer)
+v1.2.14-4,corpusmind-web-v1.2.14-4.zip,2376821,2,keep (not an installer)
+v1.2.14-4,CorpusMind_1.2.14-4_aarch64.dmg,248391283,3,delete
+v1.2.14-4,CorpusMind_1.2.14-4_amd64.AppImage,399313400,3,delete
+v1.2.14-4,CorpusMind_1.2.14-4_amd64.deb,366085222,2,delete
+v1.2.14-4,CorpusMind_1.2.14-4_x64-setup.exe,216144420,4,delete
+v1.2.14-4,CorpusMind_1.2.14-4_x64.dmg,261542112,3,delete
+v1.2.14-4,CorpusMind_1.2.14-4_x64_en-US.msi,274308142,2,delete
+v1.2.14-4,CorpusMind_User_Guide_v1.2.14-4.pdf,554866,3,keep (not an installer)
+v1.2.14-4,SHA256SUMS.txt,684,2,keep (not an installer)
+v1.2.14-3,corpusmind-web-v1.2.14-3.zip,2365869,2,keep (not an installer)
+v1.2.14-3,CorpusMind_1.2.14-3_aarch64.dmg,248324646,3,delete
+v1.2.14-3,CorpusMind_1.2.14-3_amd64.AppImage,399284728,3,delete
+v1.2.14-3,CorpusMind_1.2.14-3_amd64.deb,366045488,3,delete
+v1.2.14-3,CorpusMind_1.2.14-3_x64-setup.exe,216130703,3,delete
+v1.2.14-3,CorpusMind_1.2.14-3_x64.dmg,261499349,3,delete
+v1.2.14-3,CorpusMind_1.2.14-3_x64_en-US.msi,274271278,2,delete
+v1.2.14-3,CorpusMind_User_Guide_v1.2.14-3.pdf,554052,2,keep (not an installer)
+v1.2.14-3,SHA256SUMS.txt,684,1,keep (not an installer)
+v1.2.14-2,corpusmind-web-v1.2.14-2.zip,2486094,2,keep (not an installer)
+v1.2.14-2,CorpusMind_1.2.14-2_aarch64.dmg,248061996,3,delete
+v1.2.14-2,CorpusMind_1.2.14-2_amd64.AppImage,398862840,3,delete
+v1.2.14-2,CorpusMind_1.2.14-2_amd64.deb,365525760,3,delete
+v1.2.14-2,CorpusMind_1.2.14-2_x64-setup.exe,215991795,4,delete
+v1.2.14-2,CorpusMind_1.2.14-2_x64.dmg,261472315,6,delete
+v1.2.14-2,CorpusMind_1.2.14-2_x64_en-US.msi,274059249,3,delete
+v1.2.14-2,CorpusMind_User_Guide_Arabic_v1.2.14-2.pdf,578196,3,keep (not an installer)
+v1.2.14-2,CorpusMind_User_Guide_v1.2.14-2.pdf,553241,3,keep (not an installer)
+v1.2.14-2,SHA256SUMS.txt,895,3,keep (not an installer)
+v1.2.14-1,corpusmind-web-v1.2.14-1.zip,2480804,3,keep (not an installer)
+v1.2.14-1,CorpusMind_1.2.14-1_aarch64.dmg,248081508,2,delete
+v1.2.14-1,CorpusMind_1.2.14-1_amd64.AppImage,398858744,2,delete
+v1.2.14-1,CorpusMind_1.2.14-1_amd64.deb,365518310,2,delete
+v1.2.14-1,CorpusMind_1.2.14-1_x64-setup.exe,215986179,3,delete
+v1.2.14-1,CorpusMind_1.2.14-1_x64.dmg,261476336,2,delete
+v1.2.14-1,CorpusMind_1.2.14-1_x64_en-US.msi,274051056,4,delete
+v1.2.14-1,SHA256SUMS.txt,684,1,keep (not an installer)
+v1.2.13,corpusmind-web-v1.2.13.zip,2476499,3,keep (not an installer)
+v1.2.13,CorpusMind_1.2.13_aarch64.dmg,287852537,7,delete
+v1.2.13,CorpusMind_1.2.13_amd64.AppImage,398821880,5,delete
+v1.2.13,CorpusMind_1.2.13_amd64.deb,365468924,3,delete
+v1.2.13,CorpusMind_1.2.13_x64-setup.exe,215942984,11,delete
+v1.2.13,CorpusMind_1.2.13_x64.dmg,300976265,6,delete
+v1.2.13,CorpusMind_1.2.13_x64_en-US.msi,273997503,3,delete
+v1.2.13,CorpusMind_User_Guide_v1.2.13.pdf,553241,6,keep (not an installer)
+v1.2.13,SHA256SUMS.txt,670,2,keep (not an installer)
+v1.2.13-2,corpusmind-web-v1.2.13-2.zip,2476467,2,keep (not an installer)
+v1.2.13-2,CorpusMind_1.2.13-2_aarch64.dmg,248032494,2,delete
+v1.2.13-2,CorpusMind_1.2.13-2_amd64.AppImage,398817784,2,delete
+v1.2.13-2,CorpusMind_1.2.13-2_amd64.deb,365465120,2,delete
+v1.2.13-2,CorpusMind_1.2.13-2_x64-setup.exe,215948808,4,delete
+v1.2.13-2,CorpusMind_1.2.13-2_x64.dmg,261367749,2,delete
+v1.2.13-2,CorpusMind_1.2.13-2_x64_en-US.msi,273985217,2,delete
+v1.2.13-2,CorpusMind_User_Guide_v1.2.13-2.pdf,553281,1,keep (not an installer)
+v1.2.13-2,SHA256SUMS.txt,684,1,keep (not an installer)
+v1.2.12,corpusmind-web-v1.2.12.zip,2456694,2,keep (not an installer)
+v1.2.12,CorpusMind_1.2.12_aarch64.dmg,247831611,2,delete
+v1.2.12,CorpusMind_1.2.12_amd64.AppImage,398670328,3,delete
+v1.2.12,CorpusMind_1.2.12_amd64.deb,365320396,2,delete
+v1.2.12,CorpusMind_1.2.12_x64-setup.exe,215834368,4,delete
+v1.2.12,CorpusMind_1.2.12_x64.dmg,261249858,2,delete
+v1.2.12,CorpusMind_1.2.12_x64_en-US.msi,273858239,3,delete
+v1.2.12,CorpusMind_Classroom_Server_Guide_AR-EN_v1.2.12.pdf,625417,1,keep (not an installer)
+v1.2.12,CorpusMind_User_Guide_v1.2.12.pdf,547688,3,keep (not an installer)
+v1.2.12,SHA256SUMS.txt,670,1,keep (not an installer)
+v1.2.12-rc7,corpusmind-web-v1.2.12-rc7.zip,2456695,2,keep (not an installer)
+v1.2.12-rc7,CorpusMind_1.2.12_aarch64.dmg,247818781,2,delete
+v1.2.12-rc7,CorpusMind_1.2.12_amd64.AppImage,398645752,2,delete
+v1.2.12-rc7,CorpusMind_1.2.12_amd64.deb,365294530,2,delete
+v1.2.12-rc7,CorpusMind_1.2.12_x64-setup.exe,215836494,3,delete
+v1.2.12-rc7,CorpusMind_1.2.12_x64.dmg,261231442,2,delete
+v1.2.12-rc7,CorpusMind_1.2.12_x64_en-US.msi,273878719,2,delete
+v1.2.12-rc7,CorpusMind_User_Guide_v1.2.12.pdf,547688,0,keep (not an installer)
+v1.2.12-rc7,SHA256SUMS.txt,674,2,keep (not an installer)
+v1.2.12-rc6,corpusmind-web-v1.2.12-rc6.zip,2454563,2,keep (not an installer)
+v1.2.12-rc6,CorpusMind_1.2.12_aarch64.dmg,247510074,3,delete
+v1.2.12-rc6,CorpusMind_1.2.12_amd64.AppImage,398268920,3,delete
+v1.2.12-rc6,CorpusMind_1.2.12_amd64.deb,364914182,2,delete
+v1.2.12-rc6,CorpusMind_1.2.12_x64-setup.exe,215451074,3,delete
+v1.2.12-rc6,CorpusMind_1.2.12_x64.dmg,260873755,3,delete
+v1.2.12-rc6,CorpusMind_1.2.12_x64_en-US.msi,273467613,3,delete
+v1.2.12-rc6,CorpusMind_User_Guide_v1.2.12.pdf,547688,1,keep (not an installer)
+v1.2.12-rc6,SHA256SUMS.txt,674,1,keep (not an installer)
+v1.2.12-rc5,corpusmind-web-v1.2.12-rc5.zip,2454231,2,keep (not an installer)
+v1.2.12-rc5,CorpusMind_1.2.12_aarch64.dmg,247486351,2,delete
+v1.2.12-rc5,CorpusMind_1.2.12_amd64.AppImage,398273016,2,delete
+v1.2.12-rc5,CorpusMind_1.2.12_amd64.deb,364908256,2,delete
+v1.2.12-rc5,CorpusMind_1.2.12_x64-setup.exe,215433583,3,delete
+v1.2.12-rc5,CorpusMind_1.2.12_x64.dmg,260858809,2,delete
+v1.2.12-rc5,CorpusMind_1.2.12_x64_en-US.msi,273483997,2,delete
+v1.2.12-rc5,CorpusMind_User_Guide_v1.2.12.pdf,547688,0,keep (not an installer)
+v1.2.12-rc5,SHA256SUMS.txt,674,1,keep (not an installer)
+v1.2.12-rc4,corpusmind-web-v1.2.12-rc4.zip,2454170,2,keep (not an installer)
+v1.2.12-rc4,CorpusMind_1.2.12_aarch64.dmg,247487534,2,delete
+v1.2.12-rc4,CorpusMind_1.2.12_amd64.AppImage,398268920,2,delete
+v1.2.12-rc4,CorpusMind_1.2.12_amd64.deb,364911600,2,delete
+v1.2.12-rc4,CorpusMind_1.2.12_x64-setup.exe,215416022,3,delete
+v1.2.12-rc4,CorpusMind_1.2.12_x64.dmg,260855539,2,delete
+v1.2.12-rc4,CorpusMind_1.2.12_x64_en-US.msi,273463517,2,delete
+v1.2.12-rc4,CorpusMind_User_Guide_v1.2.12.pdf,547688,0,keep (not an installer)
+v1.2.12-rc4,SHA256SUMS.txt,674,1,keep (not an installer)
+v1.2.12-rc3,corpusmind-web-v1.2.12-rc3.zip,2451039,2,keep (not an installer)
+v1.2.12-rc3,CorpusMind_1.2.12_aarch64.dmg,247339601,2,delete
+v1.2.12-rc3,CorpusMind_1.2.12_amd64.AppImage,398162424,2,delete
+v1.2.12-rc3,CorpusMind_1.2.12_amd64.deb,364789526,3,delete
+v1.2.12-rc3,CorpusMind_1.2.12_x64-setup.exe,215318413,3,delete
+v1.2.12-rc3,CorpusMind_1.2.12_x64.dmg,260703209,2,delete
+v1.2.12-rc3,CorpusMind_1.2.12_x64_en-US.msi,273320157,2,delete
+v1.2.12-rc3,CorpusMind_Classroom_Server_Guide_AR-EN_v1.2.12.pdf,625417,1,keep (not an installer)
+v1.2.12-rc3,CorpusMind_User_Guide_v1.2.12.pdf,547688,0,keep (not an installer)
+v1.2.12-rc3,SHA256SUMS.txt,674,1,keep (not an installer)
+v1.2.12-rc2,corpusmind-web-v1.2.12-rc2.zip,2451038,2,keep (not an installer)
+v1.2.12-rc2,CorpusMind_1.2.12_aarch64.dmg,247335138,2,delete
+v1.2.12-rc2,CorpusMind_1.2.12_amd64.AppImage,398162424,2,delete
+v1.2.12-rc2,CorpusMind_1.2.12_amd64.deb,364789372,2,delete
+v1.2.12-rc2,CorpusMind_1.2.12_x64-setup.exe,215314316,2,delete
+v1.2.12-rc2,CorpusMind_1.2.12_x64.dmg,260705662,3,delete
+v1.2.12-rc2,CorpusMind_1.2.12_x64_en-US.msi,273316061,2,delete
+v1.2.12-rc2,SHA256SUMS.txt,674,1,keep (not an installer)
+v1.2.11,corpusmind-web-v1.2.11.zip,2448579,2,keep (not an installer)
+v1.2.11,CorpusMind_1.2.11_aarch64.dmg,247363667,2,delete
+v1.2.11,CorpusMind_1.2.11_amd64.AppImage,398162424,2,delete
+v1.2.11,CorpusMind_1.2.11_amd64.deb,364795070,2,delete
+v1.2.11,CorpusMind_1.2.11_x64-setup.exe,215298640,2,delete
+v1.2.11,CorpusMind_1.2.11_x64.dmg,260704543,2,delete
+v1.2.11,CorpusMind_1.2.11_x64_en-US.msi,273279197,2,delete
+v1.2.11,CorpusMind_User_Guide_v1.2.11.pdf,546811,1,keep (not an installer)
+v1.2.11,SHA256SUMS.txt,670,1,keep (not an installer)
+v1.2.11-rc3,corpusmind-web-v1.2.11-rc3.zip,2448579,2,keep (not an installer)
+v1.2.11-rc3,CorpusMind_1.2.11_aarch64.dmg,247367966,2,delete
+v1.2.11-rc3,CorpusMind_1.2.11_amd64.AppImage,398158328,2,delete
+v1.2.11-rc3,CorpusMind_1.2.11_amd64.deb,364795866,2,delete
+v1.2.11-rc3,CorpusMind_1.2.11_x64-setup.exe,215310243,2,delete
+v1.2.11-rc3,CorpusMind_1.2.11_x64.dmg,260701886,2,delete
+v1.2.11-rc3,CorpusMind_1.2.11_x64_en-US.msi,273307869,2,delete
+v1.2.11-rc3,CorpusMind_User_Guide_v1.2.11.pdf,546811,0,keep (not an installer)
+v1.2.11-rc3,SHA256SUMS.txt,674,1,keep (not an installer)
+v1.2.11-rc2,corpusmind-web-v1.2.11-rc2.zip,2447440,2,keep (not an installer)
+v1.2.11-rc2,CorpusMind_1.2.11_aarch64.dmg,247354914,2,delete
+v1.2.11-rc2,CorpusMind_1.2.11_amd64.AppImage,398195192,2,delete
+v1.2.11-rc2,CorpusMind_1.2.11_amd64.deb,364803990,2,delete
+v1.2.11-rc2,CorpusMind_1.2.11_x64-setup.exe,215320018,3,delete
+v1.2.11-rc2,CorpusMind_1.2.11_x64.dmg,260714837,2,delete
+v1.2.11-rc2,CorpusMind_1.2.11_x64_en-US.msi,273299677,2,delete
+v1.2.11-rc2,CorpusMind_User_Guide_v1.2.11.pdf,546811,0,keep (not an installer)
+v1.2.11-rc2,SHA256SUMS.txt,674,1,keep (not an installer)
+v1.2.11-rc1,corpusmind-web-v1.2.11-rc1.zip,2446000,2,keep (not an installer)
+v1.2.11-rc1,CorpusMind_1.2.11_aarch64.dmg,247375621,2,delete
+v1.2.11-rc1,CorpusMind_1.2.11_amd64.AppImage,398166520,2,delete
+v1.2.11-rc1,CorpusMind_1.2.11_amd64.deb,364771940,2,delete
+v1.2.11-rc1,CorpusMind_1.2.11_x64-setup.exe,215312704,3,delete
+v1.2.11-rc1,CorpusMind_1.2.11_x64.dmg,260736169,2,delete
+v1.2.11-rc1,CorpusMind_1.2.11_x64_en-US.msi,273332445,2,delete
+v1.2.11-rc1,CorpusMind_User_Guide_v1.2.11.pdf,546811,0,keep (not an installer)
+v1.2.11-rc1,SHA256SUMS.txt,755,2,keep (not an installer)
+v1.2.10,corpusmind-web-v1.2.10.zip,1396468,2,keep (not an installer)
+v1.2.10,CorpusMind_1.2.10_aarch64.dmg,191029970,27,delete
+v1.2.10,CorpusMind_1.2.10_amd64.AppImage,340007416,3,delete
+v1.2.10,CorpusMind_1.2.10_amd64.deb,302943958,2,delete
+v1.2.10,CorpusMind_1.2.10_x64-setup.exe,169019704,30,delete
+v1.2.10,CorpusMind_1.2.10_x64.dmg,203235249,28,delete
+v1.2.10,CorpusMind_1.2.10_x64_en-US.msi,215828477,3,delete
+v1.2.10,CorpusMind_User_Guide_v1.2.10.pdf,542660,33,keep (not an installer)
+v1.2.10,SHA256SUMS.txt,670,3,keep (not an installer)
+v1.2.9,corpusmind-web-v1.2.9.zip,1374976,4,keep (not an installer)
+v1.2.9,CorpusMind_1.2.9_aarch64.dmg,190981980,4,delete
+v1.2.9,CorpusMind_1.2.9_amd64.AppImage,339880440,5,delete
+v1.2.9,CorpusMind_1.2.9_amd64.deb,302825424,3,delete
+v1.2.9,CorpusMind_1.2.9_x64-setup.exe,168942639,6,delete
+v1.2.9,CorpusMind_1.2.9_x64.dmg,203177339,4,delete
+v1.2.9,CorpusMind_1.2.9_x64_en-US.msi,215758843,4,delete
+v1.2.9,CorpusMind_User_Guide_v1.2.9.pdf,541148,4,keep (not an installer)
+v1.2.9,SHA256SUMS.txt,663,3,keep (not an installer)
+v1.2.8,corpusmind-web-v1.2.8.zip,1296805,2,keep (not an installer)
+v1.2.8,CorpusMind_1.2.8_aarch64.dmg,175268032,2,delete
+v1.2.8,CorpusMind_1.2.8_amd64.AppImage,324823544,2,delete
+v1.2.8,CorpusMind_1.2.8_amd64.deb,286200348,2,delete
+v1.2.8,CorpusMind_1.2.8_x64-setup.exe,156720665,3,delete
+v1.2.8,CorpusMind_1.2.8_x64.dmg,186206365,2,delete
+v1.2.8,CorpusMind_1.2.8_x64_en-US.msi,199232229,3,delete
+v1.2.8,CorpusMind_User_Guide_v1.2.8.pdf,533888,1,keep (not an installer)
+v1.2.8,SHA256SUMS.txt,663,1,keep (not an installer)
+v1.2.7,corpusmind-web-v1.2.7.zip,1272109,2,keep (not an installer)
+v1.2.7,CorpusMind_1.2.7_aarch64.dmg,108395219,2,delete
+v1.2.7,CorpusMind_1.2.7_amd64.AppImage,257296888,2,delete
+v1.2.7,CorpusMind_1.2.7_amd64.deb,217417194,2,delete
+v1.2.7,CorpusMind_1.2.7_x64-setup.exe,92552198,3,delete
+v1.2.7,CorpusMind_1.2.7_x64.dmg,118823049,3,delete
+v1.2.7,CorpusMind_1.2.7_x64_en-US.msi,132759999,2,delete
+v1.2.7,CorpusMind_User_Guide_v1.2.6.pdf,532180,1,keep (not an installer)
+v1.2.7,SHA256SUMS.txt,663,1,keep (not an installer)
+v1.2.6,corpusmind-web-v1.2.6.zip,1255256,2,keep (not an installer)
+v1.2.6,CorpusMind_1.2.6_aarch64.dmg,107888155,2,delete
+v1.2.6,CorpusMind_1.2.6_amd64.AppImage,255408632,2,delete
+v1.2.6,CorpusMind_1.2.6_amd64.deb,215980526,2,delete
+v1.2.6,CorpusMind_1.2.6_x64-setup.exe,92205933,3,delete
+v1.2.6,CorpusMind_1.2.6_x64.dmg,118529191,2,delete
+v1.2.6,CorpusMind_1.2.6_x64_en-US.msi,132312546,2,delete
+v1.2.6,CorpusMind_User_Guide_v1.2.6.pdf,532180,1,keep (not an installer)
+v1.2.6,SHA256SUMS.txt,663,2,keep (not an installer)
+v1.2.4,corpusmind-web-v1.2.4.zip,1247978,2,keep (not an installer)
+v1.2.4,CorpusMind_1.2.4_aarch64.dmg,107641177,2,delete
+v1.2.4,CorpusMind_1.2.4_amd64.AppImage,255130104,2,delete
+v1.2.4,CorpusMind_1.2.4_amd64.deb,215713668,2,delete
+v1.2.4,CorpusMind_1.2.4_x64-setup.exe,91929611,3,delete
+v1.2.4,CorpusMind_1.2.4_x64.dmg,118311595,3,delete
+v1.2.4,CorpusMind_1.2.4_x64_en-US.msi,132079074,3,delete
+v1.2.4,CorpusMind_User_Guide_v1.2.0.pdf,299928,1,keep (not an installer)
+v1.2.4,SHA256SUMS.txt,663,1,keep (not an installer)
+v1.2.3,corpusmind-web-v1.2.3.zip,1242937,3,keep (not an installer)
+v1.2.3,CorpusMind_1.2.3_aarch64.dmg,107628991,2,delete
+v1.2.3,CorpusMind_1.2.3_amd64.AppImage,255134200,2,delete
+v1.2.3,CorpusMind_1.2.3_amd64.deb,215728554,2,delete
+v1.2.3,CorpusMind_1.2.3_x64-setup.exe,91919062,3,delete
+v1.2.3,CorpusMind_1.2.3_x64.dmg,118302030,2,delete
+v1.2.3,CorpusMind_1.2.3_x64_en-US.msi,132042210,2,delete
+v1.2.3,CorpusMind_User_Guide_v1.2.0.pdf,299928,0,keep (not an installer)
+v1.2.3,SHA256SUMS.txt,663,2,keep (not an installer)
+v1.2.2,corpusmind-web-v1.2.2.zip,1238958,3,keep (not an installer)
+v1.2.2,CorpusMind_1.2.2_aarch64.dmg,107602605,2,delete
+v1.2.2,CorpusMind_1.2.2_amd64.AppImage,255113720,2,delete
+v1.2.2,CorpusMind_1.2.2_amd64.deb,215702654,2,delete
+v1.2.2,CorpusMind_1.2.2_x64-setup.exe,91906311,3,delete
+v1.2.2,CorpusMind_1.2.2_x64.dmg,118293498,2,delete
+v1.2.2,CorpusMind_1.2.2_x64_en-US.msi,132042210,2,delete
+v1.2.2,CorpusMind_User_Guide_v1.2.0.pdf,299928,1,keep (not an installer)
+v1.2.2,SHA256SUMS.txt,663,2,keep (not an installer)
+v1.2.1,corpusmind-web-v1.2.1.zip,1238958,3,keep (not an installer)
+v1.2.1,CorpusMind_1.2.1_aarch64.dmg,107605387,3,delete
+v1.2.1,CorpusMind_1.2.1_amd64.AppImage,255039992,2,delete
+v1.2.1,CorpusMind_1.2.1_amd64.deb,215624198,2,delete
+v1.2.1,CorpusMind_1.2.1_x64-setup.exe,91910887,3,delete
+v1.2.1,CorpusMind_1.2.1_x64.dmg,118434339,2,delete
+v1.2.1,CorpusMind_1.2.1_x64_en-US.msi,132046306,2,delete
+v1.2.1,CorpusMind_User_Guide_v1.2.0.pdf,299928,1,keep (not an installer)
+v1.2.1,SHA256SUMS.txt,663,2,keep (not an installer)
+v1.2.0,corpusmind-web-v1.2.0.zip,1643890,2,keep (not an installer)
+v1.2.0,CorpusMind.Lens_1.2.0_amd64.AppImage,257034744,2,delete
+v1.2.0,CorpusMind.Lens_1.2.0_amd64.deb,218967446,2,delete
+v1.2.0,CorpusMind.Lens_1.2.0_universal.dmg,116433404,2,delete
+v1.2.0,CorpusMind.Lens_1.2.0_x64-setup.exe,92567627,3,delete
+v1.2.0,CorpusMind.Lens_1.2.0_x64_en-US.msi,132697847,2,delete
+v1.2.0,CorpusMind_1.2.0_aarch64.dmg,107158034,2,delete
+v1.2.0,CorpusMind_1.2.0_amd64.AppImage,255461880,2,delete
+v1.2.0,CorpusMind_1.2.0_amd64.deb,216037980,2,delete
+v1.2.0,CorpusMind_1.2.0_x64-setup.exe,92287638,3,delete
+v1.2.0,CorpusMind_1.2.0_x64.dmg,117841751,2,delete
+v1.2.0,CorpusMind_1.2.0_x64_en-US.msi,132435426,3,delete
+v1.2.0,CorpusMind_User_Guide_v1.2.0.pdf,299928,0,keep (not an installer)
+v1.2.0,SHA256SUMS.txt,1170,1,keep (not an installer)
+v1.1.0,corpusmind-web-v1.1.0.zip,1600587,2,keep (not an installer)
+v1.1.0,CorpusMind.Lens_1.1.0_amd64.AppImage,256637432,2,delete
+v1.1.0,CorpusMind.Lens_1.1.0_amd64.deb,218576690,2,delete
+v1.1.0,CorpusMind.Lens_1.1.0_universal.dmg,115996045,2,delete
+v1.1.0,CorpusMind.Lens_1.1.0_x64-setup.exe,92259682,3,delete
+v1.1.0,CorpusMind.Lens_1.1.0_x64_en-US.msi,132345440,3,delete
+v1.1.0,CorpusMind_1.1.0_aarch64.dmg,106830091,2,delete
+v1.1.0,CorpusMind_1.1.0_amd64.AppImage,255076856,2,delete
+v1.1.0,CorpusMind_1.1.0_amd64.deb,215633336,2,delete
+v1.1.0,CorpusMind_1.1.0_x64-setup.exe,91962427,3,delete
+v1.1.0,CorpusMind_1.1.0_x64_en-US.msi,132042059,2,delete
+v1.1.0,SHA256SUMS.txt,1079,1,keep (not an installer)
+v1.0.7,corpusmind-web-v1.0.7.zip,1254222,2,keep (not an installer)
+v1.0.7,CorpusMind.Lens_1.0.7_amd64.AppImage,256260600,2,delete
+v1.0.7,CorpusMind.Lens_1.0.7_amd64.deb,218269568,2,delete
+v1.0.7,CorpusMind.Lens_1.0.7_universal.dmg,113988449,3,delete
+v1.0.7,CorpusMind.Lens_1.0.7_x64-setup.exe,91819131,2,delete
+v1.0.7,CorpusMind.Lens_1.0.7_x64_en-US.msi,131862112,2,delete
+v1.0.7,CorpusMind_1.0.7_aarch64.dmg,106355535,2,delete
+v1.0.7,CorpusMind_1.0.7_amd64.AppImage,254700024,2,delete
+v1.0.7,CorpusMind_1.0.7_amd64.deb,215348514,2,delete
+v1.0.7,CorpusMind_1.0.7_x64-setup.exe,91533671,3,delete
+v1.0.7,CorpusMind_1.0.7_x64_en-US.msi,131587403,2,delete
+v1.0.7,SHA256SUMS.txt,1079,2,keep (not an installer)
+v1.0.6,corpusmind-web-v1.0.6.zip,1247696,4,keep (not an installer)
+v1.0.6,CorpusMind.Lens_1.0.6_amd64.AppImage,256256504,2,delete
+v1.0.6,CorpusMind.Lens_1.0.6_amd64.deb,218267434,2,delete
+v1.0.6,CorpusMind.Lens_1.0.6_universal.dmg,113975370,3,delete
+v1.0.6,CorpusMind.Lens_1.0.6_x64-setup.exe,91815397,2,delete
+v1.0.6,CorpusMind.Lens_1.0.6_x64_en-US.msi,131858016,2,delete
+v1.0.6,CorpusMind_1.0.6_aarch64.dmg,106330883,2,delete
+v1.0.6,CorpusMind_1.0.6_amd64.AppImage,254687736,2,delete
+v1.0.6,CorpusMind_1.0.6_amd64.deb,215353086,3,delete
+v1.0.6,CorpusMind_1.0.6_x64-setup.exe,91532387,4,delete
+v1.0.6,CorpusMind_1.0.6_x64_en-US.msi,131575115,2,delete
+v1.0.6,SHA256SUMS.txt,1079,2,keep (not an installer)
+v1.0.5,CorpusMind.Lens_1.0.5_amd64.AppImage,256256504,2,delete
+v1.0.5,CorpusMind.Lens_1.0.5_amd64.deb,218265550,2,delete
+v1.0.5,CorpusMind.Lens_1.0.5_universal.dmg,113973844,4,delete
+v1.0.5,CorpusMind.Lens_1.0.5_x64-setup.exe,91809442,3,delete
+v1.0.5,CorpusMind.Lens_1.0.5_x64_en-US.msi,131849824,2,delete
+v1.0.5,CorpusMind_1.0.5_aarch64.dmg,106334449,2,delete
+v1.0.5,CorpusMind_1.0.5_amd64.deb,215344718,3,delete
+v1.0.5,CorpusMind_1.0.5_x64-setup.exe,91528413,2,delete
+v1.0.5,CorpusMind_1.0.5_x64_en-US.msi,131571019,2,delete
+v1.0.5,SHA256SUMS.txt,889,1,keep (not an installer)
+v1.0.0,corpusmind-web-v1.0.0.zip,993785,2,keep (not an installer)
+v1.0.0,CorpusMind.Lens_1.0.0_amd64.AppImage,256195064,2,delete
+v1.0.0,CorpusMind.Lens_1.0.0_amd64.deb,218219866,2,delete
+v1.0.0,CorpusMind.Lens_1.0.0_universal.dmg,113923172,3,delete
+v1.0.0,CorpusMind.Lens_1.0.0_x64-setup.exe,91741788,2,delete
+v1.0.0,CorpusMind.Lens_1.0.0_x64_en-US.msi,131792208,2,delete
+v1.0.0,CorpusMind_1.0.0_aarch64.dmg,106301072,2,delete
+v1.0.0,CorpusMind_1.0.0_amd64.AppImage,225155576,2,delete
+v1.0.0,CorpusMind_1.0.0_amd64.deb,215282804,2,delete
+v1.0.0,CorpusMind_1.0.0_universal.dmg,97000674,2,delete
+v1.0.0,CorpusMind_1.0.0_x64-setup.exe,91451461,3,delete
+v1.0.0,CorpusMind_1.0.0_x64_en-US.msi,131492923,2,delete
+v1.0.0,CorpusMind_User_Guide.pdf,179503,4,keep (not an installer)
+v1.0.0,default.pdf,4838772,2,keep (not an installer)
+v1.0.0,SHA256SUMS.txt,1346,2,keep (not an installer)
+v0.1.11,CorpusMind_0.1.11_aarch64.dmg,88417908,1,delete
+v0.1.11,CorpusMind_0.1.11_amd64.deb,170354218,1,delete
+v0.1.11,CorpusMind_0.1.11_x64-setup.exe,73401609,1,delete
+v0.1.10,CorpusMind_0.1.10_aarch64.dmg,88413491,2,delete
+v0.1.10,CorpusMind_0.1.10_amd64.deb,170356944,1,delete
+v0.1.10,CorpusMind_0.1.10_x64-setup.exe,73394327,1,delete
+v0.1.3,CorpusMind_0.1.10_x64-setup.exe,73393980,3,delete
+v0.1.3,CorpusMind_0.1.11_aarch64.dmg,88418721,1,delete
+v0.1.3,CorpusMind_0.1.11_amd64.deb,170355658,2,delete
+v0.1.3,CorpusMind_0.1.11_x64-setup.exe,73400092,2,delete
+v0.1.3,CorpusMind_0.1.12_aarch64.dmg,88419329,1,delete
+v0.1.3,CorpusMind_0.1.12_amd64.deb,170355002,1,delete
+v0.1.3,CorpusMind_0.1.12_x64-setup.exe,73393999,1,delete
+v0.1.3,CorpusMind_0.1.13_aarch64.dmg,88433730,1,delete
+v0.1.3,CorpusMind_0.1.13_amd64.deb,170370676,1,delete
+v0.1.3,CorpusMind_0.1.13_x64-setup.exe,73429303,1,delete
+v0.1.3,CorpusMind_0.1.13_x64_en-US.msi,104538514,1,delete
+v0.1.8,CorpusMind_0.1.8_aarch64.dmg,88415956,1,delete
+v0.1.8,CorpusMind_0.1.8_amd64.deb,170356232,1,delete
+v0.1.8,CorpusMind_0.1.8_x64-setup.exe,73393511,2,delete
+v0.1.6,CorpusMind_0.1.6_aarch64.dmg,88411836,2,delete
+v0.1.6,CorpusMind_0.1.6_amd64.deb,170352026,1,delete
+v0.1.6,CorpusMind_0.1.6_x64-setup.exe,73382192,2,delete
+v0.1.5,CorpusMind_0.1.5_aarch64.dmg,88411838,1,delete
+v0.1.5,CorpusMind_0.1.5_amd64.deb,170352166,1,delete
+v0.1.5,CorpusMind_0.1.5_x64-setup.exe,73378889,2,delete
+v0.1.2,CorpusMind_0.1.2_aarch64.dmg,114096225,1,delete
+v0.1.2,CorpusMind_0.1.2_amd64.deb,223336882,1,delete
+v0.1.2,CorpusMind_0.1.2_x64-setup.exe,97270715,1,delete
+v0.1.2,CorpusMind_0.1.2_x64_en-US.msi,139271883,2,delete
+v0.1.1,CorpusMind_0.1.1_aarch64.dmg,114025123,1,delete
+v0.1.1,CorpusMind_0.1.1_amd64.deb,223303800,1,delete
+v0.1.1,CorpusMind_0.1.1_x64-setup.exe,97248968,1,delete
+v0.1.1,CorpusMind_0.1.1_x64_en-US.msi,139243250,2,delete
+v0.1.0-pre,CorpusMind_0.1.0_aarch64.dmg,113994952,1,delete
+v0.1.0-pre,CorpusMind_0.1.0_amd64.deb,223357998,1,delete
+v0.1.0-pre,CorpusMind_0.1.0_x64_en-US.msi,127226952,2,delete
+v0.1.0-pre,CorpusMind_User_Guide_Arabic_v0.1.0.pdf,546343,3,keep (not an installer)
+v0.1.0-pre,CorpusMind_User_Guide_v0.1.0.pdf,534759,3,keep (not an installer)
+v0.1.0-pre,Screenshot.png,238691,2,keep (not an installer)

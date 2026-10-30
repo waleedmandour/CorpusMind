@@ -1,10 +1,13 @@
 """Intrinsic evaluation of Arabic sentence segmentation against AraSEG.
 
 Reference: Elkholy, Elmadani, Habash & Alhafni (2026), "Arabic Sentence
-Segmentation Across Genres and Punctuation Conditions" (EMNLP Findings 2026,
-arXiv:2606.08025). AraSEG: 658 manually annotated documents / 451K words /
-8 genres, four punctuation-and-paragraph conditions (PA, NoPnx-PA, NP,
-NoPnx-NP). Data: MIT licence, https://github.com/mbzuai-nlp/araseg-shared-task-2026
+Segmentation Across Genres and Punctuation Conditions" (arXiv preprint
+arXiv:2606.08025; data from the AraSEG shared-task release, ArabicNLP 2026
+@ EMNLP 2026). AraSEG shared-task release: 658 manually annotated documents
+/ ~451K words / 8 genres (train 174 / dev 222 / test 262), four
+punctuation-and-paragraph conditions (PA, NoPnx-PA, NP, NoPnx-NP). Data:
+MIT licence (per the live HF dataset cards, verified 2026-10-30),
+https://github.com/mbzuai-nlp/araseg-shared-task-2026
 (HF: MBZUAI/AraSeg-2026-Shared-Task-{PA,NoPnx-PA,NP,NoPnx-NP}).
 
 What is evaluated: the engine's rule-based splitter

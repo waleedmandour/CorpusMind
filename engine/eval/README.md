@@ -75,8 +75,30 @@ keyness tool's N1/N2 are post-filter counts, not raw corpus tokens.
 
 ## 2. Arabic sentence segmentation (AraSEG)
 
-Reference: Elkholy et al., EMNLP Findings 2026 (arXiv:2606.08025); MIT-
-licensed data, fetched not vendored (see `data/araseg/README.md`).
+Reference: Mohammed Elkholy, Khalid N. Elmadani, Nizar Habash & Bashar
+Alhafni, "Arabic Sentence Segmentation Across Genres and Punctuation
+Conditions", arXiv preprint arXiv:2606.08025 (v2, 2026-08-31). The paper is
+an arXiv preprint; the data comes from the **AraSEG shared-task release**
+run at ArabicNLP 2026 @ EMNLP 2026
+([mbzuai-nlp/araseg-shared-task-2026](https://github.com/mbzuai-nlp/araseg-shared-task-2026),
+HF `MBZUAI/AraSeg-2026-Shared-Task-{PA,NoPnx-PA,NP,NoPnx-NP}`).
+
+**Data licence: the dataset cards state MIT** — all four Hugging Face
+variants carry `license: mit` in their front matter, and the shared-task
+repo is MIT (both checked live 2026-10-30). Stated no stronger than the
+sources: the AraSEG paper describes part of the material as BAREC-derived,
+and BAREC-derived material is listed under CC BY-SA 4.0 in the paper's own
+data statement; we did not find that statement on the dataset cards.
+CorpusMind fetches the data for local evaluation and never redistributes
+it. An earlier note here and in `data/araseg/README.md` claimed CC BY-SA
+4.0 for the dataset; no CC BY-SA statement exists on the cards themselves.
+The data is fetched, not vendored (see `data/araseg/README.md`).
+
+**Shared-task release splits** (per the dataset cards): train 174 documents
+(128K words) / dev 222 documents (164K words) / test 262 documents (159K
+words) — 658 documents, ~451K words, 8 genres. This evaluation uses the dev
+split only (222 docs per condition); the test split is never touched for
+tuning.
 
 ```bash
 python -m eval.segmentation_araseg --data /tmp/araseg/PA/dev.jsonl --task PA
