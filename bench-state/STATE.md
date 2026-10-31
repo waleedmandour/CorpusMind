@@ -71,7 +71,7 @@ Daily budget: morning slice ≤16 ids, drip slice ≤4 ids (retry or advance).
 | 2026-10-30 | attempt | 41127495897 | main@bd25058 | G-006 | 0 | 1 | OFF-SPEC model pro |
 | 2026-10-30 | attempt | 41129889514 | main@bd25058 | G-001..G-008 | 0 | 7 | quota exhausted |
 | 2026-10-30 | attempt | 41134947351 | main@bd25058 | G-003 | 0 | 1 | quota exhausted |
-| 2026-10-31 | slice-1 | 41181861553 | bench/freeze-1 @ ee42bfa | G-003,G-005..G-019 (16) | (pending) | — | dispatched manually 07:45:38Z after the daily job's failed fire; A2 removed G-004/G-040/G-073 |
+| 2026-10-31 | slice-1 | 41181861553 | bench/freeze-1 @ ee42bfa | G-003,G-005..G-019 (16) | 0 | 16 | completed 09:17Z; 15× 'Model call failed: [cloud] chat request failed: H…' (429-class) + G-003 600s deadline exceed; raw artifact in bench-state/artifacts/2026-10-31-run-41181861553/. ZERO-CLEAN DAY 1 of the 3-day stop rule. All 16 ids remain UNBANKED; the 15:30 drip may retry ≤4 (infra failures only) |
 
 ## 5. Crawl queue (unbanked order for bench/freeze-1)
 
@@ -237,6 +237,12 @@ shrink to what succeeds and update this file.
 - Oct-30 quota accounting is inconsistent with a plain 20/day pool (79×429 at
   12:27Z, then a clean G-002 at 20:06Z the same Pacific day). Treat slices as
   adaptive: never exceed 20/day, shrink if 429 walls appear early.
+- Oct-31 07:45Z (= 00:45 PDT, right after the nominal reset): all 16 slice-1
+  attempts failed (15× 429-class, 1× deadline). A fresh 20/day pool would
+  have allowed ~16 clean — the reset/quota model in the brief is NOT holding
+  (day-2 evidence). The 15:30 drip turn will retry ≤4; if the pattern
+  persists, the crawl stalls regardless of budget — surface to the user at
+  T6 (A8: crawl optional; probe runs remain incident evidence).
 - Two off-spec model attempts happened Oct-30 evening (flash-lite, pro) — see
   §3; zero clean answers, disclosed.
 - docs/BENCHMARK_IMPROVEMENT_PLAN.md section 5 still says "PAID key" — user
