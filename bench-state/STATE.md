@@ -309,7 +309,17 @@ shrink to what succeeds and update this file.
   KWIC 'the'@400 5.87 s (75,632 total matches), 'goal'@400 5.59 s
   (16,806), ceiling probe 'the'@1000 14.21 s OK (borderline envelope);
   KEYNESS 0.69 s (+29/-100 keywords); DB 470 MB; peak RSS 238 MiB.
-  10M leg in flight since 13:05Z, ETA ~14:00-14:30Z.
+  10M leg RESULTS (same run 41203959363, artifact scale-10000000, archived
+  bench-state/artifacts/a7-scale/10m/): 9,940 docs / 10,000,547 tokens;
+  INGEST 4,721.3 s = 2,129 tok/s (throughput drops ~30% vs 1M — sublinear
+  but healthy at a 4.52 GB SQLite file); KWIC 'the'@400 70.25 s (756,340
+  matches), 'goal'@400 62.32 s (168,078), ceiling probe @1000 166.6 s OK
+  (still under the depth limit — borderline at both scales);
+  KEYNESS 8.22 s (+30/-100, same top terms); PEAK RSS 287 MiB — essentially
+  FLAT vs 238 MiB at 1M (the pipeline streams; memory does not track
+  corpus size). HEADLINE: storage paths scale to 10M tokens on a standard
+  runner with no out-of-memory risk; the only ceiling found is the KWIC
+  expression-depth limit above.
 
 ## 10. Known anomalies / open items for the report
 
