@@ -1,0 +1,2036 @@
+{
+ "summary": {
+  "questions": 80,
+  "pass_rate": 0.15,
+  "pass_rate_ci95": [
+   0.075,
+   0.225
+  ],
+  "hallucination_rate": 0.675,
+  "hallucination_rate_ci95": [
+   0.575,
+   0.775
+  ],
+  "verdict_counts": {
+   "PASS": 12,
+   "MISSING_NUMBER": 12,
+   "HALLUCINATED": 43,
+   "TRAP_FAILURE": 13
+  },
+  "per_category": {
+   "arabic_tools": {
+    "n": 4,
+    "pass_rate": 0.0
+   },
+   "collocation": {
+    "n": 6,
+    "pass_rate": 0.16666666666666666
+   },
+   "corpus_stats": {
+    "n": 5,
+    "pass_rate": 0.2
+   },
+   "cql": {
+    "n": 6,
+    "pass_rate": 0.3333333333333333
+   },
+   "discourse": {
+    "n": 3,
+    "pass_rate": 0.0
+   },
+   "dispersion": {
+    "n": 7,
+    "pass_rate": 0.0
+   },
+   "diversity": {
+    "n": 7,
+    "pass_rate": 0.14285714285714285
+   },
+   "keyness": {
+    "n": 10,
+    "pass_rate": 0.1
+   },
+   "kwic": {
+    "n": 7,
+    "pass_rate": 0.42857142857142855
+   },
+   "ngrams": {
+    "n": 4,
+    "pass_rate": 0.0
+   },
+   "pos_grammar": {
+    "n": 3,
+    "pass_rate": 0.3333333333333333
+   },
+   "register": {
+    "n": 5,
+    "pass_rate": 0.0
+   },
+   "sentiment": {
+    "n": 5,
+    "pass_rate": 0.0
+   },
+   "trap": {
+    "n": 8,
+    "pass_rate": 0.25
+   }
+  }
+ },
+ "verdicts": [
+  {
+   "id": "G-001",
+   "verdict": "PASS",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [
+     {
+      "documents": 3
+     },
+     {
+      "tokens": 384
+     },
+     {
+      "types": 257
+     },
+     {
+      "sentences": 27
+     }
+    ],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-002",
+   "verdict": "MISSING_NUMBER",
+   "detail": {
+    "missing": [
+     {
+      "documents": 4
+     },
+     {
+      "types": 199
+     },
+     {
+      "sentences": 18
+     }
+    ],
+    "hallucinated": [],
+    "matched": [
+     {
+      "tokens": 233
+     }
+    ],
+    "notes": [
+     "gold numbers not quoted: [{'documents': 4}, {'types': 199}, {'sentences': 18}]"
+    ]
+   }
+  },
+  {
+   "id": "G-003",
+   "verdict": "HALLUCINATED",
+   "detail": {
+    "missing": [
+     {
+      "total types": 5
+     }
+    ],
+    "hallucinated": [
+     20.0,
+     45.0,
+     317.0,
+     45.0,
+     317.0
+    ],
+    "matched": [
+     {
+      "total tokens": 331
+     },
+     {
+      "top word freq": 15
+     },
+     {
+      "top word": "the"
+     }
+    ],
+    "notes": [
+     "numbers not in any tool output: [20.0, 45.0, 317.0, 45.0, 317.0]",
+     "gold numbers not quoted: [{'total types': 5}]"
+    ]
+   }
+  },
+  {
+   "id": "G-004",
+   "verdict": "TRAP_FAILURE",
+   "detail": {
+    "missing": [],
+    "hallucinated": [
+     0.6042,
+     0.6042
+    ],
+    "matched": [],
+    "notes": [
+     "no-tool trap: answer does not state unavailability",
+     "no-tool trap: answer quotes numbers [0.6042, 0.6042]",
+     "numbers not in any tool output: [0.6042, 0.6042]"
+    ]
+   }
+  },
+  {
+   "id": "G-005",
+   "verdict": "HALLUCINATED",
+   "detail": {
+    "missing": [
+     {
+      "total types": 1
+     }
+    ],
+    "hallucinated": [
+     5.0,
+     3.0,
+     3.0,
+     2.0
+    ],
+    "matched": [
+     {
+      "total tokens": 233
+     }
+    ],
+    "notes": [
+     "numbers not in any tool output: [5.0, 3.0, 3.0, 2.0]",
+     "gold numbers not quoted: [{'total types': 1}]"
+    ]
+   }
+  },
+  {
+   "id": "G-006",
+   "verdict": "HALLUCINATED",
+   "detail": {
+    "missing": [
+     {
+      "types": 1
+     }
+    ],
+    "hallucinated": [
+     20.0
+    ],
+    "matched": [
+     {
+      "tokens": 105
+     }
+    ],
+    "notes": [
+     "numbers not in any tool output: [20.0]",
+     "gold numbers not quoted: [{'types': 1}]"
+    ]
+   }
+  },
+  {
+   "id": "G-007",
+   "verdict": "HALLUCINATED",
+   "detail": {
+    "missing": [
+     {
+      "N1": 35
+     },
+     {
+      "N2": 32
+     }
+    ],
+    "hallucinated": [
+     22.0,
+     105.0
+    ],
+    "matched": [
+     {
+      "top positive keyword": "i"
+     }
+    ],
+    "notes": [
+     "numbers not in any tool output: [22.0, 105.0]",
+     "gold numbers not quoted: [{'N1': 35}, {'N2': 32}]"
+    ]
+   }
+  },
+  {
+   "id": "G-008",
+   "verdict": "HALLUCINATED",
+   "detail": {
+    "missing": [],
+    "hallucinated": [
+     22.0,
+     13.0,
+     10.0,
+     10.0,
+     9.0,
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     22.0,
+     13.0,
+     10.0,
+     10.0,
+     9.0,
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     4.0
+    ],
+    "matched": [
+     {
+      "positive keywords": 5
+     },
+     {
+      "negative keywords": 4
+     }
+    ],
+    "notes": [
+     "numbers not in any tool output: [22.0, 13.0, 10.0, 10.0, 9.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 22.0, 13.0, 10.0, 10.0, 9.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0]"
+    ]
+   }
+  },
+  {
+   "id": "G-009",
+   "verdict": "HALLUCINATED",
+   "detail": {
+    "missing": [
+     {
+      "log_ratio": 3.4556794837761897
+     },
+     {
+      "pct_diff": 997.1428571428571
+     }
+    ],
+    "hallucinated": [
+     0.5905,
+     1.9048
+    ],
+    "matched": [],
+    "notes": [
+     "numbers not in any tool output: [0.5905, 1.9048]",
+     "gold numbers not quoted: [{'log_ratio': 3.4556794837761897}, {'pct_diff': 997.1428571428571}]"
+    ]
+   }
+  },
+  {
+   "id": "G-010",
+   "verdict": "HALLUCINATED",
+   "detail": {
+    "missing": [
+     {
+      "q_bh": 0.007698
+     }
+    ],
+    "hallucinated": [
+     0.05
+    ],
+    "matched": [
+     {
+      "p_ll": 0.003897
+     }
+    ],
+    "notes": [
+     "numbers not in any tool output: [0.05]",
+     "gold numbers not quoted: [{'q_bh': 0.007698}]"
+    ]
+   }
+  },
+  {
+   "id": "G-011",
+   "verdict": "HALLUCINATED",
+   "detail": {
+    "missing": [
+     {
+      "its log_ratio": -3.714245517666123
+     }
+    ],
+    "hallucinated": [
+     -2.0
+    ],
+    "matched": [],
+    "notes": [
+     "numbers not in any tool output: [-2.0]",
+     "gold numbers not quoted: [{'its log_ratio': -3.714245517666123}]",
+     "gold string not quoted: top negative keyword='in'"
+    ]
+   }
+  },
+  {
+   "id": "G-012",
+   "verdict": "TRAP_FAILURE",
+   "detail": {
+    "missing": [],
+    "hallucinated": [
+     10.0,
+     44.0,
+     247.79,
+     44.25,
+     6.0,
+     26.0,
+     548.67,
+     26.55,
+     6.0,
+     26.0,
+     548.67,
+     26.55
+    ],
+    "matched": [],
+    "notes": [
+     "no-tool trap: answer does not state unavailability",
+     "no-tool trap: answer quotes numbers [10.0, 44.0, 247.79, 44.25, 6.0, 26.0, 548.67, 26.55, 6.0, 26.0, 548.67, 26.55]",
+     "numbers not in any tool output: [10.0, 44.0, 247.79, 44.25, 6.0, 26.0, 548.67, 26.55, 6.0, 26.0, 548.67, 26.55]"
+    ]
+   }
+  },
+  {
+   "id": "G-013",
+   "verdict": "HALLUCINATED",
+   "detail": {
+    "missing": [],
+    "hallucinated": [
+     0.5
+    ],
+    "matched": [],
+    "notes": [
+     "numbers not in any tool output: [0.5]"
+    ]
+   }
+  },
+  {
+   "id": "G-014",
+   "verdict": "PASS",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [
+     {
+      "third positive keyword": "is"
+     }
+    ],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-015",
+   "verdict": "HALLUCINATED",
+   "detail": {
+    "missing": [
+     {
+      "N1": 35
+     },
+     {
+      "N2": 32
+     }
+    ],
+    "hallucinated": [
+     105.0,
+     121.0
+    ],
+    "matched": [],
+    "notes": [
+     "numbers not in any tool output: [105.0, 121.0]",
+     "gold numbers not quoted: [{'N1': 35}, {'N2': 32}]"
+    ]
+   }
+  },
+  {
+   "id": "G-016",
+   "verdict": "HALLUCINATED",
+   "detail": {
+    "missing": [],
+    "hallucinated": [
+     22.0,
+     13.0,
+     10.0,
+     10.0,
+     9.0,
+     4.0,
+     4.0,
+     4.0,
+     10.0,
+     4.0,
+     4.0,
+     4.0,
+     3.0,
+     3.0,
+     3.0,
+     3.0,
+     3.0
+    ],
+    "matched": [],
+    "notes": [
+     "numbers not in any tool output: [22.0, 13.0, 10.0, 10.0, 9.0, 4.0, 4.0, 4.0, 10.0, 4.0, 4.0, 4.0, 3.0, 3.0, 3.0, 3.0, 3.0]"
+    ]
+   }
+  },
+  {
+   "id": "G-017",
+   "verdict": "HALLUCINATED",
+   "detail": {
+    "missing": [
+     {
+      "DP": 0.6193
+     }
+    ],
+    "hallucinated": [
+     0.6042
+    ],
+    "matched": [
+     {
+      "Juilland's D": 0.0
+     }
+    ],
+    "notes": [
+     "numbers not in any tool output: [0.6042]",
+     "gold numbers not quoted: [{'DP': 0.6193}]"
+    ]
+   }
+  },
+  {
+   "id": "G-018",
+   "verdict": "HALLUCINATED",
+   "detail": {
+    "missing": [
+     {
+      "per-part frequencies": 0.0
+     },
+     {
+      "per-part frequencies": 0.0
+     }
+    ],
+    "hallucinated": [
+     12084.59,
+     12084.59,
+     12084.59,
+     12084.59,
+     12084.59,
+     12084.59,
+     12084.59,
+     12084.59,
+     12084.59,
+     12084.59,
+     12084.59,
+     12084.59,
+     12084.59,
+     12084.59,
+     12084.59,
+     12084.59,
+     12084.59,
+     12084.59,
+     12084.59,
+     12084.59,
+     12084.59,
+     12084.59,
+     12084.59,
+     12084.59,
+     12084.59,
+     12084.59
+    ],
+    "matched": [
+     {
+      "per-part frequencies": 4.0
+     }
+    ],
+    "notes": [
+     "numbers not in any tool output: [12084.59, 12084.59, 12084.59, 12084.59, 12084.59, 12084.59, 12084.59, 12084.59, 12084.59, 12084.59, 12084.59, 12084.59, 12084.59, 12084.59, 12084.59, 12084.59, 12084.59, 12084.59, 12084.59, 12084.59, 12084.59, 12084.59, 12084.59, 12084.59, 12084.59, 12084.59]",
+     "gold numbers not quoted: [{'per-part frequencies': 0.0}, {'per-part frequencies': 0.0}]"
+    ]
+   }
+  },
+  {
+   "id": "G-019",
+   "verdict": "TRAP_FAILURE",
+   "detail": {
+    "missing": [],
+    "hallucinated": [
+     1.0,
+     3.0,
+     33.33
+    ],
+    "matched": [],
+    "notes": [
+     "no-tool trap: answer does not state unavailability",
+     "no-tool trap: answer quotes numbers [1.0, 3.0, 33.33]",
+     "numbers not in any tool output: [1.0, 3.0, 33.33]"
+    ]
+   }
+  },
+  {
+   "id": "G-020",
+   "verdict": "HALLUCINATED",
+   "detail": {
+    "missing": [
+     {
+      "Juilland's D": 0.8797
+     }
+    ],
+    "hallucinated": [
+     0.6042
+    ],
+    "matched": [],
+    "notes": [
+     "numbers not in any tool output: [0.6042]",
+     "gold numbers not quoted: [{\"Juilland's D\": 0.8797}]"
+    ]
+   }
+  },
+  {
+   "id": "G-021",
+   "verdict": "HALLUCINATED",
+   "detail": {
+    "missing": [
+     {
+      "DP": 0.6979
+     }
+    ],
+    "hallucinated": [
+     0.6042
+    ],
+    "matched": [],
+    "notes": [
+     "numbers not in any tool output: [0.6042]",
+     "gold numbers not quoted: [{'DP': 0.6979}]"
+    ]
+   }
+  },
+  {
+   "id": "G-022",
+   "verdict": "HALLUCINATED",
+   "detail": {
+    "missing": [
+     {
+      "DP word": 0.6828
+     },
+     {
+      "DP lemma": 0.6828
+     }
+    ],
+    "hallucinated": [
+     5.0,
+     15105.74
+    ],
+    "matched": [],
+    "notes": [
+     "numbers not in any tool output: [5.0, 15105.74]",
+     "gold numbers not quoted: [{'DP word': 0.6828}, {'DP lemma': 0.6828}]"
+    ]
+   }
+  },
+  {
+   "id": "G-023",
+   "verdict": "HALLUCINATED",
+   "detail": {
+    "missing": [
+     {
+      "per-part frequencies": 4.0
+     },
+     {
+      "per-part frequencies": 0.0
+     },
+     {
+      "per-part frequencies": 0.0
+     }
+    ],
+    "hallucinated": [
+     3.0,
+     21148.04,
+     2.1148,
+     3.0
+    ],
+    "matched": [],
+    "notes": [
+     "numbers not in any tool output: [3.0, 21148.04, 2.1148, 3.0]",
+     "gold numbers not quoted: [{'per-part frequencies': 4.0}, {'per-part frequencies': 0.0}, {'per-part frequencies': 0.0}]"
+    ]
+   }
+  },
+  {
+   "id": "G-024",
+   "verdict": "TRAP_FAILURE",
+   "detail": {
+    "missing": [],
+    "hallucinated": [
+     0.6042,
+     0.0,
+     0.0
+    ],
+    "matched": [],
+    "notes": [
+     "no-tool trap: answer does not state unavailability",
+     "no-tool trap: answer quotes numbers [0.6042, 0.0, 0.0]",
+     "numbers not in any tool output: [0.6042, 0.0, 0.0]"
+    ]
+   }
+  },
+  {
+   "id": "G-025",
+   "verdict": "TRAP_FAILURE",
+   "detail": {
+    "missing": [],
+    "hallucinated": [
+     0.6042,
+     60.42,
+     39.58
+    ],
+    "matched": [],
+    "notes": [
+     "no-tool trap: answer does not state unavailability",
+     "no-tool trap: answer quotes numbers [0.6042, 60.42, 39.58]",
+     "numbers not in any tool output: [0.6042, 60.42, 39.58]"
+    ]
+   }
+  },
+  {
+   "id": "G-026",
+   "verdict": "TRAP_FAILURE",
+   "detail": {
+    "missing": [],
+    "hallucinated": [
+     105.0,
+     20.0,
+     0.5905,
+     10.0,
+     8.0,
+     76.0,
+     190.48,
+     10.0
+    ],
+    "matched": [],
+    "notes": [
+     "no-tool trap: answer does not state unavailability",
+     "no-tool trap: answer quotes numbers [105.0, 20.0, 0.5905, 10.0, 8.0, 76.0, 190.48, 10.0]",
+     "numbers not in any tool output: [105.0, 20.0, 0.5905, 10.0, 8.0, 76.0, 190.48, 10.0]"
+    ]
+   }
+  },
+  {
+   "id": "G-027",
+   "verdict": "MISSING_NUMBER",
+   "detail": {
+    "missing": [
+     {
+      "STTR": 0.7768
+     }
+    ],
+    "hallucinated": [],
+    "matched": [],
+    "notes": [
+     "gold numbers not quoted: [{'STTR': 0.7768}]"
+    ]
+   }
+  },
+  {
+   "id": "G-028",
+   "verdict": "TRAP_FAILURE",
+   "detail": {
+    "missing": [],
+    "hallucinated": [
+     0.5905
+    ],
+    "matched": [],
+    "notes": [
+     "no-tool trap: answer does not state unavailability",
+     "no-tool trap: answer quotes numbers [0.5905]",
+     "numbers not in any tool output: [0.5905]"
+    ]
+   }
+  },
+  {
+   "id": "G-029",
+   "verdict": "PASS",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [
+     {
+      "STTR": 0.5905
+     }
+    ],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-030",
+   "verdict": "PASS",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [
+     {
+      "MI": 3.9113
+     },
+     {
+      "O": 4
+     },
+     {
+      "top collocate": "the"
+     }
+    ],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-031",
+   "verdict": "MISSING_NUMBER",
+   "detail": {
+    "missing": [
+     {
+      "log_dice": 14.0
+     }
+    ],
+    "hallucinated": [],
+    "matched": [],
+    "notes": [
+     "gold numbers not quoted: [{'log_dice': 14.0}]"
+    ]
+   }
+  },
+  {
+   "id": "G-032",
+   "verdict": "HALLUCINATED",
+   "detail": {
+    "missing": [
+     {
+      "number of collocates": 20
+     }
+    ],
+    "hallucinated": [
+     7.0
+    ],
+    "matched": [],
+    "notes": [
+     "numbers not in any tool output: [7.0]",
+     "gold numbers not quoted: [{'number of collocates': 20}]"
+    ]
+   }
+  },
+  {
+   "id": "G-033",
+   "verdict": "HALLUCINATED",
+   "detail": {
+    "missing": [
+     {
+      "t-score": 1.8671
+     }
+    ],
+    "hallucinated": [
+     7.0
+    ],
+    "matched": [
+     {
+      "O": 4
+     }
+    ],
+    "notes": [
+     "numbers not in any tool output: [7.0]",
+     "gold numbers not quoted: [{'t-score': 1.8671}]"
+    ]
+   }
+  },
+  {
+   "id": "G-034",
+   "verdict": "HALLUCINATED",
+   "detail": {
+    "missing": [
+     {
+      "fy": 22
+     },
+     {
+      "N": 331
+     }
+    ],
+    "hallucinated": [
+     3.0,
+     9063.44,
+     0.9063,
+     27190.33,
+     2.719,
+     12084.59,
+     15105.74,
+     1.5106,
+     24169.18
+    ],
+    "matched": [
+     {
+      "fx": 4
+     }
+    ],
+    "notes": [
+     "numbers not in any tool output: [3.0, 9063.44, 0.9063, 27190.33, 2.719, 12084.59, 15105.74, 1.5106, 24169.18]",
+     "gold numbers not quoted: [{'fy': 22}, {'N': 331}]"
+    ]
+   }
+  },
+  {
+   "id": "G-035",
+   "verdict": "MISSING_NUMBER",
+   "detail": {
+    "missing": [
+     {
+      "collocates window 2": 11
+     },
+     {
+      "collocates window 5": 20
+     }
+    ],
+    "hallucinated": [],
+    "matched": [],
+    "notes": [
+     "gold numbers not quoted: [{'collocates window 2': 11}, {'collocates window 5': 20}]"
+    ]
+   }
+  },
+  {
+   "id": "G-036",
+   "verdict": "HALLUCINATED",
+   "detail": {
+    "missing": [
+     {
+      "freq": 2
+     }
+    ],
+    "hallucinated": [
+     5.0,
+     15105.74
+    ],
+    "matched": [],
+    "notes": [
+     "numbers not in any tool output: [5.0, 15105.74]",
+     "gold numbers not quoted: [{'freq': 2}]",
+     "gold string not quoted: top 3-gram='the park will'"
+    ]
+   }
+  },
+  {
+   "id": "G-037",
+   "verdict": "HALLUCINATED",
+   "detail": {
+    "missing": [],
+    "hallucinated": [
+     5.0
+    ],
+    "matched": [
+     {
+      "freq": 2
+     }
+    ],
+    "notes": [
+     "numbers not in any tool output: [5.0]",
+     "gold string not quoted: top 2-gram='and I'"
+    ]
+   }
+  },
+  {
+   "id": "G-038",
+   "verdict": "HALLUCINATED",
+   "detail": {
+    "missing": [
+     {
+      "2-grams with range >= 2": 1
+     }
+    ],
+    "hallucinated": [
+     17.0
+    ],
+    "matched": [],
+    "notes": [
+     "numbers not in any tool output: [17.0]",
+     "gold numbers not quoted: [{'2-grams with range >= 2': 1}]"
+    ]
+   }
+  },
+  {
+   "id": "G-039",
+   "verdict": "HALLUCINATED",
+   "detail": {
+    "missing": [],
+    "hallucinated": [
+     3.0,
+     9063.44
+    ],
+    "matched": [
+     {
+      "freq of 'the park'": 2
+     }
+    ],
+    "notes": [
+     "numbers not in any tool output: [3.0, 9063.44]"
+    ]
+   }
+  },
+  {
+   "id": "G-040",
+   "verdict": "PASS",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [
+     {
+      "total hits": 4
+     },
+     {
+      "first line_id": "<id>:0:4"
+     }
+    ],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-041",
+   "verdict": "HALLUCINATED",
+   "detail": {
+    "missing": [],
+    "hallucinated": [
+     1.0,
+     8.0,
+     12.0
+    ],
+    "matched": [
+     {
+      "total hits": 4
+     },
+     {
+      "distinct documents": 1
+     }
+    ],
+    "notes": [
+     "numbers not in any tool output: [1.0, 8.0, 12.0]"
+    ]
+   }
+  },
+  {
+   "id": "G-042",
+   "verdict": "PASS",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [
+     {
+      "lemma hits": 1
+     },
+     {
+      "word hits": 1
+     }
+    ],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-043",
+   "verdict": "HALLUCINATED",
+   "detail": {
+    "missing": [],
+    "hallucinated": [
+     1.0,
+     2.0,
+     1.0
+    ],
+    "matched": [
+     {
+      "press hits": 4
+     },
+     {
+      "full-corpus hits": 4
+     }
+    ],
+    "notes": [
+     "numbers not in any tool output: [1.0, 2.0, 1.0]"
+    ]
+   }
+  },
+  {
+   "id": "G-044",
+   "verdict": "HALLUCINATED",
+   "detail": {
+    "missing": [],
+    "hallucinated": [
+     3.0,
+     3.0
+    ],
+    "matched": [
+     {
+      "total hits": 2
+     }
+    ],
+    "notes": [
+     "numbers not in any tool output: [3.0, 3.0]",
+     "gold string not quoted: first line_id='<id>:2:3'"
+    ]
+   }
+  },
+  {
+   "id": "G-045",
+   "verdict": "MISSING_NUMBER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [
+     {
+      "total": 6
+     }
+    ],
+    "notes": [
+     "gold string not quoted: second line_id='<id>:0:6'"
+    ]
+   }
+  },
+  {
+   "id": "G-046",
+   "verdict": "PASS",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [
+     {
+      "'riverfront' hits": 2
+     },
+     {
+      "'river' hits": 1
+     }
+    ],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-047",
+   "verdict": "PASS",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [
+     {
+      "total hits": 4
+     }
+    ],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-048",
+   "verdict": "PASS",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [
+     {
+      "total hits": 4
+     }
+    ],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-049",
+   "verdict": "HALLUCINATED",
+   "detail": {
+    "missing": [],
+    "hallucinated": [
+     0.0,
+     2.0
+    ],
+    "matched": [
+     {
+      "total hits": 1
+     }
+    ],
+    "notes": [
+     "numbers not in any tool output: [0.0, 2.0]"
+    ]
+   }
+  },
+  {
+   "id": "G-050",
+   "verdict": "HALLUCINATED",
+   "detail": {
+    "missing": [
+     {
+      "within sentence": 2
+     },
+     {
+      "within document": 2
+     }
+    ],
+    "hallucinated": [
+     331.0,
+     20.0
+    ],
+    "matched": [],
+    "notes": [
+     "numbers not in any tool output: [331.0, 20.0]",
+     "gold numbers not quoted: [{'within sentence': 2}, {'within document': 2}]"
+    ]
+   }
+  },
+  {
+   "id": "G-051",
+   "verdict": "TRAP_FAILURE",
+   "detail": {
+    "missing": [],
+    "hallucinated": [
+     5.0,
+     0.0
+    ],
+    "matched": [],
+    "notes": [
+     "error trap: answer does not acknowledge the failure",
+     "numbers not in any tool output: [5.0, 0.0]"
+    ]
+   }
+  },
+  {
+   "id": "G-052",
+   "verdict": "HALLUCINATED",
+   "detail": {
+    "missing": [
+     {
+      "total hits": 1
+     }
+    ],
+    "hallucinated": [
+     0.0,
+     2.0,
+     3.0
+    ],
+    "matched": [],
+    "notes": [
+     "numbers not in any tool output: [0.0, 2.0, 3.0]",
+     "gold numbers not quoted: [{'total hits': 1}]"
+    ]
+   }
+  },
+  {
+   "id": "G-053",
+   "verdict": "HALLUCINATED",
+   "detail": {
+    "missing": [
+     {
+      "positive": 5
+     },
+     {
+      "negative": 1
+     }
+    ],
+    "hallucinated": [
+     331.0,
+     81.0,
+     24.471,
+     44.0,
+     13.293,
+     34.0,
+     10.272,
+     8.157,
+     26.0,
+     7.855,
+     25.0,
+     7.553,
+     6.344,
+     6.344,
+     15.0,
+     4.532,
+     12.0,
+     3.625
+    ],
+    "matched": [
+     {
+      "neutral": 21
+     }
+    ],
+    "notes": [
+     "numbers not in any tool output: [331.0, 81.0, 24.471, 44.0, 13.293, 34.0, 10.272, 8.157, 26.0, 7.855, 25.0, 7.553, 6.344, 6.344, 15.0, 4.532, 12.0, 3.625]",
+     "gold numbers not quoted: [{'positive': 5}, {'negative': 1}]"
+    ]
+   }
+  },
+  {
+   "id": "G-054",
+   "verdict": "HALLUCINATED",
+   "detail": {
+    "missing": [
+     {
+      "avg score": 0.074
+     }
+    ],
+    "hallucinated": [
+     0.6042
+    ],
+    "matched": [
+     {
+      "sentences": 27
+     }
+    ],
+    "notes": [
+     "numbers not in any tool output: [0.6042]",
+     "gold numbers not quoted: [{'avg score': 0.074}]"
+    ]
+   }
+  },
+  {
+   "id": "G-055",
+   "verdict": "HALLUCINATED",
+   "detail": {
+    "missing": [
+     {
+      "positive": 0
+     },
+     {
+      "avg score": 0.0
+     }
+    ],
+    "hallucinated": [
+     36.0,
+     12.0,
+     33.33,
+     7.0,
+     19.44,
+     3.0,
+     8.33,
+     3.0,
+     8.33,
+     3.0,
+     8.33,
+     3.0,
+     8.33,
+     2.0,
+     5.56,
+     2.0,
+     5.56,
+     1.0,
+     2.78,
+     33.33,
+     2.78
+    ],
+    "matched": [],
+    "notes": [
+     "numbers not in any tool output: [36.0, 12.0, 33.33, 7.0, 19.44, 3.0, 8.33, 3.0, 8.33, 3.0, 8.33, 3.0, 8.33, 2.0, 5.56, 2.0, 5.56, 1.0, 2.78, 33.33, 2.78]",
+     "gold numbers not quoted: [{'positive': 0}, {'avg score': 0.0}]"
+    ]
+   }
+  },
+  {
+   "id": "G-056",
+   "verdict": "HALLUCINATED",
+   "detail": {
+    "missing": [
+     {
+      "positive": 2
+     },
+     {
+      "negative": 1
+     },
+     {
+      "neutral": 15
+     }
+    ],
+    "hallucinated": [
+     11.0,
+     5.0
+    ],
+    "matched": [],
+    "notes": [
+     "numbers not in any tool output: [11.0, 5.0]",
+     "gold numbers not quoted: [{'positive': 2}, {'negative': 1}, {'neutral': 15}]"
+    ]
+   }
+  },
+  {
+   "id": "G-057",
+   "verdict": "MISSING_NUMBER",
+   "detail": {
+    "missing": [
+     {
+      "positive": 3
+     },
+     {
+      "negative": 0
+     },
+     {
+      "neutral": 5
+     }
+    ],
+    "hallucinated": [],
+    "matched": [],
+    "notes": [
+     "gold numbers not quoted: [{'positive': 3}, {'negative': 0}, {'neutral': 5}]"
+    ]
+   }
+  },
+  {
+   "id": "G-058",
+   "verdict": "HALLUCINATED",
+   "detail": {
+    "missing": [
+     {
+      "classical": 0.0
+     },
+     {
+      "msa": 1.0
+     },
+     {
+      "dialectal": 0.0
+     }
+    ],
+    "hallucinated": [
+     11.0,
+     5.0,
+     5.0,
+     5.0,
+     4.0,
+     3.0,
+     3.0,
+     3.0,
+     3.0,
+     3.0,
+     3.0,
+     3.0,
+     3.0,
+     2.0,
+     2.0,
+     2.0,
+     2.0,
+     2.0,
+     2.0,
+     2.0,
+     2.0
+    ],
+    "matched": [],
+    "notes": [
+     "numbers not in any tool output: [11.0, 5.0, 5.0, 5.0, 4.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0]",
+     "gold numbers not quoted: [{'classical': 0.0}, {'msa': 1.0}, {'dialectal': 0.0}]"
+    ]
+   }
+  },
+  {
+   "id": "G-059",
+   "verdict": "MISSING_NUMBER",
+   "detail": {
+    "missing": [
+     {
+      "classical": 0.75
+     },
+     {
+      "msa": 0.25
+     },
+     {
+      "dialectal": 0.0
+     }
+    ],
+    "hallucinated": [],
+    "matched": [],
+    "notes": [
+     "gold numbers not quoted: [{'classical': 0.75}, {'msa': 0.25}, {'dialectal': 0.0}]"
+    ]
+   }
+  },
+  {
+   "id": "G-060",
+   "verdict": "HALLUCINATED",
+   "detail": {
+    "missing": [
+     {
+      "classical": 0.333
+     },
+     {
+      "msa": 0.333
+     },
+     {
+      "dialectal": 0.333
+     }
+    ],
+    "hallucinated": [
+     11.0,
+     47.21,
+     5.0,
+     21.46,
+     5.0,
+     21.46,
+     4.0,
+     17.17,
+     3.0,
+     12.88,
+     3.0,
+     12.88,
+     3.0,
+     12.88,
+     3.0,
+     12.88,
+     3.0,
+     12.88,
+     3.0,
+     12.88,
+     3.0,
+     12.88,
+     2.0,
+     8.58,
+     2.0,
+     8.58,
+     2.0,
+     8.58,
+     2.0,
+     8.58,
+     2.0,
+     8.58,
+     2.0,
+     8.58,
+     2.0,
+     8.58,
+     2.0,
+     8.58,
+     2.0,
+     8.58,
+     11.0,
+     47.21
+    ],
+    "matched": [],
+    "notes": [
+     "numbers not in any tool output: [11.0, 47.21, 5.0, 21.46, 5.0, 21.46, 4.0, 17.17, 3.0, 12.88, 3.0, 12.88, 3.0, 12.88, 3.0, 12.88, 3.0, 12.88, 3.0, 12.88, 3.0, 12.88, 2.0, 8.58, 2.0, 8.58, 2.0, 8.58, 2.0, 8.58, 2.0, 8.58, 2.0, 8.58, 2.0, 8.58, 2.0, 8.58, 2.0, 8.58, 11.0, 47.21]",
+     "gold numbers not quoted: [{'classical': 0.333}, {'msa': 0.333}, {'dialectal': 0.333}]"
+    ]
+   }
+  },
+  {
+   "id": "G-061",
+   "verdict": "HALLUCINATED",
+   "detail": {
+    "missing": [
+     {
+      "classical": 0.0
+     },
+     {
+      "msa": 1.0
+     },
+     {
+      "dialectal": 0.0
+     }
+    ],
+    "hallucinated": [
+     11.0,
+     5.0,
+     5.0,
+     4.0,
+     3.0,
+     3.0,
+     3.0,
+     3.0,
+     3.0,
+     3.0,
+     3.0,
+     2.0,
+     2.0,
+     2.0,
+     2.0,
+     2.0,
+     2.0,
+     2.0,
+     2.0,
+     2.0
+    ],
+    "matched": [],
+    "notes": [
+     "numbers not in any tool output: [11.0, 5.0, 5.0, 4.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0]",
+     "gold numbers not quoted: [{'classical': 0.0}, {'msa': 1.0}, {'dialectal': 0.0}]"
+    ]
+   }
+  },
+  {
+   "id": "G-062",
+   "verdict": "MISSING_NUMBER",
+   "detail": {
+    "missing": [
+     {
+      "classical": 0.0
+     },
+     {
+      "msa": 1.0
+     },
+     {
+      "dialectal": 0.0
+     }
+    ],
+    "hallucinated": [],
+    "matched": [],
+    "notes": [
+     "gold numbers not quoted: [{'classical': 0.0}, {'msa': 1.0}, {'dialectal': 0.0}]"
+    ]
+   }
+  },
+  {
+   "id": "G-063",
+   "verdict": "HALLUCINATED",
+   "detail": {
+    "missing": [
+     {
+      "egy": 0.0024675895358600044
+     },
+     {
+      "glf": 0.0023610946103347517
+     },
+     {
+      "lev": 0.9944542674280016
+     }
+    ],
+    "hallucinated": [
+     233.0,
+     77.68,
+     11.0,
+     5.0
+    ],
+    "matched": [],
+    "notes": [
+     "numbers not in any tool output: [233.0, 77.68, 11.0, 5.0]",
+     "gold numbers not quoted: [{'egy': 0.0024675895358600044}, {'glf': 0.0023610946103347517}, {'lev': 0.9944542674280016}]"
+    ]
+   }
+  },
+  {
+   "id": "G-064",
+   "verdict": "MISSING_NUMBER",
+   "detail": {
+    "missing": [
+     {
+      "msa": 0.45418850360592744
+     },
+     {
+      "egy": 0.15262960302093256
+     },
+     {
+      "glf": 0.11429192051311023
+     },
+     {
+      "lev": 0.2788899728600298
+     }
+    ],
+    "hallucinated": [],
+    "matched": [],
+    "notes": [
+     "gold numbers not quoted: [{'msa': 0.45418850360592744}, {'egy': 0.15262960302093256}, {'glf': 0.11429192051311023}, {'lev': 0.2788899728600298}]"
+    ]
+   }
+  },
+  {
+   "id": "G-065",
+   "verdict": "MISSING_NUMBER",
+   "detail": {
+    "missing": [
+     {
+      "distinct roots": 3
+     }
+    ],
+    "hallucinated": [],
+    "matched": [],
+    "notes": [
+     "gold numbers not quoted: [{'distinct roots': 3}]"
+    ]
+   }
+  },
+  {
+   "id": "G-066",
+   "verdict": "HALLUCINATED",
+   "detail": {
+    "missing": [],
+    "hallucinated": [
+     233.0,
+     20.0,
+     0.7768,
+     1.0,
+     11.0,
+     47210.3,
+     4.0,
+     100.0,
+     2.0,
+     21459.23,
+     3.0,
+     75.0,
+     3.0,
+     21459.23,
+     4.0,
+     100.0,
+     4.0,
+     4.0,
+     17167.38,
+     2.0,
+     50.0,
+     3.0,
+     12875.54,
+     2.0,
+     50.0,
+     6.0,
+     3.0,
+     12875.54,
+     1.0,
+     25.0,
+     7.0,
+     3.0,
+     12875.54,
+     2.0,
+     50.0,
+     8.0,
+     3.0,
+     12875.54,
+     2.0,
+     50.0,
+     9.0,
+     3.0,
+     12875.54,
+     1.0,
+     25.0,
+     10.0,
+     3.0,
+     12875.54,
+     1.0,
+     25.0,
+     11.0,
+     3.0,
+     12875.54,
+     1.0,
+     25.0,
+     12.0,
+     3.0,
+     12875.0
+    ],
+    "matched": [
+     {
+      "token count": 5
+     }
+    ],
+    "notes": [
+     "numbers not in any tool output: [233.0, 20.0, 0.7768, 1.0, 11.0, 47210.3, 4.0, 100.0, 2.0, 21459.23, 3.0, 75.0, 3.0, 21459.23, 4.0, 100.0, 4.0, 4.0, 17167.38, 2.0, 50.0, 3.0, 12875.54, 2.0, 50.0, 6.0, 3.0, 12875.54, 1.0, 25.0, 7.0, 3.0, 12875.54, 2.0, 50.0, 8.0, 3.0, 12875.54, 2.0, 50.0, 9.0, 3.0, 12875.54, 1.0, 25.0, 10.0, 3.0, 12875.54, 1.0, 25.0, 11.0, 3.0, 12875.54, 1.0, 25.0, 12.0, 3.0, 12875.0]",
+     "gold string not quoted: first root='ق.#.ل'"
+    ]
+   }
+  },
+  {
+   "id": "G-067",
+   "verdict": "HALLUCINATED",
+   "detail": {
+    "missing": [],
+    "hallucinated": [
+     5.0
+    ],
+    "matched": [
+     {
+      "total tokens": 331
+     }
+    ],
+    "notes": [
+     "numbers not in any tool output: [5.0]",
+     "gold string not quoted: most frequent category='interactional.self_mentions'"
+    ]
+   }
+  },
+  {
+   "id": "G-068",
+   "verdict": "HALLUCINATED",
+   "detail": {
+    "missing": [
+     {
+      "hedges freq": 7
+     },
+     {
+      "hedges per million": 21148.04
+     }
+    ],
+    "hallucinated": [
+     45.0,
+     317.22
+    ],
+    "matched": [],
+    "notes": [
+     "numbers not in any tool output: [45.0, 317.22]",
+     "gold numbers not quoted: [{'hedges freq': 7}, {'hedges per million': 21148.04}]"
+    ]
+   }
+  },
+  {
+   "id": "G-069",
+   "verdict": "HALLUCINATED",
+   "detail": {
+    "missing": [
+     {
+      "boosters freq": 2
+     }
+    ],
+    "hallucinated": [
+     2005.0,
+     3.0
+    ],
+    "matched": [],
+    "notes": [
+     "numbers not in any tool output: [2005.0, 3.0]",
+     "gold numbers not quoted: [{'boosters freq': 2}]"
+    ]
+   }
+  },
+  {
+   "id": "G-070",
+   "verdict": "PASS",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [
+     {
+      "total tokens": 331
+     },
+     {
+      "most frequent POS": "NOUN"
+     }
+    ],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-071",
+   "verdict": "MISSING_NUMBER",
+   "detail": {
+    "missing": [
+     {
+      "NOUN count": 81
+     }
+    ],
+    "hallucinated": [],
+    "matched": [],
+    "notes": [
+     "gold numbers not quoted: [{'NOUN count': 81}]"
+    ]
+   }
+  },
+  {
+   "id": "G-072",
+   "verdict": "MISSING_NUMBER",
+   "detail": {
+    "missing": [
+     {
+      "passive count": 6
+     }
+    ],
+    "hallucinated": [],
+    "matched": [],
+    "notes": [
+     "gold numbers not quoted: [{'passive count': 6}]"
+    ]
+   }
+  },
+  {
+   "id": "G-073",
+   "verdict": "PASS",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [
+     {
+      "total hits": 0
+     }
+    ],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-074",
+   "verdict": "TRAP_FAILURE",
+   "detail": {
+    "missing": [
+     {
+      "total hits": 0
+     }
+    ],
+    "hallucinated": [
+     11.0
+    ],
+    "matched": [],
+    "notes": [
+     "zero-match trap: answer lacks an explicit zero/absence marker",
+     "numbers not in any tool output: [11.0]",
+     "gold numbers not quoted: [{'total hits': 0}]"
+    ]
+   }
+  },
+  {
+   "id": "G-075",
+   "verdict": "PASS",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-076",
+   "verdict": "TRAP_FAILURE",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": [
+     "error trap: answer does not acknowledge the failure"
+    ]
+   }
+  },
+  {
+   "id": "G-077",
+   "verdict": "TRAP_FAILURE",
+   "detail": {
+    "missing": [],
+    "hallucinated": [
+     60.42
+    ],
+    "matched": [],
+    "notes": [
+     "no-tool trap: answer does not state unavailability",
+     "no-tool trap: answer quotes numbers [60.42]",
+     "numbers not in any tool output: [60.42]"
+    ]
+   }
+  },
+  {
+   "id": "G-078",
+   "verdict": "TRAP_FAILURE",
+   "detail": {
+    "missing": [],
+    "hallucinated": [
+     10.0
+    ],
+    "matched": [],
+    "notes": [
+     "no-tool trap: answer does not state unavailability",
+     "no-tool trap: answer quotes numbers [10.0]",
+     "numbers not in any tool output: [10.0]"
+    ]
+   }
+  },
+  {
+   "id": "G-079",
+   "verdict": "TRAP_FAILURE",
+   "detail": {
+    "missing": [
+     {
+      "8-gram rows": 0
+     }
+    ],
+    "hallucinated": [],
+    "matched": [],
+    "notes": [
+     "zero-match trap: answer lacks an explicit zero/absence marker",
+     "gold numbers not quoted: [{'8-gram rows': 0}]"
+    ]
+   }
+  },
+  {
+   "id": "G-080",
+   "verdict": "HALLUCINATED",
+   "detail": {
+    "missing": [],
+    "hallucinated": [
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "matched": [
+     {
+      "collocate rows": 0
+     }
+    ],
+    "notes": [
+     "numbers not in any tool output: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]"
+    ]
+   }
+  }
+ ],
+ "meta": {
+  "gold_meta": {
+   "description": "Frozen grounding gold for the fixed snapshot corpus. Produced ONCE by eval/build_gold.py from the engine's own tool registry; every numeric answer the assistant gives is scored against these values. Do not regenerate silently: a rebuild must be reviewed like any golden-file change (see measures_v2.json discipline). Tool outputs are frozen verbatim as provenance.",
+   "engine_version": "2.0.1",
+   "git_commit": "afce8fe",
+   "created_utc": "2026-10-30T10:19:53+00:00",
+   "spacy_model": {
+    "en_core_web_sm": "3.8.0"
+   },
+   "arabic_pack": {
+    "status": "ready"
+   },
+   "snapshot": {
+    "en_news.txt": "2de994e8e50dd7f14e33df69c8327fb76cf7c9c90877c3e4603b28c1297c94f9",
+    "en_academic.txt": "e4c45639c311f6d533113f97c0a73d8a3abe99e32ee0e9ace4e68b0275c329c8",
+    "en_learner.txt": "7343c83132570299d4bc7bcb91f4c9e93bb9dbc68f2851533b882bb03140133c",
+    "ar_msa.txt": "29dd5871b9b44be838350583fe8c375173376ddd06d94781efa6fa81cc80c40d",
+    "ar_classical.txt": "29ef1a2abfb28d8dd35c1066c15a04af88f2c2fa57cfbf31726aa497a5aee42d",
+    "ar_dialect.txt": "5d0a95cd5914b86ccff0f93242134279cba0f7141c3a2e71e02e9659a7b54b13",
+    "ar_nopunct.txt": "6062f14bad04f0f29c28bd9e6619724bc0a9d09a9ea55e2e24bf606ac38ccabb",
+    "en_parallel.txt": "cc4914be7d98d4c9540c298ef9d18ea3502a595a147f35c95a5c36c60661ca82",
+    "ar_parallel.txt": "468cc499fff7885787781d2b8dacfe9aa7cbc89d7861067f754f67fd76b85880"
+   },
+   "corpus_layout": {
+    "C1": {
+     "name": "EN-all",
+     "language": "en",
+     "files": [
+      "en_news.txt",
+      "en_academic.txt",
+      "en_learner.txt"
+     ]
+    },
+    "C2": {
+     "name": "EN-learner",
+     "language": "en",
+     "files": [
+      "en_learner.txt"
+     ]
+    },
+    "C3": {
+     "name": "EN-press",
+     "language": "en",
+     "files": [
+      "en_news.txt",
+      "en_academic.txt"
+     ]
+    },
+    "C4": {
+     "name": "AR-all",
+     "language": "ar",
+     "files": [
+      "ar_msa.txt",
+      "ar_classical.txt",
+      "ar_dialect.txt",
+      "ar_nopunct.txt"
+     ]
+    },
+    "C5": {
+     "name": "AR-parallel",
+     "language": "ar",
+     "files": [
+      "ar_parallel.txt"
+     ]
+    },
+    "C6": {
+     "name": "EN-parallel",
+     "language": "en",
+     "files": [
+      "en_parallel.txt"
+     ]
+    }
+   },
+   "question_count": 80
+  },
+  "run_meta": {
+   "created_utc": "2026-10-31T10:57:36+00:00",
+   "provider": "ollama",
+   "model": "qwen2.5:1.5b",
+   "question_count": 80,
+   "pause_s": 0.0,
+   "rate_retries": 4,
+   "cloud_reasoning_effort": "low",
+   "cloud_chat_timeout_s": 240.0,
+   "chat_deadline_s": 300.0,
+   "harness_timeout_s": 600.0
+  }
+ }
+}

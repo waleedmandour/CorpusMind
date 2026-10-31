@@ -1,0 +1,200 @@
+{
+ "documents": 5,
+ "pairs": [
+  {
+   "doc_id": "doc_02284d965de1",
+   "boundary_errors": 75,
+   "tokens": {
+    "engine": 274,
+    "gold": 274
+   },
+   "sentences": {
+    "engine": 29,
+    "gold": 97
+   },
+   "delta_sentences": 68,
+   "collocations": {
+    "rows_delta": 0,
+    "sum_O_delta": 0,
+    "rows_engine": 0,
+    "sum_O_engine": 0,
+    "rows_gold": 0,
+    "sum_O_gold": 0
+   },
+   "ngrams": {
+    "rows_delta": 0,
+    "sum_freq_delta": 0
+   },
+   "cql_within_sentence": {
+    "engine": 4,
+    "gold": 4,
+    "delta": 0
+   },
+   "sentiment": {
+    "delta_total": 68,
+    "delta_positive": 0,
+    "delta_negative": 0,
+    "delta_avg": -0.012
+   },
+   "caf": {
+    "delta_mean_sentence_length": -6.6236
+   }
+  },
+  {
+   "doc_id": "doc_02b21fa0f702",
+   "boundary_errors": 0,
+   "tokens": {
+    "engine": 63,
+    "gold": 63
+   },
+   "sentences": {
+    "engine": 9,
+    "gold": 9
+   },
+   "delta_sentences": 0,
+   "collocations": {
+    "rows_delta": 0,
+    "sum_O_delta": 0,
+    "rows_engine": 0,
+    "sum_O_engine": 0,
+    "rows_gold": 0,
+    "sum_O_gold": 0
+   },
+   "ngrams": {
+    "rows_delta": 0,
+    "sum_freq_delta": 0
+   },
+   "cql_within_sentence": {
+    "engine": 0,
+    "gold": 0,
+    "delta": 0
+   },
+   "sentiment": {
+    "delta_total": 0,
+    "delta_positive": 0,
+    "delta_negative": 0,
+    "delta_avg": 0
+   },
+   "caf": {
+    "delta_mean_sentence_length": 0.0
+   }
+  },
+  {
+   "doc_id": "doc_0301b9267980",
+   "boundary_errors": 24,
+   "tokens": {
+    "engine": 434,
+    "gold": 434
+   },
+   "sentences": {
+    "engine": 47,
+    "gold": 50
+   },
+   "delta_sentences": 3,
+   "collocations": {
+    "rows_delta": 0,
+    "sum_O_delta": 0,
+    "rows_engine": 0,
+    "sum_O_engine": 0,
+    "rows_gold": 0,
+    "sum_O_gold": 0
+   },
+   "ngrams": {
+    "rows_delta": 0,
+    "sum_freq_delta": 0
+   },
+   "cql_within_sentence": {
+    "engine": 6,
+    "gold": 6,
+    "delta": 0
+   },
+   "sentiment": {
+    "delta_total": 3,
+    "delta_positive": 0,
+    "delta_negative": 0,
+    "delta_avg": 0
+   },
+   "caf": {
+    "delta_mean_sentence_length": -0.5540000000000003
+   }
+  },
+  {
+   "doc_id": "doc_0353cc83d633",
+   "boundary_errors": 22,
+   "tokens": {
+    "engine": 740,
+    "gold": 740
+   },
+   "sentences": {
+    "engine": 91,
+    "gold": 113
+   },
+   "delta_sentences": 22,
+   "collocations": {
+    "rows_delta": 0,
+    "sum_O_delta": 0,
+    "rows_engine": 0,
+    "sum_O_engine": 0,
+    "rows_gold": 0,
+    "sum_O_gold": 0
+   },
+   "ngrams": {
+    "rows_delta": 0,
+    "sum_freq_delta": 0
+   },
+   "cql_within_sentence": {
+    "engine": 19,
+    "gold": 19,
+    "delta": 0
+   },
+   "sentiment": {
+    "delta_total": 22,
+    "delta_positive": 0,
+    "delta_negative": 0,
+    "delta_avg": -0.008
+   },
+   "caf": {
+    "delta_mean_sentence_length": -1.5831999999999997
+   }
+  },
+  {
+   "doc_id": "doc_0458fdd062c7",
+   "boundary_errors": 39,
+   "tokens": {
+    "engine": 1056,
+    "gold": 1056
+   },
+   "sentences": {
+    "engine": 182,
+    "gold": 221
+   },
+   "delta_sentences": 39,
+   "collocations": {
+    "rows_delta": 0,
+    "sum_O_delta": 0,
+    "rows_engine": 0,
+    "sum_O_engine": 0,
+    "rows_gold": 0,
+    "sum_O_gold": 0
+   },
+   "ngrams": {
+    "rows_delta": 0,
+    "sum_freq_delta": 0
+   },
+   "cql_within_sentence": {
+    "engine": 32,
+    "gold": 32,
+    "delta": 0
+   },
+   "sentiment": {
+    "delta_total": 39,
+    "delta_positive": 0,
+    "delta_negative": 0,
+    "delta_avg": -0.006000000000000002
+   },
+   "caf": {
+    "delta_mean_sentence_length": -1.0239000000000003
+   }
+  }
+ ]
+}
