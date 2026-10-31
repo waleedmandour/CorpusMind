@@ -1,15 +1,22 @@
 #!/usr/bin/env python3
-"""v2.0.0 bump: 1.2.14 -> 2.0.0 (assertion-guarded, 31 replacements).
+"""v2.x version bump: assertion-guarded, idempotent.
 
-Statistical-correctness release bump: every live version surface moves in
-ONE atomic step so the version-lockstep tests are green before and after.
-Historical version references (CHANGELOG entries, historical comments like
-"v1.2.14-8 (r8 ...)", guide body notes, the README Versioned-DOIs history
-line) are deliberately untouched. Fails loudly if any surface is not in the
+v2.0.0 history: 1.2.14 -> 2.0.0 (31 replacements, atomic across all live
+version surfaces). This revision: 2.0.1 -> 2.0.2 (release-what-was-measured,
+MODE A: engine code identical to the frozen benchmark commit ee42bfa except
+version constants).
+
+Historical version references (CHANGELOG entries, "post-v2.0.1" comments,
+historical comments like "v1.2.14-8 (r8 ...)", guide body notes, the README
+Versioned-DOIs history line, benchmarks/results/**,
+docs/release_retirement_manifest.csv, engine/eval/data/gold/grounding_gold.json)
+are deliberately untouched. Fails loudly if any live surface is not in the
 expected state, so a partial bump can never be committed.
 
+Idempotent: re-running on an already-bumped tree is a no-op (exit 0).
+
 Usage:
-    python scripts/v2_bump.py --date 2026-10-29
+    python scripts/v2_bump.py --date 2026-11-01
 """
 from __future__ import annotations
 
@@ -17,7 +24,7 @@ import argparse
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-OLD, NEW = "1.2.14", "2.0.0"
+OLD, NEW = "2.0.1", "2.0.2"
 
 _MONTHS = {
     "01": "jan", "02": "feb", "03": "mar", "04": "apr",
@@ -32,11 +39,15 @@ JOBS: list[tuple[str, str, str, int]] = [
     ("package.json", '"version": "{OLD}"', '"version": "{NEW}"', 1),
     ("web/package.json", '"version": "{OLD}"', '"version": "{NEW}"', 1),
     ("shared/package.json", '"version": "{OLD}"', '"version": "{NEW}"', 1),
-    # Locks: root version + packages[""] + workspace entries.
-    ("package-lock.json", '"version": "{OLD}"', '"version": "{NEW}"', 4),
-    ("web/package-lock.json", '"version": "{OLD}"', '"version": "{NEW}"', 2),
+    # Locks: every package-lock entry that pins the project's own packages.
+    # Third-party entries (argparse ^2.0.1, color-convert ^2.0.1, ...) use
+    # other shapes and are never touched.
+    ("package-lock.json", '"version": "{OLD}"', '"version": "{NEW}"', 9),
+    ("web/package-lock.json", '"version": "{OLD}"', '"version": "{NEW}"', 9),
     ("desktop/src-tauri/tauri.conf.json", '"version": "{OLD}"', '"version": "{NEW}"', 1),
     ("desktop/src-tauri/Cargo.toml", 'version = "{OLD}"', 'version = "{NEW}"', 1),
+    # NOTE: no Cargo.lock is tracked in the repo (built fresh by cargo); the
+    # project's own Cargo.lock entry therefore does not exist to bump.
     ("web/src/hooks/useEngineVersion.ts", 'FALLBACK_VERSION = "{OLD}"', 'FALLBACK_VERSION = "{NEW}"', 1),
     ("engine/pyproject.toml", 'version = "{OLD}"', 'version = "{NEW}"', 1),
     ("engine/app/__init__.py", '__version__ = "{OLD}"', '__version__ = "{NEW}"', 1),
@@ -46,15 +57,17 @@ JOBS: list[tuple[str, str, str, int]] = [
     # CITATION.cff: top-level version AND the indented preferred-citation
     # version (both contain the substring), plus BOTH date-released values.
     ("CITATION.cff", "version: {OLD}", "version: {NEW}", 2),
-    ("CITATION.cff", "date-released: 2026-10-20", "date-released: {DATE}", 2),
+    ("CITATION.cff", "date-released: 2026-10-30", "date-released: {DATE}", 2),
     # README: badge, current-release line, language-support line, health-check
     # sample, plain-text citation, BibTeX version and month.
+    # The Versioned-DOIs history line (v2.0.1 -> 10.5281/zenodo.23785435) is
+    # historical and intentionally NOT matched by any template.
     ("README.md", "release-v{OLD}-blue", "release-v{NEW}-blue", 1),
     ("README.md", "**Current release: v{OLD}**", "**Current release: v{NEW}**", 1),
     ("README.md", "**Language support (v{OLD}):**", "**Language support (v{NEW}):**", 1),
     ("README.md", '"version":"{OLD}"', '"version":"{NEW}"', 1),
     ("README.md", "(Version {OLD})", "(Version {NEW})", 1),
-    ("README.md", "version      = {1.2.14},", "version      = {2.0.0},", 1),
+    ("README.md", "version      = {2.0.1},", "version      = {2.0.2},", 1),
     ("README.md", "month        = oct,", "month        = {MONTH},", 1),
     # Guides: header + Zenodo citation line ONLY (body mentions stay historical).
     ("docs/USER_GUIDE.md", "> Version {OLD} | AGPL-3.0-only", "> Version {NEW} | AGPL-3.0-only", 1),
@@ -65,7 +78,7 @@ JOBS: list[tuple[str, str, str, int]] = [
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="CorpusMind v2.0.0 bump (assertion-guarded)")
+    parser = argparse.ArgumentParser(description="CorpusMind v2.0.1 -> v2.0.2 bump (assertion-guarded, idempotent)")
     parser.add_argument("--date", required=True, help="release date YYYY-MM-DD for CITATION.cff date-released")
     args = parser.parse_args()
     date: str = args.date
@@ -74,13 +87,28 @@ def main() -> None:
     month = _MONTHS[date[5:7]]
     subs = {"{OLD}": OLD, "{NEW}": NEW, "{DATE}": date, "{MONTH}": month}
 
+    def render(t: str) -> str:
+        for token, value in subs.items():
+            t = t.replace(token, value)
+        return t
+
+    # Idempotency: if NO live surface still carries OLD but NEW is present in
+    # the first job's file, the bump was already applied — no-op.
+    old_found = False
+    for rel, old_t, _new_t, _expected in JOBS:
+        old = render(old_t)
+        if old in (ROOT / rel).read_text(encoding="utf-8"):
+            old_found = True
+            break
+    probe = (ROOT / JOBS[0][0]).read_text(encoding="utf-8")
+    if not old_found and render('"version": "{NEW}"') in probe:
+        print(f"Already at {NEW} — nothing to do (idempotent no-op).")
+        return
+
     applied = 0
     for rel, old_t, new_t, expected in JOBS:
-        old = old_t
-        new = new_t
-        for token, value in subs.items():
-            old = old.replace(token, value)
-            new = new.replace(token, value)
+        old = render(old_t)
+        new = render(new_t)
         p = ROOT / rel
         text = p.read_text(encoding="utf-8")
         n = text.count(old)
@@ -97,7 +125,6 @@ def main() -> None:
     # rewritten.
     live = [
         "package.json", "web/package.json", "shared/package.json",
-        "package-lock.json", "web/package-lock.json",
         "desktop/src-tauri/tauri.conf.json", "desktop/src-tauri/Cargo.toml",
         "web/src/hooks/useEngineVersion.ts",
         "engine/pyproject.toml", "engine/app/__init__.py",
@@ -109,6 +136,13 @@ def main() -> None:
         text = (ROOT / rel).read_text(encoding="utf-8")
         if OLD in text:
             stale.append(rel)
+    # Lockfiles: third-party packages legitimately use version 2.0.1
+    # (argparse, color-convert, ...) — only the project's OWN entries carry
+    # the exact '"version": "2.0.1"' pin, and those must all have moved.
+    for rel in ("package-lock.json", "web/package-lock.json"):
+        text = (ROOT / rel).read_text(encoding="utf-8")
+        if f'"version": "{OLD}"' in text:
+            stale.append(rel)
     # useEngineVersion.ts keeps HISTORICAL comments like "v1.2.14-3 (PWA
     # hotfix)" by design — only the live FALLBACK_VERSION must have moved.
     hook = (ROOT / "web/src/hooks/useEngineVersion.ts").read_text(encoding="utf-8")
@@ -116,7 +150,7 @@ def main() -> None:
         stale.append("web/src/hooks/useEngineVersion.ts (live FALLBACK_VERSION)")
     stale = [s for s in stale if s != "web/src/hooks/useEngineVersion.ts"]
     cff = (ROOT / "CITATION.cff").read_text(encoding="utf-8")
-    if f"version: {OLD}" in cff or "date-released: 2026-10-20" in cff:
+    if f"version: {OLD}" in cff or "date-released: 2026-10-30" in cff:
         stale.append("CITATION.cff")
     for rel in ("docs/USER_GUIDE.md", "docs/USER_GUIDE_AR.md"):
         text = (ROOT / rel).read_text(encoding="utf-8")

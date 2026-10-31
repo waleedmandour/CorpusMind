@@ -6,9 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 once 1.0 ships. Until then, expect breaking changes between 0.x releases.
 
-## [Unreleased]
+## [2.0.2] — 2026-11-01
 
-### Fixed — boot-stable ordering for tied rows and capped examples (second gold-diff round)
+Release-what-was-measured: the engine code in v2.0.2 is identical to the
+frozen benchmark commit `ee42bfa` except version constants (verified gate:
+`git diff ee42bfa -- engine ':!engine/eval'` touches only `__version__` and
+`pyproject.toml version`), so v2.0.2 ships exactly what the benchmark report
+measured (docs/BENCHMARK_REPORT.md, frozen-row battery 2026-10-31).
+
+### Fixed — boot-stable ordering for tied rows and capped examples (second gold-diff round) (#44)
 
 The gold-diff gate, re-run locally on a fresh boot after #43, flagged 8
 questions the CI boots had never caught: the SAME corpus produced different
@@ -49,7 +55,7 @@ of the freq-2 tie group). Verified boot-stable: two full 80-question
 rebuilds in fresh processes (including a different `PYTHONHASHSEED`) diff
 clean against the re-frozen file.
 
-### Fixed — harness determinism + grounding gold re-freeze (reviewed)
+### Fixed — harness determinism + grounding gold re-freeze (reviewed) (#43)
 
 The first full gold-diff run (rebuild all 80 vs frozen) found the frozen
 gold was BOTH stale and unstable — exactly what the review suspected
@@ -81,7 +87,7 @@ gold was BOTH stale and unstable — exactly what the review suspected
 - Verified boot-stable: a second full 80-question rebuild after the
   re-freeze diffs CLEAN against the committed gold.
 
-### Added — full gold-diff CI gate + a local-Ollama grounding row
+### Added — full gold-diff CI gate + a local-Ollama grounding row (#42)
 
 - `eval.gold_diff`: rebuilds the WHOLE 80-question bank in-process and diffs
   every gold value (and frozen tool result) against the committed gold —
@@ -106,7 +112,7 @@ gold was BOTH stale and unstable — exactly what the review suspected
   default 600), `grounding_chat_deadline_s` (engine chat deadline, default
   300), `reasoning_effort` (default `low`, cloud only).
 
-### Fixed — grounded pass 2 against strict cloud backends (flatten, don't replay)
+### Fixed — grounded pass 2 against strict cloud backends (flatten, don't replay) (#41)
 
 Product bug, not a Gemini quirk: OpenAI's chat-completions contract requires
 every `role: "tool"` message to follow an assistant message carrying
@@ -123,7 +129,7 @@ OllamaProvider's native /api/chat path is untouched — local behavior is
 byte-identical. Regression test: a mock server that ENFORCES the OpenAI
 rule (the old wire shape 400s against it; the new one passes).
 
-### Changed — cloud tool-round timeouts and opt-in reasoning_effort
+### Changed — cloud tool-round timeouts and opt-in reasoning_effort (#41)
 
 - Cloud tool rounds get a longer per-attempt timeout
   (`CORPUSMIND_CLOUD_CHAT_TIMEOUT_S`, default 240 s; local providers keep
@@ -136,7 +142,7 @@ rule (the old wire shape 400s against it; the new one passes).
   (e.g. `low` for Gemini 3.x, which cannot turn thinking off). Empty
   (default) = field not sent — gateways that don't know it may 400.
 
-### Fixed — Arabic sentence segmentation (quote-guard regression)
+### Fixed — Arabic sentence segmentation (quote-guard regression) (#39)
 
 A stray self-paired quote (`'` or `"`) opened the v2.0.1 quote-parity guard
 with no closer anywhere on the line, disabling every sentence boundary to
@@ -153,7 +159,7 @@ AraSEG dev re-measure (checksum-pinned, same evaluator): PA micro-F1
 0.7092 → 0.7115, NP 0.5559 → 0.5572. No condition regresses; the test split
 was not touched.
 
-### Fixed — AI provider layer
+### Fixed — AI provider layer (#39)
 
 - `_OpenAICompatibleProvider.chat` no longer fails with "unexpected response
   shape" when a tool-call reply omits `content` or sends `"content": null` —
@@ -163,7 +169,9 @@ was not touched.
   response body so provider 4xx bodies reach the logs (diagnostic only;
   retry semantics unchanged).
 
-### Changed — Gemini default model + benchmark workflow inputs
+### Changed — Gemini default model + benchmark workflow inputs (#39)
+
+**Gemini default is now `gemini-3.8-flash`.**
 
 - New single source of truth `DEFAULT_GEMINI_MODEL` in `app/settings.py`
   (`gemini-3.8-flash`), replacing the repeated `gemini-2.5-flash` fallback in
@@ -173,6 +181,30 @@ was not touched.
   (space/comma-separated question ids; empty = the full 80-question bank) and
   `debug_raw` (default false — raw provider bodies are opt-in diagnostics
   now, no longer always-on in CI).
+
+### Known issues — post-freeze engine fixes proposed, NOT in 2.0.2
+
+Two engine fixes are known and deliberately NOT shipped in 2.0.2 (the
+engine is frozen at the benchmark commit `ee42bfa`; both are recorded as
+approval-requested follow-ups in docs/BENCHMARK_REPORT.md §7 finding 4):
+
+- **MTLD aggregation convention.** `engine/stats/measures.py` `mtld()`
+  returns `len(tokens) / mean(forward_factors, backward_factors)`; the
+  McCarthy & Jarvis (2010) published form — and the `lexicalrichness`
+  reference — is `mean(len/f_forward, len/f_backward)`. Equal only when the
+  two directional factor counts coincide; currently disclosed as a
+  convention difference in the stats-parity battery (max rel dev 2.87%).
+  Fix ≈ 3 lines + tests; no frozen gold value quotes MTLD, but it is a
+  visible numeric change (semver-minor + battery re-run per house
+  discipline).
+- **Word-level KWIC `or_()` chunking.** The word-level KWIC context fetch
+  (`engine/stats/service.py`, ~lines 498–516) builds ONE un-chunked `or_()`
+  over every matched sentence; SQLite's expression-depth limit (1000) is
+  crossed when a limit-1000 query matches ≳ 950 distinct sentences
+  (deterministic, CI run 41202901041; portable repro
+  `scripts/kwic_repro.py`). The phrase path already chunks at 400
+  (~lines 426–440); the word-level path should copy that batching. Pure
+  query-batching change, no result semantics change.
 
 ## [2.0.1] — 2026-10-30
 
