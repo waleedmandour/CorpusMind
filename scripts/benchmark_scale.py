@@ -115,6 +115,14 @@ def peak_rss_kib() -> int:
     return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
 
 
+def _dump(out_dir: Path, size: int, report: dict) -> None:
+    """Incremental snapshot after every phase — a late-phase failure must not
+    destroy the earlier phases' measurements."""
+    path = out_dir / f"scale_{size}.json"
+    path.write_text(json.dumps(report, ensure_ascii=False, indent=1),
+                    encoding="utf-8")
+
+
 def phase_meta() -> dict:
     return {"peak_rss_kib": peak_rss_kib()}
 
@@ -182,49 +190,71 @@ async def run_size(size: int, out_dir: Path, db_url: str) -> dict:
         }
     await dispose_db()
     gc.collect()
+    _dump(out_dir, size, report)
 
     # --- KWIC (concordance) -------------------------------------------------
-    # second query: deterministic mid-frequency pool word (4th most common
-    # type after skipping the top 3) so both KWIC queries exercise the scan.
+    # ENVELOPE: the engine's word-level KWIC context fetch builds one
+    # un-chunked or_() over every distinct matched sentence (engine/stats/
+    # service.py, word-level path — the phrase path chunks at 400). SQLite's
+    # expression-depth limit (1000) is crossed when a query matches roughly
+    # >=500 distinct sentences, i.e. at limit>=~500 on any frequent term at
+    # corpus scale. A7 therefore (a) measures wall time INSIDE the envelope
+    # with limit=400, and (b) PROBES the ceiling once with limit=1000,
+    # recording the overflow as the finding it is (production-path scale
+    # ceiling, engine code frozen for the row — reported, not patched).
+    # Mid-frequency content word for query 2: deterministic — most common
+    # pool type outside a small function-word stoplist.
     from collections import Counter
-    pool_freq = Counter(w for s in load_pool() for w in s.lower().split())
-    second_word = [w for w, _ in pool_freq.most_common(8)][3]
+    STOP = {"the", "and", "of", "to", "in", "a", "i", "is", "that", "it", "for",
+            "on", "with", "as", "are", "this", "be", "was", "or", "by",
+            "from", "which", "not", "has", "have", "an", "at", "but", "its",
+            "can", "may", "we", "they", "their", "such", "these", "into"}
+    pool_freq = Counter(w.lower() for s in load_pool() for w in s.split())
+    mid_word = next(w for w, _ in pool_freq.most_common(50) if w not in STOP)
+
+    async def timed_kwic(session, word, lim):
+        t = time.perf_counter()
+        try:
+            r = await search_concordance(session, target.id, word,
+                                         level="word", window=5, limit=lim)
+            return {"query": word, "limit": lim,
+                    "wall_s": round(time.perf_counter() - t, 3),
+                    "lines": r.total, "ok": True}
+        except Exception as e:  # noqa: BLE001 — the failure IS the datum
+            return {"query": word, "limit": lim,
+                    "wall_s": round(time.perf_counter() - t, 3), "ok": False,
+                    "error": f"{type(e).__name__}: {e}"[:200]}
+
     await init_db()
     async for session in get_session():
-        t1 = time.perf_counter()
-        kwic = await search_concordance(session, target.id, "the", level="word",
-                                        window=5, limit=1000)
-        kwic_s = time.perf_counter() - t1
-        t2 = time.perf_counter()
-        kwic2 = await search_concordance(session, target.id, second_word,
-                                         level="word", window=5, limit=1000)
-        kwic2_s = time.perf_counter() - t2
-        report["kwic"] = {
-            "queries": [
-                {"query": "the", "wall_s": round(kwic_s, 3),
-                 "lines": kwic.total},
-                {"query": second_word, "wall_s": round(kwic2_s, 3),
-                 "lines": kwic2.total},
-            ],
-            **phase_meta(),
-        }
+        q = []
+        q.append(await timed_kwic(session, "the", 400))
+        q.append(await timed_kwic(session, mid_word, 400))
+        q.append(await timed_kwic(session, "the", 1000))  # ceiling probe
+        report["kwic"] = {"queries": q, **phase_meta()}
     await dispose_db()
     gc.collect()
+    _dump(out_dir, size, report)
 
     # --- keyness -------------------------------------------------------------
     async for session in get_session():
         t3 = time.perf_counter()
-        kr = await compute_keyness(session, target.id, reference.id,
-                                   min_freq=5, limit=100)
-        keyness_s = time.perf_counter() - t3
-        pos = kr.positive_keywords or []
-        report["keyness"] = {
-            "wall_s": round(keyness_s, 3),
-            "n_positive": len(pos),
-            "n_negative": len(kr.negative_keywords or []),
-            "top3": [row.get("term") for row in pos[:3]],
-            **phase_meta(),
-        }
+        try:
+            kr = await compute_keyness(session, target.id, reference.id,
+                                       min_freq=5, limit=100)
+            keyness_s = time.perf_counter() - t3
+            pos = kr.positive_keywords or []
+            report["keyness"] = {
+                "wall_s": round(keyness_s, 3),
+                "n_positive": len(pos),
+                "n_negative": len(kr.negative_keywords or []),
+                "top3": [row.get("term") for row in pos[:3]],
+                **phase_meta(),
+            }
+        except Exception as e:  # noqa: BLE001 — record, keep the run alive
+            report["keyness"] = {
+                "wall_s": round(time.perf_counter() - t3, 3), "ok": False,
+                "error": f"{type(e).__name__}: {e}"[:200], **phase_meta()}
     await dispose_db()
 
     db_path = db_url.split("///")[-1]
@@ -271,11 +301,17 @@ def main() -> None:
                         encoding="utf-8")
         all_reports.append(rep)
         ing = rep["ingest"]
+        kw = rep.get("kwic", {})
+        kn = rep.get("keyness", {})
+        peak = max((p.get("peak_rss_kib", 0)
+                    for p in [ing, kw, kn] if isinstance(p, dict)), default=0)
+        kw_s = ["%s%s" % (q.get("wall_s"), "" if q.get("ok") else "!")
+                for q in kw.get("queries", [])]
         print(f"[{size:>9}] ingest {ing['wall_s']} s ({ing['tokens_per_s']} tok/s, "
               f"degraded={ing['pipeline']['degraded']}) | "
-              f"kwic {[q['wall_s'] for q in rep['kwic']['queries']]} s | "
-              f"keyness {rep['keyness']['wall_s']} s | "
-              f"peak RSS {max(ing['peak_rss_kib'], rep['kwic']['peak_rss_kib'], rep['keyness']['peak_rss_kib'])/1024:.0f} MiB",
+              f"kwic {kw_s} s | "
+              f"keyness {kn.get('wall_s')} s | "
+              f"peak RSS {peak/1024:.0f} MiB",
               flush=True)
 
     summary = out_dir / "scale_summary.json"
