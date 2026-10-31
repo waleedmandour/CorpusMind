@@ -12,14 +12,27 @@ English corpora of 1M and 10M tokens:
                log-likelihood + effect size).
 
 Corpus construction (documented, by design — same pattern as
-scripts/benchmark_arabic_corpus.py): the fixed sentence pool below is built
-from the engine's own hash-frozen English snapshot texts
-(engine/eval/data/snapshot/en_*.txt), split into sentences deterministically;
-the pool is then cycled with light numeric variation to build documents of
-~1000 tokens until the target token count is reached. The corpus is
-therefore REPETITIVE (small vocabulary): tok/s reflects steady-state
-storage-path throughput on repetitive text, and keyness operates on a small
-type inventory. `_meta` records pool provenance, vocabulary size, document
+scripts/benchmark_arabic_corpus.py): two modes, selected with --corpus-mode:
+
+  - "repetitive" (default, matches the 2026-10-31 A7 runs 41202459225 /
+    41203959363): the fixed sentence pool below is built from the engine's
+    own hash-frozen English snapshot texts (engine/eval/data/snapshot/en_*.txt),
+    split into sentences deterministically; the pool is then cycled with light
+    numeric variation to build documents of ~1000 tokens until the target
+    token count is reached. The corpus is therefore REPETITIVE (small
+    vocabulary, 234 types): tok/s reflects steady-state storage-path
+    throughput on repetitive text, and keyness operates on a small type
+    inventory. Any report MUST label this mode "repetitive synthetic text".
+
+  - "zipf" (F4 re-run mode): deterministic seeded (numpy PCG64, seed
+    20261031) Zipf-like token streams over a 200k+ type vocabulary
+    (zipf(a=1.15) draws mapped modulo 220000 word ids, period-delimited
+    ~20-token sentences). This gives keyness a realistic type inventory and
+    tests that peak RSS stays flat when the vocabulary is large — the
+    memory/keyness findings must be supported on THIS mode; the repetitive
+    mode numbers are kept for continuity and labelled as such.
+
+`_meta` records the mode, seed, pool provenance, vocabulary size, document
 count and the exact token count of every measured corpus so readers can
 judge this.
 
@@ -32,11 +45,6 @@ Run (CI):
     python scripts/benchmark_scale.py --sizes 1000000 --out benchmarks/out
 Env:
     CORPUSMIND_SCALE_SIZES=1000000,10000000  (--sizes fallback)
-
-The database URL MUST be provided via CORPUSMIND_DB_URL (the script refuses
-to run against the default ~/.corpusmind data dir); each size run should use
-its own fresh file so ingest cost includes table creation and cannot reuse a
-previous size's rows.
 """
 
 from __future__ import annotations
@@ -71,6 +79,10 @@ SENT_SPLIT = re.compile(r"(?<=[.!?])\s+")
 DOC_TOKENS = 1000          # target tokens per document
 REF_TOKENS = 50_000        # reference-corpus size (keyness side B)
 COMMIT_EVERY = 50          # docs per commit during ingest
+ZIPF_SEED = 20261031       # F4 zipf mode: deterministic PCG64 seed
+ZIPF_VOCAB = 220_000       # F4 zipf mode: vocabulary size (>= 200k types)
+ZIPF_A = 1.15              # F4 zipf mode: Zipf shape parameter
+ZIPF_SENT = 20             # F4 zipf mode: tokens per synthetic sentence
 
 _pool_cache: list[str] | None = None
 
@@ -111,6 +123,32 @@ def build_docs(target_tokens: int) -> tuple[list[str], int]:
     return docs, total
 
 
+def zipf_docs(target_tokens: int) -> tuple[list[str], int, int]:
+    """F4: Zipf-like corpus over a 200k+ type vocabulary.
+
+    Deterministic: numpy PCG64(seed=ZIPF_SEED), zipf(a=ZIPF_A) draws mapped
+    modulo ZIPF_VOCAB onto word ids ("zw<i>"). Tokens are grouped into
+    ~ZIPF_SENT-token period-delimited sentences and packed into
+    ~DOC_TOKENS-token documents. Returns (docs, actual_tokens, n_types).
+    """
+    import numpy as np
+
+    rng = np.random.Generator(np.random.PCG64(ZIPF_SEED))
+    docs: list[str] = []
+    total = 0
+    types: set[str] = set()
+    while total < target_tokens:
+        n_doc = min(DOC_TOKENS, target_tokens - total)
+        draws = rng.zipf(ZIPF_A, size=n_doc)
+        toks = [f"zw{int(d) % ZIPF_VOCAB}" for d in draws]
+        types.update(toks)
+        sents = [" ".join(toks[i:i + ZIPF_SENT]) + "."
+                 for i in range(0, len(toks), ZIPF_SENT)]
+        docs.append(" ".join(sents))
+        total += n_doc
+    return docs, total, len(types)
+
+
 def peak_rss_kib() -> int:
     return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
 
@@ -127,7 +165,8 @@ def phase_meta() -> dict:
     return {"peak_rss_kib": peak_rss_kib()}
 
 
-async def run_size(size: int, out_dir: Path, db_url: str) -> dict:
+async def run_size(size: int, out_dir: Path, db_url: str,
+                   corpus_mode: str = "repetitive") -> dict:
     os.environ["CORPUSMIND_DB_URL"] = db_url
     for mod in ["app.settings", "storage.session", "ingestion.service",
                 "stats.service"]:
@@ -139,23 +178,42 @@ async def run_size(size: int, out_dir: Path, db_url: str) -> dict:
     from ingestion.service import ingest_document
     from stats.service import search_concordance, compute_keyness
 
-    report: dict = {"size_tokens_target": size}
+    report: dict = {"size_tokens_target": size, "corpus_mode": corpus_mode}
     tmp = Path(tempfile.mkdtemp(prefix=f"scalebench-{size}-"))
 
-    docs, total_tokens = build_docs(size)
-    ref_docs, ref_total = build_docs(REF_TOKENS)
-    pool = load_pool()
-    vocab = len({w for s in pool for w in s.split()})
-    report["corpus"] = {
-        "pattern": "cycled fixed snapshot sentences (en_*.txt), ~1000 tok/doc",
-        "pool_sentences": len(pool),
-        "pool_vocab_types": vocab,
-        "documents": len(docs),
-        "actual_tokens": total_tokens,
-        "reference_documents": len(ref_docs),
-        "reference_tokens": ref_total,
-        "unique_input_tokens": vocab,
-    }
+    if corpus_mode == "zipf":
+        docs, total_tokens, n_types = zipf_docs(size)
+        ref_docs, ref_total, ref_types = zipf_docs(REF_TOKENS)
+        report["corpus"] = {
+            "pattern": f"F4 zipf-like synthetic tokens, a={ZIPF_A}, "
+                       f"vocab={ZIPF_VOCAB}, seed={ZIPF_SEED}, "
+                       f"~{ZIPF_SENT}-token sentences, ~1000 tok/doc",
+            "zipf_seed": ZIPF_SEED,
+            "zipf_vocab_target": ZIPF_VOCAB,
+            "documents": len(docs),
+            "actual_tokens": total_tokens,
+            "input_types": n_types,
+            "reference_documents": len(ref_docs),
+            "reference_tokens": ref_total,
+            "reference_input_types": ref_types,
+            "unique_input_tokens": n_types,
+        }
+    else:
+        docs, total_tokens = build_docs(size)
+        ref_docs, ref_total = build_docs(REF_TOKENS)
+        pool = load_pool()
+        vocab = len({w for s in pool for w in s.split()})
+        report["corpus"] = {
+            "pattern": "cycled fixed snapshot sentences (en_*.txt), ~1000 tok/doc "
+                       "— REPETITIVE SYNTHETIC TEXT (label required in reports)",
+            "pool_sentences": len(pool),
+            "pool_vocab_types": vocab,
+            "documents": len(docs),
+            "actual_tokens": total_tokens,
+            "reference_documents": len(ref_docs),
+            "reference_tokens": ref_total,
+            "unique_input_tokens": vocab,
+        }
 
     # --- ingest ------------------------------------------------------------
     t0 = time.perf_counter()
@@ -209,8 +267,13 @@ async def run_size(size: int, out_dir: Path, db_url: str) -> dict:
             "on", "with", "as", "are", "this", "be", "was", "or", "by",
             "from", "which", "not", "has", "have", "an", "at", "but", "its",
             "can", "may", "we", "they", "their", "such", "these", "into"}
-    pool_freq = Counter(w.lower() for s in load_pool() for w in s.split())
-    mid_word = next(w for w, _ in pool_freq.most_common(50) if w not in STOP)
+    if corpus_mode == "zipf":
+        # Query words must exist in the zipf corpus. numpy zipf() draws are >= 1,
+        # so the rank-1/rank-2 types are zw1 and zw2 (zw0 never occurs).
+        w1, w2 = "zw1", "zw2"
+    else:
+        pool_freq = Counter(w.lower() for s in load_pool() for w in s.split())
+        w1, w2 = "the", next(w for w, _ in pool_freq.most_common(50) if w not in STOP)
 
     async def timed_kwic(session, word, lim):
         t = time.perf_counter()
@@ -228,9 +291,9 @@ async def run_size(size: int, out_dir: Path, db_url: str) -> dict:
     await init_db()
     async for session in get_session():
         q = []
-        q.append(await timed_kwic(session, "the", 400))
-        q.append(await timed_kwic(session, mid_word, 400))
-        q.append(await timed_kwic(session, "the", 1000))  # ceiling probe
+        q.append(await timed_kwic(session, w1, 400))
+        q.append(await timed_kwic(session, w2, 400))
+        q.append(await timed_kwic(session, w1, 1000))  # ceiling probe
         report["kwic"] = {"queries": q, **phase_meta()}
     await dispose_db()
     gc.collect()
@@ -276,6 +339,11 @@ def main() -> None:
     ap.add_argument("--sizes",
                     default=os.environ.get("CORPUSMIND_SCALE_SIZES", "1000000"))
     ap.add_argument("--out", default=str(REPO_ROOT / "benchmarks" / "out"))
+    ap.add_argument("--corpus-mode", choices=("repetitive", "zipf"),
+                    default="repetitive",
+                    help="repetitive = cycled snapshot sentences (the A7 2026-10-31 "
+                         "mode, small vocab); zipf = F4 Zipf-like 200k+ type corpus "
+                         "(memory/keyness re-run mode)")
     args = ap.parse_args()
 
     db_url = os.environ.get("CORPUSMIND_DB_URL", "")
@@ -294,7 +362,7 @@ def main() -> None:
     all_reports = []
     for size in sizes:
         db_url_i = db_url.replace(".db", f"-{size}.db")
-        rep = asyncio.run(run_size(size, out_dir, db_url_i))
+        rep = asyncio.run(run_size(size, out_dir, db_url_i, corpus_mode=args.corpus_mode))
         rep["_meta"] = _meta_block(size, args)
         path = out_dir / f"scale_{size}.json"
         path.write_text(json.dumps(rep, ensure_ascii=False, indent=1),
@@ -333,11 +401,16 @@ def _meta_block(size: int, args) -> dict:
         "runner": {"platform": platform.platform(), "python": platform.python_version(),
                    "machine": platform.machine(),
                    "cpus": os.cpu_count()},
-        "command": f"python scripts/benchmark_scale.py --sizes {args.sizes}",
+        "command": f"python scripts/benchmark_scale.py --sizes {args.sizes} "
+                   f"--corpus-mode {args.corpus_mode}",
         "corpus_construction": (
-            "synthetic: fixed English snapshot sentences "
-            "(engine/eval/data/snapshot/en_*.txt) cycled to target size; "
-            "repetitive text, small vocabulary — see module docstring"),
+            "synthetic; mode " + args.corpus_mode + ": " +
+            ("zipf-like tokens over a 200k+ type vocabulary (PCG64 seed "
+             "20261031, a=1.15, vocab 220000)" if args.corpus_mode == "zipf"
+             else "fixed English snapshot sentences (engine/eval/data/snapshot/en_*.txt) "
+                  "cycled to target size; REPETITIVE SYNTHETIC TEXT, small vocabulary "
+                  "— reports must label this mode") +
+            " — see module docstring"),
         "rss_definition": "process-wide monotone peak (ru_maxrss), KiB",
     }
 
