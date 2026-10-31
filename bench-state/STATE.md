@@ -3,7 +3,7 @@
 Read this file FIRST every session and every scheduled turn. Do not act before
 checking §7 (next action) and §8 (binding rules). Never put secrets in this file.
 
-Last updated: 2026-10-31T06:20Z (setup session: T0-T5 done; seg row verified; local 1.5b row verified; 3b full in flight 41176056150; crawl armed for 00:45 PDT)
+Last updated: 2026-10-31T07:45Z (addendum session: A1 done, A2 done, A4 run 41181061992 in flight, A5 DONE gate PASS, A3 chain defined; refs bench/extra-1 @ b592cdc)
 
 ## 1. Freeze
 
@@ -36,14 +36,18 @@ Daily budget: morning slice ≤16 ids, drip slice ≤4 ids (retry or advance).
 |-------|---------|--------------------|----------|----------------------------------------------|-----------------------|
 | G-001 | BANKED  | 41055467044        | 0704955  | 0 lines                                      | YES                   |
 | G-002 | BANKED  | 41120607735        | bd25058  | 0 lines                                      | YES                   |
-| G-004 | RE-ASK  | 41026068623 (08:23Z) | afce8fe | 1936 lines                                   | NO — re-ask           |
-| G-040 | RE-ASK  | 41026068623 (08:23Z) | afce8fe | 1936 lines                                   | NO — re-ask           |
-| G-073 | RE-ASK  | 41051082943 (11:51Z) | 9c272b8 | 94 lines (tests-only: engine/tests/test_phase3_arabic.py) | NO — re-ask (literal rule) |
+| G-004 | BANKED (A2) | 41051082943 (11:51Z) | 9c272b8 | 0 lines excluding engine/tests | YES — reused, disclosed |
+| G-040 | BANKED (A2) | 41051082943 (11:51Z) | 9c272b8 | 0 lines excluding engine/tests | YES — reused, disclosed |
+| G-073 | BANKED (A2) | 41051082943 (11:51Z) | 9c272b8 | 0 lines excluding engine/tests | YES — reused, disclosed |
 
-- Probe-run answers G-004/G-040 scored PASS and G-004 was an honest-trap fail —
-  none of that carries over: gold was re-frozen in #43/#44 and the diff rule
-  above is applied literally. Their freeze-row status will be whatever the
-  re-ask produces.
+- A2 (addendum 2026-10-31): the reuse rule now EXCLUDES engine/tests.
+  `git diff 9c272b8..ee42bfa -- engine shared reference-data ':!engine/tests'`
+  = 0 lines, so G-004, G-040, G-073 are BANKED from probe run 41051082943
+  (earliest REUSABLE clean; 41026068623 @ afce8fe is earlier at 08:23Z but its
+  diff is 1692 lines even excluding tests -> not reusable). REUSE DISCLOSED.
+  Caveat carried into the report: these probe answers scored under the
+  PRE-freeze gold (#43/#44 re-froze it) and G-004 was an honest-trap fail;
+  the freeze-row score for G-004 will reflect that (reported as-is).
 - Off-spec probe attempts, Oct-30 evening, ZERO clean answers (disclose in
   report; consumed Oct-30 quota tail): 41125306050 (gemini-3.8-flash-lite,
   G-005 failed), 41127495897 (gemini-3.8-pro, G-006 failed), 41129889514
@@ -71,11 +75,11 @@ Daily budget: morning slice ≤16 ids, drip slice ≤4 ids (retry or advance).
 
 ## 5. Crawl queue (unbanked order for bench/freeze-1)
 
-Re-asks first, then bank order. Banked-for-freeze so far: G-001, G-002.
+Banked-for-freeze: G-001, G-002, G-004, G-040, G-073 (5/80). 75 unbanked.
 
-1. slice-1 (≤16): G-004 G-040 G-073 G-003 G-005 G-006 G-007 G-008 G-009 G-010 G-011 G-012 G-013 G-014 G-015 G-016
-2. drip (≤4): retry infra-dirty of slice-1 (max 4); if none, advance: G-017 G-018 G-019 G-020
-3. then in order: G-021 … G-039, G-041 … G-072, G-074 … G-080 (60 remaining after today)
+1. slice-1 (≤16): G-003 G-005 G-006 G-007 G-008 G-009 G-010 G-011 G-012 G-013 G-014 G-015 G-016 G-017 G-018 G-019
+2. drip (≤4): retry infra-dirty of slice-1 (max 4); if none, advance: G-020 G-021 G-022 G-023
+3. then in order: G-024 … G-039, G-041 … G-072, G-074 … G-080 (55 remaining after today)
 
 Slice sizing rule: never exceed 20 dispatched questions per Pacific day across
 both slices (16 morning + 4 drip). If the observed quota is tighter (see §10),
@@ -167,8 +171,56 @@ shrink to what succeeds and update this file.
   idle freeze-1-local; full bank only if projection ≤ 330 min. If 7b does not
   fit: write a one-command runbook in engine/eval/README.md (on a bench branch,
   NOT a freeze ref) and mark the 7b row "pending user-run".
-- (gemini) IN PROGRESS: banked 2/80 reusable (+3 re-asks queued). ~5-8 Pacific
-  days at 16+4/day if clean; re-check §5 every turn.
+- (gemini) IN PROGRESS: banked 5/80 reusable (A2 added G-004/G-040/G-073 from
+  the probe run). ~4-5 Pacific days at 16+4/day if clean; re-check §5 every turn.
+  A8: the crawl is OPTIONAL for T6 — T6 records only completed rows and must
+  not wait; if incomplete at T6, write it into the limitations and cite the
+  probe runs (41051082943, 41055467044) as incident evidence only.
+
+- (A3 local rows, addendum) Each config runs 3× on bench/freeze-1-local (full
+  80, commit_results=true). Report all runs, the mean pass/hallucination, and
+  the number of questions whose verdict flips across the runs. Chain order
+  (serialized, poll before each dispatch):
+    1. 3b #1 — 41176056150 IN FLIGHT since 06:18:28Z
+    2. 1.5b #2   3. 1.5b #3   4. 3b #2   5. 3b #3
+    6. 7b probe (5 questions, commit_results=false, grounding_only
+       'G-001 G-002 G-003 G-004 G-005') -> full 7b only if projection <= 330
+       min; if it fits: 7b #1, #2, #3; if not: one-command runbook in
+       engine/eval/README.md (on bench/extra-1, never a freeze ref) and mark
+       the 7b row 'pending user-run'.
+  1.5b #1 = 41173022988 (done: pass 0.1625 [0.0875-0.2375], halluc 0.625
+  [0.525-0.725]). The afce8fe row 0.1375/0.65 stays labelled SUPERSEDED.
+
+- (A4) Full-dev extrinsic rerun: 41181061992 on bench/freeze-1-seg
+  (seg_limit=222, commit_results=true), IN FLIGHT since 07:33:14Z. Sign
+  convention stated in engine/eval/README.md on bench/extra-1: the code
+  computes deltas as GOLD MINUS ENGINE (positive = engine produced fewer);
+  the addendum's 'engine minus gold' wording corresponds to negating every
+  delta. The 20-doc extrinsic view (41173011756) is superseded by the 222-doc
+  numbers once this run lands.
+
+- (A5) DONE, gate PASS. engine/eval/calibration_sentence.py on bench/extra-1
+  (b592cdc) reproduces Table 4 of arXiv:2606.08025 (dev) within 0.21 F1:
+  PA punkt 65.18/65.2, pysbd 63.31/63.1, spacy 67.29/67.3;
+  NP punkt 52.32/52.3, pysbd 52.05/52.1, spacy 54.31/54.3.
+  Root cause of the initial PA mismatch (12-13 F1): punkt/sentencizer ignore
+  bare newlines; the paper's PA protocol counts paragraph breaks. NP matched
+  exactly with no change. No evaluator or split change was needed; the
+  finding is documented in engine/eval/README.md and the raw calib JSONs are
+  on bench/state (bench-state/artifacts/calib_{PA,NP}.json).
+
+- (A6) TODO after A3 completes: engine/eval/parity_stats.py on a new ref at
+  ee42bfa comparing CorpusMind with scipy/statsmodels/lexicalrichness on one
+  shared corpus; per measure record max abs + relative deviation and the
+  convention; a gap is an error only after checking the other tool's
+  convention. Verify `git diff ee42bfa -- engine ':!engine/eval'` empty.
+
+- (A7) TODO after A6: ingest / KWIC / keyness wall time + peak RSS at 1M and
+  10M tokens. Text: SYNTHETIC (deterministic repetition of the fixed snapshot
+  sentences, same pattern as scripts/benchmark_arabic_corpus.py) — state that
+  choice in the report. Run on CI (standardized runners, 360-min cap) via a
+  minimal extra workflow or a one-off dispatch on a new ref at ee42bfa;
+  engine-diff rule must stay satisfied.
 
 ## 10. Known anomalies / open items for the report
 
