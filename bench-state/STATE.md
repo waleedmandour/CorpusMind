@@ -3,7 +3,7 @@
 Read this file FIRST every session and every scheduled turn. Do not act before
 checking §7 (next action) and §8 (binding rules). Never put secrets in this file.
 
-Last updated: 2026-10-31T05:40Z (setup session: T0–T4a done, crawl jobs 489282/489284 armed, T5 pushed)
+Last updated: 2026-10-31T06:20Z (setup session: T0-T5 done; seg row verified; local 1.5b row verified; 3b full in flight 41176056150; crawl armed for 00:45 PDT)
 
 ## 1. Freeze
 
@@ -143,21 +143,30 @@ shrink to what succeeds and update this file.
   * snapshot branch bench/snapshot-run-41173011756 pushed (data-only); the
     bot's PR step silently failed — open the PR manually at merge time
   * test split NOT run (per user decision)
-- (local-a) qwen2.5:1.5b re-run on freeze: run 41173022988 on bench/freeze-1-local
-  (full 80, commit_results=true) — IN FLIGHT since 05:32:48Z. Note: its snapshot
-  branch bench/snapshot-run-41173022988 may land WITHOUT the grounding artifact
-  (results-snapshot only waits on perf+seg jobs) — after the run completes,
-  download the grounding artifact and push it onto that snapshot branch before
-  merging. On success, mark 41028985957
+- (local-a) DONE. Run 41173022988 on bench/freeze-1-local @ ee42bfa
+  (qwen2.5:1.5b, ollama, full 80, commit_results=true), SUCCESS 06:04Z, 80/80
+  clean answers. Scored vs frozen gold (artifact grounding-report):
+  pass_rate 0.1625 (CI95 0.0875-0.2375), hallucination_rate 0.625 (CI95
+  0.525-0.725); verdicts PASS 13 / MISSING_NUMBER 14 / HALLUCINATED 39 /
+  TRAP_FAILURE 14. The afce8fe row (41028985957; pass 0.1375, halluc 0.65 per
+  brief — not re-verified this session) is SUPERSEDED; note the delta reflects
+  engine+gold changes (#43/#44), not engine effect alone. Snapshot branch
+  bench/snapshot-run-41173022988 patched with grounding/ (data-only commit) —
+  the results-snapshot job had raced ahead of the grounding artifact. On success, mark 41028985957
   superseded. Prior row (to be replaced): pass 0.1375, hallucination 0.65
   (UNVERIFIED here; verify by re-scoring the new run).
-- (local-b) larger local model: NOT STARTED. Procedure: after (a) completes and
-  bench/freeze-1-local is idle, dispatch qwen2.5:3b with grounding_only =
-  "G-001 G-002 G-003 G-004 G-005" (5 questions), same ollama params as (a),
-  commit_results=false. Wall-time projection = elapsed × 16; run the full bank
-  only if projection ≤ 330 min (runner cap 360). Then try qwen2.5:7b the same
-  way. If neither fits: write a one-command runbook in engine/eval/README.md
-  (on a bench branch, not the freeze refs) and mark the row "pending user-run".
+- (local-b) qwen2.5:3b — timing probe DONE: run 41175198604 (5 questions
+  G-001..G-005, commit_results=false), SUCCESS 06:17Z. Grounding job 11.4 min,
+  mean 95.8 s/q (max 125.5) → full-80 projection 127.7 min (job-level 182 min)
+  ≤ 330 min → FITS. FULL RUN DISPATCHED: 41176056150 on bench/freeze-1-local
+  @ ee42bfa (full 80, commit_results=true), IN FLIGHT since 06:18:28Z, ETA ~3 h.
+  On completion: download grounding-report, score, record numbers, patch the
+  snapshot branch with grounding/ if missing (same race as local-a).
+  NEXT after that: qwen2.5:7b timing probe the same way (5 questions,
+  grounding_only="G-001 G-002 G-003 G-004 G-005", commit_results=false) on an
+  idle freeze-1-local; full bank only if projection ≤ 330 min. If 7b does not
+  fit: write a one-command runbook in engine/eval/README.md (on a bench branch,
+  NOT a freeze ref) and mark the 7b row "pending user-run".
 - (gemini) IN PROGRESS: banked 2/80 reusable (+3 re-asks queued). ~5-8 Pacific
   days at 16+4/day if clean; re-check §5 every turn.
 
@@ -173,3 +182,8 @@ shrink to what succeeds and update this file.
   docs-only PR (T6), not into any freeze ref.
 - Brief said canonical seg snapshot was @ 06de47b; the actual snapshot run
   40970859593 is @ 57be77f. Superseded either way by §9(seg).
+- The workflow's "Open snapshot PR" step silently failed for runs 41173011756
+  and 41173022988 (step reports success via `|| echo`; no PR exists). Open the
+  data-only snapshot PRs manually at merge time.
+- Oct-30 20:42-21:58Z dispatch runs (4 in §3) were not in the original brief;
+  all 0 clean, two off-spec models. No bank impact.
