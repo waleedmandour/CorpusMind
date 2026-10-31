@@ -1,0 +1,17 @@
+{
+ "source": "https://huggingface.co/datasets/MBZUAI/AraSeg-2026-Shared-Task-NP (dev split, checksum-pinned)",
+ "parquet": "NP_dev.parquet",
+ "parquet_sha256": "3809f2676c61ba06fa90cf404ac7f1f532b56163b07a667979fb8b858474ca21",
+ "parquet_bytes": 1273377,
+ "columns": [
+  "doc_id",
+  "tokens",
+  "labels",
+  "text",
+  "label_str"
+ ],
+ "rows_kept": 222,
+ "rows_skipped": 0,
+ "out_sha256": "2a0a93fcbec1358e36a0462c8abc4da4d24d86e7cb41f7fbcd6ba5fca23aee04",
+ "utc": "2026-10-30T22:01:53+00:00"
+}

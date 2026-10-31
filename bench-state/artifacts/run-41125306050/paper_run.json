@@ -1,0 +1,23 @@
+{
+ "meta": {
+  "created_utc": "2026-10-30T20:50:16+00:00",
+  "provider": "cloud",
+  "model": "gemini-3.8-flash-lite",
+  "question_count": 1,
+  "pause_s": 0.0,
+  "rate_retries": 4,
+  "cloud_reasoning_effort": "low",
+  "cloud_chat_timeout_s": 240.0,
+  "chat_deadline_s": 600.0,
+  "harness_timeout_s": 600.0
+ },
+ "results": [
+  {
+   "id": "G-005",
+   "answer": "",
+   "http_status": 502,
+   "error": "{\"detail\":\"Model call failed: [cloud] chat request failed: HTTPStatusError: Client error '404 Not Found' for url 'https://generativelanguage.googleapis.com/v1beta/openai/v1/chat/completions'\\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404\"}",
+   "wall_ms": 231521
+  }
+ ]
+}

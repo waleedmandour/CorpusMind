@@ -1,0 +1,53 @@
+{
+ "meta": {
+  "created_utc": "2026-10-30T20:22:18+00:00",
+  "provider": "cloud",
+  "model": "gemini-3.8-flash",
+  "question_count": 1,
+  "pause_s": 0.0,
+  "rate_retries": 4,
+  "cloud_reasoning_effort": "low",
+  "cloud_chat_timeout_s": 240.0,
+  "chat_deadline_s": 600.0,
+  "harness_timeout_s": 600.0
+ },
+ "results": [
+  {
+   "id": "G-002",
+   "answer": "بناءً على نتائج أداة **`get_corpus_overview`**، يحتوي هذا المحتوى على الإحصاءات التالية:\n\n* **عدد المستندات (document_count):** 4 مستندات.\n* **عدد الكلمات/الرموز (token_count):** 233 كلمة.\n* **عدد الأنواع (type_count):** 199 نوعاً.\n* **عدد الجمل (sentence_count):** 18 جملة.",
+   "grounded": true,
+   "tool_calls": [
+    {
+     "name": "get_corpus_overview",
+     "args": {
+      "corpus_id": "56dde79247b6467b"
+     },
+     "ok": true,
+     "auto": true
+    },
+    {
+     "name": "get_frequency",
+     "args": {
+      "corpus_id": "56dde79247b6467b"
+     },
+     "ok": true,
+     "auto": true
+    }
+   ],
+   "evidence": [
+    {
+     "kind": "tool_result",
+     "ref": "auto:get_corpus_overview:1",
+     "snippet": "{\"corpus_id\": \"56dde79247b6467b\", \"name\": \"AR-all\", \"language\": \"ar\", \"genre\": \"mixed\", \"text_side\": {\"document_count\": 4, \"token_count\": 233, \"type_count\": 199, \"sentence_count\": 18}, \"vision_side\": {\"image_set_count\": 0, \"image_count\": 0, \"image_sets\": []}, \"note\": \"\"}"
+    },
+    {
+     "kind": "tool_result",
+     "ref": "auto:get_frequency:2",
+     "snippet": "{\"unit\": \"word\", \"total_tokens\": 233, \"total_types\": 20, \"sttr\": 0.7768, \"top_items\": [{\"item\": \"في\", \"freq\": 11, \"per_million\": 47210.3, \"percent\": 4.721, \"range\": 4, \"range_percent\": 100.0}, {\"item\": \"على\", \"freq\": 5, \"per_million\": 21459.23, \"percent\": 2.1459, \"range\": 3, \"range_percent\": 75.0}, {\"item\": \"من\", \"freq\": 5, \"per_million\": 21459.23, \"percent\": 2.1459, \"range\": 4, \"range_percent\": 100.0}, {\"item\": \"عن\", \"freq\": 4, \"per_million\": 17167.38, \"percent\": 1.7167, \"range\": 2, \"range_perc"
+    }
+   ],
+   "elapsed_ms": 331680,
+   "wall_ms": 775621
+  }
+ ]
+}
