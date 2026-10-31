@@ -97,6 +97,10 @@ on:
         description: "Commit artifacts to benchmarks/results/ (data-only commit)"
         type: boolean
         default: false
+      scale_corpus_mode:
+        description: "Corpus generator for the Scale job (repetitive = A7 cycled sentences | zipf = F4 200k+ type re-run)"
+        default: "repetitive"
+        required: false
   pull_request:
     paths:
       - "benchmarks/**"
@@ -519,6 +523,7 @@ jobs:
     env:
       CORPUSMIND_DB_URL: "sqlite+aiosqlite:////tmp/scale-${{ matrix.size }}/scale.db"
       CORPUSMIND_SCALE_SIZES: ${{ matrix.size }}
+      CORPUSMIND_SCALE_CORPUS_MODE: ${{ inputs.scale_corpus_mode }}
     steps:
       - uses: actions/checkout@v4
 
@@ -540,6 +545,7 @@ jobs:
       - name: Run scale benchmark
         run: |
           python scripts/benchmark_scale.py --sizes "${{ matrix.size }}" \
+            --corpus-mode "${{ inputs.scale_corpus_mode }}" \
             --out benchmarks/out/scale
 
       - name: Markdown summary

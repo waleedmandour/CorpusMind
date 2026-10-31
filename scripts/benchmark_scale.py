@@ -340,7 +340,7 @@ def main() -> None:
                     default=os.environ.get("CORPUSMIND_SCALE_SIZES", "1000000"))
     ap.add_argument("--out", default=str(REPO_ROOT / "benchmarks" / "out"))
     ap.add_argument("--corpus-mode", choices=("repetitive", "zipf"),
-                    default="repetitive",
+                    default=os.environ.get("CORPUSMIND_SCALE_CORPUS_MODE", "repetitive"),
                     help="repetitive = cycled snapshot sentences (the A7 2026-10-31 "
                          "mode, small vocab); zipf = F4 Zipf-like 200k+ type corpus "
                          "(memory/keyness re-run mode)")
