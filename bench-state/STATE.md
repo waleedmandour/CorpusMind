@@ -3,7 +3,7 @@
 Read this file FIRST every session and every scheduled turn. Do not act before
 checking §7 (next action) and §8 (binding rules). Never put secrets in this file.
 
-Last updated: 2026-10-31T05:45Z (setup session: T0–T4a done, crawl jobs armed)
+Last updated: 2026-10-31T05:40Z (setup session: T0–T4a done, crawl jobs 489282/489284 armed, T5 pushed)
 
 ## 1. Freeze
 
@@ -83,8 +83,8 @@ shrink to what succeeds and update this file.
 
 ## 6. Schedule
 
-- `corpusmind-gemini-daily` — 00:45 America/Los_Angeles (after Pacific reset) — id: see scheduler
-- `corpusmind-gemini-drip` — 15:30 America/Los_Angeles — id: see scheduler
+- `corpusmind-gemini-daily` — 00:45 America/Los_Angeles (after Pacific reset) — id 489282, next fire 2026-10-31T00:45-07:00
+- `corpusmind-gemini-drip` — 15:30 America/Los_Angeles — id 489284, next fire 2026-10-31T15:30-07:00
 - (old IDs 489079/489080 were NOT found in this scheduler on 2026-10-31; these
   two jobs are their replacements)
 
