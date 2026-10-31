@@ -88,14 +88,20 @@ def compare(engine_vals: dict[str, float], ref_vals: dict[str, float],
         e, r = engine_vals[k], ref_vals.get(k)
         if r is None:
             continue
-        abs_dev = abs(e - r)
-        rel_dev = abs_dev / abs(r) if r else (0.0 if not abs_dev else math.inf)
+        comparable = math.isfinite(e) and math.isfinite(r)
+        abs_dev = abs(e - r) if comparable else math.nan
+        rel_dev = (abs_dev / abs(r)
+                   if comparable and r else (0.0 if comparable and not abs_dev else math.nan))
         rows.append({"corpus": k, "engine": e, "reference": r,
-                     "abs_dev": abs_dev, "rel_dev": rel_dev})
-    max_abs = max((r["abs_dev"] for r in rows), default=0.0)
-    max_rel = max((r["rel_dev"] for r in rows), default=0.0)
+                     "abs_dev": abs_dev, "rel_dev": rel_dev,
+                     "comparable": comparable})
+    finite = [r for r in rows if math.isfinite(r["abs_dev"])]
+    max_abs = max((r["abs_dev"] for r in finite), default=0.0)
+    max_rel = max((r["rel_dev"] for r in finite if math.isfinite(r["rel_dev"])), default=0.0)
+    n_excluded = sum(1 for r in rows if not r["comparable"])
     return {"measure": note.split(" — ")[0], "rows": rows,
-            "max_abs_dev": max_abs, "max_rel_dev": max_rel, "note": note}
+            "max_abs_dev": max_abs, "max_rel_dev": max_rel, "note": note,
+            "n_comparable": len(finite), "n_excluded": n_excluded}
 
 
 def main() -> None:
@@ -113,13 +119,21 @@ def main() -> None:
     results: list[dict[str, Any]] = []
 
     # ---- lexicalrichness family (same token list on both sides) ----
-    lr_objs = {k: LexicalRichness(" ".join(t)) for k, t in corpora.items()}
-    # NOTE: LexicalRichness re-tokenizes internally; verify its token count
-    # matches ours and disclose any drift.
-    tok_note = ("shared regex tokenizer \\w+; LR re-tokenizes internally, "
-                f"token-count match checked per corpus")
-    tok_match = {k: lr.words == len(t) for k, (lr, t) in
-                 ((k, (lr_objs[k], corpora[k])) for k in corpora)}
+    # LR 0.5.x preprocesses (lowercase, strip punctuation/digits) and re-tokenizes
+    # by default. To keep the SHARED-TOKENIZER premise, LR is constructed with an
+    # identity preprocessor and a tokenizer that returns the exact shared token
+    # list. LR's default-preprocessing token counts are still recorded as drift
+    # disclosure (they explain any naive-LR numbers a reader may reproduce).
+    lr_objs = {k: LexicalRichness(" ".join(t), preprocessor=lambda x: x,
+                                 tokenizer=lambda _s, toks=t: toks)
+               for k, t in corpora.items()}
+    lr_default = {k: LexicalRichness(" ".join(t)) for k, t in corpora.items()}
+    tok_note = ("shared regex tokenizer \\w+; LR pinned to the same list via "
+                "preprocessor=identity + tokenizer=closure; LR default "
+                "preprocessing drift recorded per corpus")
+    tok_match = {k: lr.words == len(corpora[k]) for k, lr in lr_objs.items()}
+    tok_drift_default = {k: {"shared": len(corpora[k]), "lr_default": lr.words}
+                         for k, lr in lr_default.items()}
 
     def _ev(fn) -> dict[str, float]:
         return {k: fn(t) for k, t in corpora.items()}
@@ -133,20 +147,35 @@ def main() -> None:
                 out[k] = math.nan
         return out
 
-    results.append(compare(_ev(type_token_ratio), _rv("ttr"),
-        "TTR — identical definition (types/tokens); LR tokenization checked via tok_match"))
-    results.append(compare(_ev(lambda t: mattr(t, window=50)), _rv("mattr", window_size=50),
+    def _skip_none(vals: dict[str, float], min_len: int) -> dict[str, float]:
+        # LR raises on inputs shorter than its window; drop those corpora so the
+        # comparison only covers rows where BOTH tools define the measure.
+        return {k: v for k, v in vals.items()
+                if len(corpora[k]) >= min_len and math.isfinite(v)}
+
+    results.append(compare(_ev(type_token_ratio),
+                           _skip_none(_rv("ttr"), 0),
+        "TTR — identical definition (types/tokens) on the shared token list"))
+    results.append(compare(_ev(lambda t: mattr(t, window=50)),
+                           _skip_none(_rv("mattr", window_size=50), 50),
         "MATTR window=50 — both average TTR over every full window, stride 1; "
-        "engine falls back to raw TTR below the window, LR may differ (see rows)"))
-    results.append(compare(_ev(lambda t: sttr(t, chunk_size=1000)), _rv("msttr", segment_window=1000),
+        "corpora shorter than the window are EXCLUDED on the LR side (LR raises) "
+        "while the engine falls back to raw TTR — convention difference, disclosed, "
+        "not scored"))
+    results.append(compare(_ev(lambda t: sttr(t, chunk_size=1000)),
+                           _skip_none(_rv("msttr", segment_window=1000), 1000),
         "STTR chunk=1000 — both drop the trailing partial chunk (engine: documented "
-        "standard practice; LR msttr: same standard)"))
+        "standard practice; LR msttr discard=True: same standard); corpora shorter "
+        "than the chunk are EXCLUDED (LR raises, engine falls back to raw TTR)"))
     results.append(compare(_ev(lambda t: mtld(t, threshold=0.72)), _rv("mtld", threshold=0.72),
-        "MTLD threshold=0.72 — forward+backward factor passes averaged; both implement "
-        "McCarthy & Jarvis 2010"))
-    results.append(compare(_ev(lambda t: hd_d(t, sample_size=42)), _rv("hdd", sample_size=42),
-        "HD-D sample=42 — McCarthy & Jarvis hypergeometric sampling; both implement "
-        "the same expectation"))
+        "MTLD threshold=0.72 — AGGREGATION CONVENTION DIFFERS (checked, disclosed): "
+        "engine = len(tokens)/mean(forward_factors, backward_factors); LR = mean of the "
+        "two directional MTLD scores (len/factors each) — the McCarthy & Jarvis 2010 "
+        "published form. Equal iff forward==backward factor counts; residual gap is "
+        "this convention, not a bug. Per-corpus rows show where the passes diverge"))
+    results.append(compare(_ev(lambda t: hd_d(t, sample_size=42)), _rv("hdd", draws=42),
+        "HD-D sample=42 — McCarthy & Jarvis hypergeometric sampling; LR 0.5.x names "
+        "the parameter 'draws' (same quantity), engine names it 'sample_size'"))
     if guiraud is not None:
         results.append(compare(_ev(guiraud), _rv("rttr"),
             "Guiraud RTTR — types/sqrt(tokens); identical definition"))
@@ -155,7 +184,10 @@ def main() -> None:
     (ck1, ck2), (a, b, c, d) = corpus_2x2(corpora)
     eng_chi = {"n/a": chi_square_2x2(a, b, c, d)}
     eng_g2 = {"n/a": log_likelihood_2x2(a, b, c, d)}
-    eng_or = {"n/a": odds_ratio(a, b, c, d)}
+    # engine's odds_ratio takes (f1, f2, N1, N2) — corpus freqs and sizes —
+    # NOT raw 2x2 cells; mapping from the table: f1=a, N1=a+b, f2=c, N2=c+d,
+    # which reproduces the same a·d/(b·c) statistic statsmodels reports.
+    eng_or = {"n/a": odds_ratio(a, c, a + b, c + d)}
 
     import numpy as np
     import scipy.stats as st
@@ -197,6 +229,7 @@ def main() -> None:
         "corpus_tokens": {k: len(t) for k, t in corpora.items()},
         "tokenizer": tok_note,
         "lr_token_count_matches": tok_match,
+        "lr_default_preproc_drift": tok_drift_default,
         "table_2x2": {"corpora": [ck1, ck2], "cells": [a, b, c, d]},
         "measures": results,
     }
