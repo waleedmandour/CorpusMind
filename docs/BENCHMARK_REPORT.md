@@ -246,14 +246,17 @@ CI runner (ubuntu-latest), full spaCy `en_core_web_sm` 3.8.0 pipeline
 (degraded=false — tagger/lemmatizer/parser active), 350-min job cap.
 Corpus: SYNTHETIC — **REPETITIVE SYNTHETIC TEXT** (required label): cycled
 frozen en-snapshot sentences (~234 types, ~1,000 tok/doc), stated by design.
-Every memory/keyness finding below therefore holds for repetitive text; the
+The A7 primary table below was measured on REPETITIVE SYNTHETIC TEXT; the
+F4 re-run table that follows it was measured on the zipf corpus. The
 F4 re-run mode (`--corpus-mode zipf`: deterministic PCG64 seed 20261031,
-zipf(a=1.15) over a 220,000-type vocabulary, ~20-token sentences) exists on
-bench/scale-1 (commit 3ffedaf) for the like-for-like re-run with a realistic
-type inventory — local 100k-token validation passed (27,322 input types,
-full pipeline degraded=false, keyness 100+100 keywords); the 1M/10M zipf
-legs were NOT measured this session (CI dispatch blocked — no write token;
-dispatch command in STATE.md).
+zipf(a=1.15) over a 220,000-type vocabulary, ~20-token sentences) was
+subsequently DISPATCHED AND MEASURED on the same branch (commit 9125bbb,
+run **41226973126**, workflow_dispatch `grounding_only=SCALE
+scale_corpus_mode=zipf`, both matrix legs SUCCESS, 2026-10-31): local 100k
+validation had passed (27,322 input types, full pipeline degraded=false,
+keyness 100+100 keywords).
+
+A7 primary table — REPETITIVE SYNTHETIC TEXT (run 41203959363):
 
 | phase | 1,000,050 tokens | 10,000,547 tokens | scaling |
 |---|---|---|---|
@@ -265,26 +268,70 @@ dispatch command in STATE.md).
 | DB size | 470 MB | 4.52 GB | linear |
 | peak RSS (process max) | 238 MiB | 287 MiB | **flat** |
 
+F4 re-run — ZIPF-LIKE 200k+ TYPE TEXT (run 41226973126; realized unique
+input types 140,543 @1M and 219,934 @10M — the 220,000-type vocabulary is
+essentially fully realized at 10M; queries zw1/zw2 are in-corpus zipf
+words):
+
+| phase | 1,000,000 tokens | 10,000,000 tokens | scaling |
+|---|---|---|---|
+| input types | 140,543 | 219,934 | vocabulary saturates at 10M |
+| ingest wall | 439.5 s (2,389 tok/s) | 4,364.3 s (2,303 tok/s) | throughput ~flat (degraded=false) |
+| KWIC zw1 @limit 400 | 3.35 s (138,190 hits) | 53.06 s (1,377,841 hits) | ~16× for 10× tokens+hits |
+| KWIC zw2 @limit 400 | 4.99 s (61,759 hits) | 44.86 s (621,088 hits) | ~9× |
+| KWIC ceiling probe zw1 @1000 | 7.83 s OK | 78.37 s OK | OK at both zipf scales |
+| keyness (vs 50k zipf reference) | 0.98 s (+100/−100) | 11.91 s (+100/−100) | linear, full ±100 budget |
+| peak RSS (process max) | 293 MiB | 666 MiB | tracks TYPE INVENTORY, not tokens |
+
 Findings:
-1. The storage paths scale to 10M tokens on a standard runner; peak memory
-   is corpus-size independent (the pipeline streams) — no OOM risk. (F4
-   label: measured on REPETITIVE SYNTHETIC TEXT; zipf re-run pending.)
+1. The storage paths scale to 10M tokens on a standard runner — no OOM
+   risk. Refined by the F4 zipf re-run (no longer pending): peak RSS is
+   flat in CORPUS SIZE at fixed vocabulary (238→287 MiB repetitive;
+   293→666 MiB zipf), i.e. memory tracks the type/lemma inventory
+   (234 → ~220k types), not token count. Ingest throughput at 10M is
+   2,129 tok/s (repetitive) vs 2,303 tok/s (zipf) — the ~30% 1M→10M drop
+   seen on repetitive text does not recur on the zipf corpus. Keyness
+   reaches its full ±100 keyword budget on zipf text (repetitive 1M could
+   only surface +29/−100 — a small-vocabulary artifact, now labeled as
+   such).
 2. ENGINE SCALE CEILING (reported, not patched — engine frozen for the
-   rows): the word-level KWIC context fetch builds ONE un-chunked `or_()`
-   over every matched sentence; SQLite's expression-depth limit (1000) is
-   crossed when a limit-1000 query matches ≳950 distinct sentences. The
-   phrase path already chunks at 400; the word-level path should chunk the
-   same way. All envelope measurements (limit=400) are unaffected.
+   rows; see the approval-request list below): the word-level KWIC context
+   fetch builds ONE un-chunked `or_()` over every matched sentence;
+   SQLite's expression-depth limit (1000) is crossed when a limit-1000
+   query matches ≳950 distinct sentences. The phrase path already chunks
+   at 400; the word-level path should chunk the same way. All envelope
+   measurements (limit=400) are unaffected; the @1000 probes passed at
+   all four measured scales (repetitive 1M/10M, zipf 1M/10M) — the
+   ceiling is reached by DISTINCT MATCHES, not corpus size.
 3. Failure evidence (F4): the ceiling failure is DETERMINISTIC, not
-   intermittent — reproduced locally on 2026-10-31 with a 6,000-token
-   corpus (1,200 distinct one-"the" sentences) through the production
-   `search_concordance`: limit=400 returns OK (400 lines), limit=1000
-   raises `sqlite3.OperationalError: Expression tree is too large (maximum
-   depth 1000)` (repro script `scripts/kwic_repro.py`, session log
-   captured in STATE.md §11). The A7 CI retry run that first hit it was not
-   recorded by its run ID in STATE.md (the 41202459225 DB-fix run and the
-   final 41203959363 envelope run bracket it); its ID is recoverable from
-   the Actions history of bench/scale-1 when API access returns.
+   intermittent. CI evidence: run **41202901041** (bench/scale-1,
+   workflow_dispatch @ c02b3c7, 12:50:46Z), job "Scale (1000000 tokens)"
+   FAILED at 12:58:17Z with `sqlite3.OperationalError: Expression tree is
+   too large (maximum depth 1000)` (sqlalchemy.exc.OperationalError wrap;
+   the 10M leg of that run was cancelled as a consequence). Local
+   reproduction: 2026-10-31, 6,000-token corpus (1,200 distinct
+   one-"the" sentences) through the production `search_concordance`:
+   limit=400 returns OK (400 lines), limit=1000 raises the same error
+   (portable repro committed: `scripts/kwic_repro.py` on bench/scale-1
+   @ 9125bbb).
+4. Post-freeze engine fixes — PROPOSED, NOT MADE (user approval
+   required before any implementation; the engine is frozen at ee42bfa and
+   every bench branch keeps `git diff ee42bfa -- engine ':!engine/eval'`
+   empty):
+   - MTLD aggregation: `engine/stats/measures.py` `mtld()` returns
+     `len / mean(forward_factors, backward_factors)`; the McCarthy &
+     Jarvis (2010) published form — and lexicalrichness — use
+     `mean(len/f_forward, len/f_backward)`. Equal only when the two
+     directional factor counts coincide; currently disclosed as a
+     convention difference in the parity battery. Fix ≈3 lines + tests;
+     no frozen gold value quotes MTLD, but it is a visible numeric change
+     (semver-minor + battery re-run per house discipline).
+   - Word-level KWIC `or_()` chunking: `engine/stats/service.py`
+     word-level context fetch (~lines 498–516) should copy the phrase
+     path's CHUNK=400 batching (~lines 426–440), removing the
+     deterministic depth-1000 ceiling of finding 2/3. Pure query-batching
+     change, no result semantics change; gold unaffected; still a
+     post-freeze engine edit (new freeze ref required).
 
 ## 8. Provenance, anomalies, and disclosures
 
@@ -292,7 +339,10 @@ Findings:
   41173011756, clean=true, diffs=[]). Snapshot branches pushed for every
   completed run; the workflow's automatic snapshot-PR step silently failed
   (known anomaly), so manual data-only PRs were opened: #50 (seg canonical),
-  #51 (A4 222-doc), #52–#56 (local rows). Merge is the maintainer's call.
+  #51 (A4 222-doc), #52–#56 (local rows), #58 (3b #3 snapshot, 41202610042).
+  F-order tooling/data PRs: #59 (raw local-run envelopes), #60 (F2+F3 eval),
+  #61 (F4 zipf + repetitive labeling). Merge is the maintainer's call;
+  nothing has been merged by the bot.
 - Quota model: the free-tier Gemini quota/reset model in the original brief
   does NOT hold (§5); treat slices as adaptive and ≤20/day regardless.
 - Off-spec model attempts on Oct-30 (flash-lite, pro): 0 clean answers,
@@ -315,7 +365,9 @@ Findings:
   equal to the frozen runs' `araseg_sha256.txt`). Raw outputs:
   `bench-state/artifacts/f2_pooled_{PA,NP}.json`, regenerated
   `bench-state/artifacts/a6_parity.json`, per-category aggregation
-  `bench-state/artifacts/f5_per_category.json`.
+  `bench-state/artifacts/f5_per_category.json`. F4 zipf re-run measured on
+  2026-10-31 (run 41226973126, both legs SUCCESS; §7 table); raw artifacts
+  archived at `bench-state/artifacts/f4-scale-zipf/{1m,10m}/`.
 - Archival gap (disclosed): `paper_run.json` for 3b runs #2 (41194918539)
   and #3 (41202610042) is not in any archived artifact (their snapshot
   branches race-predated the grounding artifact; only `paper_report.json`
