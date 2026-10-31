@@ -126,9 +126,11 @@ grounding score by construction (honest `no_tool` traps):
 - No bundled-reference keyness tool; no readability tool.
 - Then re-freeze the gold (a reviewable event per the harness discipline) and re-run
   the battery — **primary row: a local Ollama model (no provider quota, fits the
-  local-first pitch); reference row: Gemini with a PAID key** (the free tier's 20
-  requests/day for gemini-3.8-flash cannot cover the ~160+ calls the full bank
-  needs).
+  local-first pitch); reference row: Gemini 3.8-flash on the FREE tier
+  (by design)** — the free tier's 20 requests/day for gemini-3.8-flash cannot
+  cover the ~160+ calls the full bank needs in one day, so the reference row is
+  filled by a multi-day drip crawl (morning slice ≤16 ids + drip ≤4 ids, quota
+  reset midnight Pacific) rather than a paid key.
 
 ## 6. What NOT to chase
 
