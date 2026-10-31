@@ -1,11 +1,19 @@
-"""A6 stats parity: CorpusMind vs scipy / statsmodels / lexicalrichness.
+"""A6/F3 stats parity: CorpusMind vs scipy / statsmodels / lexicalrichness.
 
-Compares the engine's measures against reference implementations on ONE
-shared corpus set: the hash-frozen snapshot texts in engine/eval/data/snapshot
-(8 corpora) plus "en_all" (concatenation of the four en_* texts). 9 sub-corpora,
-each tokenized ONCE with a shared regex tokenizer (``\\w+`` over the raw text;
-same token list is handed to both sides), so every deviation is a real
-implementation/convention difference, not a tokenization difference.
+Compares the engine's measures against reference implementations on TWO
+corpus sets and ONE contingency-table battery:
+
+1. Hash-frozen snapshot texts in engine/eval/data/snapshot (8 corpora) plus
+   "en_all" (concatenation of the four en_* texts) — 29..369 tokens each.
+2. F3 synthetic long texts (10k / 50k / 100k tokens, deterministic seeded
+   Zipf-like sampling, numpy PCG64 seed 20261031) — these make window/segment
+   measures (MATTR(50), STTR(1000)) genuinely comparable, which the short
+   snapshot texts cannot: LR RAISES on inputs shorter than its window, so on
+   the snapshot set those measures have n_comparable=0.
+
+Both sides always receive the SAME token list (shared regex tokenizer ``\\w+``
+over the snapshot texts; the synthetic texts are generated as token lists
+directly), so every deviation is a real implementation/convention difference.
 
 Measures compared (only those the named reference tools actually provide):
 - lexicalrichness: TTR, MATTR(50), STTR(1000) [LR name: msttr], MTLD(0.72),
@@ -18,18 +26,23 @@ Measures compared (only those the named reference tools actually provide):
   engine.stats.measures.odds_ratio; the engine's Haldane variant has no
   equivalent in the three reference tools and is NOT compared).
 
-The 2x2 table is deterministic: target word "the", corpora = the two largest
-en_* snapshot texts (most tokens), cells = (freq_the, rest) per corpus.
+F3 2x2 battery (>= 300 tables, including small and zero counts):
+  - every (a,b,c,d) in {0,1,2,3,5}^4 — 625 tables, zero cells in every position
+  - the deterministic corpus-derived table ("the" in the two largest en corpora)
+  - 150 seeded random tables with cells in [0,200] and 100 in [0,5000]
+  - degenerate tables (all-zero, zero row, zero column) fall out of the grid
+  Tables where EITHER side returns a non-finite value (scipy raises or returns
+  nan/inf on zero margins; the engine returns inf for undefined odds ratios)
+  are EXCLUDED and counted, never folded into a deviation statistic — an
+  empty comparison is reported as NOT_TESTED, never as zero deviation.
 
-For each measure the report records: per-corpus (engine, reference, abs dev,
-rel dev), the max absolute deviation and max relative deviation across
-corpora, and the convention note. A gap is reported as a DEVIATION, not an
-error; A6 requires checking the other tool's convention first (done here and
-in the notes).
+compare() semantics (F3 fix): if a measure has NO comparable rows, its report
+carries status "NOT_TESTED" with max_abs_dev = max_rel_dev = null. Deviation
+maxima are computed over comparable rows only.
 
 Usage (from engine/):
     python -m eval.parity_stats [--snapshot-dir data/snapshot]
-        [--out parity.json]
+        [--out parity.json] [--skip-battery] [--skip-synthetic]
 """
 
 from __future__ import annotations
@@ -60,6 +73,11 @@ except ImportError:  # pragma: no cover - older layout
 
 TOKEN_RE = re.compile(r"\w+", re.UNICODE)
 
+SYNTH_SEED = 20261031
+SYNTH_SIZES = (10_000, 50_000, 100_000)
+SYNTH_VOCAB = 200_000
+SYNTH_A = 1.25  # Zipf shape
+
 
 def load_corpora(snapshot_dir: Path) -> dict[str, list[str]]:
     texts: dict[str, str] = {}
@@ -69,6 +87,23 @@ def load_corpora(snapshot_dir: Path) -> dict[str, list[str]]:
     if len(en_keys) >= 2:
         texts["en_all"] = "\n".join(texts[k] for k in en_keys)
     return {k: TOKEN_RE.findall(v) for k, v in texts.items()}
+
+
+def synthetic_corpora() -> dict[str, list[str]]:
+    """F3: deterministic long texts so window measures become comparable.
+
+    Tokens are drawn from a Zipf-like distribution (numpy zipf(a=1.25) mapped
+    modulo the vocabulary) with a fixed PCG64 seed — no text files, no
+    tokenizer: the exact same token list goes to both sides.
+    """
+    import numpy as np
+
+    rng = np.random.Generator(np.random.PCG64(SYNTH_SEED))
+    out: dict[str, list[str]] = {}
+    for size in SYNTH_SIZES:
+        draws = rng.zipf(SYNTH_A, size=size)
+        out[f"synth_{size//1000}k"] = [f"w{int(d) % SYNTH_VOCAB}" for d in draws]
+    return out
 
 
 def corpus_2x2(corpora: dict[str, list[str]]) -> tuple[list[str], tuple[int, int, int, int]]:
@@ -83,6 +118,7 @@ def corpus_2x2(corpora: dict[str, list[str]]) -> tuple[list[str], tuple[int, int
 
 def compare(engine_vals: dict[str, float], ref_vals: dict[str, float],
             note: str) -> dict[str, Any]:
+    """F3 fix: an empty/uncomparable comparison is NOT_TESTED, never 0/0."""
     rows = []
     for k in sorted(engine_vals):
         e, r = engine_vals[k], ref_vals.get(k)
@@ -96,18 +132,147 @@ def compare(engine_vals: dict[str, float], ref_vals: dict[str, float],
                      "abs_dev": abs_dev, "rel_dev": rel_dev,
                      "comparable": comparable})
     finite = [r for r in rows if math.isfinite(r["abs_dev"])]
-    max_abs = max((r["abs_dev"] for r in finite), default=0.0)
-    max_rel = max((r["rel_dev"] for r in finite if math.isfinite(r["rel_dev"])), default=0.0)
     n_excluded = sum(1 for r in rows if not r["comparable"])
+    if not finite:
+        # NOT_TESTED: no row compares — report nulls, never a zero deviation.
+        return {"measure": note.split(" — ")[0], "rows": rows,
+                "status": "NOT_TESTED", "max_abs_dev": None, "max_rel_dev": None,
+                "note": note, "n_comparable": 0, "n_excluded": n_excluded}
+    max_abs = max(r["abs_dev"] for r in finite)
+    max_rel = max((r["rel_dev"] for r in finite if math.isfinite(r["rel_dev"])), default=0.0)
     return {"measure": note.split(" — ")[0], "rows": rows,
-            "max_abs_dev": max_abs, "max_rel_dev": max_rel, "note": note,
-            "n_comparable": len(finite), "n_excluded": n_excluded}
+            "status": "OK", "max_abs_dev": max_abs, "max_rel_dev": max_rel,
+            "note": note, "n_comparable": len(finite), "n_excluded": n_excluded}
+
+
+def battery_tables(corpora: dict[str, list[str]]) -> list[dict[str, Any]]:
+    """F3: >= 300 deterministic 2x2 tables, small and zero cells included."""
+    tables: list[dict[str, Any]] = []
+    # 1. exhaustive small grid {0,1,2,3,5}^4 (625 tables, zeros everywhere)
+    for a in (0, 1, 2, 3, 5):
+        for b in (0, 1, 2, 3, 5):
+            for c in (0, 1, 2, 3, 5):
+                for d in (0, 1, 2, 3, 5):
+                    tables.append({"cells": (a, b, c, d), "kind": "small_grid"})
+    # 2. the deterministic corpus-derived table
+    _cks, (a, b, c, d) = corpus_2x2(corpora)
+    tables.append({"cells": (a, b, c, d), "kind": "corpus"})
+    # 3. seeded random tables at two magnitude scales
+    import random
+
+    rng = random.Random(SYNTH_SEED)
+    for _ in range(150):
+        tables.append({"cells": tuple(rng.randint(0, 200) for _ in range(4)),
+                       "kind": "random_small"})
+    for _ in range(100):
+        tables.append({"cells": tuple(rng.randint(0, 5000) for _ in range(4)),
+                       "kind": "random_large"})
+    return tables
+
+
+def run_battery(corpora: dict[str, list[str]]) -> list[dict[str, Any]]:
+    """Compare chi-square / G^2 / odds-ratio over the whole battery."""
+    import numpy as np
+    import scipy.stats as st
+    from statsmodels.stats.contingency_tables import Table2x2
+
+    tables = battery_tables(corpora)
+    out: list[dict[str, Any]] = []
+    specs = [
+        ("chi_square_2x2", "Pearson chi-square, Yates correction DISABLED on the scipy side "
+         "(scipy default is corrected — convention checked, engine is raw); scipy raises "
+         "on zero margins — those tables are excluded, not zero-dev"),
+        ("log_likelihood_2x2", "Dunning G^2 = 2*sum(O*ln(O/E)) with independence expected "
+         "counts; reference scipy.stats.power_divergence(lambda_='log-likelihood') on the "
+         "same 2x2 — same convention, no continuity correction"),
+        ("odds_ratio", "uncorrected sample odds ratio; reference statsmodels "
+         "Table2x2(table, shift_zeros=False).oddsratio — the statsmodels DEFAULT "
+         "shift_zeros=True silently applies the Haldane 0.5 correction (convention "
+         "trap, verified in source) and would match the engine's separate "
+         "odds_ratio_haldane instead; engine maps (f1, f2, N1, N2) = (a, c, a+b, c+d); "
+         "tables where the raw OR is UNDEFINED (b == 0 or c == 0) are excluded — the "
+         "engine returns 0.0/inf there by convention and statsmodels would divide by zero"),
+    ]
+    for name, note in specs:
+        rows: list[dict[str, Any]] = []
+        for t in tables:
+            a, b, c, d = t["cells"]
+            try:
+                e_val = float({
+                    "chi_square_2x2": lambda: chi_square_2x2(a, b, c, d),
+                    "log_likelihood_2x2": lambda: log_likelihood_2x2(a, b, c, d),
+                    "odds_ratio": lambda: odds_ratio(a, c, a + b, c + d),
+                }[name]())
+            except Exception:
+                e_val = math.nan
+            try:
+                table = np.array([[a, b], [c, d]], dtype=float)
+                if name == "chi_square_2x2":
+                    r_val = float(st.chi2_contingency(table, correction=False)[0])
+                elif name == "log_likelihood_2x2":
+                    _chi2, _p, _dof, expected = st.chi2_contingency(table, correction=False)
+                    r_val = float(st.power_divergence(table.ravel(), expected.ravel(),
+                                                      lambda_="log-likelihood")[0])
+                else:
+                    # shift_zeros=False: statsmodels' DEFAULT Table2x2 applies the
+                    # Haldane 0.5 shift to zero cells (verified: Table2x2 stores
+                    # [[0.5,1],[1,2]] for input [[0,1],[1,2]]) — that is the CORRECTED
+                    # OR, not the sample OR the engine computes. The default quietly
+                    # matches the engine's separate odds_ratio_haldane, not odds_ratio.
+                    r_val = float(Table2x2(table, shift_zeros=False).oddsratio)
+            except Exception:
+                r_val = math.nan
+            # F3: the raw sample OR is UNDEFINED when b == 0 or c == 0. There the
+            # engine returns 0.0/inf by convention while statsmodels returns
+            # placeholder values (observed 1.0, 2.0, ...) — neither is the OR,
+            # so such tables are EXCLUDED for the odds-ratio comparison instead
+            # of being scored as (meaningless) agreements or deviations.
+            defined = (name != "odds_ratio") or (b > 0 and c > 0)
+            comparable = (defined and math.isfinite(e_val) and math.isfinite(r_val))
+            abs_dev = abs(e_val - r_val) if comparable else math.nan
+            rel_dev = (abs_dev / abs(r_val)
+                       if comparable and r_val else (0.0 if comparable and not abs_dev else math.nan))
+            rows.append({"cells": list(t["cells"]), "kind": t["kind"],
+                         "engine": e_val, "reference": r_val,
+                         "abs_dev": abs_dev, "rel_dev": rel_dev,
+                         "comparable": comparable})
+        finite = [r for r in rows if r["comparable"]]
+        zero_cell = [r for r in rows if 0 in r["cells"]]
+        zero_cell_ok = [r for r in zero_cell if r["comparable"]]
+        if not finite:
+            out.append({"measure": name, "status": "NOT_TESTED",
+                        "n_tables": len(rows), "n_comparable": 0,
+                        "n_excluded": len(rows), "max_abs_dev": None,
+                        "max_rel_dev": None, "note": note, "rows_example": []})
+            continue
+        excluded_examples = [
+            {"cells": r["cells"], "kind": r["kind"],
+             "engine": r["engine"] if math.isfinite(r["engine"]) else str(r["engine"]),
+             "reference": r["reference"] if math.isfinite(r["reference"]) else str(r["reference"])}
+            for r in rows if not r["comparable"]][:3]
+        out.append({
+            "measure": name, "status": "OK",
+            "n_tables": len(rows), "n_comparable": len(finite),
+            "n_excluded": len(rows) - len(finite),
+            "max_abs_dev": max(r["abs_dev"] for r in finite),
+            "max_rel_dev": max((r["rel_dev"] for r in finite
+                                if math.isfinite(r["rel_dev"])), default=0.0),
+            "zero_cell_tables": len(zero_cell),
+            "zero_cell_comparable": len(zero_cell_ok),
+            "zero_cell_max_abs_dev": (max(r["abs_dev"] for r in zero_cell_ok)
+                                      if zero_cell_ok else None),
+            "excluded_examples": excluded_examples,
+            "note": note,
+        })
+    return out
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description="A6 stats parity (scipy/statsmodels/lexicalrichness)")
+    ap = argparse.ArgumentParser(description="A6/F3 stats parity (scipy/statsmodels/lexicalrichness)")
     ap.add_argument("--snapshot-dir", default=str(Path(__file__).parent / "data" / "snapshot"))
     ap.add_argument("--out", default=None)
+    ap.add_argument("--skip-battery", action="store_true")
+    ap.add_argument("--skip-synthetic", action="store_true")
     args = ap.parse_args()
 
     from lexicalrichness import LexicalRichness
@@ -115,6 +280,9 @@ def main() -> None:
     corpora = load_corpora(Path(args.snapshot_dir))
     if not corpora:
         raise SystemExit("no snapshot texts found")
+    if not args.skip_synthetic:
+        synth = synthetic_corpora()
+        corpora.update(synth)
 
     results: list[dict[str, Any]] = []
 
@@ -130,7 +298,8 @@ def main() -> None:
     lr_default = {k: LexicalRichness(" ".join(t)) for k, t in corpora.items()}
     tok_note = ("shared regex tokenizer \\w+; LR pinned to the same list via "
                 "preprocessor=identity + tokenizer=closure; LR default "
-                "preprocessing drift recorded per corpus")
+                "preprocessing drift recorded per corpus; synth_* are F3 "
+                "deterministic Zipf-like texts (seed 20261031)")
     tok_match = {k: lr.words == len(corpora[k]) for k, lr in lr_objs.items()}
     tok_drift_default = {k: {"shared": len(corpora[k]), "lr_default": lr.words}
                          for k, lr in lr_default.items()}
@@ -161,12 +330,20 @@ def main() -> None:
         "MATTR window=50 — both average TTR over every full window, stride 1; "
         "corpora shorter than the window are EXCLUDED on the LR side (LR raises) "
         "while the engine falls back to raw TTR — convention difference, disclosed, "
-        "not scored"))
+        "not scored; F3 synth texts make the comparison real"))
     results.append(compare(_ev(lambda t: sttr(t, chunk_size=1000)),
                            _skip_none(_rv("msttr", segment_window=1000), 1000),
-        "STTR chunk=1000 — both drop the trailing partial chunk (engine: documented "
-        "standard practice; LR msttr discard=True: same standard); corpora shorter "
-        "than the chunk are EXCLUDED (LR raises, engine falls back to raw TTR)"))
+        "STTR chunk=1000 — both split into NON-overlapping 1000-token segments and "
+        "average per-segment TTR; trailing handling DIFFERS (checked, disclosed): the "
+        "engine drops only a trailing PARTIAL chunk (documented standard practice) "
+        "while LR msttr(discard=True) deletes the LAST segment unconditionally — when "
+        "n is an exact multiple of the window that discards one full segment "
+        "(LR source: segment_generator yields all segments, then `del scores[-1]`). "
+        "Residual relative deviation <= ~1/segment_count (observed 2.6e-3 on the F3 "
+        "synth texts); convention difference, not an engine bug. Corpora shorter "
+        "than the chunk are EXCLUDED (LR raises, engine falls back to raw TTR); on "
+        "the snapshot set alone this measure is NOT_TESTED (F3: n_comparable=0 is "
+        "NOT TESTED, never 0/0) — the synth 10k/50k/100k texts provide comparables"))
     results.append(compare(_ev(lambda t: mtld(t, threshold=0.72)), _rv("mtld", threshold=0.72),
         "MTLD threshold=0.72 — AGGREGATION CONVENTION DIFFERS (checked, disclosed): "
         "engine = len(tokens)/mean(forward_factors, backward_factors); LR = mean of the "
@@ -180,49 +357,9 @@ def main() -> None:
         results.append(compare(_ev(guiraud), _rv("rttr"),
             "Guiraud RTTR — types/sqrt(tokens); identical definition"))
 
-    # ---- scipy / statsmodels on the deterministic 2x2 ----
-    (ck1, ck2), (a, b, c, d) = corpus_2x2(corpora)
-    eng_chi = {"n/a": chi_square_2x2(a, b, c, d)}
-    eng_g2 = {"n/a": log_likelihood_2x2(a, b, c, d)}
-    # engine's odds_ratio takes (f1, f2, N1, N2) — corpus freqs and sizes —
-    # NOT raw 2x2 cells; mapping from the table: f1=a, N1=a+b, f2=c, N2=c+d,
-    # which reproduces the same a·d/(b·c) statistic statsmodels reports.
-    eng_or = {"n/a": odds_ratio(a, c, a + b, c + d)}
-
-    import numpy as np
-    import scipy.stats as st
-    from statsmodels.stats.contingency_tables import Table2x2
-
-    table = np.array([[a, b], [c, d]], dtype=float)
-    chi2, _p, _dof, expected = st.chi2_contingency(table, correction=False)
-    G2, _p2 = st.power_divergence(table.ravel(), expected.ravel(), lambda_="log-likelihood")
-    sm_or = float(Table2x2(table).oddsratio)
-
-    results.append({"measure": "chi_square_2x2", "rows": [
-        {"corpus": f"{ck1} vs {ck2}", "engine": eng_chi["n/a"], "reference": float(chi2),
-         "abs_dev": abs(eng_chi["n/a"] - float(chi2)),
-         "rel_dev": abs(eng_chi["n/a"] - float(chi2)) / float(chi2)}],
-        "max_abs_dev": abs(eng_chi["n/a"] - float(chi2)),
-        "max_rel_dev": abs(eng_chi["n/a"] - float(chi2)) / float(chi2),
-        "note": "Pearson chi-square, Yates correction DISABLED on the scipy side "
-                "(scipy default is corrected — convention checked, engine is raw)"})
-    results.append({"measure": "log_likelihood_2x2", "rows": [
-        {"corpus": f"{ck1} vs {ck2}", "engine": eng_g2["n/a"], "reference": float(G2),
-         "abs_dev": abs(eng_g2["n/a"] - float(G2)),
-         "rel_dev": abs(eng_g2["n/a"] - float(G2)) / float(G2)}],
-        "max_abs_dev": abs(eng_g2["n/a"] - float(G2)),
-        "max_rel_dev": abs(eng_g2["n/a"] - float(G2)) / float(G2),
-        "note": "Dunning G^2 = 2*sum(O*ln(O/E)) with independence expected counts; "
-                "reference scipy.stats.power_divergence(lambda_='log-likelihood') on "
-                "the same 2x2 — same convention, no continuity correction"})
-    results.append({"measure": "odds_ratio", "rows": [
-        {"corpus": f"{ck1} vs {ck2}", "engine": eng_or["n/a"], "reference": sm_or,
-         "abs_dev": abs(eng_or["n/a"] - sm_or),
-         "rel_dev": abs(eng_or["n/a"] - sm_or) / sm_or}],
-        "max_abs_dev": abs(eng_or["n/a"] - sm_or),
-        "max_rel_dev": abs(eng_or["n/a"] - sm_or) / sm_or,
-        "note": "uncorrected sample odds ratio; statsmodels Table2x2.oddsratio — same "
-                "convention (the engine's Haldane variant is intentionally NOT compared)"})
+    # ---- F3 battery: >=300 2x2 tables incl small and zero counts ----
+    battery = [] if args.skip_battery else run_battery(corpora)
+    results.extend(battery)
 
     report = {
         "shared_corpus": sorted(corpora.keys()),
@@ -230,14 +367,23 @@ def main() -> None:
         "tokenizer": tok_note,
         "lr_token_count_matches": tok_match,
         "lr_default_preproc_drift": tok_drift_default,
-        "table_2x2": {"corpora": [ck1, ck2], "cells": [a, b, c, d]},
+        "battery": {"n_tables": sum(m.get("n_tables", 0) for m in battery),
+                    "measures": [m["measure"] for m in battery]},
+        "sign_convention": "deviation = |engine - reference|; rel_dev = abs_dev/|reference|",
         "measures": results,
     }
     print(json.dumps({k: v for k, v in report.items() if k != "measures"},
                      ensure_ascii=False, indent=1))
     for m in results:
-        print(f"{m['measure']:18} max_abs_dev={m['max_abs_dev']:.6g} "
-              f"max_rel_dev={m['max_rel_dev']:.6g}")
+        status = m.get("status", "OK")
+        ma = m.get("max_abs_dev")
+        mr = m.get("max_rel_dev")
+        ma_s = "n/a" if ma is None else f"{ma:.6g}"
+        mr_s = "n/a" if mr is None else f"{mr:.6g}"
+        extra = (f" n_tables={m['n_tables']} excl={m['n_excluded']}"
+                 if "n_tables" in m else f" n_excl={m.get('n_excluded', 0)}")
+        print(f"{m['measure']:18} [{status}] max_abs_dev={ma_s} "
+              f"max_rel_dev={mr_s}{extra}")
     if args.out:
         Path(args.out).parent.mkdir(parents=True, exist_ok=True)
         Path(args.out).write_text(json.dumps(report, ensure_ascii=False, indent=1),
