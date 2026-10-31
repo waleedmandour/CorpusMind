@@ -252,6 +252,10 @@ def main() -> None:
     if not db_url or ".corpusmind" in db_url:
         raise SystemExit("refusing to run: set CORPUSMIND_DB_URL to a fresh "
                          "sqlite+aiosqlite:/// path (not the default data dir)")
+    # SQLite cannot create a DB file in a non-existent directory; the engine
+    # only auto-creates its DEFAULT data dir, so make the custom parent here.
+    db_parent = Path(db_url.split("///")[-1]).parent
+    db_parent.mkdir(parents=True, exist_ok=True)
 
     out_dir = Path(args.out)
     out_dir.mkdir(parents=True, exist_ok=True)
