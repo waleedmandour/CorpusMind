@@ -3,7 +3,7 @@
 Read this file FIRST every session and every scheduled turn. Do not act before
 checking §7 (next action) and §8 (binding rules). Never put secrets in this file.
 
-Last updated: 2026-10-31T07:45Z (addendum session: A1 done, A2 done, A4 run 41181061992 in flight, A5 DONE gate PASS, A3 chain defined; refs bench/extra-1 @ b592cdc)
+Last updated: 2026-10-31T12:55Z (A6 DONE on bench/extra-1 @ 62af13c; A7 scale run 41202459225 in flight on bench/scale-1 @ fcdab4f; A3: 3b#2 recorded, 3b#3 run 41202610042 in flight; 1.5b triple wrapped: flips 16/80)
 
 ## 1. Freeze
 
@@ -196,8 +196,15 @@ shrink to what succeeds and update this file.
        1.5b TRIPLE COMPLETE: pass 0.1625 / 0.15 / 0.15 (mean 0.1542);
        halluc 0.625 / 0.6875 / 0.675 (mean 0.6625). Verdict-flip analysis at
        T6 from the three paper_report.json artifacts (on snapshot branches).
-    4. 3b #2 — 41194918539 IN FLIGHT since 10:58:44Z
-    5. 3b #3 (then the 7b probe per the §9(A3) step 6 rule)
+    4. 3b #2 — 41194918539 DONE 12:27Z (scored), 80/80 clean, pass 0.075
+       [0.025-0.1375], halluc 0.3875 [0.2875-0.4875]; verdicts PASS 6 /
+       MISSING_NUMBER 36 / HALLUCINATED 24 / TRAP_FAILURE 14. run_meta
+       confirms ollama/qwen2.5:3b. paper_report.json archived under
+       bench-state/artifacts/run-41194918539/.
+    5. 3b #3 — 41202610042 IN FLIGHT since 12:46:46Z (bench/freeze-1-local
+       @ ee42bfa, qwen2.5:3b, full 80, commit_results=true). On completion:
+       fetch grounding-report, verify run_meta model, record, then the 7b
+       probe per the step-6 rule.
     6. 7b probe (5 questions, commit_results=false, grounding_only
        'G-001 G-002 G-003 G-004 G-005') -> full 7b only if projection <= 330
        min; if it fits: 7b #1, #2, #3; if not: one-command runbook in
@@ -205,6 +212,13 @@ shrink to what succeeds and update this file.
        the 7b row 'pending user-run'.
   1.5b #1 = 41173022988 (done: pass 0.1625 [0.0875-0.2375], halluc 0.625
   [0.525-0.725]). The afce8fe row 0.1375/0.65 stays labelled SUPERSEDED.
+  1.5b TRIPLE WRAP (2026-10-31): pass 0.1625/0.15/0.15 (mean 0.1542);
+  halluc 0.625/0.6875/0.675 (mean 0.6625); VERDICT FLIPS 16/80 (20%) across
+  the three runs — analysis + per-question detail in
+  bench-state/artifacts/a3_verdict_flips_1.5b.json. Flip composition:
+  11× HALLUCINATED<->MISSING_NUMBER, 1× HALLUCINATED<->TRAP_FAILURE, 4×
+  involve PASS (G-034, G-043, G-046, G-071) — single-question passes are
+  unstable across runs, no systematic direction.
 
 - (A4) DONE. Run 41181061992 on bench/freeze-1-seg @ ee42bfa (seg_limit=222,
   commit_results=true), SUCCESS 07:45Z. 222 docs per condition; intrinsic
@@ -230,18 +244,50 @@ shrink to what succeeds and update this file.
   finding is documented in engine/eval/README.md and the raw calib JSONs are
   on bench/state (bench-state/artifacts/calib_{PA,NP}.json).
 
-- (A6) TODO after A3 completes: engine/eval/parity_stats.py on a new ref at
-  ee42bfa comparing CorpusMind with scipy/statsmodels/lexicalrichness on one
-  shared corpus; per measure record max abs + relative deviation and the
-  convention; a gap is an error only after checking the other tool's
-  convention. Verify `git diff ee42bfa -- engine ':!engine/eval'` empty.
+- (A6) DONE 2026-10-31 (run executed early, in parallel with the A3 local
+  chain — CPU-local work on the bench/extra-1 worktree only, zero contact
+  with any frozen row; deviation from the A1..A9 sequencing noted here for
+  the record). Script engine/eval/parity_stats.py on bench/extra-1
+  (@ 62af13c after two fix commits, engine-diff rule still 0 lines vs
+  ee42bfa). Shared-corpus set: the 9 snapshot texts (8 + en_all concat),
+  29..369 tokens each, ONE shared regex tokenizer (\w+) handed to both
+  sides. Results (max abs / max rel dev across corpora):
+    TTR 0 / 0; MATTR(50) 2.0e-15 / 2.4e-15; STTR(1000) 0 / 0;
+    HD-D(42) 1.4e-15 / 1.7e-15; Guiraud RTTR 0 / 0;
+    chi-square 0 / 0; Dunning G^2 0 / 0; odds-ratio 0 / 0.
+    MTLD(0.72): max_abs 1.3777, max_rel 0.0287 (en_learner) — CONVENTION
+    DIFFERENCE, checked and disclosed: engine = len/mean(forward,
+    backward factor counts); LR = mean of the two directional MTLD scores
+    (the McCarthy & Jarvis 2010 published form). Equal iff forward ==
+    backward factor counts; not scored as an engine error.
+  Fix history (A6 rule "check the other tool's convention" in action):
+    1st run had NaN/inf/large gaps -> root causes: (a) LR 0.5.x default
+    preprocessing (lowercase, strip punct/digits) broke the shared-token
+    premise — fixed by pinning LR with preprocessor=identity and a
+    tokenizer closure returning the exact shared token list; (b) engine
+    odds_ratio takes (f1, f2, N1, N2), not 2x2 cells — mapped
+    (a, c, a+b, c+d); (c) LR 0.5.1 names the HD-D parameter 'draws';
+    (d) window measures: corpora shorter than the window are excluded on
+    the LR side (LR raises; engine falls back to raw TTR) — disclosed.
+  Raw artifact: bench-state/artifacts/a6_parity.json.
 
-- (A7) TODO after A6: ingest / KWIC / keyness wall time + peak RSS at 1M and
-  10M tokens. Text: SYNTHETIC (deterministic repetition of the fixed snapshot
-  sentences, same pattern as scripts/benchmark_arabic_corpus.py) — state that
-  choice in the report. Run on CI (standardized runners, 360-min cap) via a
-  minimal extra workflow or a one-off dispatch on a new ref at ee42bfa;
-  engine-diff rule must stay satisfied.
+- (A7) IN FLIGHT. scripts/benchmark_scale.py + a gated `scale` job inside
+  .github/workflows/benchmarks.yml on new branch bench/scale-1
+  (@ fcdab4f, at ee42bfa; engine-diff rule 0 lines). NOTE: a new workflow
+  file on a side branch is NOT dispatchable via the API (GitHub registers
+  workflows from the default branch only — dispatch of scale.yml returned
+  404), so the job piggybacks on the already-dispatchable benchmarks.yml,
+  gated on `inputs.grounding_only == 'SCALE'` (schema-compatible with
+  main; run_grounding stays false so no Gemini quota is used; the
+  unconditional perf-arabic + seg-araseg jobs run as usual noise).
+  Dispatched run 41202459225 on bench/scale-1 (matrix 1M / 10M tokens,
+  parallel legs, each on a fresh SQLite file, timeout 350 min). Measures:
+  ingest (ingestion.service.ingest_document, spaCy en_core_web_sm-3.8.0
+  pinned), KWIC (search_concordance, word level, window 5), keyness
+  (compute_keyness vs a 50k-token reference corpus) — wall time + peak RSS
+  (ru_maxrss). Corpus: SYNTHETIC cycled frozen en-snapshot sentences
+  (~1000 tok/doc; vocabulary ~234 types) — stated in _meta. Smoke-tested
+  locally at 3k tokens before dispatch.
 
 ## 10. Known anomalies / open items for the report
 

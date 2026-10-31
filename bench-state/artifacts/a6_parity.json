@@ -1,0 +1,575 @@
+{
+ "shared_corpus": [
+  "ar_classical",
+  "ar_dialect",
+  "ar_msa",
+  "ar_nopunct",
+  "ar_parallel",
+  "en_academic",
+  "en_all",
+  "en_learner",
+  "en_news",
+  "en_parallel"
+ ],
+ "corpus_tokens": {
+  "ar_classical": 60,
+  "ar_dialect": 53,
+  "ar_msa": 79,
+  "ar_nopunct": 43,
+  "ar_parallel": 29,
+  "en_academic": 127,
+  "en_learner": 105,
+  "en_news": 101,
+  "en_parallel": 36,
+  "en_all": 369
+ },
+ "tokenizer": "shared regex tokenizer \\w+; LR pinned to the same list via preprocessor=identity + tokenizer=closure; LR default preprocessing drift recorded per corpus",
+ "lr_token_count_matches": {
+  "ar_classical": true,
+  "ar_dialect": true,
+  "ar_msa": true,
+  "ar_nopunct": true,
+  "ar_parallel": true,
+  "en_academic": true,
+  "en_learner": true,
+  "en_news": true,
+  "en_parallel": true,
+  "en_all": true
+ },
+ "lr_default_preproc_drift": {
+  "ar_classical": {
+   "shared": 60,
+   "lr_default": 60
+  },
+  "ar_dialect": {
+   "shared": 53,
+   "lr_default": 53
+  },
+  "ar_msa": {
+   "shared": 79,
+   "lr_default": 77
+  },
+  "ar_nopunct": {
+   "shared": 43,
+   "lr_default": 43
+  },
+  "ar_parallel": {
+   "shared": 29,
+   "lr_default": 29
+  },
+  "en_academic": {
+   "shared": 127,
+   "lr_default": 124
+  },
+  "en_learner": {
+   "shared": 105,
+   "lr_default": 105
+  },
+  "en_news": {
+   "shared": 101,
+   "lr_default": 95
+  },
+  "en_parallel": {
+   "shared": 36,
+   "lr_default": 36
+  },
+  "en_all": {
+   "shared": 369,
+   "lr_default": 360
+  }
+ },
+ "table_2x2": {
+  "corpora": [
+   "en_all",
+   "en_academic"
+  ],
+  "cells": [
+   18,
+   351,
+   5,
+   122
+  ]
+ },
+ "measures": [
+  {
+   "measure": "TTR",
+   "rows": [
+    {
+     "corpus": "ar_classical",
+     "engine": 0.85,
+     "reference": 0.85,
+     "abs_dev": 0.0,
+     "rel_dev": 0.0,
+     "comparable": true
+    },
+    {
+     "corpus": "ar_dialect",
+     "engine": 0.8301886792452831,
+     "reference": 0.8301886792452831,
+     "abs_dev": 0.0,
+     "rel_dev": 0.0,
+     "comparable": true
+    },
+    {
+     "corpus": "ar_msa",
+     "engine": 0.8481012658227848,
+     "reference": 0.8481012658227848,
+     "abs_dev": 0.0,
+     "rel_dev": 0.0,
+     "comparable": true
+    },
+    {
+     "corpus": "ar_nopunct",
+     "engine": 0.8837209302325582,
+     "reference": 0.8837209302325582,
+     "abs_dev": 0.0,
+     "rel_dev": 0.0,
+     "comparable": true
+    },
+    {
+     "corpus": "ar_parallel",
+     "engine": 0.896551724137931,
+     "reference": 0.896551724137931,
+     "abs_dev": 0.0,
+     "rel_dev": 0.0,
+     "comparable": true
+    },
+    {
+     "corpus": "en_academic",
+     "engine": 0.7952755905511811,
+     "reference": 0.7952755905511811,
+     "abs_dev": 0.0,
+     "rel_dev": 0.0,
+     "comparable": true
+    },
+    {
+     "corpus": "en_all",
+     "engine": 0.6449864498644986,
+     "reference": 0.6449864498644986,
+     "abs_dev": 0.0,
+     "rel_dev": 0.0,
+     "comparable": true
+    },
+    {
+     "corpus": "en_learner",
+     "engine": 0.638095238095238,
+     "reference": 0.638095238095238,
+     "abs_dev": 0.0,
+     "rel_dev": 0.0,
+     "comparable": true
+    },
+    {
+     "corpus": "en_news",
+     "engine": 0.7623762376237624,
+     "reference": 0.7623762376237624,
+     "abs_dev": 0.0,
+     "rel_dev": 0.0,
+     "comparable": true
+    },
+    {
+     "corpus": "en_parallel",
+     "engine": 0.8888888888888888,
+     "reference": 0.8888888888888888,
+     "abs_dev": 0.0,
+     "rel_dev": 0.0,
+     "comparable": true
+    }
+   ],
+   "max_abs_dev": 0.0,
+   "max_rel_dev": 0.0,
+   "note": "TTR — identical definition (types/tokens) on the shared token list",
+   "n_comparable": 10,
+   "n_excluded": 0
+  },
+  {
+   "measure": "MATTR window=50",
+   "rows": [
+    {
+     "corpus": "ar_classical",
+     "engine": 0.8890909090909094,
+     "reference": 0.889090909090909,
+     "abs_dev": 3.3306690738754696e-16,
+     "rel_dev": 3.746151310084884e-16,
+     "comparable": true
+    },
+    {
+     "corpus": "ar_dialect",
+     "engine": 0.845,
+     "reference": 0.845,
+     "abs_dev": 0.0,
+     "rel_dev": 0.0,
+     "comparable": true
+    },
+    {
+     "corpus": "ar_msa",
+     "engine": 0.944666666666667,
+     "reference": 0.9446666666666667,
+     "abs_dev": 3.3306690738754696e-16,
+     "rel_dev": 3.525761193234442e-16,
+     "comparable": true
+    },
+    {
+     "corpus": "en_academic",
+     "engine": 0.9043589743589746,
+     "reference": 0.9043589743589744,
+     "abs_dev": 2.220446049250313e-16,
+     "rel_dev": 2.4552706527009414e-16,
+     "comparable": true
+    },
+    {
+     "corpus": "en_all",
+     "engine": 0.8500625000000019,
+     "reference": 0.8500624999999999,
+     "abs_dev": 1.9984014443252818e-15,
+     "rel_dev": 2.350887663348615e-15,
+     "comparable": true
+    },
+    {
+     "corpus": "en_learner",
+     "engine": 0.7857142857142854,
+     "reference": 0.7857142857142857,
+     "abs_dev": 3.3306690738754696e-16,
+     "rel_dev": 4.239033366750598e-16,
+     "comparable": true
+    },
+    {
+     "corpus": "en_news",
+     "engine": 0.8707692307692313,
+     "reference": 0.8707692307692307,
+     "abs_dev": 5.551115123125783e-16,
+     "rel_dev": 6.3749555300914465e-16,
+     "comparable": true
+    }
+   ],
+   "max_abs_dev": 1.9984014443252818e-15,
+   "max_rel_dev": 2.350887663348615e-15,
+   "note": "MATTR window=50 — both average TTR over every full window, stride 1; corpora shorter than the window are EXCLUDED on the LR side (LR raises) while the engine falls back to raw TTR — convention difference, disclosed, not scored",
+   "n_comparable": 7,
+   "n_excluded": 0
+  },
+  {
+   "measure": "STTR chunk=1000",
+   "rows": [],
+   "max_abs_dev": 0.0,
+   "max_rel_dev": 0.0,
+   "note": "STTR chunk=1000 — both drop the trailing partial chunk (engine: documented standard practice; LR msttr discard=True: same standard); corpora shorter than the chunk are EXCLUDED (LR raises, engine falls back to raw TTR)",
+   "n_comparable": 0,
+   "n_excluded": 0
+  },
+  {
+   "measure": "MTLD threshold=0.72",
+   "rows": [
+    {
+     "corpus": "ar_classical",
+     "engine": 112.0,
+     "reference": 112.0,
+     "abs_dev": 0.0,
+     "rel_dev": 0.0,
+     "comparable": true
+    },
+    {
+     "corpus": "ar_dialect",
+     "engine": 87.39111111111114,
+     "reference": 87.39111111111114,
+     "abs_dev": 0.0,
+     "rel_dev": 0.0,
+     "comparable": true
+    },
+    {
+     "corpus": "ar_msa",
+     "engine": 145.6233333333333,
+     "reference": 145.6233333333333,
+     "abs_dev": 0.0,
+     "rel_dev": 0.0,
+     "comparable": true
+    },
+    {
+     "corpus": "ar_nopunct",
+     "engine": 103.54400000000003,
+     "reference": 103.54400000000003,
+     "abs_dev": 0.0,
+     "rel_dev": 0.0,
+     "comparable": true
+    },
+    {
+     "corpus": "ar_parallel",
+     "engine": 78.49333333333335,
+     "reference": 78.49333333333335,
+     "abs_dev": 0.0,
+     "rel_dev": 0.0,
+     "comparable": true
+    },
+    {
+     "corpus": "en_academic",
+     "engine": 173.69692307692313,
+     "reference": 173.69692307692313,
+     "abs_dev": 0.0,
+     "rel_dev": 0.0,
+     "comparable": true
+    },
+    {
+     "corpus": "en_all",
+     "engine": 139.08131649190923,
+     "reference": 139.44069439627805,
+     "abs_dev": 0.359377904368813,
+     "rel_dev": 0.002577281373452523,
+     "comparable": true
+    },
+    {
+     "corpus": "en_learner",
+     "engine": 46.5552343848184,
+     "reference": 47.93294921810969,
+     "abs_dev": 1.377714833291293,
+     "rel_dev": 0.028742542567582602,
+     "comparable": true
+    },
+    {
+     "corpus": "en_news",
+     "engine": 119.01166666666668,
+     "reference": 119.01166666666668,
+     "abs_dev": 0.0,
+     "rel_dev": 0.0,
+     "comparable": true
+    },
+    {
+     "corpus": "en_parallel",
+     "engine": 90.71999999999997,
+     "reference": 90.71999999999997,
+     "abs_dev": 0.0,
+     "rel_dev": 0.0,
+     "comparable": true
+    }
+   ],
+   "max_abs_dev": 1.377714833291293,
+   "max_rel_dev": 0.028742542567582602,
+   "note": "MTLD threshold=0.72 — AGGREGATION CONVENTION DIFFERS (checked, disclosed): engine = len(tokens)/mean(forward_factors, backward_factors); LR = mean of the two directional MTLD scores (len/factors each) — the McCarthy & Jarvis 2010 published form. Equal iff forward==backward factor counts; residual gap is this convention, not a bug. Per-corpus rows show where the passes diverge",
+   "n_comparable": 10,
+   "n_excluded": 0
+  },
+  {
+   "measure": "HD-D sample=42",
+   "rows": [
+    {
+     "corpus": "ar_classical",
+     "engine": 0.8875019225445261,
+     "reference": 0.8875019225445271,
+     "abs_dev": 9.992007221626409e-16,
+     "rel_dev": 1.1258575297480662e-15,
+     "comparable": true
+    },
+    {
+     "corpus": "ar_dialect",
+     "engine": 0.8564842482711519,
+     "reference": 0.8564842482711517,
+     "abs_dev": 2.220446049250313e-16,
+     "rel_dev": 2.5925124177500916e-16,
+     "comparable": true
+    },
+    {
+     "corpus": "ar_msa",
+     "engine": 0.9137613441410902,
+     "reference": 0.9137613441410899,
+     "abs_dev": 3.3306690738754696e-16,
+     "rel_dev": 3.6450098214717163e-16,
+     "comparable": true
+    },
+    {
+     "corpus": "ar_nopunct",
+     "engine": 0.8859357696566991,
+     "reference": 0.8859357696567003,
+     "abs_dev": 1.2212453270876722e-15,
+     "rel_dev": 1.3784806629502094e-15,
+     "comparable": true
+    },
+    {
+     "corpus": "ar_parallel",
+     "engine": 0.896551724137931,
+     "reference": NaN,
+     "abs_dev": NaN,
+     "rel_dev": NaN,
+     "comparable": false
+    },
+    {
+     "corpus": "en_academic",
+     "engine": 0.9092627937636831,
+     "reference": 0.9092627937636817,
+     "abs_dev": 1.4432899320127035e-15,
+     "rel_dev": 1.5873188058630891e-15,
+     "comparable": true
+    },
+    {
+     "corpus": "en_all",
+     "engine": 0.88608581739031,
+     "reference": 0.8860858173903109,
+     "abs_dev": 8.881784197001252e-16,
+     "rel_dev": 1.0023616248773482e-15,
+     "comparable": true
+    },
+    {
+     "corpus": "en_learner",
+     "engine": 0.7796130126856744,
+     "reference": 0.7796130126856755,
+     "abs_dev": 1.1102230246251565e-15,
+     "rel_dev": 1.4240693864261812e-15,
+     "comparable": true
+    },
+    {
+     "corpus": "en_news",
+     "engine": 0.8742325303432923,
+     "reference": 0.8742325303432937,
+     "abs_dev": 1.4432899320127035e-15,
+     "rel_dev": 1.6509222454190216e-15,
+     "comparable": true
+    },
+    {
+     "corpus": "en_parallel",
+     "engine": 0.8888888888888888,
+     "reference": NaN,
+     "abs_dev": NaN,
+     "rel_dev": NaN,
+     "comparable": false
+    }
+   ],
+   "max_abs_dev": 1.4432899320127035e-15,
+   "max_rel_dev": 1.6509222454190216e-15,
+   "note": "HD-D sample=42 — McCarthy & Jarvis hypergeometric sampling; LR 0.5.x names the parameter 'draws' (same quantity), engine names it 'sample_size'",
+   "n_comparable": 8,
+   "n_excluded": 2
+  },
+  {
+   "measure": "Guiraud RTTR",
+   "rows": [
+    {
+     "corpus": "ar_classical",
+     "engine": 6.5840716885526085,
+     "reference": 6.5840716885526085,
+     "abs_dev": 0.0,
+     "rel_dev": 0.0,
+     "comparable": true
+    },
+    {
+     "corpus": "ar_dialect",
+     "engine": 6.043864813742317,
+     "reference": 6.043864813742317,
+     "abs_dev": 0.0,
+     "rel_dev": 0.0,
+     "comparable": true
+    },
+    {
+     "corpus": "ar_msa",
+     "engine": 7.53808893620436,
+     "reference": 7.53808893620436,
+     "abs_dev": 0.0,
+     "rel_dev": 0.0,
+     "comparable": true
+    },
+    {
+     "corpus": "ar_nopunct",
+     "engine": 5.794945672638978,
+     "reference": 5.794945672638978,
+     "abs_dev": 0.0,
+     "rel_dev": 0.0,
+     "comparable": true
+    },
+    {
+     "corpus": "ar_parallel",
+     "engine": 4.828078792603349,
+     "reference": 4.828078792603349,
+     "abs_dev": 0.0,
+     "rel_dev": 0.0,
+     "comparable": true
+    },
+    {
+     "corpus": "en_academic",
+     "engine": 8.96230074510275,
+     "reference": 8.96230074510275,
+     "abs_dev": 0.0,
+     "rel_dev": 0.0,
+     "comparable": true
+    },
+    {
+     "corpus": "en_all",
+     "engine": 12.389785109829415,
+     "reference": 12.389785109829415,
+     "abs_dev": 0.0,
+     "rel_dev": 0.0,
+     "comparable": true
+    },
+    {
+     "corpus": "en_learner",
+     "engine": 6.538530488755173,
+     "reference": 6.538530488755173,
+     "abs_dev": 0.0,
+     "rel_dev": 0.0,
+     "comparable": true
+    },
+    {
+     "corpus": "en_news",
+     "engine": 7.661786364616916,
+     "reference": 7.661786364616916,
+     "abs_dev": 0.0,
+     "rel_dev": 0.0,
+     "comparable": true
+    },
+    {
+     "corpus": "en_parallel",
+     "engine": 5.333333333333333,
+     "reference": 5.333333333333333,
+     "abs_dev": 0.0,
+     "rel_dev": 0.0,
+     "comparable": true
+    }
+   ],
+   "max_abs_dev": 0.0,
+   "max_rel_dev": 0.0,
+   "note": "Guiraud RTTR — types/sqrt(tokens); identical definition",
+   "n_comparable": 10,
+   "n_excluded": 0
+  },
+  {
+   "measure": "chi_square_2x2",
+   "rows": [
+    {
+     "corpus": "en_all vs en_academic",
+     "engine": 0.18920812916451127,
+     "reference": 0.18920812916451127,
+     "abs_dev": 0.0,
+     "rel_dev": 0.0
+    }
+   ],
+   "max_abs_dev": 0.0,
+   "max_rel_dev": 0.0,
+   "note": "Pearson chi-square, Yates correction DISABLED on the scipy side (scipy default is corrected — convention checked, engine is raw)"
+  },
+  {
+   "measure": "log_likelihood_2x2",
+   "rows": [
+    {
+     "corpus": "en_all vs en_academic",
+     "engine": 0.19573079918270198,
+     "reference": 0.19573079918270198,
+     "abs_dev": 0.0,
+     "rel_dev": 0.0
+    }
+   ],
+   "max_abs_dev": 0.0,
+   "max_rel_dev": 0.0,
+   "note": "Dunning G^2 = 2*sum(O*ln(O/E)) with independence expected counts; reference scipy.stats.power_divergence(lambda_='log-likelihood') on the same 2x2 — same convention, no continuity correction"
+  },
+  {
+   "measure": "odds_ratio",
+   "rows": [
+    {
+     "corpus": "en_all vs en_academic",
+     "engine": 1.2512820512820513,
+     "reference": 1.2512820512820513,
+     "abs_dev": 0.0,
+     "rel_dev": 0.0
+    }
+   ],
+   "max_abs_dev": 0.0,
+   "max_rel_dev": 0.0,
+   "note": "uncorrected sample odds ratio; statsmodels Table2x2.oddsratio — same convention (the engine's Haldane variant is intentionally NOT compared)"
+  }
+ ]
+}
