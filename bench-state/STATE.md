@@ -3,7 +3,7 @@
 Read this file FIRST every session and every scheduled turn. Do not act before
 checking §7 (next action) and §8 (binding rules). Never put secrets in this file.
 
-Last updated: 2026-10-31T14:40Z (A3 DONE incl. 7b: probe 362 min > 330 cap -> 7b PENDING USER-RUN, runbook on bench/extra-1 @ 697458c; A6 DONE; A7 DONE — 1M+10M legs SUCCESS; T6 in progress: snapshot PRs #50-#56 open, docs PR next, then secret+cron deletion)
+Last updated: 2026-10-31T15:05Z (T6 COMPLETE: PR #57 open — BENCHMARK_REPORT.md + free-tier fix; secret CORPUSMIND_CLOUD_API_KEY deleted from the repo; scheduled jobs 489478/489479 DELETED; A1-A9 all DONE; Gemini row left IN PROGRESS at 5/80 as a disclosed limitation; user must revoke the leaked GitHub token)
 
 ## 1. Freeze
 
@@ -87,10 +87,15 @@ shrink to what succeeds and update this file.
 
 ## 6. Schedule
 
-- `corpusmind-gemini-daily` — 00:45 America/Los_Angeles — id 489478 (recreated 2026-10-31 per addendum; its first fire at 00:45 PDT 10-31 failed with 'model concurrency limit exceeded' — slice-1 was dispatched manually instead; next fire 2026-11-01T00:45-07:00)
-- `corpusmind-gemini-drip` — 15:30 America/Los_Angeles — id 489479 (recreated 2026-10-31), next fire 2026-10-31T15:30-07:00
-- (old IDs 489079/489080 were NOT found in this scheduler on 2026-10-31; these
-  two jobs are their replacements)
+- DELETED 2026-10-31 ~15:00Z at T6 (per the addendum cleanup step):
+  `corpusmind-gemini-daily` (489478) and `corpusmind-gemini-drip` (489479).
+  Zero scheduled jobs remain (verified by scheduler list). Their payloads
+  embedded the GitHub token, so deletion also removes that exposure from
+  the scheduler. The Gemini row stays IN PROGRESS at 5/80 banked; resuming
+  later = recreate the two jobs (or dispatch manually) with the §2 params
+  and a fresh token.
+- (old IDs 489079/489080 were NOT found in this scheduler on 2026-10-31; A1
+  verified only the two replacement jobs existed before the T6 deletion.)
 
 ## 7. Next action
 
@@ -334,9 +339,14 @@ shrink to what succeeds and update this file.
   T6 (A8: crawl optional; probe runs remain incident evidence).
 - Two off-spec model attempts happened Oct-30 evening (flash-lite, pro) — see
   §3; zero clean answers, disclosed.
-- docs/BENCHMARK_IMPROVEMENT_PLAN.md section 5 still says "PAID key" — user
-  decision: the Gemini row is FREE-TIER BY DESIGN. Fix goes into the final
-  docs-only PR (T6), not into any freeze ref.
+- RESOLVED at T6: docs/BENCHMARK_IMPROVEMENT_PLAN.md section 5 "PAID key"
+  wording fixed to FREE-TIER BY DESIGN and docs/BENCHMARK_REPORT.md added —
+  both in docs-only PR #57 (bench/t6-report; engine-diff rule 0 lines).
+  The repository secret CORPUSMIND_CLOUD_API_KEY was DELETED (API 204,
+  remaining secrets list empty). USER ACTION STILL REQUIRED: revoke and
+  rotate the GitHub token that was pasted into the original chat (it was
+  embedded in the scheduled-task payloads until deletion; the repo secret
+  was separate).
 - Brief said canonical seg snapshot was @ 06de47b; the actual snapshot run
   40970859593 is @ 57be77f. Superseded either way by §9(seg).
 - The workflow's "Open snapshot PR" step silently failed for runs 41173011756
