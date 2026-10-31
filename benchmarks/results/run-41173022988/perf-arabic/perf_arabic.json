@@ -1,0 +1,234 @@
+{
+ "_meta": {
+  "utc": "2026-10-31T05:35:18+00:00",
+  "label": "ci-workflow_dispatch",
+  "command": "python --sizes 20000,100000,250000 --reps 3 --label ci-workflow_dispatch --out benchmarks/out/perf_arabic.json",
+  "python": "3.12.15",
+  "implementation": "CPython",
+  "platform": "Linux-7.0.0-1017-azure-x86_64-with-glibc2.39",
+  "machine": "x86_64",
+  "cpu_count": 4,
+  "commit": "ee42bfab72291072b191ebb4c7d77ec03bb1f94d",
+  "github": {
+   "GITHUB_SHA": "ee42bfab72291072b191ebb4c7d77ec03bb1f94d",
+   "GITHUB_RUN_ID": "41173022988",
+   "GITHUB_RUN_NUMBER": "61",
+   "GITHUB_RUN_ATTEMPT": "1",
+   "RUNNER_NAME": "GitHub Actions 1000007254",
+   "RUNNER_OS": "Linux",
+   "RUNNER_ARCH": "X64"
+  },
+  "sizes": [
+   20000,
+   100000,
+   250000
+  ],
+  "reps": 3,
+  "corpus_construction": "the 8 SENTENCES repeated to the target token count; after the 2k warmup the morphology cache is warm, so tok/s measures steady-state production-path throughput on repetitive text",
+  "camel_tools": "1.6.0",
+  "unique_input_tokens": 66
+ },
+ "sizes": [
+  20000,
+  100000,
+  250000
+ ],
+ "analyze": [
+  {
+   "path": "analyze_arabic (calima-msa-r13)",
+   "input_tokens": 19950,
+   "output_tokens": 19950,
+   "reps": [
+    {
+     "rep": 1,
+     "elapsed_s": 5.06,
+     "tokens_per_s": 3941.5,
+     "est_500k_s": 126.9,
+     "est_1m_s": 253.7
+    },
+    {
+     "rep": 2,
+     "elapsed_s": 5.07,
+     "tokens_per_s": 3935.8,
+     "est_500k_s": 127.0,
+     "est_1m_s": 254.1
+    },
+    {
+     "rep": 3,
+     "elapsed_s": 5.06,
+     "tokens_per_s": 3939.7,
+     "est_500k_s": 126.9,
+     "est_1m_s": 253.8
+    }
+   ],
+   "median_tokens_per_s": 3939.7,
+   "min_tokens_per_s": 3935.8,
+   "max_tokens_per_s": 3941.5,
+   "cv_pct": 0.06,
+   "elapsed_s": 5.06,
+   "tokens_per_s": 3939.7,
+   "est_500k_s": 126.9,
+   "est_1m_s": 253.8
+  },
+  {
+   "path": "analyze_arabic (calima-msa-r13)",
+   "input_tokens": 99975,
+   "output_tokens": 99975,
+   "reps": [
+    {
+     "rep": 1,
+     "elapsed_s": 25.53,
+     "tokens_per_s": 3916.1,
+     "est_500k_s": 127.7,
+     "est_1m_s": 255.4
+    },
+    {
+     "rep": 2,
+     "elapsed_s": 25.45,
+     "tokens_per_s": 3928.8,
+     "est_500k_s": 127.3,
+     "est_1m_s": 254.5
+    },
+    {
+     "rep": 3,
+     "elapsed_s": 25.54,
+     "tokens_per_s": 3914.8,
+     "est_500k_s": 127.7,
+     "est_1m_s": 255.4
+    }
+   ],
+   "median_tokens_per_s": 3916.1,
+   "min_tokens_per_s": 3914.8,
+   "max_tokens_per_s": 3928.8,
+   "cv_pct": 0.16,
+   "elapsed_s": 25.53,
+   "tokens_per_s": 3916.1,
+   "est_500k_s": 127.7,
+   "est_1m_s": 255.4
+  },
+  {
+   "path": "analyze_arabic (calima-msa-r13)",
+   "input_tokens": 249975,
+   "output_tokens": 249975,
+   "reps": [
+    {
+     "rep": 1,
+     "elapsed_s": 63.56,
+     "tokens_per_s": 3933.0,
+     "est_500k_s": 127.1,
+     "est_1m_s": 254.3
+    },
+    {
+     "rep": 2,
+     "elapsed_s": 63.8,
+     "tokens_per_s": 3918.1,
+     "est_500k_s": 127.6,
+     "est_1m_s": 255.2
+    },
+    {
+     "rep": 3,
+     "elapsed_s": 63.9,
+     "tokens_per_s": 3912.2,
+     "est_500k_s": 127.8,
+     "est_1m_s": 255.6
+    }
+   ],
+   "median_tokens_per_s": 3918.1,
+   "min_tokens_per_s": 3912.2,
+   "max_tokens_per_s": 3933.0,
+   "cv_pct": 0.22,
+   "elapsed_s": 63.8,
+   "tokens_per_s": 3918.1,
+   "est_500k_s": 127.6,
+   "est_1m_s": 255.2
+  }
+ ],
+ "dialect": [
+  {
+   "path": "identify_arabic_dialect (DIDModel6)",
+   "input_tokens": 19950,
+   "reps": [
+    {
+     "rep": 1,
+     "elapsed_s": 0.16,
+     "tokens_per_s": 123817.9
+    },
+    {
+     "rep": 2,
+     "elapsed_s": 0.16,
+     "tokens_per_s": 124819.2
+    },
+    {
+     "rep": 3,
+     "elapsed_s": 0.16,
+     "tokens_per_s": 124845.9
+    }
+   ],
+   "median_tokens_per_s": 124819.2,
+   "min_tokens_per_s": 123817.9,
+   "max_tokens_per_s": 124845.9,
+   "cv_pct": 0.38,
+   "elapsed_s": 0.16,
+   "tokens_per_s": 124819.2,
+   "top_bucket": "msa"
+  },
+  {
+   "path": "identify_arabic_dialect (DIDModel6)",
+   "input_tokens": 99975,
+   "reps": [
+    {
+     "rep": 1,
+     "elapsed_s": 0.81,
+     "tokens_per_s": 123559.0
+    },
+    {
+     "rep": 2,
+     "elapsed_s": 0.81,
+     "tokens_per_s": 124073.2
+    },
+    {
+     "rep": 3,
+     "elapsed_s": 0.8,
+     "tokens_per_s": 125442.7
+    }
+   ],
+   "median_tokens_per_s": 124073.2,
+   "min_tokens_per_s": 123559.0,
+   "max_tokens_per_s": 125442.7,
+   "cv_pct": 0.64,
+   "elapsed_s": 0.81,
+   "tokens_per_s": 124073.2,
+   "top_bucket": "msa"
+  },
+  {
+   "path": "identify_arabic_dialect (DIDModel6)",
+   "input_tokens": 249975,
+   "reps": [
+    {
+     "rep": 1,
+     "elapsed_s": 2.02,
+     "tokens_per_s": 123540.3
+    },
+    {
+     "rep": 2,
+     "elapsed_s": 2.03,
+     "tokens_per_s": 123374.1
+    },
+    {
+     "rep": 3,
+     "elapsed_s": 2.03,
+     "tokens_per_s": 122884.2
+    }
+   ],
+   "median_tokens_per_s": 123374.1,
+   "min_tokens_per_s": 122884.2,
+   "max_tokens_per_s": 123540.3,
+   "cv_pct": 0.23,
+   "elapsed_s": 2.03,
+   "tokens_per_s": 123374.1,
+   "top_bucket": "msa"
+  }
+ ],
+ "cold_load_and_2k_s": 2.76,
+ "dialect_model_load_and_2k_s": 1.64
+}
