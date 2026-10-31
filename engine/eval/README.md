@@ -119,6 +119,34 @@ and (with `--en-text`) the Gale-Church `alignment_pair_count`. These deltas
 are the paper's evidence that segmentation quality propagates into every
 analysis the tool sells.
 
+SIGN CONVENTION (authoritative, matches the code in
+`segmentation_downstream.measure_pair`): every `*_delta` field is computed as
+**gold minus engine** (`sents["gold"] - sents["engine"]`, etc.). A POSITIVE
+delta therefore means the GOLD segmentation produced MORE of that quantity
+than the ENGINE segmentation (e.g. `delta_sentences = +68` = the engine
+merged 68 sentences relative to gold); a NEGATIVE delta means the engine
+produced MORE. Beware summaries that phrase the convention as "engine minus
+gold" — that phrasing corresponds to negating every delta reported here.
+`boundary_errors` in the same report is a symmetric count of differing
+boundary positions (unsigned). Extrinsic coverage note: from the A4 rerun
+(2026-10-31) the extrinsic deltas are computed on ALL 222 AraSEG dev
+documents per condition (`seg_limit=222`), not the earlier 20-document
+subset (runs 41173011756 and earlier are superseded for the extrinsic
+view; the 20-doc numbers remain in their snapshot branches for audit).
+
+Calibration: `calibration_sentence.py` scores NLTK Punkt (trained per
+condition on the AraSEG train split), pySBD (`language='ar'`) and the spaCy
+sentencizer (blank `ar` pipeline, default `punct_chars`) through the SAME
+owner-map protocol as `segmentation_araseg`. In the PA conditions punkt and
+the sentencizer are run per paragraph (AraSEG `\n` markers count as
+boundaries) and pysbd splits newlines natively — this reproduces Table 4 of
+arXiv:2606.08025 (dev set) to within 0.21 F1:
+PA punkt 65.18 vs 65.2, pysbd 63.31 vs 63.1, spacy 67.29 vs 67.3;
+NP punkt 52.32 vs 52.3, pysbd 52.05 vs 52.1, spacy 54.31 vs 54.3.
+
+    python -m eval.calibration_sentence --data /tmp/araseg/PA/dev.jsonl \
+        --task PA --punkt-train /tmp/araseg/PA/train.jsonl --out calib_PA.json
+
 ## 3. Determinism & CI
 
 - The snapshot texts are hash-frozen; the scorer refuses to run against a
