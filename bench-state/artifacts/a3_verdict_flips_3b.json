@@ -1,0 +1,135 @@
+{
+ "n_flips": 24,
+ "detail": {
+  "G-002": [
+   "MISSING_NUMBER",
+   "MISSING_NUMBER",
+   "HALLUCINATED"
+  ],
+  "G-008": [
+   "MISSING_NUMBER",
+   "MISSING_NUMBER",
+   "HALLUCINATED"
+  ],
+  "G-011": [
+   "MISSING_NUMBER",
+   "MISSING_NUMBER",
+   "HALLUCINATED"
+  ],
+  "G-015": [
+   "HALLUCINATED",
+   "MISSING_NUMBER",
+   "MISSING_NUMBER"
+  ],
+  "G-017": [
+   "MISSING_NUMBER",
+   "MISSING_NUMBER",
+   "HALLUCINATED"
+  ],
+  "G-018": [
+   "MISSING_NUMBER",
+   "HALLUCINATED",
+   "HALLUCINATED"
+  ],
+  "G-031": [
+   "MISSING_NUMBER",
+   "MISSING_NUMBER",
+   "HALLUCINATED"
+  ],
+  "G-033": [
+   "MISSING_NUMBER",
+   "HALLUCINATED",
+   "MISSING_NUMBER"
+  ],
+  "G-039": [
+   "PASS",
+   "PASS",
+   "HALLUCINATED"
+  ],
+  "G-040": [
+   "HALLUCINATED",
+   "HALLUCINATED",
+   "MISSING_NUMBER"
+  ],
+  "G-043": [
+   "MISSING_NUMBER",
+   "MISSING_NUMBER",
+   "PASS"
+  ],
+  "G-044": [
+   "MISSING_NUMBER",
+   "HALLUCINATED",
+   "HALLUCINATED"
+  ],
+  "G-046": [
+   "PASS",
+   "PASS",
+   "HALLUCINATED"
+  ],
+  "G-050": [
+   "MISSING_NUMBER",
+   "MISSING_NUMBER",
+   "HALLUCINATED"
+  ],
+  "G-055": [
+   "MISSING_NUMBER",
+   "HALLUCINATED",
+   "PASS"
+  ],
+  "G-063": [
+   "HALLUCINATED",
+   "MISSING_NUMBER",
+   "MISSING_NUMBER"
+  ],
+  "G-066": [
+   "HALLUCINATED",
+   "MISSING_NUMBER",
+   "MISSING_NUMBER"
+  ],
+  "G-067": [
+   "HALLUCINATED",
+   "MISSING_NUMBER",
+   "HALLUCINATED"
+  ],
+  "G-068": [
+   "MISSING_NUMBER",
+   "HALLUCINATED",
+   "MISSING_NUMBER"
+  ],
+  "G-069": [
+   "MISSING_NUMBER",
+   "HALLUCINATED",
+   "HALLUCINATED"
+  ],
+  "G-071": [
+   "HALLUCINATED",
+   "MISSING_NUMBER",
+   "MISSING_NUMBER"
+  ],
+  "G-075": [
+   "PASS",
+   "PASS",
+   "TRAP_FAILURE"
+  ],
+  "G-079": [
+   "MISSING_NUMBER",
+   "MISSING_NUMBER",
+   "HALLUCINATED"
+  ],
+  "G-080": [
+   "TRAP_FAILURE",
+   "TRAP_FAILURE",
+   "MISSING_NUMBER"
+  ]
+ },
+ "pass": [
+  0.075,
+  0.075,
+  0.0625
+ ],
+ "halluc": [
+  0.3625,
+  0.3875,
+  0.425
+ ]
+}

@@ -1,0 +1,82 @@
+[
+ {
+  "size_tokens_target": 1000000,
+  "corpus": {
+   "pattern": "cycled fixed snapshot sentences (en_*.txt), ~1000 tok/doc",
+   "pool_sentences": 28,
+   "pool_vocab_types": 234,
+   "documents": 994,
+   "actual_tokens": 1000050,
+   "reference_documents": 50,
+   "reference_tokens": 50301,
+   "unique_input_tokens": 234
+  },
+  "ingest": {
+   "wall_s": 348.57,
+   "tokens": 1050351,
+   "tokens_per_s": 3013.4,
+   "pipeline": {
+    "backend": "spacy",
+    "model": "en_core_web_sm",
+    "model_version": "3.8.0",
+    "spacy_version": "3.8.18",
+    "degraded": false
+   },
+   "peak_rss_kib": 243296
+  },
+  "kwic": {
+   "queries": [
+    {
+     "query": "the",
+     "limit": 400,
+     "wall_s": 5.874,
+     "lines": 75632,
+     "ok": true
+    },
+    {
+     "query": "goal",
+     "limit": 400,
+     "wall_s": 5.59,
+     "lines": 16806,
+     "ok": true
+    },
+    {
+     "query": "the",
+     "limit": 1000,
+     "wall_s": 14.207,
+     "lines": 75632,
+     "ok": true
+    }
+   ],
+   "peak_rss_kib": 243296
+  },
+  "keyness": {
+   "wall_s": 0.693,
+   "n_positive": 29,
+   "n_negative": 100,
+   "top3": [
+    "he",
+    "brass",
+    "carried"
+   ],
+   "peak_rss_kib": 243296
+  },
+  "db": {
+   "file": "/tmp/scale-1000000/scale-1000000.db",
+   "size_bytes": 470155264
+  },
+  "_meta": {
+   "utc": "2026-10-31T13:12:43.065741+00:00",
+   "commit": "9dd65d2a53e05aa5214eec2a94fdffb27824751d",
+   "runner": {
+    "platform": "Linux-7.0.0-1017-azure-x86_64-with-glibc2.39",
+    "python": "3.12.15",
+    "machine": "x86_64",
+    "cpus": 4
+   },
+   "command": "python scripts/benchmark_scale.py --sizes 1000000",
+   "corpus_construction": "synthetic: fixed English snapshot sentences (engine/eval/data/snapshot/en_*.txt) cycled to target size; repetitive text, small vocabulary — see module docstring",
+   "rss_definition": "process-wide monotone peak (ru_maxrss), KiB"
+  }
+ }
+]

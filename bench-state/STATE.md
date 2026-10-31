@@ -3,7 +3,7 @@
 Read this file FIRST every session and every scheduled turn. Do not act before
 checking §7 (next action) and §8 (binding rules). Never put secrets in this file.
 
-Last updated: 2026-10-31T12:55Z (A6 DONE on bench/extra-1 @ 62af13c; A7 scale run 41202459225 in flight on bench/scale-1 @ fcdab4f; A3: 3b#2 recorded, 3b#3 run 41202610042 in flight; 1.5b triple wrapped: flips 16/80)
+Last updated: 2026-10-31T13:50Z (A3 3b triple COMPLETE: mean pass 0.0708 / mean halluc 0.3917, flips 24/80; 7b probe run 41206910830 in flight; A7: 1M leg SUCCESS — ingest 3013 tok/s full spaCy, KWIC envelope OK, keyness 0.69 s, peak RSS 238 MiB; 10M leg in flight; 7 snapshot PRs #50-#56 opened)
 
 ## 1. Freeze
 
@@ -201,13 +201,23 @@ shrink to what succeeds and update this file.
        MISSING_NUMBER 36 / HALLUCINATED 24 / TRAP_FAILURE 14. run_meta
        confirms ollama/qwen2.5:3b. paper_report.json archived under
        bench-state/artifacts/run-41194918539/.
-    5. 3b #3 — 41202610042 IN FLIGHT since 12:46:46Z (bench/freeze-1-local
-       @ ee42bfa, qwen2.5:3b, full 80, commit_results=true). On completion:
-       fetch grounding-report, verify run_meta model, record, then the 7b
-       probe per the step-6 rule.
-    6. 7b probe (5 questions, commit_results=false, grounding_only
-       'G-001 G-002 G-003 G-004 G-005') -> full 7b only if projection <= 330
-       min; if it fits: 7b #1, #2, #3; if not: one-command runbook in
+    5. 3b #3 — 41202610042 DONE 13:41Z, 80/80 clean, pass 0.0625
+       [0.0125-0.1125], halluc 0.425 [0.3125-0.5375]; verdicts PASS 5 /
+       MISSING_NUMBER 31 / HALLUCINATED 30 / TRAP_FAILURE 14. run_meta
+       confirms ollama/qwen2.5:3b.
+       3b TRIPLE COMPLETE: pass 0.075/0.075/0.0625 (mean 0.0708); halluc
+       0.3625/0.3875/0.425 (mean 0.3917). VERDICT FLIPS 24/80 (30%):
+       18× HALLUCINATED<->MISSING_NUMBER, 4× involve PASS, 2× involve
+       TRAP_FAILURE (detail: bench-state/artifacts/a3_verdict_flips_3b.json).
+       READING: 3b fails 'safer' than 1.5b (shifts HALLUCINATED ->
+       MISSING_NUMBER: mean hallucination 0.39 vs 0.66) but passes less
+       (mean 0.0708 vs 0.1542); both local rows are far below any usable
+       operating point and flips show single-question instability, not
+       systematic verdict migration.
+    6. 7b probe — 41206910830 IN FLIGHT since 13:44:15Z (5 questions,
+       commit_results=false, grounding_only 'G-001..G-005'). On completion:
+       projection = mean s/q × 80 (job-level) vs the 330-min cap; fits ->
+       7b #1/#2/#3; does not fit -> one-command runbook in
        engine/eval/README.md (on bench/extra-1, never a freeze ref) and mark
        the 7b row 'pending user-run'.
   1.5b #1 = 41173022988 (done: pass 0.1625 [0.0875-0.2375], halluc 0.625
@@ -271,23 +281,33 @@ shrink to what succeeds and update this file.
     the LR side (LR raises; engine falls back to raw TTR) — disclosed.
   Raw artifact: bench-state/artifacts/a6_parity.json.
 
-- (A7) IN FLIGHT. scripts/benchmark_scale.py + a gated `scale` job inside
-  .github/workflows/benchmarks.yml on new branch bench/scale-1
-  (@ fcdab4f, at ee42bfa; engine-diff rule 0 lines). NOTE: a new workflow
-  file on a side branch is NOT dispatchable via the API (GitHub registers
-  workflows from the default branch only — dispatch of scale.yml returned
-  404), so the job piggybacks on the already-dispatchable benchmarks.yml,
-  gated on `inputs.grounding_only == 'SCALE'` (schema-compatible with
-  main; run_grounding stays false so no Gemini quota is used; the
-  unconditional perf-arabic + seg-araseg jobs run as usual noise).
-  Dispatched run 41202459225 on bench/scale-1 (matrix 1M / 10M tokens,
-  parallel legs, each on a fresh SQLite file, timeout 350 min). Measures:
-  ingest (ingestion.service.ingest_document, spaCy en_core_web_sm-3.8.0
-  pinned), KWIC (search_concordance, word level, window 5), keyness
-  (compute_keyness vs a 50k-token reference corpus) — wall time + peak RSS
-  (ru_maxrss). Corpus: SYNTHETIC cycled frozen en-snapshot sentences
-  (~1000 tok/doc; vocabulary ~234 types) — stated in _meta. Smoke-tested
-  locally at 3k tokens before dispatch.
+- (A7) PARTIAL (1M DONE, 10M in flight). scripts/benchmark_scale.py + a
+  gated `scale` job inside .github/workflows/benchmarks.yml on new branch
+  bench/scale-1 (@ 9dd65d2, at ee42bfa; engine-diff rule 0 lines). NOTE: a
+  new workflow file on a side branch is NOT dispatchable via the API
+  (GitHub registers workflows from the default branch only — dispatch of
+  scale.yml returned 404), so the job piggybacks on the already-
+  dispatchable benchmarks.yml, gated on `inputs.grounding_only == 'SCALE'`
+  (schema-compatible with main; run_grounding stays false so no Gemini
+  quota is used). Run history: 41202459225 FAILED (SQLite could not create
+  the DB file — custom CORPUSMIND_DB_URL parent dir not auto-created;
+  fixed by mkdir in the script); retry FAILED at the KWIC phase (engine
+  word-level context fetch builds ONE un-chunked or_() over all matched
+  sentences — SQLite 'Expression tree is too large (maximum depth 1000)'
+  when a limit=1000 query matches ≳950 distinct sentences at 1M tokens;
+  the phrase path chunks at 400, the word-level path does not — ENGINE
+  SCALE FINDING, reported not patched, engine frozen); final run
+  41203959363 @ 9dd65d2 with an envelope design: measure inside the
+  envelope (limit=400) + one ceiling probe at limit=1000 + incremental
+  per-phase report dumps.
+  1M leg RESULTS (run 41203959363, artifact scale-1000000, archived
+  bench-state/artifacts/a7-scale/1m/): corpus 994 docs / 1,000,050 tokens
+  (cycled frozen en-snapshot sentences, vocab 234 types); INGEST 348.6 s
+  = 3,013 tok/s (FULL en_core_web_sm 3.8.0 pipeline, degraded=false);
+  KWIC 'the'@400 5.87 s (75,632 total matches), 'goal'@400 5.59 s
+  (16,806), ceiling probe 'the'@1000 14.21 s OK (borderline envelope);
+  KEYNESS 0.69 s (+29/-100 keywords); DB 470 MB; peak RSS 238 MiB.
+  10M leg in flight since 13:05Z, ETA ~14:00-14:30Z.
 
 ## 10. Known anomalies / open items for the report
 
@@ -308,7 +328,11 @@ shrink to what succeeds and update this file.
 - Brief said canonical seg snapshot was @ 06de47b; the actual snapshot run
   40970859593 is @ 57be77f. Superseded either way by §9(seg).
 - The workflow's "Open snapshot PR" step silently failed for runs 41173011756
-  and 41173022988 (step reports success via `|| echo`; no PR exists). Open the
-  data-only snapshot PRs manually at merge time.
+  and 41173022988 (step reports success via `|| echo`; no PR exists). RESOLVED
+  2026-10-31 ~13:40Z: manual data-only PRs opened for ALL completed snapshot
+  branches — #50 (41173011756 seg canonical), #51 (41181061992 A4 222-doc),
+  #52 (41173022988 1.5b#1), #53 (41176056150 3b#1), #54 (41185282664 1.5b#2),
+  #55 (41189716613 1.5b#3), #56 (41194918539 3b#2). Merge decision is the
+  maintainer's; merging makes the citable snapshots visible on main.
 - Oct-30 20:42-21:58Z dispatch runs (4 in §3) were not in the original brief;
   all 0 clean, two off-spec models. No bank impact.
