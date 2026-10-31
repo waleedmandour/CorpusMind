@@ -470,3 +470,68 @@ finished; scheduled jobs absent, consistent with the T6 deletion).
 - Artifacts added this session: f2_pooled_PA.json, f2_pooled_NP.json,
   a6_parity.json (regenerated with battery), f5_per_category.json,
   pr-bodies-f1.md.
+
+## 12. F-order execution session (2026-10-31 ~17:40Z+, fresh token) — PUSHED, PRs OPEN
+
+Token restored by the user ("keep using the same token for now" = this new
+one). Everything from §11 that was local-only is now on origin. All pushes
+fast-forward; no force, no tags, no releases. No frozen ref moved.
+
+- PUSHED (verified by push output): bench/local-results (NEW branch @ ce77f49),
+  bench/extra-1 697458c..76454a0, bench/scale-1 9dd65d2..9125bbb
+  (= 3ffedaf zipf mode + b9578c2 ci wiring + 9125bbb kwic repro),
+  bench/t6-report 9f16790..a0b3283, bench/state 69213e8..f35d511 (+this commit).
+- PRS OPENED (bot opened, none merged): #58 = bench/snapshot-run-41202610042
+  (3b #3 snapshot — the PR step had never produced it), #59 = bench/local-results
+  (raw run envelopes), #60 = bench/extra-1 (F2+F3 eval), #61 = bench/scale-1
+  (F4 zipf + repetitive labeling). PR #57 head advanced to a0b3283 (F5 report
+  corrections are on #57 — no new PR needed).
+- DIFF GATES re-verified THIS session, all 0 lines:
+  `git diff ee42bfa <SHA> -- engine ':!engine/eval'` for
+  ce77f49, 76454a0, 3ffedaf, a0b3283; additionally full `-- engine`
+  (including eval) = 0 lines for data-only ce77f49.
+- KWIC limit-1000 FAILURE RUN ID FOUND (F4 evidence complete): run
+  **41202901041** (workflow_dispatch, bench/scale-1 @ c02b3c7, 12:50:46Z),
+  job "Scale (1000000 tokens)" FAILED at 12:58:17Z with
+  `sqlite3.OperationalError: Expression tree is too large (maximum depth
+  1000)` (sqlalchemy.exc.OperationalError wrap); the "Scale (10000000
+  tokens)" leg was then cancelled. Logs downloaded and grepped this session.
+  The failure is DETERMINISTIC (local repro scripts/kwic_repro.py on
+  bench/scale-1 @ 9125bbb; 1200 distinct one-'the' sentences: limit=400 OK,
+  limit=1000 raises). ACTION for #57: replace the "intermittent" wording
+  with deterministic + this run ID (follow-up docs commit, with the zipf
+  numbers below).
+- ci(scale) wiring (b9578c2, on bench/scale-1): the Scale job previously
+  called benchmark_scale.py WITHOUT --corpus-mode, so a dispatch would have
+  re-run the repetitive mode. Added inputs.scale_corpus_mode (default
+  repetitive) passed as flag + env fallback (script default now reads
+  CORPUSMIND_SCALE_CORPUS_MODE). Gate re-verified 0 lines.
+- F4 ZIPF DISPATCH: first dispatch attempt correctly REFUSED by the poll
+  rule (pull_request CI runs in flight on bench/scale-1 head b9578c2;
+  concurrency-safe wait). Dispatch = benchmarks.yml on bench/scale-1 with
+  grounding_only="SCALE", scale_corpus_mode="zipf", run_grounding=false,
+  commit_results=false. [STATUS TO BE APPENDED after dispatch]
+- F3 re-verified from the artifact: battery n_tables=2628 measure-rows over
+  876 tables (chi2 n_comp 795 / G2 795 / OR 651; excluded 81/81/225 counted,
+  not folded); compare() emits status NOT_TESTED with null maxima (code
+  grep 76454a0 lines 119-139, 243-246); STTR short-corpus case documented
+  "on the snapshot set alone this measure is NOT_TESTED" with the synth
+  10k/50k/100k texts providing the comparables (max_rel 2.6e-3, disclosed
+  LR last-segment discard).
+- F2 re-verified from artifacts: pooled PA 222 docs / 163,609 tokens,
+  boundary_errors 6,313, convention "gold minus engine", two-token CQL
+  bigram table present (e.g. "العفريت فمن" freq 2 with 2 gold crossings).
+- 7b (user ask: "quantized 7b such as qwen 3.8 or Gemma4"): still
+  DOES-NOT-FIT per the pre-registered rule — qwen2.5:7b (already Q4_K_M)
+  probed 271.5 s/q → 362 min full-80 > 330-min cap (probe 41206910830, 5/5
+  clean). "Gemma4" does not exist (Gemma 3 = 1b/4b/12b/27b); closest to
+  "qwen 3.8" is qwen3:8b Q4_K_M, same size class, <think> blocks risk dirty
+  answers without a frozen-prompt change. Standing options for the user:
+  (a) two serialized 40-question runs ~185 min each (protocol deviation,
+  disclosed), (b) user-run via engine/eval/README.md runbook, (c) keep
+  7b = PENDING USER-RUN. Nothing dispatched without user choice.
+- MERGE ORDER (proposal; maintainer merges — bot must not): #50 → #51 →
+  #52 → #53 → #54 → #55 → #56 → #58 (snapshots) → #59 (raw envelopes) →
+  #60 (eval F2/F3) → #61 (scale F4) → #57 LAST (report, lands with its
+  artifacts/tooling). Rationale: data snapshots first, then tooling that
+  interprets them, report last so citations resolve.
