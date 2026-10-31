@@ -1,7 +1,7 @@
 {
  "run_url": "https://github.com/waleedmandour/CorpusMind/actions/runs/41189716613",
  "commit": "ee42bfab72291072b191ebb4c7d77ec03bb1f94d",
- "utc": "2026-10-31T09:51:35+00:00",
+ "utc": "2026-10-31T10:58:40+00:00",
  "runner": {
   "platform": "Linux-7.0.0-1017-azure-x86_64-with-glibc2.39",
   "cpu_count": 4,
@@ -9,6 +9,16 @@
   "camel_tools": "1.6.0"
  },
  "files": [
+  {
+   "path": "grounding/paper_report.json",
+   "sha256": "64faa88cd2dc1e3ac5733a412b103549313f0c5e496556cbc4c6ab4d35766d0a",
+   "bytes": 35561
+  },
+  {
+   "path": "grounding/paper_run.json",
+   "sha256": "d05fe77672642d7107e57ed24874b3d0184287fa6cb92a5044ab28a722003c09",
+   "bytes": 123815
+  },
   {
    "path": "perf-arabic/perf_arabic.json",
    "sha256": "cbaa277c40002decdc62a197bb1dea6f411b1f7beb21c7d10568d7b50eec5a00",
