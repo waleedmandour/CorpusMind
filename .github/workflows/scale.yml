@@ -1,0 +1,88 @@
+name: Scale
+
+# A7: ingest / KWIC / keyness wall time + peak RSS at 1M and 10M tokens.
+# Synthetic English corpora (cycled frozen snapshot sentences — see
+# scripts/benchmark_scale.py docstring). One job per size, parallel,
+# each on its own fresh SQLite file. 360-min runner cap respected
+# (timeout below).
+
+on:
+  workflow_dispatch:
+    inputs:
+      sizes:
+        description: "Comma-separated token counts"
+        default: "1000000,10000000"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  scale:
+    name: Scale (${{ matrix.size }} tokens)
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      matrix:
+        size: ["1000000", "10000000"]
+    env:
+      CORPUSMIND_DB_URL: "sqlite+aiosqlite:////tmp/scale-${{ matrix.size }}/scale.db"
+      CORPUSMIND_SCALE_SIZES: ${{ matrix.size }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install engine
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e "./engine" python-multipart cryptography
+
+      - name: Install pinned spaCy English model
+        run: |
+          pip install "en_core_web_sm@https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl"
+
+      - name: Run scale benchmark
+        run: |
+          python scripts/benchmark_scale.py --sizes "${{ matrix.size }}" \
+            --out benchmarks/out/scale
+
+      - name: Markdown summary
+        if: always()
+        run: |
+          python - <<'PY'
+          import json, glob, pathlib
+          rows = []
+          for p in sorted(glob.glob("benchmarks/out/scale/scale_*.json")):
+              r = json.loads(pathlib.Path(p).read_text())
+              if "_meta" not in r:
+                  continue
+              ing, kw, kn = r["ingest"], r["kwic"], r["keyness"]
+              peak = max(ing["peak_rss_kib"], kw["peak_rss_kib"], kn["peak_rss_kib"])
+              rows.append(
+                  f"| {r['corpus']['actual_tokens']:,} | {ing['wall_s']:,} s "
+                  f"| {ing['tokens_per_s']:,.0f} | {kw['queries'][0]['wall_s']} s "
+                  f"| {kw['queries'][1]['wall_s']} s | {kn['wall_s']} s "
+                  f"| {peak/1024:.0f} MiB | {ing['pipeline']['degraded']} |")
+          print("## A7 scale (ingest / KWIC / keyness)\n")
+          print("| tokens | ingest wall | tok/s | KWIC 'the' | KWIC q2 | keyness | peak RSS | degraded |")
+          print("|---|---|---|---|---|---|---|---|")
+          for row in rows:
+              print(row)
+          PY
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scale-${{ matrix.size }}
+          path: benchmarks/out/scale/
+          retention-days: 30
