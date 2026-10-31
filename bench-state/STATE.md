@@ -189,8 +189,15 @@ shrink to what succeeds and update this file.
        [0.075-0.2375], halluc 0.6875 [0.5875-0.7875]; verdicts PASS 12 /
        MISSING_NUMBER 11 / HALLUCINATED 44 / TRAP_FAILURE 13. Snapshot
        bench/snapshot-run-41185282664 patched with grounding/.
-    3. 1.5b #3 — 41189716613 IN FLIGHT since 09:41:31Z
-    4. 3b #2   5. 3b #3
+    3. 1.5b #3 — 41189716613 DONE 10:58Z, 80/80 clean, pass 0.15
+       [0.075-0.225], halluc 0.675 [0.575-0.775]; verdicts PASS 12 /
+       MISSING_NUMBER 12 / HALLUCINATED 43 / TRAP_FAILURE 13. Snapshot
+       bench/snapshot-run-41189716613 patched with grounding/.
+       1.5b TRIPLE COMPLETE: pass 0.1625 / 0.15 / 0.15 (mean 0.1542);
+       halluc 0.625 / 0.6875 / 0.675 (mean 0.6625). Verdict-flip analysis at
+       T6 from the three paper_report.json artifacts (on snapshot branches).
+    4. 3b #2 — 41194918539 IN FLIGHT since 10:58:44Z
+    5. 3b #3 (then the 7b probe per the §9(A3) step 6 rule)
     6. 7b probe (5 questions, commit_results=false, grounding_only
        'G-001 G-002 G-003 G-004 G-005') -> full 7b only if projection <= 330
        min; if it fits: 7b #1, #2, #3; if not: one-command runbook in
