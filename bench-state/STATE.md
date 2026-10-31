@@ -185,8 +185,12 @@ shrink to what succeeds and update this file.
        [0.025-0.1375], halluc 0.3625 [0.2625-0.475]; verdicts PASS 6 /
        MISSING_NUMBER 37 / HALLUCINATED 23 / TRAP_FAILURE 14. Snapshot branch
        bench/snapshot-run-41176056150 patched with grounding/.
-    2. 1.5b #2 — 41185282664 IN FLIGHT since 08:36:13Z
-    3. 1.5b #3   4. 3b #2   5. 3b #3
+    2. 1.5b #2 — 41185282664 DONE 09:41Z, 80/80 clean, pass 0.15
+       [0.075-0.2375], halluc 0.6875 [0.5875-0.7875]; verdicts PASS 12 /
+       MISSING_NUMBER 11 / HALLUCINATED 44 / TRAP_FAILURE 13. Snapshot
+       bench/snapshot-run-41185282664 patched with grounding/.
+    3. 1.5b #3 — 41189716613 IN FLIGHT since 09:41:31Z
+    4. 3b #2   5. 3b #3
     6. 7b probe (5 questions, commit_results=false, grounding_only
        'G-001 G-002 G-003 G-004 G-005') -> full 7b only if projection <= 330
        min; if it fits: 7b #1, #2, #3; if not: one-command runbook in
