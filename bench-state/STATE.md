@@ -3,7 +3,7 @@
 Read this file FIRST every session and every scheduled turn. Do not act before
 checking §7 (next action) and §8 (binding rules). Never put secrets in this file.
 
-Last updated: 2026-10-31T13:50Z (A3 3b triple COMPLETE: mean pass 0.0708 / mean halluc 0.3917, flips 24/80; 7b probe run 41206910830 in flight; A7: 1M leg SUCCESS — ingest 3013 tok/s full spaCy, KWIC envelope OK, keyness 0.69 s, peak RSS 238 MiB; 10M leg in flight; 7 snapshot PRs #50-#56 opened)
+Last updated: 2026-10-31T14:40Z (A3 DONE incl. 7b: probe 362 min > 330 cap -> 7b PENDING USER-RUN, runbook on bench/extra-1 @ 697458c; A6 DONE; A7 DONE — 1M+10M legs SUCCESS; T6 in progress: snapshot PRs #50-#56 open, docs PR next, then secret+cron deletion)
 
 ## 1. Freeze
 
@@ -214,12 +214,14 @@ shrink to what succeeds and update this file.
        (mean 0.0708 vs 0.1542); both local rows are far below any usable
        operating point and flips show single-question instability, not
        systematic verdict migration.
-    6. 7b probe — 41206910830 IN FLIGHT since 13:44:15Z (5 questions,
-       commit_results=false, grounding_only 'G-001..G-005'). On completion:
-       projection = mean s/q × 80 (job-level) vs the 330-min cap; fits ->
-       7b #1/#2/#3; does not fit -> one-command runbook in
-       engine/eval/README.md (on bench/extra-1, never a freeze ref) and mark
-       the 7b row 'pending user-run'.
+    6. 7b probe — 41206910830 DONE 14:11Z. 5/5 clean answers (verdicts
+       G-001..G-005: MISSING_NUMBER x2, HALLUCINATED x2, TRAP_FAILURE x1 —
+       diagnostic only, not a row; paper_run.json archived under
+       bench-state/artifacts/run-41206910830/). Timing 313.8/241.8/270.1/
+       331.5/200.3 s -> mean 271.5 s/q -> full-80 projection 362 min > 330-min
+       cap -> DOES NOT FIT. Per the pre-registered rule: one-command runbook
+       written into engine/eval/README.md on bench/extra-1 (@ 697458c, never
+       a freeze ref); 7b ROW = PENDING USER-RUN.
   1.5b #1 = 41173022988 (done: pass 0.1625 [0.0875-0.2375], halluc 0.625
   [0.525-0.725]). The afce8fe row 0.1375/0.65 stays labelled SUPERSEDED.
   1.5b TRIPLE WRAP (2026-10-31): pass 0.1625/0.15/0.15 (mean 0.1542);
@@ -281,7 +283,7 @@ shrink to what succeeds and update this file.
     the LR side (LR raises; engine falls back to raw TTR) — disclosed.
   Raw artifact: bench-state/artifacts/a6_parity.json.
 
-- (A7) PARTIAL (1M DONE, 10M in flight). scripts/benchmark_scale.py + a
+- (A7) DONE 2026-10-31. scripts/benchmark_scale.py + a
   gated `scale` job inside .github/workflows/benchmarks.yml on new branch
   bench/scale-1 (@ 9dd65d2, at ee42bfa; engine-diff rule 0 lines). NOTE: a
   new workflow file on a side branch is NOT dispatchable via the API
