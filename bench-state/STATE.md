@@ -125,12 +125,30 @@ shrink to what succeeds and update this file.
 ## 9. Row status
 
 - (seg) 40970859593 @ 57be77f (branch bench/snapshot-run-40970859593) is the
-  committed "canonical" snapshot — SUPERSEDED by: run 41173011756 on
-  bench/freeze-1-seg (seg_limit=20, run_grounding=false, run_gold_diff=true,
-  commit_results=true) — result: PENDING, update on completion. Do NOT run the
-  test split.
+  committed "canonical" snapshot — SUPERSEDED (mark in report). New canonical:
+  run 41173011756 on bench/freeze-1-seg @ ee42bfa (seg_limit=20,
+  run_grounding=false, run_gold_diff=true, commit_results=true) — SUCCESS.
+  Verified from artifact seg-araseg (bench_artifacts/run-41173011756):
+  * gold-diff at freeze SHA: clean=true, diffs=[] (80 frozen = 80 rebuilt)
+  * intrinsic PA (222 dev docs): micro-F1 0.7115 (micro_P 0.8748 / micro_R
+    0.5996), macro-F1 0.6705 (macro_P 0.9147 / macro_R 0.6123), 10 perfect docs
+  * intrinsic NP (222 dev docs): micro-F1 0.5572 (micro_P 0.8326 / micro_R
+    0.4187), macro-F1 0.5469 (macro_P 0.8857 / macro_R 0.4738), 3 perfect docs
+  * extrinsic (20 docs, engine vs gold segmentation): PA boundary errors 459,
+    delta_sentences +344 (engine/gold sentence count 0.705), CAF mean sentence
+    length -20.13; NP 697 / +592 (0.493) / -25.65; sentiment deltas +5/-3 (PA),
+    +3/-4 (NP); collocation/ngram/CQL deltas 0 for both tasks
+  * perf (analyze path, median tok/s, cv%): 20k 2708.7 (1.33), 100k 2694.8
+    (1.19), 250k 2696.9 (0.34); dialect-id ~96.6k-98.8k tok/s; cold load 4.0 s
+  * snapshot branch bench/snapshot-run-41173011756 pushed (data-only); the
+    bot's PR step silently failed — open the PR manually at merge time
+  * test split NOT run (per user decision)
 - (local-a) qwen2.5:1.5b re-run on freeze: run 41173022988 on bench/freeze-1-local
-  (full 80, commit_results=true) — PENDING. On success, mark 41028985957
+  (full 80, commit_results=true) — IN FLIGHT since 05:32:48Z. Note: its snapshot
+  branch bench/snapshot-run-41173022988 may land WITHOUT the grounding artifact
+  (results-snapshot only waits on perf+seg jobs) — after the run completes,
+  download the grounding artifact and push it onto that snapshot branch before
+  merging. On success, mark 41028985957
   superseded. Prior row (to be replaced): pass 0.1375, hallucination 0.65
   (UNVERIFIED here; verify by re-scoring the new run).
 - (local-b) larger local model: NOT STARTED. Procedure: after (a) completes and
