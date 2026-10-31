@@ -32,16 +32,46 @@ engine; deltas are GOLD MINUS ENGINE — positive = engine produced fewer):
 | boundary errors | 6,313 | 8,641 |
 | delta sentences | +5,291 | +7,593 |
 | engine/gold sentence count | 0.616 | 0.449 |
-| CAF delta mean sentence length | −62.71 | −88.27 |
+| CAF delta mean sentence length (per-doc deltas summed) | −62.71 | −88.27 |
 | sentiment flips (+/−) | +54/−99 | +68/−122 |
-| collocation / n-gram / CQL deltas | 0 | 0 |
+| collocation / n-gram / CQL deltas (per-doc recording, superseded) | 0 | 0 |
 
-Reading: the engine's sentence-splitting under-segments Arabic sharply
-(fewer, longer sentences than gold), which inflates CAF sentence length and
-shifts sentiment; collocational/n-gram/CQL statistics are robust to the
-segmentation difference at these settings. The 20-doc extrinsic view (run
-41173011756) is superseded by the 222-doc numbers above. Test split NOT run
-(user decision).
+**F2 correction (2026-10-31, pooled re-run).** The recorded zeros for
+collocation / n-gram / CQL in the row above are an artifact of the per-doc
+design, NOT evidence of robustness, and partly a response-key bug: the eval
+script read `top_collocates`/`top_ngrams` while the REST endpoints return
+`rows`, so rows were recorded as empty even when the engine returned a full
+table; and the single-term CQL pattern ("في" within sentence) cannot show a
+delta by construction (every occurrence lies inside SOME sentence under both
+segmentations). The re-run (`engine/eval/segmentation_downstream.py --pool`
+on bench/extra-1, commit 76454a0) pools all 222 docs into ONE engine vs ONE
+gold corpus per condition (byte-identical AraSEG dev parquets, sha256
+verified vs the frozen runs), uses realistic thresholds (min_freq ≥ 5) and
+data-driven TWO-TOKEN CQL sequences. Results (gold minus engine; the pooled
+corpus reproduces the frozen per-doc totals exactly: boundary errors
+6,313/8,641, delta sentences +5,291/+7,593, sentiment +54/−99 and +68/−122):
+
+| pooled measure (222 docs, min_freq ≥ 5) | PA | NP |
+|---|---|---|
+| collocation rows (cap 200) | 200 vs 200 | 200 vs 200 |
+| collocation Σ O delta | −838 (eng 8,466 / gold 7,628) | −1,069 (eng 8,697 / gold 7,628) |
+| n-gram Σ freq delta | −125 | −128 |
+| CQL single-term "في" within sentence | 3,309 vs 3,309 (Δ 0) | 3,309 vs 3,309 (Δ 0) |
+| CQL two-token, boundary-crossing bigrams | engine finds 2/2/1/1 matches gold misses | engine finds 8/7/4/4/3 matches gold misses |
+| CQL two-token, top within-sentence bigrams | Δ 0 (e.g. "جنوب" "السودان" 224 = 224) | Δ 0 (same) |
+| CAF mean sentence length (corpus-level) | −5.86 | −11.53 |
+
+Reading (replaces the earlier claim): corpus-scale collocational statistics
+are NOT robust to the segmentation difference — the engine's merged
+sentences inflate the same-sentence co-occurrence mass (Σ O +838/+1,069)
+and n-gram totals, and any two-token CQL pattern whose tokens straddle a
+gold boundary silently loses matches under the gold segmentation while the
+engine keeps them. The direction is systematic: under-segmentation biases
+all sentence-scoped statistics upward on the engine side. Single-term
+"within sentence" counts are insensitive by construction and must not be
+cited as evidence of segmentation-independence. The 20-doc extrinsic view
+(run 41173011756) is superseded by the 222-doc numbers above. Test split
+NOT run (user decision).
 
 ## 2. Calibration of the segmentation evaluator (A5)
 
@@ -76,6 +106,26 @@ Verdict distributions (across runs): 1.5b PASS 12–13, MISSING_NUMBER 11–14,
 HALLUCINATED 39–44, TRAP_FAILURE 13–14; 3b PASS 5–6, MISSING_NUMBER 31–37,
 HALLUCINATED 23–30, TRAP_FAILURE 14.
 
+Per-category grounding (F5; the bank partitions into 62 answerable questions
+with numeric/structured gold and 18 trap/no_tool questions — no_tool,
+error, zero-match and expected-absent traps, incl. the 4 category-"trap"
+ids G-073/G-074/G-079/G-080; per-run values from the archived
+paper_report.json of every run):
+
+| config | answerable (n=62) pass per run | mean | trap/no_tool (n=18) pass per run | mean |
+|---|---|---|---|---|
+| qwen2.5:1.5b | 11, 10, 10 → 0.177 / 0.161 / 0.161 | **0.167** | 2, 2, 2 → 0.111 | **0.111** |
+| qwen2.5:3b | 3, 3, 3 → 0.048 | **0.048** | 3, 3, 2 → 0.167/0.167/0.111 | **0.148** |
+
+Reading: on answerable questions the 1.5b model is ~3.4× better than 3b
+(0.167 vs 0.048) — 3b's "safer" failure mode (fewer hallucinations) costs it
+nearly all its answerable passes. Both models mostly fall for the
+no-tool/zero-match traps (TRAP_FAILURE 13–14 of 18 per run); 3b declines
+correctly on 2–3 of 18, 1.5b on 2 of 18 — a small honesty edge to 3b that
+does not transfer into usable answers. Trap verdict composition: 1.5b
+TRAP_FAILURE 13–14 / HALLUCINATED 2–3 / PASS 2; 3b TRAP_FAILURE 14 /
+PASS 2–3 / (1 run each) MISSING_NUMBER 1, HALLUCINATED 1.
+
 Reading: (a) both models are far below any usable operating point — at most
 13/80 questions answered passably; (b) 3b fails *safer* than 1.5b (shifts
 HALLUCINATED → MISSING_NUMBER: mean hallucination 0.39 vs 0.66) but passes
@@ -108,6 +158,12 @@ per project (resets midnight Pacific), crawled as a multi-day drip
   is empty). Caveat: the three reused answers scored under the PRE-freeze
   gold; G-004 was an honest-trap fail and its freeze-row score is reported
   as-is.
+- Per-category view of the banked 5 (F5): answerable G-002 **PASS**
+  (archived verdict, run 41120607735) and G-040 **PASS** (recorded in the
+  plan §7 probe note); G-001 clean answer banked but its verdict is NOT in
+  any archived report (UNVERIFIED — recoverable from the probe reports).
+  Trap/no_tool: G-073 **PASS** (declined correctly, plan §7 record), G-004
+  **FAIL** (answered a no-tool trap with numbers).
 - Slice-1 (2026-10-31, first full free-tier day): 16 ids attempted, **0
   clean** — 15× 429-class transport failures + 1× deadline. A fresh 20/day
   pool would have allowed ~16 clean: the reset/quota model is NOT holding
@@ -126,35 +182,61 @@ per project (resets midnight Pacific), crawled as a multi-day drip
   `bench-state/scripts/dispatch_crawl.sh` and the parameters in §2 of
   STATE.md (branch `bench/state`, path `bench-state/STATE.md`).
 
-## 6. Stats-parity check (A6)
+## 6. Stats-parity check (A6, hardened by F3)
 
-`engine/eval/parity_stats.py` (bench/extra-1) compares the engine's measures
-with scipy / statsmodels / lexicalrichness on ONE shared corpus set (the 9
-snapshot texts, 29–369 tokens each) with ONE shared tokenizer handed to both
-sides. Result (max abs / max rel deviation across corpora):
+`engine/eval/parity_stats.py` (bench/extra-1, F3 commit 76454a0) compares the
+engine's measures with scipy / statsmodels / lexicalrichness with ONE shared
+tokenizer handed to both sides, on TWO corpus sets: the 9 snapshot texts
+(29–369 tokens) plus F3 deterministic synthetic texts of 10k / 50k / 100k
+tokens (Zipf-like, PCG64 seed 20261031) that make the window/segment
+measures genuinely comparable. F3 semantics: an empty comparison is reported
+as **NOT_TESTED** (null maxima) — never as zero deviation.
 
-| measure | engine vs reference | max abs dev | max rel dev |
-|---|---|---|---|
-| TTR | lexicalrichness | 0 | 0 |
-| MATTR(50) | lexicalrichness | 2.0e-15 | 2.4e-15 |
-| STTR(1000) | lexicalrichness | 0 | 0 |
-| HD-D(42) | lexicalrichness | 1.4e-15 | 1.7e-15 |
-| Guiraud RTTR | lexicalrichness | 0 | 0 |
-| Pearson χ² (no Yates) | scipy | 0 | 0 |
-| Dunning G² | scipy | 0 | 0 |
-| Odds ratio (uncorrected) | statsmodels | 0 | 0 |
-| MTLD(0.72) | lexicalrichness | 1.3777 | 2.87% |
+| measure | engine vs reference | max abs dev | max rel dev | comparable rows |
+|---|---|---|---|---|
+| TTR | lexicalrichness | 0 | 0 | all |
+| MATTR(50) | lexicalrichness | 1.39e-13 | 2.27e-13 | all (incl. synth) |
+| STTR(1000) | lexicalrichness | 8.9e-4 | 0.26% | snapshot-only: **NOT_TESTED**; with synth: 3 |
+| HD-D(42) | lexicalrichness | 9.5e-14 | 1.5e-13 | all but 2 excluded |
+| Guiraud RTTR | lexicalrichness | 0 | 0 | all |
+| Pearson χ² (no Yates) | scipy | 7.1e-15 | 2.4e-16 | 795 of 876 battery tables |
+| Dunning G² | scipy | 0 | 0 | 795 of 876 battery tables |
+| Odds ratio (uncorrected) | statsmodels `shift_zeros=False` | 0 | 0 | 651 of 876 battery tables |
+| MTLD(0.72) | lexicalrichness | 1.3777 | 2.87% | all — convention, disclosed |
 
-MTLD is the only gap and it is a disclosed AGGREGATION CONVENTION, not a bug:
-engine = len(tokens)/mean(forward, backward factor counts); LR = mean of the
-two directional MTLD scores (the McCarthy & Jarvis 2010 published form);
-equal iff both passes find the same factor count. Convention checks made
-along the way (A6 rule): LR 0.5.x default preprocessing (lowercase, strip
-punct/digits) was pinned away to preserve the shared-token premise; the
-engine's odds_ratio takes (f1, f2, N1, N2) rather than raw 2×2 cells; LR
-names the HD-D parameter `draws`; corpora shorter than a window are excluded
-on the LR side (LR raises, engine falls back). Raw report:
-`bench-state/artifacts/a6_parity.json`.
+F3 battery: 876 deterministic 2×2 tables (the {0,1,2,3,5}⁴ grid — small and
+zero cells in every position — + the corpus-derived table + 250 seeded
+random tables up to cell 5,000), 373 of them containing at least one zero
+cell (max deviation on the comparable zero-cell subset: 0.0 for all three
+statistics). Excluded tables are counted and never folded into deviations:
+81 (zero margins — scipy raises; engine's raw-χ² convention returns a
+number there but there is no reference value) and 225 (raw odds ratio
+UNDEFINED, b=0 or c=0).
+
+Corrections this hardening surfaced (F3):
+1. The earlier STTR row ("max dev 0 / 0") was the n_comparable=0 case F3
+   outlaws: no snapshot text reaches the 1,000-token chunk, so LR excludes
+   everything and the old script printed 0/0. It is NOT TESTED on the
+   snapshot set. With the 10k–100k texts the real residual appears: LR's
+   `msttr(discard=True)` deletes the LAST segment unconditionally — when n
+   is an exact multiple of the window that drops one full segment (LR
+   source: `del scores[-1]`) — while the engine drops only a trailing
+   partial chunk. Convention difference (≤ ~1/segment_count), not an engine
+   bug.
+2. The statsmodels reference for the odds ratio was `Table2x2(table)` whose
+   DEFAULT `shift_zeros=True` silently applies the Haldane 0.5 correction —
+   i.e. it matches the engine's separate `odds_ratio_haldane`, not the
+   sample `odds_ratio` it was compared against (verified in statsmodels
+   source: stored table [[0.5,1],[1,2]] for input [[0,1],[1,2]]). The
+   battery now uses `shift_zeros=False`; with that, engine vs statsmodels
+   agree exactly on all 651 defined tables.
+
+MTLD remains the only lexical gap and it is a disclosed AGGREGATION
+CONVENTION, not a bug: engine = len(tokens)/mean(forward, backward factor
+counts); LR = mean of the two directional MTLD scores (the McCarthy &
+Jarvis 2010 published form); equal iff both passes find the same factor
+count. Raw report: `bench-state/artifacts/a6_parity.json` (regenerated with
+the battery this session).
 
 ## 7. Scale benchmark (A7) — ingest / KWIC / keyness at 1M and 10M tokens
 
@@ -162,8 +244,16 @@ on the LR side (LR raises, engine falls back). Raw report:
 empty), run 41203959363, one matrix leg per size on a fresh SQLite file,
 CI runner (ubuntu-latest), full spaCy `en_core_web_sm` 3.8.0 pipeline
 (degraded=false — tagger/lemmatizer/parser active), 350-min job cap.
-Corpus: SYNTHETIC, cycled frozen en-snapshot sentences (~234 types,
-~1,000 tok/doc) — repetitive-text steady-state, stated by design.
+Corpus: SYNTHETIC — **REPETITIVE SYNTHETIC TEXT** (required label): cycled
+frozen en-snapshot sentences (~234 types, ~1,000 tok/doc), stated by design.
+Every memory/keyness finding below therefore holds for repetitive text; the
+F4 re-run mode (`--corpus-mode zipf`: deterministic PCG64 seed 20261031,
+zipf(a=1.15) over a 220,000-type vocabulary, ~20-token sentences) exists on
+bench/scale-1 (commit 3ffedaf) for the like-for-like re-run with a realistic
+type inventory — local 100k-token validation passed (27,322 input types,
+full pipeline degraded=false, keyness 100+100 keywords); the 1M/10M zipf
+legs were NOT measured this session (CI dispatch blocked — no write token;
+dispatch command in STATE.md).
 
 | phase | 1,000,050 tokens | 10,000,547 tokens | scaling |
 |---|---|---|---|
@@ -177,13 +267,24 @@ Corpus: SYNTHETIC, cycled frozen en-snapshot sentences (~234 types,
 
 Findings:
 1. The storage paths scale to 10M tokens on a standard runner; peak memory
-   is corpus-size independent (the pipeline streams) — no OOM risk.
+   is corpus-size independent (the pipeline streams) — no OOM risk. (F4
+   label: measured on REPETITIVE SYNTHETIC TEXT; zipf re-run pending.)
 2. ENGINE SCALE CEILING (reported, not patched — engine frozen for the
    rows): the word-level KWIC context fetch builds ONE un-chunked `or_()`
    over every matched sentence; SQLite's expression-depth limit (1000) is
    crossed when a limit-1000 query matches ≳950 distinct sentences. The
    phrase path already chunks at 400; the word-level path should chunk the
    same way. All envelope measurements (limit=400) are unaffected.
+3. Failure evidence (F4): the ceiling failure is DETERMINISTIC, not
+   intermittent — reproduced locally on 2026-10-31 with a 6,000-token
+   corpus (1,200 distinct one-"the" sentences) through the production
+   `search_concordance`: limit=400 returns OK (400 lines), limit=1000
+   raises `sqlite3.OperationalError: Expression tree is too large (maximum
+   depth 1000)` (repro script `scripts/kwic_repro.py`, session log
+   captured in STATE.md §11). The A7 CI retry run that first hit it was not
+   recorded by its run ID in STATE.md (the 41202459225 DB-fix run and the
+   final 41203959363 envelope run bracket it); its ID is recoverable from
+   the Actions history of bench/scale-1 when API access returns.
 
 ## 8. Provenance, anomalies, and disclosures
 
@@ -206,3 +307,18 @@ Findings:
 - Addendum sequencing note: A6 was executed early (in parallel with the A3
   local chain) because it is CPU-local work on a bench ref with zero contact
   with any frozen row; recorded in STATE.md §9.
+- F-order fixes (2026-10-31 follow-up session): F2 pooled extrinsic re-run +
+  F3 parity hardening on bench/extra-1 (commit 76454a0; engine-diff rule
+  still empty); F4 zipf corpus mode on bench/scale-1 (commit 3ffedaf; gate
+  empty); F5 corrections in this report + the plan §1 wording. The F2 run
+  used byte-identical AraSEG dev data (parquet sha256 bce3bed0…/3809f267…
+  equal to the frozen runs' `araseg_sha256.txt`). Raw outputs:
+  `bench-state/artifacts/f2_pooled_{PA,NP}.json`, regenerated
+  `bench-state/artifacts/a6_parity.json`, per-category aggregation
+  `bench-state/artifacts/f5_per_category.json`.
+- Archival gap (disclosed): `paper_run.json` for 3b runs #2 (41194918539)
+  and #3 (41202610042) is not in any archived artifact (their snapshot
+  branches race-predated the grounding artifact; only `paper_report.json`
+  was copied to bench-state). Both runs' summary numbers are verified from
+  the archived reports and run_meta; the raw run envelopes can be
+  re-fetched from Actions artifacts while they remain in retention.
