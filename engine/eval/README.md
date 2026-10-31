@@ -159,3 +159,20 @@ NP punkt 52.32 vs 52.3, pysbd 52.05 vs 52.1, spacy 54.31 vs 54.3.
   a gold-subset rebuild check, and an end-to-end grounding pass with a
   scripted stub provider (perfect assistant → 100% pass; corrupted answer →
   HALLUCINATED/WRONG classified).
+
+## 4. Running the qwen2.5:7b local row manually (one command)
+
+The 7b row is **pending user-run**: the CI runner cap is 330 min and the
+timing probe (run 41206910830, 5 questions G-001..G-005, 2026-10-31) measured
+a mean of 271.5 s/question, projecting to **362 min for the full 80** — it
+does not fit. Run it on any machine with Ollama and ≥8 GB free RAM:
+
+    GH_TOKEN=<token> python -m eval.run_grounding \
+        --provider ollama --model qwen2.5:7b --pause 0 \
+        --timeout 600 --chat-deadline 600 --out paper_run.json \
+        && python -m eval.score --run paper_run.json --out paper_report.json
+
+(Defaults: full 80-question bank against the frozen gold. Add
+`--grounding-only "G-001 G-002"` to smoke-test first. Expected duration
+~6 hours on a CPU-only box; the probe verdicts were MISSING_NUMBER×2,
+HALLUCINATED×2, TRAP_FAILURE×1 on G-001..G-005 — diagnostic only, not a row.)
