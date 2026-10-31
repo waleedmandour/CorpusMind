@@ -71,7 +71,7 @@ Daily budget: morning slice ≤16 ids, drip slice ≤4 ids (retry or advance).
 | 2026-10-30 | attempt | 41127495897 | main@bd25058 | G-006 | 0 | 1 | OFF-SPEC model pro |
 | 2026-10-30 | attempt | 41129889514 | main@bd25058 | G-001..G-008 | 0 | 7 | quota exhausted |
 | 2026-10-30 | attempt | 41134947351 | main@bd25058 | G-003 | 0 | 1 | quota exhausted |
-| 2026-10-31 | slice-1 | (see §7) | bench/freeze-1 | §5 list, first 16 | — | — | pending |
+| 2026-10-31 | slice-1 | 41181861553 | bench/freeze-1 @ ee42bfa | G-003,G-005..G-019 (16) | (pending) | — | dispatched manually 07:45:38Z after the daily job's failed fire; A2 removed G-004/G-040/G-073 |
 
 ## 5. Crawl queue (unbanked order for bench/freeze-1)
 
@@ -87,8 +87,8 @@ shrink to what succeeds and update this file.
 
 ## 6. Schedule
 
-- `corpusmind-gemini-daily` — 00:45 America/Los_Angeles (after Pacific reset) — id 489282, next fire 2026-10-31T00:45-07:00
-- `corpusmind-gemini-drip` — 15:30 America/Los_Angeles — id 489284, next fire 2026-10-31T15:30-07:00
+- `corpusmind-gemini-daily` — 00:45 America/Los_Angeles — id 489478 (recreated 2026-10-31 per addendum; its first fire at 00:45 PDT 10-31 failed with 'model concurrency limit exceeded' — slice-1 was dispatched manually instead; next fire 2026-11-01T00:45-07:00)
+- `corpusmind-gemini-drip` — 15:30 America/Los_Angeles — id 489479 (recreated 2026-10-31), next fire 2026-10-31T15:30-07:00
 - (old IDs 489079/489080 were NOT found in this scheduler on 2026-10-31; these
   two jobs are their replacements)
 
@@ -191,8 +191,14 @@ shrink to what succeeds and update this file.
   1.5b #1 = 41173022988 (done: pass 0.1625 [0.0875-0.2375], halluc 0.625
   [0.525-0.725]). The afce8fe row 0.1375/0.65 stays labelled SUPERSEDED.
 
-- (A4) Full-dev extrinsic rerun: 41181061992 on bench/freeze-1-seg
-  (seg_limit=222, commit_results=true), IN FLIGHT since 07:33:14Z. Sign
+- (A4) DONE. Run 41181061992 on bench/freeze-1-seg @ ee42bfa (seg_limit=222,
+  commit_results=true), SUCCESS 07:45Z. 222 docs per condition; intrinsic
+  bit-identical to the frozen row (PA micro 0.7115/macro 0.6705; NP 0.5572/
+  0.5469). Extrinsic (gold-minus-engine, 222 docs): PA boundary_errors 6313,
+  delta_sentences +5291 (engine/gold sentence count 0.616), CAF
+  delta_mean_sentence_length -62.71, sentiment +54/-99, collocation/ngram/
+  CQL deltas 0; NP 8641, +7593 (0.449), -88.27, +68/-122, others 0.
+  The 20-doc extrinsic view (41173011756) is superseded. Sign
   convention stated in engine/eval/README.md on bench/extra-1: the code
   computes deltas as GOLD MINUS ENGINE (positive = engine produced fewer);
   the addendum's 'engine minus gold' wording corresponds to negating every
