@@ -9,7 +9,10 @@
   "en_all",
   "en_learner",
   "en_news",
-  "en_parallel"
+  "en_parallel",
+  "synth_100k",
+  "synth_10k",
+  "synth_50k"
  ],
  "corpus_tokens": {
   "ar_classical": 60,
@@ -21,9 +24,12 @@
   "en_learner": 105,
   "en_news": 101,
   "en_parallel": 36,
-  "en_all": 369
+  "en_all": 369,
+  "synth_10k": 10000,
+  "synth_50k": 50000,
+  "synth_100k": 100000
  },
- "tokenizer": "shared regex tokenizer \\w+; LR pinned to the same list via preprocessor=identity + tokenizer=closure; LR default preprocessing drift recorded per corpus",
+ "tokenizer": "shared regex tokenizer \\w+; LR pinned to the same list via preprocessor=identity + tokenizer=closure; LR default preprocessing drift recorded per corpus; synth_* are F3 deterministic Zipf-like texts (seed 20261031)",
  "lr_token_count_matches": {
   "ar_classical": true,
   "ar_dialect": true,
@@ -34,7 +40,10 @@
   "en_learner": true,
   "en_news": true,
   "en_parallel": true,
-  "en_all": true
+  "en_all": true,
+  "synth_10k": true,
+  "synth_50k": true,
+  "synth_100k": true
  },
  "lr_default_preproc_drift": {
   "ar_classical": {
@@ -76,20 +85,29 @@
   "en_all": {
    "shared": 369,
    "lr_default": 360
+  },
+  "synth_10k": {
+   "shared": 10000,
+   "lr_default": 10000
+  },
+  "synth_50k": {
+   "shared": 50000,
+   "lr_default": 50000
+  },
+  "synth_100k": {
+   "shared": 100000,
+   "lr_default": 100000
   }
  },
- "table_2x2": {
-  "corpora": [
-   "en_all",
-   "en_academic"
-  ],
-  "cells": [
-   18,
-   351,
-   5,
-   122
+ "battery": {
+  "n_tables": 2628,
+  "measures": [
+   "chi_square_2x2",
+   "log_likelihood_2x2",
+   "odds_ratio"
   ]
  },
+ "sign_convention": "deviation = |engine - reference|; rel_dev = abs_dev/|reference|",
  "measures": [
   {
    "measure": "TTR",
@@ -173,12 +191,37 @@
      "abs_dev": 0.0,
      "rel_dev": 0.0,
      "comparable": true
+    },
+    {
+     "corpus": "synth_100k",
+     "engine": 0.1326,
+     "reference": 0.1326,
+     "abs_dev": 0.0,
+     "rel_dev": 0.0,
+     "comparable": true
+    },
+    {
+     "corpus": "synth_10k",
+     "engine": 0.2119,
+     "reference": 0.2119,
+     "abs_dev": 0.0,
+     "rel_dev": 0.0,
+     "comparable": true
+    },
+    {
+     "corpus": "synth_50k",
+     "engine": 0.15342,
+     "reference": 0.15342,
+     "abs_dev": 0.0,
+     "rel_dev": 0.0,
+     "comparable": true
     }
    ],
+   "status": "OK",
    "max_abs_dev": 0.0,
    "max_rel_dev": 0.0,
    "note": "TTR — identical definition (types/tokens) on the shared token list",
-   "n_comparable": 10,
+   "n_comparable": 13,
    "n_excluded": 0
   },
   {
@@ -239,21 +282,72 @@
      "abs_dev": 5.551115123125783e-16,
      "rel_dev": 6.3749555300914465e-16,
      "comparable": true
+    },
+    {
+     "corpus": "synth_100k",
+     "engine": 0.6110688237237634,
+     "reference": 0.6110688237236246,
+     "abs_dev": 1.3877787807814457e-13,
+     "rel_dev": 2.271067884505777e-13,
+     "comparable": true
+    },
+    {
+     "corpus": "synth_10k",
+     "engine": 0.6104411616922918,
+     "reference": 0.6104411616922922,
+     "abs_dev": 4.440892098500626e-16,
+     "rel_dev": 7.274889665351837e-16,
+     "comparable": true
+    },
+    {
+     "corpus": "synth_50k",
+     "engine": 0.6130295689776754,
+     "reference": 0.613029568977598,
+     "abs_dev": 7.738254481637341e-14,
+     "rel_dev": 1.2622971016786503e-13,
+     "comparable": true
     }
    ],
-   "max_abs_dev": 1.9984014443252818e-15,
-   "max_rel_dev": 2.350887663348615e-15,
-   "note": "MATTR window=50 — both average TTR over every full window, stride 1; corpora shorter than the window are EXCLUDED on the LR side (LR raises) while the engine falls back to raw TTR — convention difference, disclosed, not scored",
-   "n_comparable": 7,
+   "status": "OK",
+   "max_abs_dev": 1.3877787807814457e-13,
+   "max_rel_dev": 2.271067884505777e-13,
+   "note": "MATTR window=50 — both average TTR over every full window, stride 1; corpora shorter than the window are EXCLUDED on the LR side (LR raises) while the engine falls back to raw TTR — convention difference, disclosed, not scored; F3 synth texts make the comparison real",
+   "n_comparable": 10,
    "n_excluded": 0
   },
   {
    "measure": "STTR chunk=1000",
-   "rows": [],
-   "max_abs_dev": 0.0,
-   "max_rel_dev": 0.0,
-   "note": "STTR chunk=1000 — both drop the trailing partial chunk (engine: documented standard practice; LR msttr discard=True: same standard); corpora shorter than the chunk are EXCLUDED (LR raises, engine falls back to raw TTR)",
-   "n_comparable": 0,
+   "rows": [
+    {
+     "corpus": "synth_100k",
+     "engine": 0.33945000000000003,
+     "reference": 0.33964646464646464,
+     "abs_dev": 0.00019646464646461137,
+     "rel_dev": 0.0005784386617099338,
+     "comparable": true
+    },
+    {
+     "corpus": "synth_10k",
+     "engine": 0.33799999999999997,
+     "reference": 0.33888888888888885,
+     "abs_dev": 0.0008888888888888835,
+     "rel_dev": 0.0026229508196721155,
+     "comparable": true
+    },
+    {
+     "corpus": "synth_50k",
+     "engine": 0.33948,
+     "reference": 0.3395918367346939,
+     "abs_dev": 0.0001118367346938931,
+     "rel_dev": 0.0003293269230769689,
+     "comparable": true
+    }
+   ],
+   "status": "OK",
+   "max_abs_dev": 0.0008888888888888835,
+   "max_rel_dev": 0.0026229508196721155,
+   "note": "STTR chunk=1000 — both split into NON-overlapping 1000-token segments and average per-segment TTR; trailing handling DIFFERS (checked, disclosed): the engine drops only a trailing PARTIAL chunk (documented standard practice) while LR msttr(discard=True) deletes the LAST segment unconditionally — when n is an exact multiple of the window that discards one full segment (LR source: segment_generator yields all segments, then `del scores[-1]`). Residual relative deviation <= ~1/segment_count (observed 2.6e-3 on the F3 synth texts); convention difference, not an engine bug. Corpora shorter than the chunk are EXCLUDED (LR raises, engine falls back to raw TTR); on the snapshot set alone this measure is NOT_TESTED (F3: n_comparable=0 is NOT TESTED, never 0/0) — the synth 10k/50k/100k texts provide comparables",
+   "n_comparable": 3,
    "n_excluded": 0
   },
   {
@@ -338,12 +432,37 @@
      "abs_dev": 0.0,
      "rel_dev": 0.0,
      "comparable": true
+    },
+    {
+     "corpus": "synth_100k",
+     "engine": 17.5284837861525,
+     "reference": 17.5286216582666,
+     "abs_dev": 0.00013787211410232203,
+     "rel_dev": 7.865542242296086e-06,
+     "comparable": true
+    },
+    {
+     "corpus": "synth_10k",
+     "engine": 17.6678445229682,
+     "reference": 17.6678445229682,
+     "abs_dev": 0.0,
+     "rel_dev": 0.0,
+     "comparable": true
+    },
+    {
+     "corpus": "synth_50k",
+     "engine": 17.766927902037313,
+     "reference": 17.76694116863435,
+     "abs_dev": 1.3266597036931671e-05,
+     "rel_dev": 7.467012419871373e-07,
+     "comparable": true
     }
    ],
+   "status": "OK",
    "max_abs_dev": 1.377714833291293,
    "max_rel_dev": 0.028742542567582602,
    "note": "MTLD threshold=0.72 — AGGREGATION CONVENTION DIFFERS (checked, disclosed): engine = len(tokens)/mean(forward_factors, backward_factors); LR = mean of the two directional MTLD scores (len/factors each) — the McCarthy & Jarvis 2010 published form. Equal iff forward==backward factor counts; residual gap is this convention, not a bug. Per-corpus rows show where the passes diverge",
-   "n_comparable": 10,
+   "n_comparable": 13,
    "n_excluded": 0
   },
   {
@@ -428,12 +547,37 @@
      "abs_dev": NaN,
      "rel_dev": NaN,
      "comparable": false
+    },
+    {
+     "corpus": "synth_100k",
+     "engine": 0.6308878209310365,
+     "reference": 0.6308878209311255,
+     "abs_dev": 8.903988657493755e-14,
+     "rel_dev": 1.4113426130738084e-13,
+     "comparable": true
+    },
+    {
+     "corpus": "synth_10k",
+     "engine": 0.628534028312683,
+     "reference": 0.6285340283126339,
+     "abs_dev": 4.907185768843192e-14,
+     "rel_dev": 7.80735099103075e-14,
+     "comparable": true
+    },
+    {
+     "corpus": "synth_50k",
+     "engine": 0.6336956449632198,
+     "reference": 0.6336956449633148,
+     "abs_dev": 9.492406860545088e-14,
+     "rel_dev": 1.4979441528424285e-13,
+     "comparable": true
     }
    ],
-   "max_abs_dev": 1.4432899320127035e-15,
-   "max_rel_dev": 1.6509222454190216e-15,
+   "status": "OK",
+   "max_abs_dev": 9.492406860545088e-14,
+   "max_rel_dev": 1.4979441528424285e-13,
    "note": "HD-D sample=42 — McCarthy & Jarvis hypergeometric sampling; LR 0.5.x names the parameter 'draws' (same quantity), engine names it 'sample_size'",
-   "n_comparable": 8,
+   "n_comparable": 11,
    "n_excluded": 2
   },
   {
@@ -518,58 +662,182 @@
      "abs_dev": 0.0,
      "rel_dev": 0.0,
      "comparable": true
+    },
+    {
+     "corpus": "synth_100k",
+     "engine": 41.9318017738327,
+     "reference": 41.9318017738327,
+     "abs_dev": 0.0,
+     "rel_dev": 0.0,
+     "comparable": true
+    },
+    {
+     "corpus": "synth_10k",
+     "engine": 21.19,
+     "reference": 21.19,
+     "abs_dev": 0.0,
+     "rel_dev": 0.0,
+     "comparable": true
+    },
+    {
+     "corpus": "synth_50k",
+     "engine": 34.305754910801774,
+     "reference": 34.305754910801774,
+     "abs_dev": 0.0,
+     "rel_dev": 0.0,
+     "comparable": true
     }
    ],
+   "status": "OK",
    "max_abs_dev": 0.0,
    "max_rel_dev": 0.0,
    "note": "Guiraud RTTR — types/sqrt(tokens); identical definition",
-   "n_comparable": 10,
+   "n_comparable": 13,
    "n_excluded": 0
   },
   {
    "measure": "chi_square_2x2",
-   "rows": [
+   "status": "OK",
+   "n_tables": 876,
+   "n_comparable": 795,
+   "n_excluded": 81,
+   "max_abs_dev": 7.105427357601002e-15,
+   "max_rel_dev": 2.3825031838945893e-16,
+   "zero_cell_tables": 373,
+   "zero_cell_comparable": 292,
+   "zero_cell_max_abs_dev": 0.0,
+   "excluded_examples": [
     {
-     "corpus": "en_all vs en_academic",
-     "engine": 0.18920812916451127,
-     "reference": 0.18920812916451127,
-     "abs_dev": 0.0,
-     "rel_dev": 0.0
+     "cells": [
+      0,
+      0,
+      0,
+      0
+     ],
+     "kind": "small_grid",
+     "engine": 0.0,
+     "reference": "nan"
+    },
+    {
+     "cells": [
+      0,
+      0,
+      0,
+      1
+     ],
+     "kind": "small_grid",
+     "engine": 0.0,
+     "reference": "nan"
+    },
+    {
+     "cells": [
+      0,
+      0,
+      0,
+      2
+     ],
+     "kind": "small_grid",
+     "engine": 0.0,
+     "reference": "nan"
     }
    ],
-   "max_abs_dev": 0.0,
-   "max_rel_dev": 0.0,
-   "note": "Pearson chi-square, Yates correction DISABLED on the scipy side (scipy default is corrected — convention checked, engine is raw)"
+   "note": "Pearson chi-square, Yates correction DISABLED on the scipy side (scipy default is corrected — convention checked, engine is raw); scipy raises on zero margins — those tables are excluded, not zero-dev"
   },
   {
    "measure": "log_likelihood_2x2",
-   "rows": [
-    {
-     "corpus": "en_all vs en_academic",
-     "engine": 0.19573079918270198,
-     "reference": 0.19573079918270198,
-     "abs_dev": 0.0,
-     "rel_dev": 0.0
-    }
-   ],
+   "status": "OK",
+   "n_tables": 876,
+   "n_comparable": 795,
+   "n_excluded": 81,
    "max_abs_dev": 0.0,
    "max_rel_dev": 0.0,
+   "zero_cell_tables": 373,
+   "zero_cell_comparable": 292,
+   "zero_cell_max_abs_dev": 0.0,
+   "excluded_examples": [
+    {
+     "cells": [
+      0,
+      0,
+      0,
+      0
+     ],
+     "kind": "small_grid",
+     "engine": 0.0,
+     "reference": "nan"
+    },
+    {
+     "cells": [
+      0,
+      0,
+      0,
+      1
+     ],
+     "kind": "small_grid",
+     "engine": 0.0,
+     "reference": "nan"
+    },
+    {
+     "cells": [
+      0,
+      0,
+      0,
+      2
+     ],
+     "kind": "small_grid",
+     "engine": 0.0,
+     "reference": "nan"
+    }
+   ],
    "note": "Dunning G^2 = 2*sum(O*ln(O/E)) with independence expected counts; reference scipy.stats.power_divergence(lambda_='log-likelihood') on the same 2x2 — same convention, no continuity correction"
   },
   {
    "measure": "odds_ratio",
-   "rows": [
-    {
-     "corpus": "en_all vs en_academic",
-     "engine": 1.2512820512820513,
-     "reference": 1.2512820512820513,
-     "abs_dev": 0.0,
-     "rel_dev": 0.0
-    }
-   ],
+   "status": "OK",
+   "n_tables": 876,
+   "n_comparable": 651,
+   "n_excluded": 225,
    "max_abs_dev": 0.0,
    "max_rel_dev": 0.0,
-   "note": "uncorrected sample odds ratio; statsmodels Table2x2.oddsratio — same convention (the engine's Haldane variant is intentionally NOT compared)"
+   "zero_cell_tables": 373,
+   "zero_cell_comparable": 148,
+   "zero_cell_max_abs_dev": 0.0,
+   "excluded_examples": [
+    {
+     "cells": [
+      0,
+      0,
+      0,
+      0
+     ],
+     "kind": "small_grid",
+     "engine": 0.0,
+     "reference": "nan"
+    },
+    {
+     "cells": [
+      0,
+      0,
+      0,
+      1
+     ],
+     "kind": "small_grid",
+     "engine": 0.0,
+     "reference": "nan"
+    },
+    {
+     "cells": [
+      0,
+      0,
+      0,
+      2
+     ],
+     "kind": "small_grid",
+     "engine": 0.0,
+     "reference": "nan"
+    }
+   ],
+   "note": "uncorrected sample odds ratio; reference statsmodels Table2x2(table, shift_zeros=False).oddsratio — the statsmodels DEFAULT shift_zeros=True silently applies the Haldane 0.5 correction (convention trap, verified in source) and would match the engine's separate odds_ratio_haldane instead; engine maps (f1, f2, N1, N2) = (a, c, a+b, c+d); tables where the raw OR is UNDEFINED (b == 0 or c == 0) are excluded — the engine returns 0.0/inf there by convention and statsmodels would divide by zero"
   }
  ]
 }

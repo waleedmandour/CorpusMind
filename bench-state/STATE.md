@@ -358,3 +358,115 @@ shrink to what succeeds and update this file.
   maintainer's; merging makes the citable snapshots visible on main.
 - Oct-30 20:42-21:58Z dispatch runs (4 in §3) were not in the original brief;
   all 0 clean, two off-spec models. No bank impact.
+
+## 11. F-order follow-up session (2026-10-31, after T6) — LOCAL ONLY, pushes blocked
+
+SESSION CONSTRAINT: the sandbox was recycled — the GitHub token is NOT in
+the environment any more and the anonymous API is rate-limited, so NOTHING
+could be pushed, no PR opened, no workflow dispatched this session. All work
+below exists as LOCAL commits on local branches (SHAs listed; push with a
+fresh token, fast-forward, no force). No frozen ref was touched; the
+engine-diff gate `git diff ee42bfa -- engine ':!engine/eval'` verified empty
+for every branch listed. In-flight runs at session start: NONE (all A-runs
+finished; scheduled jobs absent, consistent with the T6 deletion).
+
+- (F2) DONE. `engine/eval/segmentation_downstream.py` gained a pooled mode
+  (--pool, thresholds --min-colloc-freq/--min-ngram-freq, data-driven
+  TWO-TOKEN CQL patterns, word-token filter). TWO BUGS FOUND in the legacy
+  recording: (a) it read `top_collocates`/`top_ngrams` while the REST
+  endpoints return `rows` — the frozen artifacts' zeros were partly this key
+  bug; (b) the single-term CQL pattern cannot show a delta by construction.
+  Pooled re-run LOCAL (AraSEG dev parquets sha256-verified byte-identical to
+  the frozen runs: bce3bed0…/3809f267…), 222 docs per condition, min_freq 5:
+  the pooled corpus reproduces the frozen per-doc totals EXACTLY (boundary
+  errors 6,313/8,641; delta sentences +5,291/+7,593; sentiment +54/−99,
+  +68/−122) — design validated. New numbers (gold−engine): colloc ΣO
+  −838 (PA) / −1,069 (NP); ngram Σfreq −125/−128; single-term CQL 0 (both);
+  two-token boundary-crossing bigrams: engine finds matches gold misses
+  (PA 2/2/1/1; NP 8/7/4/4/3); top within-sentence bigrams Δ0 (e.g.
+  "جنوب السودان" 224=224); CAF corpus-level −5.86/−11.53. "Robust to
+  segmentation" DELETED from the report — the data says the opposite.
+  Artifacts: bench-state/artifacts/f2_pooled_{PA,NP}.json.
+- (F3) DONE. parity_stats.py: compare() now emits status NOT_TESTED with
+  null maxima for empty comparisons (STTR n_comparable=0 is NOT_TESTED,
+  never 0/0); deterministic synth texts 10k/50k/100k (Zipf-like, PCG64 seed
+  20261031); 876-table 2x2 battery ({0,1,2,3,5}^4 grid + corpus table + 250
+  seeded random), 373 zero-cell tables, exclusions counted not folded in.
+  TWO REFERENCE CORRECTIONS: (a) statsmodels Table2x2 DEFAULT
+  shift_zeros=True silently applies the Haldane correction — battery now
+  uses shift_zeros=False (sample OR); engine agrees EXACTLY (651 defined
+  tables, max dev 0); (b) STTR residual vs LR is LR's unconditional
+  last-segment discard (msttr `del scores[-1]`), observed 2.6e-3 rel —
+  convention, not a bug. chi² 7.1e-15 max; G² exact 0. Artifact:
+  bench-state/artifacts/a6_parity.json (regenerated).
+- (F4) PARTIAL (code + evidence done; 1M/10M zipf legs pending dispatch).
+  scripts/benchmark_scale.py --corpus-mode zipf (PCG64 20261031, zipf 1.15,
+  vocab 220,000, ~20-token sentences; KWIC words zw1/zw2 — numpy zipf draws
+  start at 1, zw0 never occurs); repetitive mode self-labels output
+  REPETITIVE SYNTHETIC TEXT. Local validation 100k tokens (full pipeline,
+  degraded=false): 27,322 input types vs 234 repetitive; ingest 3,260 tok/s;
+  keyness 100+100 keywords. The KWIC limit-1000 failure is DETERMINISTIC —
+  reproduced locally via production search_concordance, 1,200 distinct
+  one-"the" sentences: limit=400 OK (400 lines), limit=1000 raises
+  `sqlite3.OperationalError: Expression tree is too large (maximum depth
+  1000)` (repro: scripts/kwic_repro.py, session-local). The A7 CI retry run
+  that first hit the ceiling was never recorded by run ID in this file (the
+  41202459225 and 41203959363 runs bracket it); fetch the ID from Actions
+  history when API access returns. PENDING DISPATCH (needs token):
+    CORPUSMIND_DB_URL=sqlite+aiosqlite:////tmp/scale/scale.db (set by job)
+    dispatch benchmarks.yml on bench/scale-1 @ 3ffedaf with
+    grounding_only="SCALE", the job must run:
+    python scripts/benchmark_scale.py --sizes 1000000,10000000 --corpus-mode zipf
+  (workflow gate inputs.grounding_only == 'SCALE' already wired @ 9dd65d2+).
+- (F5) DONE (docs, on bench/t6-report local commit a0b3283): report §1
+  pooled-extrinsic correction + "robust" claim deleted; §4 per-category
+  grounding (62 answerable vs 18 trap/no_tool: 1.5b mean 0.167 answerable /
+  0.111 trap; 3b 0.048 / 0.148); §5 per-category view of the banked 5
+  (G-001 verdict UNVERIFIED — clean answer banked, verdict in no archived
+  report); §6 parity corrections; §7 REPETITIVE label + zipf + KWIC
+  evidence; plan §1 wording fixed to "on par with the best classical
+  baseline on PA (67.05 vs spaCy 67.29), above on NP". Aggregation script +
+  artifact: f5_per_category.json.
+- (F1) STAGED, NOT OPENED (needs token). Local branches ready:
+  * bench/local-results @ ce77f49 (NEW, off ee42bfa, data-only): raw
+    paper_run/paper_report.json for ALL six local runs (1.5b ×3, 3b ×3) +
+    7b probe paper_run.json + README-local-runs.md. Gate: 0 lines.
+  * bench/extra-1 @ 76454a0 (1 ahead of origin 697458c): F2+F3.
+  * bench/scale-1 @ 3ffedaf (1 ahead of origin 9dd65d2): F4.
+  * bench/t6-report @ a0b3283 (1 ahead of origin 9f16790): F5 (updates PR #57).
+  PR bodies pre-written: bench-state/pr-bodies-f1.md. PROPOSED MERGE ORDER
+  after push: #50→#51 (data snapshots), #52→#56, NEW 3b#3 snapshot PR
+  (bench/snapshot-run-41202610042 — PR was never opened for it), NEW
+  bench/local-results PR, NEW bench/extra-1 PR, NEW bench/scale-1 PR, then
+  #57 (report) LAST so it lands with its artifacts. Nothing merged by the
+  bot; maintainer decides.
+- (F6) POST-FREEZE ENGINE FIXES — PROPOSED, NOT MADE (user approval required):
+  1. MTLD aggregation: engine/stats/measures.py mtld() returns
+     len/mean(forward_factors, backward_factors); the McCarthy & Jarvis 2010
+     published form (and LR) is mean(len/f_f, len/f_b). Fix = swap the
+     aggregation (≈3-line change + tests). Exposure: corpus-stats
+     lexical_diversity battery (stats/service.py). NO frozen gold value
+     quotes MTLD (0 occurrences in grounding_gold.json) → gold-diff gate
+     unaffected, but it is a visible numeric change → semver-minor + battery
+     re-run per house discipline.
+  2. Word-level KWIC or_() chunking: stats/service.py word-level context
+     fetch (~line 498-516) builds ONE un-chunked or_() over all matched
+     (doc, sentence) pairs; copy the phrase path's CHUNK=400 batching
+     (lines ~426-440). Removes the deterministic SQLite depth-1000 ceiling
+     (see F4 repro). Pure query-batching change, no result semantics change;
+     gold unaffected; still a post-freeze engine edit (new freeze ref).
+- (7b quantized) NOT RUN (dispatch blocked). Analysis with recorded data:
+  qwen2.5:7b (already Q4_K_M quantized in Ollama) probed 271.5 s/q → 362 min
+  > 330-min cap. A same-class quantized replacement (qwen3:8b Q4_K_M ~5.2 GB,
+  the closest existing model to the user's "qwen 3.8"; "Gemma4" does not
+  exist — Gemma 3 ships 1b/4b/12b/27b, no 7b) is UNLIKELY to fit one job
+  either (similar size class). Options: (a) two serialized 40-question runs
+  (~185 min each, fits; disclosed protocol deviation, combined scoring at
+  merge), (b) user-run via the runbook in engine/eval/README.md, (c) accept
+  7b = pending user-run. qwen3:8b also emits <think> blocks unless disabled —
+  a 5-question probe MUST precede any full run; if thinking output makes
+  answers dirty, the model is unusable without a prompt/engine change
+  (frozen) and (b)/(c) remain.
+- Artifacts added this session: f2_pooled_PA.json, f2_pooled_NP.json,
+  a6_parity.json (regenerated with battery), f5_per_category.json,
+  pr-bodies-f1.md.

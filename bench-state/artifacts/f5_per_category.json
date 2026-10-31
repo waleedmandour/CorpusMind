@@ -1,0 +1,176 @@
+{
+ "trap_no_tool_ids": [
+  "G-004",
+  "G-012",
+  "G-013",
+  "G-016",
+  "G-019",
+  "G-024",
+  "G-025",
+  "G-026",
+  "G-028",
+  "G-051",
+  "G-073",
+  "G-074",
+  "G-075",
+  "G-076",
+  "G-077",
+  "G-078",
+  "G-079",
+  "G-080"
+ ],
+ "n_answerable": 62,
+ "configs": {
+  "1.5b": {
+   "runs": [
+    {
+     "run": "41173022988",
+     "answerable": {
+      "n": 62,
+      "pass": 11,
+      "pass_rate": 0.1774,
+      "verdicts": {
+       "PASS": 11,
+       "MISSING_NUMBER": 14,
+       "HALLUCINATED": 37
+      }
+     },
+     "trap_no_tool": {
+      "n": 18,
+      "pass": 2,
+      "pass_rate": 0.1111,
+      "verdicts": {
+       "TRAP_FAILURE": 14,
+       "HALLUCINATED": 2,
+       "PASS": 2
+      }
+     }
+    },
+    {
+     "run": "41185282664",
+     "answerable": {
+      "n": 62,
+      "pass": 10,
+      "pass_rate": 0.1613,
+      "verdicts": {
+       "PASS": 10,
+       "MISSING_NUMBER": 11,
+       "HALLUCINATED": 41
+      }
+     },
+     "trap_no_tool": {
+      "n": 18,
+      "pass": 2,
+      "pass_rate": 0.1111,
+      "verdicts": {
+       "TRAP_FAILURE": 13,
+       "HALLUCINATED": 3,
+       "PASS": 2
+      }
+     }
+    },
+    {
+     "run": "41189716613",
+     "answerable": {
+      "n": 62,
+      "pass": 10,
+      "pass_rate": 0.1613,
+      "verdicts": {
+       "PASS": 10,
+       "MISSING_NUMBER": 12,
+       "HALLUCINATED": 40
+      }
+     },
+     "trap_no_tool": {
+      "n": 18,
+      "pass": 2,
+      "pass_rate": 0.1111,
+      "verdicts": {
+       "TRAP_FAILURE": 13,
+       "HALLUCINATED": 3,
+       "PASS": 2
+      }
+     }
+    }
+   ],
+   "mean_answerable_pass": 0.1667,
+   "mean_trap_pass": 0.1111
+  },
+  "3b": {
+   "runs": [
+    {
+     "run": "41176056150",
+     "answerable": {
+      "n": 62,
+      "pass": 3,
+      "pass_rate": 0.0484,
+      "verdicts": {
+       "MISSING_NUMBER": 36,
+       "HALLUCINATED": 23,
+       "PASS": 3
+      }
+     },
+     "trap_no_tool": {
+      "n": 18,
+      "pass": 3,
+      "pass_rate": 0.1667,
+      "verdicts": {
+       "TRAP_FAILURE": 14,
+       "PASS": 3,
+       "MISSING_NUMBER": 1
+      }
+     }
+    },
+    {
+     "run": "41194918539",
+     "answerable": {
+      "n": 62,
+      "pass": 3,
+      "pass_rate": 0.0484,
+      "verdicts": {
+       "MISSING_NUMBER": 35,
+       "HALLUCINATED": 24,
+       "PASS": 3
+      }
+     },
+     "trap_no_tool": {
+      "n": 18,
+      "pass": 3,
+      "pass_rate": 0.1667,
+      "verdicts": {
+       "TRAP_FAILURE": 14,
+       "PASS": 3,
+       "MISSING_NUMBER": 1
+      }
+     }
+    },
+    {
+     "run": "41202610042",
+     "answerable": {
+      "n": 62,
+      "pass": 3,
+      "pass_rate": 0.0484,
+      "verdicts": {
+       "MISSING_NUMBER": 30,
+       "HALLUCINATED": 29,
+       "PASS": 3
+      }
+     },
+     "trap_no_tool": {
+      "n": 18,
+      "pass": 2,
+      "pass_rate": 0.1111,
+      "verdicts": {
+       "TRAP_FAILURE": 14,
+       "PASS": 2,
+       "HALLUCINATED": 1,
+       "MISSING_NUMBER": 1
+      }
+     }
+    }
+   ],
+   "mean_answerable_pass": 0.0484,
+   "mean_trap_pass": 0.1481
+  }
+ }
+}
