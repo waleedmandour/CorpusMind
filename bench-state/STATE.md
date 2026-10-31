@@ -518,6 +518,31 @@ fast-forward; no force, no tags, no releases. No frozen ref moved.
   keyness counts, peak RSS; then update BENCHMARK_REPORT.md §7 on #57
   (zipf numbers + KWIC "deterministic, run 41202901041" wording + F6
   approval-request subsection) and append results here.
+- (F4) ZIPF RESULTS — RUN 41226973126 COMPLETED SUCCESS 2026-10-31 (~19:5xZ,
+  both matrix legs). Artifacts archived bench-state/artifacts/f4-scale-zipf/.
+  1M leg: 1,000 docs / 1,000,000 tokens / input_types 140,543; ingest
+  439.5 s = 2,389 tok/s (degraded=false); KWIC zw1@400 3.35 s (138,190
+  hits), zw2@400 4.99 s (61,759), zw1@1000 probe 7.83 s OK; keyness 0.98 s
+  +100/−100; peak RSS 293 MiB. 10M leg: 10,000 docs / 10,000,000 tokens /
+  input_types 219,934 (220k vocab fully realized — F4 "200k+ types" MET);
+  ingest 4,364.3 s = 2,303 tok/s (degraded=false); KWIC zw1@400 53.06 s
+  (1,377,841 hits), zw2@400 44.86 s (621,088), zw1@1000 probe 78.37 s OK;
+  keyness 11.91 s +100/−100 (top zw266/269/316); peak RSS 666 MiB.
+  READING: ingest throughput ~flat 1M→10M on zipf (vs the ~30% drop on
+  repetitive); peak RSS tracks TYPE INVENTORY (234→220k types ⇒
+  287→666 MiB at 10M), not token count — no OOM risk either way. The
+  @1000 ceiling probe passed at all four measured scales — the depth-1000
+  ceiling is reached by DISTINCT MATCHES, not corpus size.
+- (F5 follow-up on #57) docs commit on bench/t6-report (after a0b3283):
+  §7 zipf table + refined finding 1 (memory tracks inventory), finding 3
+  rewritten deterministic + run 41202901041 (was "intermittent", no ID),
+  finding 4 = F6 approval-request list (MTLD aggregation, KWIC or_() 400
+  chunking), §8 provenance updated (#58–#61, zipf artifacts path).
+- F-ORDER FINAL STATUS: F1 DONE (PRs #58–#61 open + merge order), F2 DONE,
+  F3 DONE, F4 DONE (code+evidence+dispatch+results), F5 DONE, F6 LISTED
+  (approval pending, nothing implemented). 7b: stays PENDING USER-RUN
+  (probe 41206910830: 271.5 s/q ⇒ 362 min full-80 > 330-min cap; options
+  in §11). Nothing merged by the bot at any point.
 - F3 re-verified from the artifact: battery n_tables=2628 measure-rows over
   876 tables (chi2 n_comp 795 / G2 795 / OR 651; excluded 81/81/225 counted,
   not folded); compare() emits status NOT_TESTED with null maxima (code
