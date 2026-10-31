@@ -181,8 +181,12 @@ shrink to what succeeds and update this file.
   80, commit_results=true). Report all runs, the mean pass/hallucination, and
   the number of questions whose verdict flips across the runs. Chain order
   (serialized, poll before each dispatch):
-    1. 3b #1 — 41176056150 IN FLIGHT since 06:18:28Z
-    2. 1.5b #2   3. 1.5b #3   4. 3b #2   5. 3b #3
+    1. 3b #1 — 41176056150 DONE 08:3xZ, 80/80 clean, pass 0.075
+       [0.025-0.1375], halluc 0.3625 [0.2625-0.475]; verdicts PASS 6 /
+       MISSING_NUMBER 37 / HALLUCINATED 23 / TRAP_FAILURE 14. Snapshot branch
+       bench/snapshot-run-41176056150 patched with grounding/.
+    2. 1.5b #2 — 41185282664 IN FLIGHT since 08:36:13Z
+    3. 1.5b #3   4. 3b #2   5. 3b #3
     6. 7b probe (5 questions, commit_results=false, grounding_only
        'G-001 G-002 G-003 G-004 G-005') -> full 7b only if projection <= 330
        min; if it fits: 7b #1, #2, #3; if not: one-command runbook in
