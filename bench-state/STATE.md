@@ -508,9 +508,16 @@ fast-forward; no force, no tags, no releases. No frozen ref moved.
   CORPUSMIND_SCALE_CORPUS_MODE). Gate re-verified 0 lines.
 - F4 ZIPF DISPATCH: first dispatch attempt correctly REFUSED by the poll
   rule (pull_request CI runs in flight on bench/scale-1 head b9578c2;
-  concurrency-safe wait). Dispatch = benchmarks.yml on bench/scale-1 with
+  concurrency-safe wait). After the 9125bbb PR runs finished SUCCESS and the
+  ref was idle (0 in-flight), DISPATCHED: run **41226973126** (queued
+  2026-10-31 ~18:05Z, workflow_dispatch, bench/scale-1 @ 9125bbb,
   grounding_only="SCALE", scale_corpus_mode="zipf", run_grounding=false,
-  commit_results=false. [STATUS TO BE APPENDED after dispatch]
+  commit_results=false). On completion: download artifacts scale-1000000 /
+  scale-10000000, archive to bench-state/artifacts/f4-scale-zipf/{1m,10m}/,
+  record ingest tok/s, KWIC zw1/zw2 wall + hits + the @1000 ceiling probe,
+  keyness counts, peak RSS; then update BENCHMARK_REPORT.md §7 on #57
+  (zipf numbers + KWIC "deterministic, run 41202901041" wording + F6
+  approval-request subsection) and append results here.
 - F3 re-verified from the artifact: battery n_tables=2628 measure-rows over
   876 tables (chi2 n_comp 795 / G2 795 / OR 651; excluded 81/81/225 counted,
   not folded); compare() emits status NOT_TESTED with null maxima (code
