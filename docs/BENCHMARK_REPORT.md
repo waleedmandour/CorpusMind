@@ -85,11 +85,44 @@ was needed. Raw calib JSONs: `bench-state/artifacts/calib_{PA,NP}.json`.
 
 ## 3. Performance row (production Arabic pipeline, snapshot corpus)
 
-From the battery's perf job (median over repetitions, CV%): analyze path
-2,687–2,709 tok/s across 20k/100k/250k-token inputs (CV 0.3–1.3%); dialect
-ID ≈ 96.6k–98.8k tok/s; cold engine load 4.0 s. Steady-state morphology
-throughput is on par with CAMeL-Tools cost bounds and is reported with CV%
-because CI runners are shared.
+All eight freeze-SHA runs of 2026-10-31 (41173011756, 41173022988,
+41176056150, 41181061992, 41185282664, 41189716613, 41194918539,
+41202610042 — artifacts and manifests under `benchmarks/results/run-<id>/`)
+measured the same production path on identical runners (ubuntu-latest,
+4 vCPU, Python 3.12.15, CAMeL-Tools 1.6.0) at engine commit ee42bfa:
+sizes 20k/100k/250k tokens × 3 timed repetitions on the snapshot corpus.
+The segmentation baseline is bit-identical in all eight runs
+(`seg_intrinsic_{PA,NP}.json` are sha256-identical across runs):
+PA micro 0.7115 / macro 0.6705; NP micro 0.5572 / macro 0.5469.
+
+Analyze-path medians per run (tok/s), with dialect-ID range and cold load:
+
+| run | 20k | 100k | 250k | dialect ID | cold load |
+|---|---|---|---|---|---|
+| 41173011756 | 2,708.7 | 2,694.8 | 2,696.9 | 96.7k–98.8k | 4.0 s |
+| 41173022988 | 3,939.7 | 3,916.1 | 3,918.1 | 123.4k–124.8k | 2.8 s |
+| 41176056150 | 2,805.5 | 2,696.1 | 2,704.8 | 97.2k–99.1k | 3.4 s |
+| 41181061992 | 5,433.1 | 5,388.3 | 5,328.6 | 165.3k–167.8k | 2.1 s |
+| 41185282664 | 2,811.2 | 2,691.9 | 2,745.8 | 97.2k–98.9k | 3.7 s |
+| 41189716613 | 2,685.9 | 2,687.3 | 2,698.4 | 96.5k–98.7k | 3.4 s |
+| 41194918539 | 3,969.8 | 3,890.6 | 3,932.9 | 122.1k–123.8k | 2.8 s |
+| 41202610042 | 2,766.2 | 2,676.3 | 2,658.7 | 96.8k–99.2k | 3.4 s |
+
+Between-runner spread of the analyze-path median is 2,686–5,433 tok/s at
+the 20k input (2.0× across identically configured runs): CI runners are
+shared infrastructure and stratify into three speed classes (≈2.7k, ≈3.9k,
+≈5.4k analyze-path tok/s; the class is constant within a run across
+sizes), so the between-runner component dominates the within-run
+component. Within-run CV stays below 1.5% at the 100k and 250k inputs in
+all eight runs (max 1.46%); the 20k input is noisier (max 2.72%). Cold
+engine load is 2.1–4.0 s across runs; dialect-ID medians span
+96.5k–167.8k tok/s and follow the same runner classes. Steady-state
+morphology throughput stays consistent with CAMeL-Tools cost bounds.
+Bootstrap confidence intervals are computed only for additive measures
+(per-question error counts and pass rates); throughput is reported
+descriptively with medians and CV%, never with resampling CIs. A single
+confirmation run at tag v2.0.2 is scheduled to reproduce this row
+(bench plan v3, P1).
 
 ## 4. Local grounding rows (Ollama, A3 triples)
 
@@ -426,3 +459,35 @@ Findings:
   was copied to bench-state). Both runs' summary numbers are verified from
   the archived reports and run_meta; the raw run envelopes can be
   re-fetched from Actions artifacts while they remain in retention.
+
+## 9. Measured-at SHAs (v2.0.2 release, added 2026-11-01)
+
+Per-row provenance: which commit produced each measured row above.
+
+| row (section) | measured at | run / evidence |
+|---|---|---|
+| Segmentation intrinsic + extrinsic, 222 docs (§1) | `ee42bfa` on `bench/freeze-1-seg` | run 41181061992 (A4); canonical 20-doc view 41173011756 (superseded) |
+| Segmentation pooled extrinsic, F2 (§1) | `bench/extra-1` @ `76454a0` | local pooled re-run, AraSEG parquets byte-identical (sha256-verified) |
+| Evaluator calibration, A5 (§2) | `bench/extra-1` @ `b592cdc` | local calibration_sentence.py; raw calib JSONs on `bench/state` |
+| Performance row (§3) | `ee42bfa` | perf job of run 41181061992 (median of 3 reps) |
+| qwen2.5:1.5b ×3 (§4) | `ee42bfa` on `bench/freeze-1-local` | runs 41173022988 / 41185282664 / 41189716613 |
+| qwen2.5:3b ×3 (§4) | `ee42bfa` on `bench/freeze-1-local` | runs 41176056150 / 41194918539 / 41202610042 |
+| qwen2.5:7b probe (§4) | `ee42bfa` on `bench/freeze-1-local` | run 41206910830; scored report on `bench/local-results` @ `c33ac35` |
+| Gemini free-tier row (§5) | `ee42bfa` on `bench/freeze-1` (+ probe @ `9c272b8`) | slice run 41181861553; probe 41051082943 (reuse disclosed) |
+| Stats parity battery, A6 + F3 (§6) | `bench/extra-1` @ `62af13c` → hardened `76454a0` | `a6_parity.json` on `bench/state` |
+| Scale 1M/10M, A7 (§7) | `bench/scale-1` @ `9dd65d2` | run 41203959363 (repetitive corpus, labeled) |
+| Scale zipf re-run, F4 (§7) | `bench/scale-1` @ `9125bbb` | run 41226973126 (both legs SUCCESS) |
+| KWIC depth-1000 failure evidence (§7) | `bench/scale-1` @ `c02b3c7` | run 41202901041 (job "Scale (1000000 tokens)" FAILED); local repro `scripts/kwic_repro.py` @ `9125bbb` |
+| F7 truncation measurement (§4) | offline, engine code @ `ee42bfa` | 2026-11-01; real Qwen2.5 tokenizer + frozen prompt construction; per-run boundaries UNVERIFIED |
+
+**v2.0.2 release statement (MODE A).** Tag `v2.0.2` =
+`5a5e43fa0c9e6a903dc06f79579b732a9f666bca`. Engine code in v2.0.2 differs
+from the frozen benchmark commit `ee42bfa` ONLY by version constants
+(`engine/app/__init__.py` `__version__`, `engine/pyproject.toml` `version`)
+— verified by `git diff ee42bfa -- engine ':!engine/eval'` at the tag, plus
+the eval-module typing cleanup of #63 (which touches `engine/eval` only and
+changes no measured value). Every number in this report was therefore
+measured by the code v2.0.2 ships, except where a row names a bench-branch
+commit (`76454a0`, `9125bbb`, `b592cdc`, `62af13c`) — those are
+`engine/eval`/`scripts` additions that do not alter engine semantics, and
+each keeps the freeze gate empty.

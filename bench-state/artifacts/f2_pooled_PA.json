@@ -1,0 +1,178 @@
+{
+ "mode": "pooled",
+ "documents": 222,
+ "tokens": 163609,
+ "boundary_errors_total": 6313,
+ "delta_convention": "gold minus engine (positive = gold segmentation produced more)",
+ "cql_bigram_selection": {
+  "top_freq": [
+   {
+    "w1": "جنوب",
+    "w2": "السودان",
+    "freq": 224,
+    "gold_crossings": 0
+   },
+   {
+    "w1": "رئيس",
+    "w2": "الجمهورية",
+    "freq": 133,
+    "gold_crossings": 0
+   },
+   {
+    "w1": "هذا",
+    "w2": "الدستور",
+    "freq": 116,
+    "gold_crossings": 0
+   },
+   {
+    "w1": "أي",
+    "w2": "من",
+    "freq": 94,
+    "gold_crossings": 0
+   },
+   {
+    "w1": "التشريعية",
+    "w2": "القومية",
+    "freq": 84,
+    "gold_crossings": 0
+   }
+  ],
+  "top_boundary": [
+   {
+    "w1": "العفريت",
+    "w2": "فمن",
+    "freq": 2,
+    "gold_crossings": 2
+   },
+   {
+    "w1": "مصر",
+    "w2": "20",
+    "freq": 2,
+    "gold_crossings": 2
+   },
+   {
+    "w1": "أتحدث",
+    "w2": "أصف",
+    "freq": 2,
+    "gold_crossings": 2
+   },
+   {
+    "w1": "مسؤوليتي",
+    "w2": "النشاط",
+    "freq": 1,
+    "gold_crossings": 1
+   },
+   {
+    "w1": "القدر",
+    "w2": "ألاحظ",
+    "freq": 1,
+    "gold_crossings": 1
+   }
+  ]
+ },
+ "pair": {
+  "thresholds": {
+   "colloc_min_freq": 5,
+   "ngram_min_freq": 5,
+   "cql_pattern": "\"في\" within sentence"
+  },
+  "tokens": {
+   "engine": 129491,
+   "gold": 129491
+  },
+  "sentences": {
+   "engine": 8489,
+   "gold": 13780
+  },
+  "delta_sentences": 5291,
+  "collocations": {
+   "rows_delta": 0,
+   "sum_O_delta": -838,
+   "rows_engine": 200,
+   "sum_O_engine": 8466,
+   "rows_gold": 200,
+   "sum_O_gold": 7628
+  },
+  "ngrams": {
+   "rows_delta": 0,
+   "sum_freq_delta": -125
+  },
+  "cql_within_sentence": {
+   "pattern": "\"في\" within sentence",
+   "engine": 3309,
+   "gold": 3309,
+   "delta": 0
+  },
+  "cql_two_token": [
+   {
+    "pattern": "\"العفريت\" \"فمن\" within sentence",
+    "engine": 2,
+    "gold": 0,
+    "delta": -2
+   },
+   {
+    "pattern": "\"مصر\" \"20\" within sentence",
+    "engine": 0,
+    "gold": 0,
+    "delta": 0
+   },
+   {
+    "pattern": "\"أتحدث\" \"أصف\" within sentence",
+    "engine": 2,
+    "gold": 0,
+    "delta": -2
+   },
+   {
+    "pattern": "\"مسؤوليتي\" \"النشاط\" within sentence",
+    "engine": 1,
+    "gold": 0,
+    "delta": -1
+   },
+   {
+    "pattern": "\"القدر\" \"ألاحظ\" within sentence",
+    "engine": 1,
+    "gold": 0,
+    "delta": -1
+   },
+   {
+    "pattern": "\"جنوب\" \"السودان\" within sentence",
+    "engine": 224,
+    "gold": 224,
+    "delta": 0
+   },
+   {
+    "pattern": "\"رئيس\" \"الجمهورية\" within sentence",
+    "engine": 133,
+    "gold": 133,
+    "delta": 0
+   },
+   {
+    "pattern": "\"هذا\" \"الدستور\" within sentence",
+    "engine": 116,
+    "gold": 116,
+    "delta": 0
+   },
+   {
+    "pattern": "\"أي\" \"من\" within sentence",
+    "engine": 94,
+    "gold": 94,
+    "delta": 0
+   },
+   {
+    "pattern": "\"التشريعية\" \"القومية\" within sentence",
+    "engine": 84,
+    "gold": 84,
+    "delta": 0
+   }
+  ],
+  "sentiment": {
+   "delta_total": 5291,
+   "delta_positive": 54,
+   "delta_negative": 99,
+   "delta_avg": -0.004
+  },
+  "caf": {
+   "delta_mean_sentence_length": -5.856999999999999
+  }
+ }
+}

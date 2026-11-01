@@ -1,0 +1,85 @@
+[
+ {
+  "size_tokens_target": 10000000,
+  "corpus_mode": "zipf",
+  "corpus": {
+   "pattern": "F4 zipf-like synthetic tokens, a=1.15, vocab=220000, seed=20261031, ~20-token sentences, ~1000 tok/doc",
+   "zipf_seed": 20261031,
+   "zipf_vocab_target": 220000,
+   "documents": 10000,
+   "actual_tokens": 10000000,
+   "input_types": 219934,
+   "reference_documents": 50,
+   "reference_tokens": 50000,
+   "reference_input_types": 15383,
+   "unique_input_tokens": 219934
+  },
+  "ingest": {
+   "wall_s": 4364.34,
+   "tokens": 10050000,
+   "tokens_per_s": 2302.8,
+   "pipeline": {
+    "backend": "spacy",
+    "model": "en_core_web_sm",
+    "model_version": "3.8.0",
+    "spacy_version": "3.8.18",
+    "degraded": false
+   },
+   "peak_rss_kib": 418208
+  },
+  "kwic": {
+   "queries": [
+    {
+     "query": "zw1",
+     "limit": 400,
+     "wall_s": 53.057,
+     "lines": 1377841,
+     "ok": true
+    },
+    {
+     "query": "zw2",
+     "limit": 400,
+     "wall_s": 44.864,
+     "lines": 621088,
+     "ok": true
+    },
+    {
+     "query": "zw1",
+     "limit": 1000,
+     "wall_s": 78.373,
+     "lines": 1377841,
+     "ok": true
+    }
+   ],
+   "peak_rss_kib": 423200
+  },
+  "keyness": {
+   "wall_s": 11.913,
+   "n_positive": 100,
+   "n_negative": 100,
+   "top3": [
+    "zw266",
+    "zw269",
+    "zw316"
+   ],
+   "peak_rss_kib": 681960
+  },
+  "db": {
+   "file": "/tmp/scale-10000000/scale-10000000.db",
+   "size_bytes": 4164849664
+  },
+  "_meta": {
+   "utc": "2026-10-31T19:13:56.571165+00:00",
+   "commit": "9125bbb5e77a4910f3c47f8f34fa4c91be0fda60",
+   "runner": {
+    "platform": "Linux-7.0.0-1017-azure-x86_64-with-glibc2.39",
+    "python": "3.12.15",
+    "machine": "x86_64",
+    "cpus": 4
+   },
+   "command": "python scripts/benchmark_scale.py --sizes 10000000 --corpus-mode zipf",
+   "corpus_construction": "synthetic; mode zipf: zipf-like tokens over a 200k+ type vocabulary (PCG64 seed 20261031, a=1.15, vocab 220000) — see module docstring",
+   "rss_definition": "process-wide monotone peak (ru_maxrss), KiB"
+  }
+ }
+]
