@@ -85,11 +85,44 @@ was needed. Raw calib JSONs: `bench-state/artifacts/calib_{PA,NP}.json`.
 
 ## 3. Performance row (production Arabic pipeline, snapshot corpus)
 
-From the battery's perf job (median over repetitions, CV%): analyze path
-2,687–2,709 tok/s across 20k/100k/250k-token inputs (CV 0.3–1.3%); dialect
-ID ≈ 96.6k–98.8k tok/s; cold engine load 4.0 s. Steady-state morphology
-throughput is on par with CAMeL-Tools cost bounds and is reported with CV%
-because CI runners are shared.
+All eight freeze-SHA runs of 2026-10-31 (41173011756, 41173022988,
+41176056150, 41181061992, 41185282664, 41189716613, 41194918539,
+41202610042 — artifacts and manifests under `benchmarks/results/run-<id>/`)
+measured the same production path on identical runners (ubuntu-latest,
+4 vCPU, Python 3.12.15, CAMeL-Tools 1.6.0) at engine commit ee42bfa:
+sizes 20k/100k/250k tokens × 3 timed repetitions on the snapshot corpus.
+The segmentation baseline is bit-identical in all eight runs
+(`seg_intrinsic_{PA,NP}.json` are sha256-identical across runs):
+PA micro 0.7115 / macro 0.6705; NP micro 0.5572 / macro 0.5469.
+
+Analyze-path medians per run (tok/s), with dialect-ID range and cold load:
+
+| run | 20k | 100k | 250k | dialect ID | cold load |
+|---|---|---|---|---|---|
+| 41173011756 | 2,708.7 | 2,694.8 | 2,696.9 | 96.7k–98.8k | 4.0 s |
+| 41173022988 | 3,939.7 | 3,916.1 | 3,918.1 | 123.4k–124.8k | 2.8 s |
+| 41176056150 | 2,805.5 | 2,696.1 | 2,704.8 | 97.2k–99.1k | 3.4 s |
+| 41181061992 | 5,433.1 | 5,388.3 | 5,328.6 | 165.3k–167.8k | 2.1 s |
+| 41185282664 | 2,811.2 | 2,691.9 | 2,745.8 | 97.2k–98.9k | 3.7 s |
+| 41189716613 | 2,685.9 | 2,687.3 | 2,698.4 | 96.5k–98.7k | 3.4 s |
+| 41194918539 | 3,969.8 | 3,890.6 | 3,932.9 | 122.1k–123.8k | 2.8 s |
+| 41202610042 | 2,766.2 | 2,676.3 | 2,658.7 | 96.8k–99.2k | 3.4 s |
+
+Between-runner spread of the analyze-path median is 2,686–5,433 tok/s at
+the 20k input (2.0× across identically configured runs): CI runners are
+shared infrastructure and stratify into three speed classes (≈2.7k, ≈3.9k,
+≈5.4k analyze-path tok/s; the class is constant within a run across
+sizes), so the between-runner component dominates the within-run
+component. Within-run CV stays below 1.5% at the 100k and 250k inputs in
+all eight runs (max 1.46%); the 20k input is noisier (max 2.72%). Cold
+engine load is 2.1–4.0 s across runs; dialect-ID medians span
+96.5k–167.8k tok/s and follow the same runner classes. Steady-state
+morphology throughput stays consistent with CAMeL-Tools cost bounds.
+Bootstrap confidence intervals are computed only for additive measures
+(per-question error counts and pass rates); throughput is reported
+descriptively with medians and CV%, never with resampling CIs. A single
+confirmation run at tag v2.0.2 is scheduled to reproduce this row
+(bench plan v3, P1).
 
 ## 4. Local grounding rows (Ollama, A3 triples)
 
