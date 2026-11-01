@@ -351,7 +351,11 @@ benchmarks, long-corpus classrooms — must start the Ollama server with
 fidelity is documented in
 [docs/BENCHMARK_REPORT.md §4 (F7)](docs/BENCHMARK_REPORT.md), and benchmark
 plans record the context length per run. Making `num_ctx` configurable from
-the engine environment is on the roadmap for **v2.0.3**.
+the engine environment is on the roadmap for **v2.0.3**. When reproducing a
+grounding run locally, `python scripts/record_ollama_env.py --model
+qwen2.5:3b` writes the same `ollama_env.json` provenance artifact (release
+pin, model config digest, server-side context length) that CI attaches to
+every committed grounding result.
 
 ### Export formats
 
