@@ -339,6 +339,20 @@ serious validity bug, so this is treated as a release-blocking test category.
 
 All statistics are **computed by these pure functions**, never by an LLM. The AI Assistant calls these same deterministic `compute_*` functions and feeds the pre-computed numbers to the LLM for interpretation only — the LLM never computes a statistic. This keeps every result reproducible and defensible under peer review.
 
+### Long-context grounding runs (Ollama)
+
+The grounded-AI layer sends corpus-derived context with every question. As of
+v2.0.2 the engine does not yet expose Ollama's `num_ctx` option, so prompts
+longer than the server's default context (4k tokens on current Ollama builds)
+are silently truncated before generation. Runs that need the full context —
+benchmarks, long-corpus classrooms — must start the Ollama server with
+`OLLAMA_CONTEXT_LENGTH=16384` (a server-level environment variable, set
+*before* `ollama serve`). The measured effect of this truncation on grounding
+fidelity is documented in
+[docs/BENCHMARK_REPORT.md §4 (F7)](docs/BENCHMARK_REPORT.md), and benchmark
+plans record the context length per run. Making `num_ctx` configurable from
+the engine environment is on the roadmap for **v2.0.3**.
+
 ### Export formats
 
 Every analysis result (concordance, frequency, collocation, keyness) can be exported in **5 formats** via a unified `?fmt=` query parameter:
