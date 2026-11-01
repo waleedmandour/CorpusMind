@@ -174,8 +174,8 @@ def battery_tables(corpora: dict[str, list[str]]) -> list[dict[str, Any]]:
 def run_battery(corpora: dict[str, list[str]]) -> list[dict[str, Any]]:
     """Compare chi-square / G^2 / odds-ratio over the whole battery."""
     import numpy as np
-    import scipy.stats as st  # type: ignore[import-untyped]
-    from statsmodels.stats.contingency_tables import Table2x2  # type: ignore[import-untyped]
+    import scipy.stats as st
+    from statsmodels.stats.contingency_tables import Table2x2
 
     tables = battery_tables(corpora)
     out: list[dict[str, Any]] = []
@@ -279,7 +279,7 @@ def main() -> None:
     ap.add_argument("--skip-synthetic", action="store_true")
     args = ap.parse_args()
 
-    from lexicalrichness import LexicalRichness  # type: ignore[import-untyped]
+    from lexicalrichness import LexicalRichness
 
     corpora = load_corpora(Path(args.snapshot_dir))
     if not corpora:
