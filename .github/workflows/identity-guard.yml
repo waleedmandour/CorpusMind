@@ -1,0 +1,93 @@
+# Identity guard (advisory only).
+#
+# Flags commits whose author/committer identity is not on the allowlist.
+# Non-blocking by design: it NEVER fails the check, NEVER cancels a run,
+# and NEVER blocks a merge — it only writes a visible warning so any
+# unexpected identity is reviewed (owner decision after the 2026-10
+# contributor-spoofing incident).
+#
+# Allowlist rationale (owner decision, 2026-11-01):
+#   - 67415456+waleedmandour@users.noreply.github.com — the owner.
+#   - z@container ("Z User") — registered agentic-automation identity, so
+#     agent-made commits and docs/data PRs pass WITHOUT interference.
+#   - github-actions[bot] / dependabot[bot] — infrastructure bots.
+
+name: Identity guard (advisory)
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  identities:
+    name: Check commit identities (advisory)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve commit range
+        id: range
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+            HEAD="${{ github.sha }}"
+            if git cat-file -e "$BASE" 2>/dev/null; then
+              echo "range=$BASE..$HEAD" >> "$GITHUB_OUTPUT"
+            else
+              echo "range=$HEAD -20" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            BEFORE="${{ github.event.before }}"
+            if [ -n "$BEFORE" ] && [ "$BEFORE" != "0000000000000000000000000000000000000000" ] && git cat-file -e "$BEFORE" 2>/dev/null; then
+              echo "range=$BEFORE..${{ github.sha }}" >> "$GITHUB_OUTPUT"
+            else
+              echo "range=${{ github.sha }} -1" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+
+      - name: Check identities
+        run: |
+          ALLOWED='^(67415456\+waleedmandour@users\.noreply\.github\.com|z@container|github-actions\[bot\]@users\.noreply\.github\.com|dependabot\[bot\]@users\.noreply\.github\.com)$'
+          RANGE="${{ steps.range.outputs.range }}"
+          LOG=$(git log --format='%H|%an <%ae>|%cn <%ce>' $RANGE)
+          # robust per-commit pass
+          FLAGGED=""
+          while IFS= read -r line; do
+            [ -z "$line" ] && continue
+            SHA=$(echo "$line" | cut -d'|' -f1)
+            AUTHOR=$(echo "$line" | cut -d'|' -f2)
+            COMMITTER=$(echo "$line" | cut -d'|' -f3)
+            AE=$(echo "$AUTHOR" | sed -E 's/.*<(.*)>/\1/')
+            CE=$(echo "$COMMITTER" | sed -E 's/.*<(.*)>/\1/')
+            if ! echo "$AE" | grep -qE "$ALLOWED" || ! echo "$CE" | grep -qE "$ALLOWED"; then
+              FLAGGED="${FLAGGED}- $SHA author: $AUTHOR, committer: $COMMITTER"$'\n'
+            fi
+          done <<< "$LOG"
+
+          {
+            echo "### Identity guard (advisory)"
+            echo ""
+            if [ -n "$FLAGGED" ]; then
+              echo ":warning: The following commits use identities outside the allowlist (owner, agentic automation \`Z User <z@container>\`, github-actions[bot], dependabot[bot]):"
+              echo ""
+              echo "$FLAGGED"
+              echo ""
+              echo "**Advisory only** — nothing is blocked. Please review that these identities are expected."
+            else
+              echo ":white_check_mark: All commits in range use allowlisted identities."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # Always exit 0 — advisory, never blocking.
+          exit 0
