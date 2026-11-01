@@ -95,8 +95,8 @@ def select_cql_bigrams(docs: list[dict[str, Any]], k: int = 5) -> dict[str, list
     Those crossing pairs are where 'within sentence' scope MUST differ
     between engine and gold segmentation.
     """
-    from collections import Counter
     import re
+    from collections import Counter
 
     # Word tokens only: Arabic letters (+digits), length >= 2, no punctuation,
     # no tatweel/diacritics-only tokens, no newline tokens. Punctuation tokens

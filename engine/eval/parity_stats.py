@@ -193,16 +193,19 @@ def run_battery(corpora: dict[str, list[str]]) -> list[dict[str, Any]]:
          "tables where the raw OR is UNDEFINED (b == 0 or c == 0) are excluded — the "
          "engine returns 0.0/inf there by convention and statsmodels would divide by zero"),
     ]
+    # B023 (ruff 0.17): the dispatch table must not close over loop
+    # variables — each lambda takes the four cells explicitly.
+    engine_fns: dict[str, Any] = {
+        "chi_square_2x2": lambda a, b, c, d: chi_square_2x2(a, b, c, d),
+        "log_likelihood_2x2": lambda a, b, c, d: log_likelihood_2x2(a, b, c, d),
+        "odds_ratio": lambda a, b, c, d: odds_ratio(a, c, a + b, c + d),
+    }
     for name, note in specs:
         rows: list[dict[str, Any]] = []
         for t in tables:
             a, b, c, d = t["cells"]
             try:
-                e_val = float({
-                    "chi_square_2x2": lambda: chi_square_2x2(a, b, c, d),
-                    "log_likelihood_2x2": lambda: log_likelihood_2x2(a, b, c, d),
-                    "odds_ratio": lambda: odds_ratio(a, c, a + b, c + d),
-                }[name]())
+                e_val = float(engine_fns[name](a, b, c, d))
             except Exception:
                 e_val = math.nan
             try:
