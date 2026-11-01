@@ -52,6 +52,7 @@ import json
 import math
 import re
 from collections import Counter
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -67,7 +68,7 @@ from stats.measures import (
 )
 
 try:
-    from stats.measures import guiraud  # type: ignore[attr-defined]
+    from stats.measures import guiraud
 except ImportError:  # pragma: no cover - older layout
     guiraud = None  # type: ignore[assignment]
 
@@ -119,7 +120,7 @@ def corpus_2x2(corpora: dict[str, list[str]]) -> tuple[list[str], tuple[int, int
 def compare(engine_vals: dict[str, float], ref_vals: dict[str, float],
             note: str) -> dict[str, Any]:
     """F3 fix: an empty/uncomparable comparison is NOT_TESTED, never 0/0."""
-    rows = []
+    rows: list[dict[str, Any]] = []
     for k in sorted(engine_vals):
         e, r = engine_vals[k], ref_vals.get(k)
         if r is None:
@@ -131,15 +132,15 @@ def compare(engine_vals: dict[str, float], ref_vals: dict[str, float],
         rows.append({"corpus": k, "engine": e, "reference": r,
                      "abs_dev": abs_dev, "rel_dev": rel_dev,
                      "comparable": comparable})
-    finite = [r for r in rows if math.isfinite(r["abs_dev"])]
+    finite = [r for r in rows if math.isfinite(float(r["abs_dev"]))]
     n_excluded = sum(1 for r in rows if not r["comparable"])
     if not finite:
         # NOT_TESTED: no row compares — report nulls, never a zero deviation.
         return {"measure": note.split(" — ")[0], "rows": rows,
                 "status": "NOT_TESTED", "max_abs_dev": None, "max_rel_dev": None,
                 "note": note, "n_comparable": 0, "n_excluded": n_excluded}
-    max_abs = max(r["abs_dev"] for r in finite)
-    max_rel = max((r["rel_dev"] for r in finite if math.isfinite(r["rel_dev"])), default=0.0)
+    max_abs = max(float(r["abs_dev"]) for r in finite)
+    max_rel = max((float(r["rel_dev"]) for r in finite if math.isfinite(float(r["rel_dev"]))), default=0.0)
     return {"measure": note.split(" — ")[0], "rows": rows,
             "status": "OK", "max_abs_dev": max_abs, "max_rel_dev": max_rel,
             "note": note, "n_comparable": len(finite), "n_excluded": n_excluded}
@@ -173,8 +174,8 @@ def battery_tables(corpora: dict[str, list[str]]) -> list[dict[str, Any]]:
 def run_battery(corpora: dict[str, list[str]]) -> list[dict[str, Any]]:
     """Compare chi-square / G^2 / odds-ratio over the whole battery."""
     import numpy as np
-    import scipy.stats as st
-    from statsmodels.stats.contingency_tables import Table2x2
+    import scipy.stats as st  # type: ignore[import-untyped]
+    from statsmodels.stats.contingency_tables import Table2x2  # type: ignore[import-untyped]
 
     tables = battery_tables(corpora)
     out: list[dict[str, Any]] = []
@@ -278,7 +279,7 @@ def main() -> None:
     ap.add_argument("--skip-synthetic", action="store_true")
     args = ap.parse_args()
 
-    from lexicalrichness import LexicalRichness
+    from lexicalrichness import LexicalRichness  # type: ignore[import-untyped]
 
     corpora = load_corpora(Path(args.snapshot_dir))
     if not corpora:
@@ -307,10 +308,10 @@ def main() -> None:
     tok_drift_default = {k: {"shared": len(corpora[k]), "lr_default": lr.words}
                          for k, lr in lr_default.items()}
 
-    def _ev(fn) -> dict[str, float]:
+    def _ev(fn: Callable[[list[str]], float]) -> dict[str, float]:
         return {k: fn(t) for k, t in corpora.items()}
 
-    def _rv(attr: str, **kw) -> dict[str, float]:
+    def _rv(attr: str, **kw: Any) -> dict[str, float]:
         out = {}
         for k, lr in lr_objs.items():
             try:
