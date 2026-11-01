@@ -119,6 +119,34 @@ and (with `--en-text`) the Gale-Church `alignment_pair_count`. These deltas
 are the paper's evidence that segmentation quality propagates into every
 analysis the tool sells.
 
+SIGN CONVENTION (authoritative, matches the code in
+`segmentation_downstream.measure_pair`): every `*_delta` field is computed as
+**gold minus engine** (`sents["gold"] - sents["engine"]`, etc.). A POSITIVE
+delta therefore means the GOLD segmentation produced MORE of that quantity
+than the ENGINE segmentation (e.g. `delta_sentences = +68` = the engine
+merged 68 sentences relative to gold); a NEGATIVE delta means the engine
+produced MORE. Beware summaries that phrase the convention as "engine minus
+gold" — that phrasing corresponds to negating every delta reported here.
+`boundary_errors` in the same report is a symmetric count of differing
+boundary positions (unsigned). Extrinsic coverage note: from the A4 rerun
+(2026-10-31) the extrinsic deltas are computed on ALL 222 AraSEG dev
+documents per condition (`seg_limit=222`), not the earlier 20-document
+subset (runs 41173011756 and earlier are superseded for the extrinsic
+view; the 20-doc numbers remain in their snapshot branches for audit).
+
+Calibration: `calibration_sentence.py` scores NLTK Punkt (trained per
+condition on the AraSEG train split), pySBD (`language='ar'`) and the spaCy
+sentencizer (blank `ar` pipeline, default `punct_chars`) through the SAME
+owner-map protocol as `segmentation_araseg`. In the PA conditions punkt and
+the sentencizer are run per paragraph (AraSEG `\n` markers count as
+boundaries) and pysbd splits newlines natively — this reproduces Table 4 of
+arXiv:2606.08025 (dev set) to within 0.21 F1:
+PA punkt 65.18 vs 65.2, pysbd 63.31 vs 63.1, spacy 67.29 vs 67.3;
+NP punkt 52.32 vs 52.3, pysbd 52.05 vs 52.1, spacy 54.31 vs 54.3.
+
+    python -m eval.calibration_sentence --data /tmp/araseg/PA/dev.jsonl \
+        --task PA --punkt-train /tmp/araseg/PA/train.jsonl --out calib_PA.json
+
 ## 3. Determinism & CI
 
 - The snapshot texts are hash-frozen; the scorer refuses to run against a
@@ -131,3 +159,50 @@ analysis the tool sells.
   a gold-subset rebuild check, and an end-to-end grounding pass with a
   scripted stub provider (perfect assistant → 100% pass; corrupted answer →
   HALLUCINATED/WRONG classified).
+
+## 4. Running the qwen2.5:7b local row manually
+
+The 7b row is **pending user-run**: the CI runner cap is 330 min and the
+timing probe (run 41206910830, 5 questions G-001..G-005, 2026-10-31) measured
+a mean of 271.5 s/question, projecting to **362 min for the full 80** — it
+does not fit. Run it on any machine with Ollama and ≥8 GB free RAM. No API
+key and no `GH_TOKEN` are needed: the harness reads its settings from the
+`CORPUSMIND_*` environment only, and a local Ollama requires neither.
+
+```bash
+cd engine
+# F7 (2026-11-01): Ollama's default context is 4k tokens for <24 GiB VRAM
+# (docs.ollama.com/context-length) — the CI runner is CPU-only, so 4k
+# applied there too. The grounding turn-1 prompt measures ~5.2k tokens
+# (system prompt ~1.0k + tool schemas ~4.1k + question), so the DEFAULT
+# context head-truncates the tools out of the prompt — a known confound of
+# the CI local rows (BENCHMARK_REPORT.md §4). Raise the server context
+# BEFORE serving, or the engine fix (num_ctx in options) must land first:
+export OLLAMA_CONTEXT_LENGTH=8192
+ollama serve   # (or restart the service with the env set)
+
+# Per-question chat deadline. The probe answers took 200-332 s, so the
+# 300 s default (CORPUSMIND_CHAT_TIMEOUT_S, what CI maps its
+# grounding_chat_deadline_s input to) would abort the slowest answers.
+export CORPUSMIND_CHAT_TIMEOUT_S=600
+
+# Full bank (default; ~6 h CPU-only). Smoke-test first by adding:
+#   --only G-001 G-002 G-003 G-004 G-005
+python -m eval.run_grounding \
+    --provider ollama --model qwen2.5:7b --pause 0 \
+    --timeout 600 \
+    --out eval/runs/paper_run_7b.json
+
+python -m eval.score eval/runs/paper_run_7b.json \
+    --out eval/runs/paper_report_7b.json --verbose
+```
+
+Flag notes (verified against `eval/run_grounding.py` / `eval/score.py`
+argparse): `--only` takes SPACE-SEPARATED question ids; `--timeout` is the
+harness per-question HTTP timeout (float); `--rate-retries 4` is what CI
+passes for cloud providers and is unnecessary for a local Ollama; scoring
+takes the run JSON as a POSITIONAL argument. There is no `--chat-deadline`
+flag — the chat deadline is the `CORPUSMIND_CHAT_TIMEOUT_S` environment
+variable above. The probe verdicts (MISSING_NUMBER×2, HALLUCINATED×2,
+TRAP_FAILURE×1 on G-001..G-005) were diagnostic only, not a row.
+
