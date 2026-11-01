@@ -539,8 +539,25 @@ jobs:
     name: Commit results snapshot
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: [perf-arabic, seg-araseg]
-    if: github.event_name == 'workflow_dispatch' && inputs.commit_results
+    # MUST include `grounding`: the grounding report IS one of the run's
+    # artifacts. With needs:[perf-arabic, seg-araseg] only, the snapshot
+    # fired ~13 min into every dispatch — hours before the 100–199 min
+    # grounding job finished — and every merged snapshot (all three pinned
+    # arms AND the P1 confirm run) silently lost its grounding data (fixed
+    # after the fact by data-only PR #78; that gap must not recur).
+    needs: [perf-arabic, seg-araseg, grounding]
+    # grounding is skipped when run_grounding=false (perf/seg-only dispatch):
+    # a skipped dependency would normally skip this job too, so the `if`
+    # explicitly allows success-or-skipped. If grounding FAILED, the snapshot
+    # intentionally does NOT run — a snapshot without grounding data is the
+    # exact failure mode this fix removes; the artifacts stay on the run page
+    # (90-day retention) for a manual data-only PR instead.
+    if: >-
+      github.event_name == 'workflow_dispatch' && inputs.commit_results &&
+      !cancelled() &&
+      needs.perf-arabic.result == 'success' &&
+      needs.seg-araseg.result == 'success' &&
+      (needs.grounding.result == 'success' || needs.grounding.result == 'skipped')
     permissions:
       contents: write
       pull-requests: write
@@ -551,6 +568,23 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: benchmarks/results/run-${{ github.run_id }}
+
+      - name: Normalize artifact dirs + assert grounding presence
+        run: |
+          # the grounding job uploads artifact name `grounding-report`; the
+          # repo convention (all previously merged snapshots) is `grounding/`
+          if [ -d "benchmarks/results/run-${{ github.run_id }}/grounding-report" ]; then
+            mv "benchmarks/results/run-${{ github.run_id }}/grounding-report" \
+               "benchmarks/results/run-${{ github.run_id }}/grounding"
+          fi
+          # belt-and-braces: a grounding dispatch must NEVER snapshot without
+          # its grounding report (this is what silently happened pre-#78)
+          if [ "${{ inputs.run_grounding }}" = "true" ] && \
+             [ ! -d "benchmarks/results/run-${{ github.run_id }}/grounding" ]; then
+            echo "::error::run_grounding=true but the grounding-report artifact is missing from this snapshot"
+            exit 1
+          fi
+          ls "benchmarks/results/run-${{ github.run_id }}"
 
       - name: Write snapshot manifest
         run: |
