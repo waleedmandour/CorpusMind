@@ -1,0 +1,232 @@
+{
+ "mode": "per_document",
+ "documents": 5,
+ "delta_convention": "gold minus engine (positive = gold segmentation produced more)",
+ "pairs": [
+  {
+   "doc_id": "doc_02284d965de1",
+   "boundary_errors": 75,
+   "tokens": {
+    "engine": 274,
+    "gold": 274
+   },
+   "thresholds": {
+    "colloc_min_freq": 1,
+    "ngram_min_freq": 2,
+    "cql_pattern": "\"في\" within sentence"
+   },
+   "sentences": {
+    "engine": 29,
+    "gold": 97
+   },
+   "delta_sentences": 68,
+   "collocations": {
+    "rows_delta": -2,
+    "sum_O_delta": -2,
+    "rows_engine": 22,
+    "sum_O_engine": 27,
+    "rows_gold": 20,
+    "sum_O_gold": 25
+   },
+   "ngrams": {
+    "rows_delta": 0,
+    "sum_freq_delta": 0
+   },
+   "cql_within_sentence": {
+    "pattern": "\"في\" within sentence",
+    "engine": 4,
+    "gold": 4,
+    "delta": 0
+   },
+   "sentiment": {
+    "delta_total": 68,
+    "delta_positive": 0,
+    "delta_negative": 0,
+    "delta_avg": -0.012
+   },
+   "caf": {
+    "delta_mean_sentence_length": -6.6236
+   }
+  },
+  {
+   "doc_id": "doc_02b21fa0f702",
+   "boundary_errors": 0,
+   "tokens": {
+    "engine": 63,
+    "gold": 63
+   },
+   "thresholds": {
+    "colloc_min_freq": 1,
+    "ngram_min_freq": 2,
+    "cql_pattern": "\"في\" within sentence"
+   },
+   "sentences": {
+    "engine": 9,
+    "gold": 9
+   },
+   "delta_sentences": 0,
+   "collocations": {
+    "rows_delta": 0,
+    "sum_O_delta": 0,
+    "rows_engine": 0,
+    "sum_O_engine": 0,
+    "rows_gold": 0,
+    "sum_O_gold": 0
+   },
+   "ngrams": {
+    "rows_delta": 0,
+    "sum_freq_delta": 0
+   },
+   "cql_within_sentence": {
+    "pattern": "\"في\" within sentence",
+    "engine": 0,
+    "gold": 0,
+    "delta": 0
+   },
+   "sentiment": {
+    "delta_total": 0,
+    "delta_positive": 0,
+    "delta_negative": 0,
+    "delta_avg": 0
+   },
+   "caf": {
+    "delta_mean_sentence_length": 0.0
+   }
+  },
+  {
+   "doc_id": "doc_0301b9267980",
+   "boundary_errors": 24,
+   "tokens": {
+    "engine": 434,
+    "gold": 434
+   },
+   "thresholds": {
+    "colloc_min_freq": 1,
+    "ngram_min_freq": 2,
+    "cql_pattern": "\"في\" within sentence"
+   },
+   "sentences": {
+    "engine": 47,
+    "gold": 50
+   },
+   "delta_sentences": 3,
+   "collocations": {
+    "rows_delta": -3,
+    "sum_O_delta": -3,
+    "rows_engine": 34,
+    "sum_O_engine": 50,
+    "rows_gold": 31,
+    "sum_O_gold": 47
+   },
+   "ngrams": {
+    "rows_delta": 0,
+    "sum_freq_delta": 0
+   },
+   "cql_within_sentence": {
+    "pattern": "\"في\" within sentence",
+    "engine": 6,
+    "gold": 6,
+    "delta": 0
+   },
+   "sentiment": {
+    "delta_total": 3,
+    "delta_positive": 0,
+    "delta_negative": 0,
+    "delta_avg": 0
+   },
+   "caf": {
+    "delta_mean_sentence_length": -0.5540000000000003
+   }
+  },
+  {
+   "doc_id": "doc_0353cc83d633",
+   "boundary_errors": 22,
+   "tokens": {
+    "engine": 740,
+    "gold": 740
+   },
+   "thresholds": {
+    "colloc_min_freq": 1,
+    "ngram_min_freq": 2,
+    "cql_pattern": "\"في\" within sentence"
+   },
+   "sentences": {
+    "engine": 91,
+    "gold": 113
+   },
+   "delta_sentences": 22,
+   "collocations": {
+    "rows_delta": -1,
+    "sum_O_delta": -3,
+    "rows_engine": 99,
+    "sum_O_engine": 123,
+    "rows_gold": 98,
+    "sum_O_gold": 120
+   },
+   "ngrams": {
+    "rows_delta": -2,
+    "sum_freq_delta": -4
+   },
+   "cql_within_sentence": {
+    "pattern": "\"في\" within sentence",
+    "engine": 19,
+    "gold": 19,
+    "delta": 0
+   },
+   "sentiment": {
+    "delta_total": 22,
+    "delta_positive": 0,
+    "delta_negative": 0,
+    "delta_avg": -0.008
+   },
+   "caf": {
+    "delta_mean_sentence_length": -1.5831999999999997
+   }
+  },
+  {
+   "doc_id": "doc_0458fdd062c7",
+   "boundary_errors": 39,
+   "tokens": {
+    "engine": 1056,
+    "gold": 1056
+   },
+   "thresholds": {
+    "colloc_min_freq": 1,
+    "ngram_min_freq": 2,
+    "cql_pattern": "\"في\" within sentence"
+   },
+   "sentences": {
+    "engine": 182,
+    "gold": 221
+   },
+   "delta_sentences": 39,
+   "collocations": {
+    "rows_delta": -11,
+    "sum_O_delta": -15,
+    "rows_engine": 157,
+    "sum_O_engine": 218,
+    "rows_gold": 146,
+    "sum_O_gold": 203
+   },
+   "ngrams": {
+    "rows_delta": 0,
+    "sum_freq_delta": 0
+   },
+   "cql_within_sentence": {
+    "pattern": "\"في\" within sentence",
+    "engine": 32,
+    "gold": 32,
+    "delta": 0
+   },
+   "sentiment": {
+    "delta_total": 39,
+    "delta_positive": 0,
+    "delta_negative": 0,
+    "delta_avg": -0.006000000000000002
+   },
+   "caf": {
+    "delta_mean_sentence_length": -1.0239000000000003
+   }
+  }
+ ]
+}
