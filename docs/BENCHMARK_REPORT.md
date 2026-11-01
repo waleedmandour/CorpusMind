@@ -165,9 +165,13 @@ TRAP_FAILURE 13–14 / HALLUCINATED 2–3 / PASS 2; 3b TRAP_FAILURE 14 /
 PASS 2–3 / (1 run each) MISSING_NUMBER 1, HALLUCINATED 1.
 
 Reading: (a) both models are far below any usable operating point — at most
-13/80 questions answered passably; (b) 3b fails *safer* than 1.5b (shifts
-HALLUCINATED → MISSING_NUMBER: mean hallucination 0.39 vs 0.66) but passes
-less (0.0708 vs 0.1542); (c) verdict flips across identical re-runs (16–24
+13/80 questions answered passably; (b) under the 4k-truncated regime 3b
+fails *safer* than 1.5b (shifts HALLUCINATED → MISSING_NUMBER: mean
+hallucination 0.39 vs 0.66) but passes less (0.0708 vs 0.1542) — **F8 below
+shows this ordering is largely a truncation artifact, not a model
+property**: with the tool schemas fully visible (16k) the pass ordering
+reverses, so "safer but worse" describes the truncated-context regime, not
+the models; (c) verdict flips across identical re-runs (16–24
 of 80) show single-question instability, concentrated in
 HALLUCINATED↔MISSING_NUMBER, with no systematic direction — single-run
 grounding scores for small local models carry a ±2.5–5 pp noise band.
@@ -215,6 +219,100 @@ do not depend on the server's VRAM-bucketed default.
 Superseded rows: the afce8fe 1.5b row (run 41028985957, pass 0.1375 /
 halluc 0.65) predates the #43/#44 re-freeze; its delta vs the current row
 reflects engine+gold changes together, not engine effect alone.
+
+### F8 — Pinned-Ollama control and context-length arms (measured 2026-11-01)
+
+F7 established that every local row above ran under 4k server-default
+truncation. Harness fix #72 pins the Ollama release
+(`install.sh OLLAMA_VERSION=0.40.13`) and records `ollama_env.json`
+provenance (release pin, model config digest, server-side context length)
+with every grounding artifact. Three dispatches on 2026-11-01 measured the
+pinned 4k control and two 16384 arms; the engine was byte-identical to the
+tag `5a5e43f` in all three (110e6c4 / 4322ae0 / ef983d6 differ from the tag
+only in `.github/workflows/benchmarks.yml`). Context was set server-side
+via `OLLAMA_CONTEXT_LENGTH=16384` (the v2.0.2 engine does not expose
+`num_ctx` — README "Long-context grounding runs"); the control left the
+build default (ollama_env.json `OLLAMA_CONTEXT_LENGTH_env: null`).
+
+| arm (run) | pass (of 80) | halluc. flag (of 80) | verdicts P/MN/H/TF | trap/no_tool (of 18) | category-trap (of 8) | chat time | job wall |
+|---|---|---|---|---|---|---|---|
+| 3b @4k pinned control (41306198564) | 4 = 0.0500 | 36 = 0.4500 | 4/33/29/14 | 3/18 | 1/8 | 82.4 min | 99.8 min |
+| 1.5b @16384 (41306208341) | 15 = 0.1875 | 40 = 0.5000 | 15/21/30/14 | 2/18 | 0/8 | 96.6 min | 109.2 min |
+| 3b @16384 (41306203484) | 18 = 0.2250 | 41 = 0.5125 | 18/18/31/13 | 2/18 | 1/8 | 185.8 min | 198.7 min |
+| P1 confirm run, 3b @4k pre-pin (41296669898) | 4 = 0.0500 | 32 = 0.4000 | 4/37/26/13 | 2/18 | 0/8 | 59.2 min | 72.5 min |
+
+**Denominators and definitions (stated explicitly).** Every rate in the
+table is over the full 80-question bank. The trap/no_tool column is the
+n=18 partition (9 no-tool, 2 expected-absent, 1 expected-present, 2 error,
+plus the 4 category-"trap" ids G-073/G-074/G-079/G-080 — all other ids
+have numeric/structured gold); the category-trap column is the n=8
+category slice (G-073..G-080), so "traps 0.125" means 1 of 8, never k of
+18. `hallucination_rate` counts every question quoting at least one number
+absent from all tool output, regardless of final verdict (flag-level), so
+it exceeds the HALLUCINATED verdict count (4k control: 36 flagged vs 29
+verdict-HALLUCINATED — the other 7 carry MISSING_NUMBER or TRAP_FAILURE
+verdicts with hallucinated numbers in their details). NO_ANSWER = 0 in all
+four runs (verdict counts sum to 80). "Attempted" below = PASS or
+hallucination-flagged, i.e. the model committed numeric content.
+
+**Deadlines and timeouts.** The chat deadline was the workflow default
+300 s (`run_meta.chat_deadline_s = 300.0` in every run). **No question
+timed out and no deadline was reached in any arm**: max elapsed 261.4 s
+(3b @16384), p95 223.1 s, and only 1/80 questions ≥ 240 s. Context raises
+latency: 3b mean 61.8 s/question at 4k → 139.4 s at 16384 (33/80 ≥ 150 s),
+which is why the grounding job wall grows 99.8 → 198.7 min. All four runs
+are grounded on 79/80 questions — G-027 (diversity) is the single zero-tool
+question in every run.
+
+**Paired per-question analysis (same 80 ids).**
+
+- *3b, 4k → 16384:* 17 gains / 3 losses (n=20 discordant pairs); exact
+  two-sided sign test p = 2.58×10⁻³ — **context significantly helps 3b**.
+  Correction: an interim reading reported "17 gains / 0 losses
+  (p ≈ 1.5×10⁻⁵)"; the committed artifacts give 17/3, p = 2.58×10⁻³ (the
+  conclusion holds at α<0.01, with the correct statistic).
+- *Accuracy per attempt:* pass|attempted rises from 4/40 = 10.0%
+  (control) to 18/59 = 30.5% (3b @16384) — context improved per-attempt
+  accuracy (more attempts AND a higher share of clean ones), not merely the
+  refusal/missing mix.
+- *1.5b, freeze rows → 16384:* the only baseline is the UNPINNED 4k freeze
+  triple (0.1625/0.15/0.15, mean 0.1542). Arm 0.1875 is +2.7 questions on
+  the mean; pairwise flips 9G/7L, 8G/5L, 9G/6L; vs the freeze per-question
+  majority verdict 9 gains / 5 losses (exact two-sided sign test
+  p = 0.424). Verdict: **no detectable
+  change for 1.5b** — "context helps" is shown for 3b only.
+- *Attempt-level, 1.5b:* 15/55 = 27.3% vs freeze rows 0.206/0.179/0.182
+  (mean 0.189) — direction positive, same flip-noise caveat, no claim.
+
+**Size ordering: none, either way.** At 4k the point estimates ordered
+1.5b (0.1542) > 3b (0.0708); at 16384 the order reverses, 3b (0.2250) ≥
+1.5b (0.1875). Wilson 95% CIs overlap (3b @16384 [0.147, 0.328]; 1.5b
+@16384 [0.117, 0.287]), so no size ordering is claimed in either
+direction; §4 reading (b) is retired as a 4k-truncation artifact.
+
+**n=1 disclosure.** The plan specified n=3 reps per config; each arm here
+is a single run. For 3b the paired sign test is run-level evidence, but
+single-run verdicts ignore run-to-run flips: identical-config 4k re-runs
+flipped 16–24/80 in the freeze triples, and the P1 confirm run vs the
+pinned control (both 3b @4k) still flipped 2/2 with the same pass count
+(4/80). Single-run point estimates therefore carry the same ±2.5–5 pp
+noise band as §4 states, and the 1.5b row is deliberately worded as "no
+detectable change" rather than a gain.
+
+**Control validity.** The pinned control (0.0500, Wilson 95%
+[0.020, 0.122]) reproduces the pre-pin 4k band (freeze 3b rows
+0.0625–0.075, P1 confirm 0.0500): pinning Ollama at 0.40.13 did not shift
+the 4k row, so the 4k→16384 contrast is attributable to context length
+alone.
+
+**Provenance and citation.** All four runs' grounding reports are
+committed on main by data-only PR #78
+(`benchmarks/results/run-<id>/grounding/paper_run.json`,
+`paper_report.json`, `ollama_env.json`; the P1 confirm run predates the
+env-provenance step, so it ships paper_run/paper_report only). The
+snapshot-job dependency that caused the grounding data to be missing from
+merged snapshots is fixed by #79. Ollama 0.40.13; model config digests
+357c53fb659c (3b), 65ec06548149 (1.5b).
 
 ## 5. Gemini free-tier reference row (by design, IN PROGRESS)
 
@@ -420,6 +518,26 @@ Findings:
   7b probe report was committed to the data branch
   (`benchmarks/results/run-41206910830/grounding-probe/
   paper_report_7b_probe.json`).
+- Grounding-snapshot gap (found 2026-11-02, fixed): the results-snapshot
+  job declared `needs: [perf-arabic, seg-araseg]` and therefore snapshotted
+  ~13 min into every dispatch, hours before grounding finished — the merged
+  snapshots of the P1 confirm run and all three F8 arms contained no
+  grounding JSONs, and their figures existed only as expiring Actions
+  artifacts. Recovered by data-only PR #78 (all four runs' grounding
+  reports committed, manifests regenerated); harness fixed by #79 (snapshot
+  now waits for grounding and hard-fails if run_grounding=true yet the
+  grounding dir is absent).
+- Engine-vs-freeze qualifier (post-freeze PR #71): "engine identical to the
+  freeze/tag" claims now read "engine code identical, plus the
+  `engine/pyproject.toml` mypy override block of #71" — 19 lines of
+  type-checker config, the ONLY engine diff between main and the tag
+  `5a5e43f`, with no runtime effect. The F8 arm runs themselves used
+  tag-identical engine code (their commits differ from the tag only in
+  `.github/workflows/benchmarks.yml`).
+- Auto-fix bot suspended for the remainder of the measurement window (#80):
+  the weekly ruff bot is a no-op while `.github/AUTO_FIX_SUSPENDED` exists,
+  and its ruff is pinned to the CI build (0.17.3) — no engine-touching
+  auto-fix PRs can be opened before the measurements are archived.
 - Freeze/gold: gold-diff gate GREEN at ee42bfa (runs 41163039515 and
   41173011756, clean=true, diffs=[]). Snapshot branches pushed for every
   completed run; the workflow's automatic snapshot-PR step silently failed
@@ -479,6 +597,10 @@ Per-row provenance: which commit produced each measured row above.
 | Scale zipf re-run, F4 (§7) | `bench/scale-1` @ `9125bbb` | run 41226973126 (both legs SUCCESS) |
 | KWIC depth-1000 failure evidence (§7) | `bench/scale-1` @ `c02b3c7` | run 41202901041 (job "Scale (1000000 tokens)" FAILED); local repro `scripts/kwic_repro.py` @ `9125bbb` |
 | F7 truncation measurement (§4) | offline, engine code @ `ee42bfa` | 2026-11-01; real Qwen2.5 tokenizer + frozen prompt construction; per-run boundaries UNVERIFIED |
+| F8 P1 confirm run, 3b @4k (§4) | tag `5a5e43f` | run 41296669898; grounding data committed by #78 |
+| F8 3b @4k pinned control (§4) | `110e6c4` (= tag + benchmarks.yml only) | run 41306198564; Ollama 0.40.13 pinned, digest 357c53fb659c |
+| F8 1.5b @16384 arm (§4) | `4322ae0` (= tag + benchmarks.yml only) | run 41306208341; OLLAMA_CONTEXT_LENGTH=16384, digest 65ec06548149 |
+| F8 3b @16384 arm (§4) | `ef983d6` (= tag + benchmarks.yml only) | run 41306203484; OLLAMA_CONTEXT_LENGTH=16384, digest 357c53fb659c |
 
 **v2.0.2 release statement (MODE A).** Tag `v2.0.2` =
 `5a5e43fa0c9e6a903dc06f79579b732a9f666bca`. Engine code in v2.0.2 differs
@@ -486,8 +608,12 @@ from the frozen benchmark commit `ee42bfa` ONLY by version constants
 (`engine/app/__init__.py` `__version__`, `engine/pyproject.toml` `version`)
 — verified by `git diff ee42bfa -- engine ':!engine/eval'` at the tag, plus
 the eval-module typing cleanup of #63 (which touches `engine/eval` only and
-changes no measured value). Every number in this report was therefore
-measured by the code v2.0.2 ships, except where a row names a bench-branch
+changes no measured value). Post-release caveat: main additionally carries
+the `engine/pyproject.toml` mypy override block of #71 (type-checker config
+only, no runtime effect) — every post-freeze engine-identity claim is
+"identical, plus that mypy config". Every number in this report was
+therefore measured by code whose runtime behaviour the v2.0.2 tag ships,
+except where a row names a bench-branch
 commit (`76454a0`, `9125bbb`, `b592cdc`, `62af13c`) — those are
 `engine/eval`/`scripts` additions that do not alter engine semantics, and
 each keeps the freeze gate empty.
