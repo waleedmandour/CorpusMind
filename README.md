@@ -2,7 +2,7 @@
 
 [![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.23216073-blue)](https://doi.org/10.5281/zenodo.23216073)
 [![License: AGPL-3.0-only](https://img.shields.io/badge/License-AGPL--3.0--only-blue.svg)](https://www.gnu.org/licenses/agpl-3.0.html)
-[![GitHub release](https://img.shields.io/badge/release-v2.0.1-blue)](https://github.com/waleedmandour/CorpusMind/releases)
+[![GitHub release](https://img.shields.io/badge/release-v2.0.2-blue)](https://github.com/waleedmandour/CorpusMind/releases)
 [![CI](https://github.com/waleedmandour/CorpusMind/actions/workflows/ci.yml/badge.svg)](https://github.com/waleedmandour/CorpusMind/actions/workflows/ci.yml)
 
 > A local-first, AI-native research environment for corpus linguistics and multimodal discourse analysis.
@@ -34,9 +34,9 @@ run entirely on the researcher's own machine.
 
 ## Status
 
-**Current release: v2.0.1** — the text suite is fully functional.
+**Current release: v2.0.2** — the text suite is fully functional.
 
-**Language support (v2.0.1):**
+**Language support (v2.0.2):**
 
 | Language | Script | Coverage |
 | --- | --- | --- |
@@ -145,7 +145,7 @@ Health check:
 
 ```bash
 curl http://127.0.0.1:8765/api/v1/health
-# {"status":"ok","engine":"corpusmind-engine","version":"2.0.1"}
+# {"status":"ok","engine":"corpusmind-engine","version":"2.0.2"}
 ```
 
 ### 2. Run the web frontend
@@ -416,7 +416,7 @@ If you use CorpusMind in your research, please cite it as:
 
 > Mandour, W., & Ibrahim, W. (2026). *CorpusMind: A local-first, AI-native
 > research environment for corpus linguistics and multimodal discourse
-> analysis* (Version 2.0.1) [Computer software]. Zenodo.
+> analysis* (Version 2.0.2) [Computer software]. Zenodo.
 > https://doi.org/10.5281/zenodo.23216073
 >
 > Dr. Waleed Mandour, Sultan Qaboos University, ORCID: 0000-0002-9262-5993
@@ -429,9 +429,9 @@ If you use CorpusMind in your research, please cite it as:
   author       = {Mandour, Waleed and Ibrahim, Wesam},
   title        = {{CorpusMind: Local-first, AI-native research environment
                    for corpus linguistics and multimodal discourse analysis}},
-  month        = oct,
+  month        = nov,
   year         = 2026,
-  version      = {2.0.1},
+  version      = {2.0.2},
   publisher    = {Zenodo},
   doi          = {10.5281/zenodo.23216073},
   url          = {https://doi.org/10.5281/zenodo.23216073}
