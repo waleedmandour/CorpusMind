@@ -1,0 +1,85 @@
+{
+ "n_flips": 16,
+ "detail": {
+  "G-018": [
+   "HALLUCINATED",
+   "MISSING_NUMBER",
+   "HALLUCINATED"
+  ],
+  "G-032": [
+   "MISSING_NUMBER",
+   "MISSING_NUMBER",
+   "HALLUCINATED"
+  ],
+  "G-034": [
+   "HALLUCINATED",
+   "PASS",
+   "HALLUCINATED"
+  ],
+  "G-038": [
+   "MISSING_NUMBER",
+   "MISSING_NUMBER",
+   "HALLUCINATED"
+  ],
+  "G-041": [
+   "HALLUCINATED",
+   "MISSING_NUMBER",
+   "HALLUCINATED"
+  ],
+  "G-043": [
+   "PASS",
+   "HALLUCINATED",
+   "HALLUCINATED"
+  ],
+  "G-046": [
+   "MISSING_NUMBER",
+   "HALLUCINATED",
+   "PASS"
+  ],
+  "G-053": [
+   "MISSING_NUMBER",
+   "HALLUCINATED",
+   "HALLUCINATED"
+  ],
+  "G-057": [
+   "MISSING_NUMBER",
+   "HALLUCINATED",
+   "MISSING_NUMBER"
+  ],
+  "G-059": [
+   "MISSING_NUMBER",
+   "HALLUCINATED",
+   "MISSING_NUMBER"
+  ],
+  "G-063": [
+   "MISSING_NUMBER",
+   "HALLUCINATED",
+   "HALLUCINATED"
+  ],
+  "G-064": [
+   "HALLUCINATED",
+   "HALLUCINATED",
+   "MISSING_NUMBER"
+  ],
+  "G-065": [
+   "MISSING_NUMBER",
+   "HALLUCINATED",
+   "MISSING_NUMBER"
+  ],
+  "G-071": [
+   "PASS",
+   "MISSING_NUMBER",
+   "MISSING_NUMBER"
+  ],
+  "G-072": [
+   "HALLUCINATED",
+   "HALLUCINATED",
+   "MISSING_NUMBER"
+  ],
+  "G-080": [
+   "TRAP_FAILURE",
+   "HALLUCINATED",
+   "HALLUCINATED"
+  ]
+ }
+}
