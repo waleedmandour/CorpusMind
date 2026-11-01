@@ -6,6 +6,14 @@
 #   If anything changed, it force-pushes its OWN scratch branch
 #   chore/auto-fix and opens/updates a PR. Merging stays with the owner.
 #
+# SUSPENSION SWITCH (measurement freeze)
+#   While .github/AUTO_FIX_SUSPENDED exists, scheduled/dispatched runs are a
+#   no-op: the guard step short-circuits every working step. Owner rule
+#   (2026-11-02): no auto-fix PR touching engine/ may even be opened, let
+#   alone merged, until the in-flight benchmark measurements are archived —
+#   the bot's only scope IS engine/, so it is suspended wholesale. Delete the
+#   marker file to re-enable.
+#
 # WHAT IT DELIBERATELY DOES NOT DO
 #   - never pushes to main; the only ref it writes is chore/auto-fix
 #   - never runs `ruff format` (the codebase is not formatter-adopted:
@@ -32,6 +40,9 @@ on:
     # Mondays 05:30 UTC = 09:30 Asia/Muscat
     - cron: "30 5 * * 1"
 
+# permissions are the minimum that can work: contents:write to force-push
+# its own scratch branch, pull-requests:write to open/update the review PR.
+# No other scopes (issues, actions, packages...) are granted.
 permissions:
   contents: write
   pull-requests: write
@@ -48,26 +59,44 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Measurement-freeze guard
+        id: guard
+        run: |
+          if [ -f .github/AUTO_FIX_SUSPENDED ]; then
+            echo "suspended=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::auto-fix bot SUSPENDED — .github/AUTO_FIX_SUSPENDED is present (benchmark measurement freeze). No lint fixes, no PR."
+          fi
+
       - name: Set up Python 3.12
+        if: steps.guard.outputs.suspended != 'true'
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - name: Install ruff (mirrors CI — floored, not pinned)
-        run: python -m pip install --upgrade "ruff>=0.7.0"
+      - name: Install ruff (EXACT pin — must match the version CI resolves)
+        if: steps.guard.outputs.suspended != 'true'
+        # The old `--upgrade "ruff>=0.7.0"` re-floated the bot to the newest
+        # ruff every Monday: a fresh ruff release can add rule classes, and
+        # the bot would then open lint PRs against engine/ mid-measurement.
+        # CI resolves ruff-0.17.3 today (engine dev extra floor `>=0.7.0`,
+        # run 41323255957). Pin the bot to the same build and bump it
+        # DELIBERATELY, together with a CI re-check — never automatically.
+        run: python -m pip install "ruff==0.17.3"
 
       - name: ruff check --fix (engine/, same gate as ci.yml)
+        if: steps.guard.outputs.suspended != 'true'
         working-directory: engine
         # ruff exits 1 when unfixable violations remain — that is a human
         # review item, not a bot failure; the applied fixes stay on disk.
         run: ruff check . --fix || true
 
       - name: Remaining violations (informational)
-        if: always()
+        if: steps.guard.outputs.suspended != 'true'
         working-directory: engine
         run: ruff check . --statistics || true
 
       - name: Detect changes
+        if: steps.guard.outputs.suspended != 'true'
         id: diff
         run: |
           if [ -n "$(git status --porcelain)" ]; then
@@ -75,7 +104,7 @@ jobs:
           fi
 
       - name: Commit and open/update review PR
-        if: steps.diff.outputs.changed == 'true'
+        if: steps.diff.outputs.changed == 'true' && steps.guard.outputs.suspended != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
@@ -114,7 +143,9 @@ jobs:
           {
             echo "### Auto-fix bot"
             echo ""
-            if [ "${{ steps.diff.outputs.changed }}" = "true" ]; then
+            if [ -f .github/AUTO_FIX_SUSPENDED ]; then
+              echo ":pause_button: **SUSPENDED** — \`.github/AUTO_FIX_SUSPENDED\` is present (benchmark measurement freeze, owner rule 2026-11-02): no auto-fix PRs touching \`engine/\` until the measurements are archived. Delete the marker file to re-enable."
+            elif [ "${{ steps.diff.outputs.changed }}" = "true" ]; then
               echo ":construction: Fixes applied → PR from \`chore/auto-fix\` (merge is a human decision)."
             else
               echo ":white_check_mark: Engine is ruff-clean — nothing to fix."

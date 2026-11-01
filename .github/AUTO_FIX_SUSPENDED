@@ -1,0 +1,11 @@
+SUSPENDED — benchmark measurement freeze (set 2026-11-02).
+
+While this file exists, the auto-fix bot (weekly ruff run) is a no-op: it
+applies no fixes and opens/updates no PRs. Rationale: the bot's only scope
+is engine/, and the owner rule of 2026-11-02 is that no auto-fix PR touching
+engine/ may be merged before the in-flight benchmark measurements (pinned
+Ollama arms, Tier B) are archived in the report and on Zenodo.
+
+To re-enable: delete this file on main. The next scheduled run
+(Mondays 05:30 UTC) or a manual dispatch then resumes lint-fix PRs from
+chore/auto-fix, with ruff pinned to the CI-resolved build (see auto-fix.yml).
