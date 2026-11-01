@@ -609,9 +609,13 @@ from the frozen benchmark commit `ee42bfa` ONLY by version constants
 — verified by `git diff ee42bfa -- engine ':!engine/eval'` at the tag, plus
 the eval-module typing cleanup of #63 (which touches `engine/eval` only and
 changes no measured value). Post-release caveat: main additionally carries
-the `engine/pyproject.toml` mypy override block of #71 (type-checker config
-only, no runtime effect) — every post-freeze engine-identity claim is
-"identical, plus that mypy config". Every number in this report was
+#71's typing-only changes — the `engine/pyproject.toml` mypy override block
+plus the removal of five now-redundant inline `# type: ignore` comments in
+`engine/eval/calibration_sentence.py` (2) and `engine/eval/parity_stats.py`
+(3) (`git diff 5a5e43f..main -- engine/` shows exactly these three files;
+type-checker config and comments only, no runtime effect) — every
+post-freeze engine-identity claim is "identical, plus those typing-only
+changes". Every number in this report was
 therefore measured by code whose runtime behaviour the v2.0.2 tag ships,
 except where a row names a bench-branch
 commit (`76454a0`, `9125bbb`, `b592cdc`, `62af13c`) — those are
