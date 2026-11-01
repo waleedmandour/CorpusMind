@@ -205,6 +205,15 @@ approval-requested follow-ups in docs/BENCHMARK_REPORT.md §7 finding 4):
   `scripts/kwic_repro.py`). The phrase path already chunks at 400
   (~lines 426–440); the word-level path should copy that batching. Pure
   query-batching change, no result semantics change.
+- **Ollama `num_ctx` (F7, added 2026-11-01).** `OllamaProvider`'s chat
+  options never set `num_ctx`, so grounding prompts ride Ollama's
+  VRAM-bucketed default context (4k for <24 GiB VRAM — the CPU-only CI
+  runner). The grounding turn-1 prompt measures ~5,221 Qwen2.5 tokens (tool
+  schemas alone are 4,095), so the local benchmark rows in
+  docs/BENCHMARK_REPORT.md §4 were measured with the prompt head-truncated
+  (see §4 F7 for the measurement and the disclosure; the rows' triple
+  statistics remain internally valid). Fix = env-driven `options.num_ctx`;
+  re-running the local rows under a raised context is the maintainer's call.
 
 ## [2.0.1] — 2026-10-30
 
