@@ -1,0 +1,124 @@
+# Auto-fix bot (lint/format fixes that commit to a review PR).
+#
+# WHAT IT DOES
+#   Runs the exact lint gate CI already enforces — `ruff check .` inside
+#   engine/ (ci.yml engine job: working-directory engine) — in --fix mode.
+#   If anything changed, it force-pushes its OWN scratch branch
+#   chore/auto-fix and opens/updates a PR. Merging stays with the owner.
+#
+# WHAT IT DELIBERATELY DOES NOT DO
+#   - never pushes to main; the only ref it writes is chore/auto-fix
+#   - never runs `ruff format` (the codebase is not formatter-adopted:
+#     a dry run on main @ 34542be showed 174/203 engine files would be
+#     reformatted — adopting the formatter is a separate human decision)
+#   - no eslint pass: `npm run lint` is currently unusable (eslint 9 with
+#     no flat config in web/ — CI never ran it); adding a flat config is
+#     a separate decision
+#   - no push/PR triggers → no loops, no surprise runs
+#
+# KNOWN GITHUB LIMITATION (documented, not fixable without a PAT):
+#   PRs created with GITHUB_TOKEN do not trigger CI runs. Auto-fix PRs are
+#   lint-class only (imports, unused code, etc.) and are reviewed before
+#   merge; to force CI on one, push any commit to its branch or close+reopen.
+#
+# Identity: commits are authored by github-actions[bot], which is on the
+# identity-guard allowlist (PR #69) — the guard stays silent for this bot.
+
+name: Auto-fix (ruff bot)
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    # Mondays 05:30 UTC = 09:30 Asia/Muscat
+    - cron: "30 5 * * 1"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: auto-fix
+  cancel-in-progress: false
+
+jobs:
+  ruff-autofix:
+    name: ruff --fix (engine) → review PR
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install ruff (mirrors CI: floored, not pinned)
+        run: python -m pip install --upgrade "ruff>=0.7.0"
+
+      - name: ruff check --fix (engine/, same gate as ci.yml)
+        working-directory: engine
+        # ruff exits 1 when unfixable violations remain — that is a human
+        # review item, not a bot failure; the applied fixes stay on disk.
+        run: ruff check . --fix || true
+
+      - name: Remaining violations (informational)
+        if: always()
+        working-directory: engine
+        run: ruff check . --statistics || true
+
+      - name: Detect changes
+        id: diff
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Commit and open/update review PR
+        if: steps.diff.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -B chore/auto-fix
+          git commit -am "chore(auto-fix): ruff lint fixes (engine)
+
+          Applied by the auto-fix bot (ruff check --fix, engine/ — the same
+          gate ci.yml enforces). Lint-class fixes only; no formatter pass,
+          no engine behavior changes intended. Review before merge.
+
+          Run: ${RUN_URL}"
+          git push --force origin chore/auto-fix
+
+          EXISTING=$(gh pr list --head chore/auto-fix --state open --json number --jq '.[0].number' || true)
+          if [ -n "$EXISTING" ]; then
+            echo "Updated existing auto-fix PR #$EXISTING (branch force-pushed)."
+          else
+            gh pr create \
+              --base main \
+              --head chore/auto-fix \
+              --title "chore(auto-fix): ruff lint fixes (engine)" \
+              --body "Automated lint fixes from the auto-fix bot (\`ruff check --fix\` inside \`engine/\` — the exact gate ci.yml enforces).
+
+          - Lint-class fixes only (imports, unused code, typos in flags). No \`ruff format\` pass, no intentional behavior changes.
+          - Note: GitHub does not run CI on PRs created with GITHUB_TOKEN; review the diff and merge, or push an empty commit to trigger checks.
+          - Identity: github-actions[bot] (identity-guard allowlisted)."
+            echo "Opened new auto-fix PR."
+          fi
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### Auto-fix bot"
+            echo ""
+            if [ "${{ steps.diff.outputs.changed }}" = "true" ]; then
+              echo ":construction: Fixes applied → PR from \`chore/auto-fix\` (merge is a human decision)."
+            else
+              echo ":white_check_mark: Engine is ruff-clean — nothing to fix."
+            fi
+            echo ""
+            echo "Scope: \`ruff check --fix\` in \`engine/\` only (mirrors ci.yml). No formatter adoption, no eslint (no flat config exists yet)."
+          } >> "$GITHUB_STEP_SUMMARY"
