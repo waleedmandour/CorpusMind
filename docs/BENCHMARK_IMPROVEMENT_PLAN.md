@@ -31,13 +31,18 @@ earlier "corrected 64.8 / 52.9" row and the 0.107 figure were evaluation artifac
 are retired; the manuscript should cite the canonical snapshot (run 40970859593) plus
 the #39 CI run.
 
-Reading: with Tier-1 landed, the rule splitter is now **above every classical
-baseline on both conditions** (Punkt 65.2/52.3, SpaCy 67.3/54.3, PySBD 63.1/52.1,
-Ersatz 64.7/51.6), within noise of SaT on PA (66.9) and ~6 points under SaT on NP
-(60.9) — respectable for a zero-dependency, instant, offline component. The gap that
+Reading: with Tier-1 landed, the rule splitter is **on par with the best
+classical baseline on PA (67.05 vs the spaCy sentencizer's 67.29 — a 0.24-point
+gap, within run-to-run evaluator noise) and above the classical baselines on
+NP (54.69 vs spaCy 54.31, PySBD 52.1, Punkt 52.3, Ersatz 51.6)**. On PA it
+also edges the neural SaT (66.9); on NP it stays ~6 points under SaT (60.9)
+— respectable for a zero-dependency, instant, offline component. The gap that
 matters is to the learned models (95.6), and that gap has a documented, licence-clean
 path (§3) — subject to the licence caveat in the data statement: the dataset cards
 state MIT, while the paper describes BAREC-derived material under CC BY-SA 4.0.
+(Correction 2026-10-31, F5: the previous wording "above every classical
+baseline on both conditions" overclaimed PA, where the measured 67.05 sits
+0.24 under the spaCy sentencizer and level with ENS_Pnx+Lexical 67.3.)
 
 ## 2. Tier 1 — principled rule fixes (LANDED; measured, not estimated)
 
@@ -126,9 +131,11 @@ grounding score by construction (honest `no_tool` traps):
 - No bundled-reference keyness tool; no readability tool.
 - Then re-freeze the gold (a reviewable event per the harness discipline) and re-run
   the battery — **primary row: a local Ollama model (no provider quota, fits the
-  local-first pitch); reference row: Gemini with a PAID key** (the free tier's 20
-  requests/day for gemini-3.8-flash cannot cover the ~160+ calls the full bank
-  needs).
+  local-first pitch); reference row: Gemini 3.8-flash on the FREE tier
+  (by design)** — the free tier's 20 requests/day for gemini-3.8-flash cannot
+  cover the ~160+ calls the full bank needs in one day, so the reference row is
+  filled by a multi-day drip crawl (morning slice ≤16 ids + drip ≤4 ids, quota
+  reset midnight Pacific) rather than a paid key.
 
 ## 6. What NOT to chase
 
