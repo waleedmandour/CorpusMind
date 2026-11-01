@@ -602,3 +602,40 @@ work order (annotated tag, no force, no deletion).
   F7 disclosure on bench/local-results (c33ac35, #59) and (b) report §4/§7/
   §8 updates on bench/t6-report (35e9509, #57). If the user meant NEW
   full-80 7b data from their own run, it was not in the message.
+
+## 14. v2.0.2 RELEASED (2026-11-01, same session as §13)
+
+- Merge chain EXECUTED with green CI before each merge: #50 → #51 → #52 →
+  #53 → #54 → #55 → #56 → #58 → #61 → #59 → #60 → #57 (LAST). #60 needed two
+  pre-merge fixes (ruff 0.17 B023/I001, commit a664a81) and main needed the
+  follow-up mypy-strict PR #63 (eval 0 -> 13 -> 0 locally; non-blocking job).
+- release/2.0.2 (#62) merged main twice; gates re-verified after each: gold
+  sha256 480f5230…; benchmarks/results + manifest 0 lines vs main;
+  engine diff vs ee42bfa = version constants only.
+- PR #62 merged; ANNOTATED tag v2.0.2 created on merge commit 5a5e43f
+  (no force, no deletions). Release run 41273493410 SUCCESS: preflight +
+  test-gate green, 4 platform builds green, checksums job green.
+- Release 430370346 published; PRERELEASE=TRUE set by release ID (work-order
+  step 8; do NOT promote to stable until the user says so). Assets (9):
+  nsis exe + msi, arm64+x64 dmg, deb + AppImage, web zip, EN guide PDF,
+  SHA256SUMS.txt (AR guide not a release asset — matches the v2.0.1
+  pattern; it ships in the repo / download/).
+- Checksums verified: guide PDF, web zip, amd64 .deb match SHA256SUMS byte
+  for byte; the other 6 assets UNVERIFIED byte-level (CI-generated from the
+  uploaded set). Bundled engine 2.0.2: cited from the release smoke-test +
+  test-gate jobs (green) and the committed version surfaces; direct
+  installer introspection UNVERIFIED.
+- Zenodo minted version DOI 10.5281/zenodo.23852351 (concept 23216073
+  unchanged). Docs PRs open: #64 (README version-DOI row), #65 (report §9
+  measured-at SHAs + release statement). NOT merged by the bot.
+- Step 12 PROPOSAL (dry run + manifest only, NOTHING applied):
+  scripts/retire_release_assets.py has v2.0.0/v2.0.1 in its hard-coded
+  KEEP_TAGS, so it will never retire them as-is; while v2.0.2 is
+  prerelease-flagged the tool's default plan targets V2.0.2's own
+  installers — do NOT run --apply before promoting v2.0.2 to stable.
+  Proposed change (user approval): drop v2.0.0/v2.0.1 from KEEP_TAGS, then
+  dry-run + --apply; README download links -> releases/latest (resolves to
+  the latest STABLE — i.e. v2.0.1 until promotion).
+- F7/7b recap: F7 CONFIRMED (§13); 7b probe scored (0/5 passable); runbook
+  fixed. F-order is DONE; the three post-freeze engine fixes (MTLD, KWIC
+  or_(), num_ctx) remain PROPOSED, NOT MADE.
