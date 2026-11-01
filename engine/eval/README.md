@@ -160,19 +160,39 @@ NP punkt 52.32 vs 52.3, pysbd 52.05 vs 52.1, spacy 54.31 vs 54.3.
   scripted stub provider (perfect assistant → 100% pass; corrupted answer →
   HALLUCINATED/WRONG classified).
 
-## 4. Running the qwen2.5:7b local row manually (one command)
+## 4. Running the qwen2.5:7b local row manually
 
 The 7b row is **pending user-run**: the CI runner cap is 330 min and the
 timing probe (run 41206910830, 5 questions G-001..G-005, 2026-10-31) measured
 a mean of 271.5 s/question, projecting to **362 min for the full 80** — it
-does not fit. Run it on any machine with Ollama and ≥8 GB free RAM:
+does not fit. Run it on any machine with Ollama and ≥8 GB free RAM. No API
+key and no `GH_TOKEN` are needed: the harness reads its settings from the
+`CORPUSMIND_*` environment only, and a local Ollama requires neither.
 
-    GH_TOKEN=<token> python -m eval.run_grounding \
-        --provider ollama --model qwen2.5:7b --pause 0 \
-        --timeout 600 --chat-deadline 600 --out paper_run.json \
-        && python -m eval.score --run paper_run.json --out paper_report.json
+```bash
+cd engine
+# Per-question chat deadline. The probe answers took 200-332 s, so the
+# 300 s default (CORPUSMIND_CHAT_TIMEOUT_S, what CI maps its
+# grounding_chat_deadline_s input to) would abort the slowest answers.
+export CORPUSMIND_CHAT_TIMEOUT_S=600
 
-(Defaults: full 80-question bank against the frozen gold. Add
-`--grounding-only "G-001 G-002"` to smoke-test first. Expected duration
-~6 hours on a CPU-only box; the probe verdicts were MISSING_NUMBER×2,
-HALLUCINATED×2, TRAP_FAILURE×1 on G-001..G-005 — diagnostic only, not a row.)
+# Full bank (default; ~6 h CPU-only). Smoke-test first by adding:
+#   --only G-001 G-002 G-003 G-004 G-005
+python -m eval.run_grounding \
+    --provider ollama --model qwen2.5:7b --pause 0 \
+    --timeout 600 \
+    --out eval/runs/paper_run_7b.json
+
+python -m eval.score eval/runs/paper_run_7b.json \
+    --out eval/runs/paper_report_7b.json --verbose
+```
+
+Flag notes (verified against `eval/run_grounding.py` / `eval/score.py`
+argparse): `--only` takes SPACE-SEPARATED question ids; `--timeout` is the
+harness per-question HTTP timeout (float); `--rate-retries 4` is what CI
+passes for cloud providers and is unnecessary for a local Ollama; scoring
+takes the run JSON as a POSITIONAL argument. There is no `--chat-deadline`
+flag — the chat deadline is the `CORPUSMIND_CHAT_TIMEOUT_S` environment
+variable above. The probe verdicts (MISSING_NUMBER×2, HALLUCINATED×2,
+TRAP_FAILURE×1 on G-001..G-005) were diagnostic only, not a row.
+
