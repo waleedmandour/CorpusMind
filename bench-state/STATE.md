@@ -567,3 +567,38 @@ fast-forward; no force, no tags, no releases. No frozen ref moved.
   #60 (eval F2/F3) → #61 (scale F4) → #57 LAST (report, lands with its
   artifacts/tooling). Rationale: data snapshots first, then tooling that
   interprets them, report last so citations resolve.
+
+## 13. Release-eve session (2026-11-01) — v2.0.2, merges authorized, F7 CONFIRMED
+
+User authorized the merge order (this session): #50–#56, #58, #59, #60, #61,
+then #57 LAST; then bring release/2.0.2 (#62) up to date, re-run the three
+gates + CI, add the 7b data, and tag. Tag/release discipline per the release
+work order (annotated tag, no force, no deletion).
+
+- F7 CONFIRMED (2026-11-01, offline measurement on the sandbox machine):
+  the grounding turn-1 prompt = ~5,221 Qwen2.5 tokens (SYSTEM_PROMPT 1,029 +
+  corpus hint + context block + tool schemas 4,095 + question ≤36); pass 2
+  with 3 summarized tool results ~7,576. Ollama default context = 4k tokens
+  for <24 GiB VRAM (docs.ollama.com/context-length, 2026-10-27); CI runner
+  is CPU-only (log: "No NVIDIA/AMD GPU detected"; client 0.40.13) ⇒ 4k
+  default applied ⇒ EVERY CI local grounding run (1.5b ×3, 3b ×3, 7b probe)
+  served truncated prompts. Rows = capability+truncation confound; triple
+  stats remain internally valid. Re-run decision = maintainer's. Per-run
+  truncation boundaries UNVERIFIED (server logs not archived). Disclosures:
+  BENCHMARK_REPORT.md §4 F7 + §7 finding 4 (num_ctx fix = third
+  post-freeze proposal); engine/eval/README.md §4 runbook now sets
+  OLLAMA_CONTEXT_LENGTH=8192; data-branch README records it.
+- 7b probe SCORED (offline vs frozen gold): G-001..G-005 → 0 PASS, 2
+  MISSING_NUMBER, 2 HALLUCINATED, 1 TRAP_FAILURE. Scored report committed
+  to bench/local-results (paper_report_7b_probe.json) with the NO_ANSWER
+  caveat (aggregates over 80 include never-asked questions).
+- Runbook fixed per user report (flags --chat-deadline/--grounding-only do
+  not exist; GH_TOKEN never read): rewritten against the real argparse
+  (bench/extra-1 4fda1a9 + cd9f96c). NOTE: the user's message referenced
+  "Section 2 below can replace it" and "Step 6 below tests it cheaply" —
+  those numbered sections did not arrive in the delivered message; both were
+  reconstructed from the frozen code and labeled as such in the final reply.
+- 7b "data PR (sections 2 and 3)": implemented as (a) scored probe report +
+  F7 disclosure on bench/local-results (c33ac35, #59) and (b) report §4/§7/
+  §8 updates on bench/t6-report (35e9509, #57). If the user meant NEW
+  full-80 7b data from their own run, it was not in the message.
