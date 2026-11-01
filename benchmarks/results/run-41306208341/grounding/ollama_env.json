@@ -1,0 +1,12 @@
+{
+  "utc": "2026-11-01T12:23:39.736879+00:00",
+  "ollama_version": "ollama version is 0.40.13",
+  "install_pin": "0.40.13",
+  "model": "qwen2.5:1.5b",
+  "config_digest": "65ec06548149",
+  "config_digest_source": "ollama ls (short id)",
+  "context": {
+    "OLLAMA_CONTEXT_LENGTH_env": 16384,
+    "note": "v2.0.2 engine does not expose num_ctx; the server-side default governs truncation (OLLAMA_CONTEXT_LENGTH here, else the Ollama build default)"
+  }
+}
