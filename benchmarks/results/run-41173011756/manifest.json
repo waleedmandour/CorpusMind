@@ -1,0 +1,58 @@
+{
+ "run_url": "https://github.com/waleedmandour/CorpusMind/actions/runs/41173011756",
+ "commit": "ee42bfab72291072b191ebb4c7d77ec03bb1f94d",
+ "utc": "2026-10-31T05:42:23+00:00",
+ "runner": {
+  "platform": "Linux-7.0.0-1017-azure-x86_64-with-glibc2.39",
+  "cpu_count": 4,
+  "python": "3.12.15",
+  "camel_tools": "1.6.0"
+ },
+ "files": [
+  {
+   "path": "gold-diff/gold_diff.json",
+   "sha256": "8734b490f368249bfaaf73e3aae03b76b52da951f1918ae21f96188cf80c1c05",
+   "bytes": 4617
+  },
+  {
+   "path": "perf-arabic/perf_arabic.json",
+   "sha256": "d9f6c557217f4945a63d3a93441facdbee91040c9a43ada83e700fa74c980c56",
+   "bytes": 4963
+  },
+  {
+   "path": "seg-araseg/NP_dev.meta.json",
+   "sha256": "c563020194d7d759380110a89ac6ba4754640c2d986bf7116e034097eaedc569",
+   "bytes": 492
+  },
+  {
+   "path": "seg-araseg/PA_dev.meta.json",
+   "sha256": "806131109e78c8e4d91b1551d4893a2d9cd13d23229f0a7ceb6ccfb235a96e7b",
+   "bytes": 492
+  },
+  {
+   "path": "seg-araseg/araseg_sha256.txt",
+   "sha256": "13d3db5433260484f8434422e04edb1755019fa6b4876f09dc1b86c0466e74cf",
+   "bytes": 162
+  },
+  {
+   "path": "seg-araseg/seg_downstream_NP.json",
+   "sha256": "bee0d5d5398107c95d73d4bf8376fa0f0b6e04e879683bd4428cd2577d16b48e",
+   "bytes": 13933
+  },
+  {
+   "path": "seg-araseg/seg_downstream_PA.json",
+   "sha256": "f720a86f583934547c926ae1c0495026d21857a5e38361a25f2bc0a3510fa4bb",
+   "bytes": 13907
+  },
+  {
+   "path": "seg-araseg/seg_intrinsic_NP.json",
+   "sha256": "08bdc7e552ac51cad2c10d6eafde194489eb4972f25ac0eb16688591d5a5bf5d",
+   "bytes": 40359
+  },
+  {
+   "path": "seg-araseg/seg_intrinsic_PA.json",
+   "sha256": "28b41dba21f231d45be5864002a2d55d0e01df49934e530ac5c86a17f1bad188",
+   "bytes": 40164
+  }
+ ]
+}
