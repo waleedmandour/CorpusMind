@@ -1,0 +1,128 @@
+{
+ "meta": {
+  "created_utc": "2026-10-31T09:17:36+00:00",
+  "provider": "cloud",
+  "model": "gemini-3.8-flash",
+  "question_count": 16,
+  "pause_s": 2.0,
+  "rate_retries": 4,
+  "cloud_reasoning_effort": "low",
+  "cloud_chat_timeout_s": 240.0,
+  "chat_deadline_s": 600.0,
+  "harness_timeout_s": 600.0
+ },
+ "results": [
+  {
+   "id": "G-003",
+   "answer": "",
+   "http_status": 504,
+   "error": "{\"detail\":\"Assistant turn exceeded the 600s deadline. Retry with a simpler query, fewer tool calls, or switch to a smaller model. If this happens often, set CORPUSMIND_CHAT_TIMEOUT_S to raise the budget.\",\"error\":\"chat_timeout\",\"timeout_s\":600.0}",
+   "wall_ms": 600258
+  },
+  {
+   "id": "G-005",
+   "answer": "",
+   "http_status": 502,
+   "error": "{\"detail\":\"Model call failed: [cloud] chat request failed: HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/v1/chat/completions'\\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429\"}",
+   "wall_ms": 767881
+  },
+  {
+   "id": "G-006",
+   "answer": "",
+   "http_status": 502,
+   "error": "{\"detail\":\"Model call failed: [cloud] chat request failed: HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/v1/chat/completions'\\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429\"}",
+   "wall_ms": 235454
+  },
+  {
+   "id": "G-007",
+   "answer": "",
+   "http_status": 502,
+   "error": "{\"detail\":\"Model call failed: [cloud] chat request failed: HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/v1/chat/completions'\\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429\"}",
+   "wall_ms": 235694
+  },
+  {
+   "id": "G-008",
+   "answer": "",
+   "http_status": 502,
+   "error": "{\"detail\":\"Model call failed: [cloud] chat request failed: HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/v1/chat/completions'\\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429\"}",
+   "wall_ms": 471248
+  },
+  {
+   "id": "G-009",
+   "answer": "",
+   "http_status": 502,
+   "error": "{\"detail\":\"Model call failed: [cloud] chat request failed: HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/v1/chat/completions'\\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429\"}",
+   "wall_ms": 379875
+  },
+  {
+   "id": "G-010",
+   "answer": "",
+   "http_status": 502,
+   "error": "{\"detail\":\"Model call failed: [cloud] chat request failed: HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/v1/chat/completions'\\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429\"}",
+   "wall_ms": 236712
+  },
+  {
+   "id": "G-011",
+   "answer": "",
+   "http_status": 502,
+   "error": "{\"detail\":\"Model call failed: [cloud] chat request failed: HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/v1/chat/completions'\\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429\"}",
+   "wall_ms": 236435
+  },
+  {
+   "id": "G-012",
+   "answer": "",
+   "http_status": 502,
+   "error": "{\"detail\":\"Model call failed: [cloud] chat request failed: HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/v1/chat/completions'\\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429\"}",
+   "wall_ms": 275814
+  },
+  {
+   "id": "G-013",
+   "answer": "",
+   "http_status": 502,
+   "error": "{\"detail\":\"Model call failed: [cloud] chat request failed: HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/v1/chat/completions'\\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429\"}",
+   "wall_ms": 235625
+  },
+  {
+   "id": "G-014",
+   "answer": "",
+   "http_status": 502,
+   "error": "{\"detail\":\"Model call failed: [cloud] chat request failed: ReadTimeout: \"}",
+   "wall_ms": 476957
+  },
+  {
+   "id": "G-015",
+   "answer": "",
+   "http_status": 502,
+   "error": "{\"detail\":\"Model call failed: [cloud] chat request failed: HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/v1/chat/completions'\\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429\"}",
+   "wall_ms": 236331
+  },
+  {
+   "id": "G-016",
+   "answer": "",
+   "http_status": 502,
+   "error": "{\"detail\":\"Model call failed: [cloud] chat request failed: HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/v1/chat/completions'\\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429\"}",
+   "wall_ms": 237075
+  },
+  {
+   "id": "G-017",
+   "answer": "",
+   "http_status": 502,
+   "error": "{\"detail\":\"Model call failed: [cloud] chat request failed: HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/v1/chat/completions'\\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429\"}",
+   "wall_ms": 235939
+  },
+  {
+   "id": "G-018",
+   "answer": "",
+   "http_status": 502,
+   "error": "{\"detail\":\"Model call failed: [cloud] chat request failed: HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/v1/chat/completions'\\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429\"}",
+   "wall_ms": 235048
+  },
+  {
+   "id": "G-019",
+   "answer": "",
+   "http_status": 502,
+   "error": "{\"detail\":\"Model call failed: [cloud] chat request failed: HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/v1/chat/completions'\\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429\"}",
+   "wall_ms": 236395
+  }
+ ]
+}

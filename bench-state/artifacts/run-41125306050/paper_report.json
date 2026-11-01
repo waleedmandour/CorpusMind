@@ -1,0 +1,976 @@
+{
+ "summary": {
+  "questions": 80,
+  "pass_rate": 0.0,
+  "pass_rate_ci95": [
+   0.0,
+   0.0
+  ],
+  "hallucination_rate": 0.0,
+  "hallucination_rate_ci95": [
+   0.0,
+   0.0
+  ],
+  "verdict_counts": {
+   "NO_ANSWER": 80
+  },
+  "per_category": {
+   "arabic_tools": {
+    "n": 4,
+    "pass_rate": 0.0
+   },
+   "collocation": {
+    "n": 6,
+    "pass_rate": 0.0
+   },
+   "corpus_stats": {
+    "n": 5,
+    "pass_rate": 0.0
+   },
+   "cql": {
+    "n": 6,
+    "pass_rate": 0.0
+   },
+   "discourse": {
+    "n": 3,
+    "pass_rate": 0.0
+   },
+   "dispersion": {
+    "n": 7,
+    "pass_rate": 0.0
+   },
+   "diversity": {
+    "n": 7,
+    "pass_rate": 0.0
+   },
+   "keyness": {
+    "n": 10,
+    "pass_rate": 0.0
+   },
+   "kwic": {
+    "n": 7,
+    "pass_rate": 0.0
+   },
+   "ngrams": {
+    "n": 4,
+    "pass_rate": 0.0
+   },
+   "pos_grammar": {
+    "n": 3,
+    "pass_rate": 0.0
+   },
+   "register": {
+    "n": 5,
+    "pass_rate": 0.0
+   },
+   "sentiment": {
+    "n": 5,
+    "pass_rate": 0.0
+   },
+   "trap": {
+    "n": 8,
+    "pass_rate": 0.0
+   }
+  }
+ },
+ "verdicts": [
+  {
+   "id": "G-001",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-002",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-003",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-004",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-005",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [
+     {
+      "total tokens": 233
+     },
+     {
+      "total types": 1
+     }
+    ],
+    "hallucinated": [],
+    "matched": [],
+    "notes": [
+     "empty answer",
+     "gold numbers not quoted: [{'total tokens': 233}, {'total types': 1}]"
+    ]
+   }
+  },
+  {
+   "id": "G-006",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-007",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-008",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-009",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-010",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-011",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-012",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-013",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-014",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-015",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-016",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-017",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-018",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-019",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-020",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-021",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-022",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-023",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-024",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-025",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-026",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-027",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-028",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-029",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-030",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-031",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-032",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-033",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-034",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-035",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-036",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-037",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-038",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-039",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-040",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-041",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-042",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-043",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-044",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-045",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-046",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-047",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-048",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-049",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-050",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-051",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-052",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-053",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-054",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-055",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-056",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-057",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-058",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-059",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-060",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-061",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-062",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-063",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-064",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-065",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-066",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-067",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-068",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-069",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-070",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-071",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-072",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-073",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-074",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-075",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-076",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-077",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-078",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-079",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  },
+  {
+   "id": "G-080",
+   "verdict": "NO_ANSWER",
+   "detail": {
+    "missing": [],
+    "hallucinated": [],
+    "matched": [],
+    "notes": []
+   }
+  }
+ ],
+ "meta": {
+  "gold_meta": {
+   "description": "Frozen grounding gold for the fixed snapshot corpus. Produced ONCE by eval/build_gold.py from the engine's own tool registry; every numeric answer the assistant gives is scored against these values. Do not regenerate silently: a rebuild must be reviewed like any golden-file change (see measures_v2.json discipline). Tool outputs are frozen verbatim as provenance.",
+   "engine_version": "2.0.1",
+   "git_commit": "afce8fe",
+   "created_utc": "2026-10-30T10:19:53+00:00",
+   "spacy_model": {
+    "en_core_web_sm": "3.8.0"
+   },
+   "arabic_pack": {
+    "status": "ready"
+   },
+   "snapshot": {
+    "en_news.txt": "2de994e8e50dd7f14e33df69c8327fb76cf7c9c90877c3e4603b28c1297c94f9",
+    "en_academic.txt": "e4c45639c311f6d533113f97c0a73d8a3abe99e32ee0e9ace4e68b0275c329c8",
+    "en_learner.txt": "7343c83132570299d4bc7bcb91f4c9e93bb9dbc68f2851533b882bb03140133c",
+    "ar_msa.txt": "29dd5871b9b44be838350583fe8c375173376ddd06d94781efa6fa81cc80c40d",
+    "ar_classical.txt": "29ef1a2abfb28d8dd35c1066c15a04af88f2c2fa57cfbf31726aa497a5aee42d",
+    "ar_dialect.txt": "5d0a95cd5914b86ccff0f93242134279cba0f7141c3a2e71e02e9659a7b54b13",
+    "ar_nopunct.txt": "6062f14bad04f0f29c28bd9e6619724bc0a9d09a9ea55e2e24bf606ac38ccabb",
+    "en_parallel.txt": "cc4914be7d98d4c9540c298ef9d18ea3502a595a147f35c95a5c36c60661ca82",
+    "ar_parallel.txt": "468cc499fff7885787781d2b8dacfe9aa7cbc89d7861067f754f67fd76b85880"
+   },
+   "corpus_layout": {
+    "C1": {
+     "name": "EN-all",
+     "language": "en",
+     "files": [
+      "en_news.txt",
+      "en_academic.txt",
+      "en_learner.txt"
+     ]
+    },
+    "C2": {
+     "name": "EN-learner",
+     "language": "en",
+     "files": [
+      "en_learner.txt"
+     ]
+    },
+    "C3": {
+     "name": "EN-press",
+     "language": "en",
+     "files": [
+      "en_news.txt",
+      "en_academic.txt"
+     ]
+    },
+    "C4": {
+     "name": "AR-all",
+     "language": "ar",
+     "files": [
+      "ar_msa.txt",
+      "ar_classical.txt",
+      "ar_dialect.txt",
+      "ar_nopunct.txt"
+     ]
+    },
+    "C5": {
+     "name": "AR-parallel",
+     "language": "ar",
+     "files": [
+      "ar_parallel.txt"
+     ]
+    },
+    "C6": {
+     "name": "EN-parallel",
+     "language": "en",
+     "files": [
+      "en_parallel.txt"
+     ]
+    }
+   },
+   "question_count": 80
+  },
+  "run_meta": {
+   "created_utc": "2026-10-30T20:50:16+00:00",
+   "provider": "cloud",
+   "model": "gemini-3.8-flash-lite",
+   "question_count": 1,
+   "pause_s": 0.0,
+   "rate_retries": 4,
+   "cloud_reasoning_effort": "low",
+   "cloud_chat_timeout_s": 240.0,
+   "chat_deadline_s": 600.0,
+   "harness_timeout_s": 600.0
+  }
+ }
+}

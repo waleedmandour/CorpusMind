@@ -1,0 +1,178 @@
+{
+ "mode": "pooled",
+ "documents": 222,
+ "tokens": 158765,
+ "boundary_errors_total": 8641,
+ "delta_convention": "gold minus engine (positive = gold segmentation produced more)",
+ "cql_bigram_selection": {
+  "top_freq": [
+   {
+    "w1": "جنوب",
+    "w2": "السودان",
+    "freq": 224,
+    "gold_crossings": 0
+   },
+   {
+    "w1": "رئيس",
+    "w2": "الجمهورية",
+    "freq": 133,
+    "gold_crossings": 0
+   },
+   {
+    "w1": "هذا",
+    "w2": "الدستور",
+    "freq": 116,
+    "gold_crossings": 0
+   },
+   {
+    "w1": "أي",
+    "w2": "من",
+    "freq": 94,
+    "gold_crossings": 0
+   },
+   {
+    "w1": "التشريعية",
+    "w2": "القومية",
+    "freq": 84,
+    "gold_crossings": 0
+   }
+  ],
+  "top_boundary": [
+   {
+    "w1": "المسجد",
+    "w2": "أي",
+    "freq": 8,
+    "gold_crossings": 8
+   },
+   {
+    "w1": "النوم",
+    "w2": "أي",
+    "freq": 7,
+    "gold_crossings": 7
+   },
+   {
+    "w1": "القومية",
+    "w2": "يكون",
+    "freq": 4,
+    "gold_crossings": 4
+   },
+   {
+    "w1": "سبق",
+    "w2": "ىعتبر",
+    "freq": 4,
+    "gold_crossings": 4
+   },
+   {
+    "w1": "القومية",
+    "w2": "تتكون",
+    "freq": 3,
+    "gold_crossings": 3
+   }
+  ]
+ },
+ "pair": {
+  "thresholds": {
+   "colloc_min_freq": 5,
+   "ngram_min_freq": 5,
+   "cql_pattern": "\"في\" within sentence"
+  },
+  "tokens": {
+   "engine": 129491,
+   "gold": 129491
+  },
+  "sentences": {
+   "engine": 6187,
+   "gold": 13780
+  },
+  "delta_sentences": 7593,
+  "collocations": {
+   "rows_delta": 0,
+   "sum_O_delta": -1069,
+   "rows_engine": 200,
+   "sum_O_engine": 8697,
+   "rows_gold": 200,
+   "sum_O_gold": 7628
+  },
+  "ngrams": {
+   "rows_delta": 0,
+   "sum_freq_delta": -128
+  },
+  "cql_within_sentence": {
+   "pattern": "\"في\" within sentence",
+   "engine": 3309,
+   "gold": 3309,
+   "delta": 0
+  },
+  "cql_two_token": [
+   {
+    "pattern": "\"المسجد\" \"أي\" within sentence",
+    "engine": 8,
+    "gold": 0,
+    "delta": -8
+   },
+   {
+    "pattern": "\"النوم\" \"أي\" within sentence",
+    "engine": 7,
+    "gold": 0,
+    "delta": -7
+   },
+   {
+    "pattern": "\"القومية\" \"يكون\" within sentence",
+    "engine": 4,
+    "gold": 0,
+    "delta": -4
+   },
+   {
+    "pattern": "\"سبق\" \"ىعتبر\" within sentence",
+    "engine": 4,
+    "gold": 0,
+    "delta": -4
+   },
+   {
+    "pattern": "\"القومية\" \"تتكون\" within sentence",
+    "engine": 3,
+    "gold": 0,
+    "delta": -3
+   },
+   {
+    "pattern": "\"جنوب\" \"السودان\" within sentence",
+    "engine": 224,
+    "gold": 224,
+    "delta": 0
+   },
+   {
+    "pattern": "\"رئيس\" \"الجمهورية\" within sentence",
+    "engine": 133,
+    "gold": 133,
+    "delta": 0
+   },
+   {
+    "pattern": "\"هذا\" \"الدستور\" within sentence",
+    "engine": 116,
+    "gold": 116,
+    "delta": 0
+   },
+   {
+    "pattern": "\"أي\" \"من\" within sentence",
+    "engine": 94,
+    "gold": 94,
+    "delta": 0
+   },
+   {
+    "pattern": "\"التشريعية\" \"القومية\" within sentence",
+    "engine": 84,
+    "gold": 84,
+    "delta": 0
+   }
+  ],
+  "sentiment": {
+   "delta_total": 7593,
+   "delta_positive": 68,
+   "delta_negative": 122,
+   "delta_avg": -0.008
+  },
+  "caf": {
+   "delta_mean_sentence_length": -11.5325
+  }
+ }
+}
