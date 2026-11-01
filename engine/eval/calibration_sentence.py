@@ -152,7 +152,7 @@ def spans_split_on_paragraphs(
 
 
 def train_punkt(train_jsonl: Path) -> Any:
-    from nltk.tokenize.punkt import PunktSentenceTokenizer  # type: ignore[import-untyped]
+    from nltk.tokenize.punkt import PunktSentenceTokenizer
 
     texts: list[str] = []
     for doc in load_documents(train_jsonl):
@@ -207,7 +207,7 @@ def main() -> None:
             raise SystemExit(2)
         tokenizers["punkt"] = train_punkt(Path(args.punkt_train))
     if "pysbd" in tools:
-        import pysbd  # type: ignore[import-not-found]
+        import pysbd
         tokenizers["pysbd"] = pysbd.Segmenter(language="ar", clean=False)
     if "spacy" in tools:
         import spacy
