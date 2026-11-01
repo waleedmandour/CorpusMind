@@ -426,3 +426,35 @@ Findings:
   was copied to bench-state). Both runs' summary numbers are verified from
   the archived reports and run_meta; the raw run envelopes can be
   re-fetched from Actions artifacts while they remain in retention.
+
+## 9. Measured-at SHAs (v2.0.2 release, added 2026-11-01)
+
+Per-row provenance: which commit produced each measured row above.
+
+| row (section) | measured at | run / evidence |
+|---|---|---|
+| Segmentation intrinsic + extrinsic, 222 docs (§1) | `ee42bfa` on `bench/freeze-1-seg` | run 41181061992 (A4); canonical 20-doc view 41173011756 (superseded) |
+| Segmentation pooled extrinsic, F2 (§1) | `bench/extra-1` @ `76454a0` | local pooled re-run, AraSEG parquets byte-identical (sha256-verified) |
+| Evaluator calibration, A5 (§2) | `bench/extra-1` @ `b592cdc` | local calibration_sentence.py; raw calib JSONs on `bench/state` |
+| Performance row (§3) | `ee42bfa` | perf job of run 41181061992 (median of 3 reps) |
+| qwen2.5:1.5b ×3 (§4) | `ee42bfa` on `bench/freeze-1-local` | runs 41173022988 / 41185282664 / 41189716613 |
+| qwen2.5:3b ×3 (§4) | `ee42bfa` on `bench/freeze-1-local` | runs 41176056150 / 41194918539 / 41202610042 |
+| qwen2.5:7b probe (§4) | `ee42bfa` on `bench/freeze-1-local` | run 41206910830; scored report on `bench/local-results` @ `c33ac35` |
+| Gemini free-tier row (§5) | `ee42bfa` on `bench/freeze-1` (+ probe @ `9c272b8`) | slice run 41181861553; probe 41051082943 (reuse disclosed) |
+| Stats parity battery, A6 + F3 (§6) | `bench/extra-1` @ `62af13c` → hardened `76454a0` | `a6_parity.json` on `bench/state` |
+| Scale 1M/10M, A7 (§7) | `bench/scale-1` @ `9dd65d2` | run 41203959363 (repetitive corpus, labeled) |
+| Scale zipf re-run, F4 (§7) | `bench/scale-1` @ `9125bbb` | run 41226973126 (both legs SUCCESS) |
+| KWIC depth-1000 failure evidence (§7) | `bench/scale-1` @ `c02b3c7` | run 41202901041 (job "Scale (1000000 tokens)" FAILED); local repro `scripts/kwic_repro.py` @ `9125bbb` |
+| F7 truncation measurement (§4) | offline, engine code @ `ee42bfa` | 2026-11-01; real Qwen2.5 tokenizer + frozen prompt construction; per-run boundaries UNVERIFIED |
+
+**v2.0.2 release statement (MODE A).** Tag `v2.0.2` =
+`5a5e43fa0c9e6a903dc06f79579b732a9f666bca`. Engine code in v2.0.2 differs
+from the frozen benchmark commit `ee42bfa` ONLY by version constants
+(`engine/app/__init__.py` `__version__`, `engine/pyproject.toml` `version`)
+— verified by `git diff ee42bfa -- engine ':!engine/eval'` at the tag, plus
+the eval-module typing cleanup of #63 (which touches `engine/eval` only and
+changes no measured value). Every number in this report was therefore
+measured by the code v2.0.2 ships, except where a row names a bench-branch
+commit (`76454a0`, `9125bbb`, `b592cdc`, `62af13c`) — those are
+`engine/eval`/`scripts` additions that do not alter engine semantics, and
+each keeps the freeze gate empty.
