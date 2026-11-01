@@ -67,6 +67,14 @@ on:
         description: "Seconds to sleep before each question (rate-limit pacing; 7.0 fits free-tier Gemini ~10 RPM)"
         default: "7"
         required: false
+      ollama_version:
+        description: "Ollama release pinned via install.sh OLLAMA_VERSION (bench plan v3 §4: freeze reproducibility)"
+        default: "0.40.13"
+        required: false
+      ollama_context_length:
+        description: "OLLAMA_CONTEXT_LENGTH exported before ollama serve; 0 = Ollama build default (freeze conditions)"
+        default: "0"
+        required: false
       grounding_only:
         description: "Space/comma-separated question ids to run (empty = full 80-question bank)"
         default: ""
@@ -364,12 +372,26 @@ jobs:
       - name: Install Ollama (local provider row only)
         if: steps.guard.outputs.available == 'true' && (inputs.grounding_provider || 'cloud') == 'ollama'
         run: |
-          curl -fsSL https://ollama.com/install.sh | sh
+          # Plan v3 §4①: PIN the Ollama release. The 8-run freeze inventory was
+          # measured on whatever ollama.com served that day; from here on the
+          # pinned control (4k) and the 16384 arms run the SAME release, so
+          # "context length" is the only moving part between them.
+          curl -fsSL https://ollama.com/install.sh | OLLAMA_VERSION="${{ inputs.ollama_version || '0.40.13' }}" sh
           ollama --version
 
       - name: Start Ollama server (local provider row only)
         if: steps.guard.outputs.available == 'true' && (inputs.grounding_provider || 'cloud') == 'ollama'
         run: |
+          # Plan v3 §4③: server-side context plumbing. The v2.0.2 engine does
+          # not expose num_ctx (README "Long-context grounding runs"), so the
+          # context length is set on the SERVER via OLLAMA_CONTEXT_LENGTH,
+          # before ollama serve. 0 = leave the Ollama default, which is the
+          # freeze condition the 4k control must reproduce.
+          if [ "${{ inputs.ollama_context_length || '0' }}" != "0" ]; then
+            export OLLAMA_CONTEXT_LENGTH="${{ inputs.ollama_context_length }}"
+            echo "OLLAMA_CONTEXT_LENGTH=$OLLAMA_CONTEXT_LENGTH (server-side default num_ctx)"
+            echo "OLLAMA_CONTEXT_LENGTH=$OLLAMA_CONTEXT_LENGTH" >> "$GITHUB_ENV"
+          fi
           if ! curl -sf http://127.0.0.1:11434/api/tags > /dev/null; then
             nohup ollama serve > /tmp/ollama.log 2>&1 &
             for i in $(seq 1 60); do
@@ -386,6 +408,42 @@ jobs:
           MODEL="${{ inputs.grounding_model || 'qwen2.5:1.5b' }}"
           ollama pull "$MODEL"
           ollama ls
+
+      - name: Record Ollama provenance (version pin + model digest + context)
+        if: steps.guard.outputs.available == 'true' && (inputs.grounding_provider || 'cloud') == 'ollama'
+        # Plan v3 §4①: the freeze grounding artifacts could not answer "which
+        # Ollama build / which model bytes?". Every ollama run from now on
+        # ships engine/eval/runs/ollama_env.json alongside paper_run.json so
+        # the manuscript can cite exact provenance (it rides the
+        # grounding-report artifact upload and the results snapshot).
+        run: |
+          MODEL="${{ inputs.grounding_model || 'qwen2.5:1.5b' }}"
+          if [[ "$MODEL" == */* ]]; then REPO_PATH="$MODEL"; else REPO_PATH="library/$MODEL"; fi
+          DIGEST=$(curl -sf "http://127.0.0.1:11434/api/manifests/$REPO_PATH" \
+            | python3 -c "import json,sys; print(json.load(sys.stdin)['config']['digest'])")
+          [ -n "$DIGEST" ] || { echo "manifest API returned no config digest"; exit 1; }
+          export CM_MODEL="$MODEL" CM_DIGEST="$DIGEST"
+          export CM_PIN="${{ inputs.ollama_version || '0.40.13' }}"
+          export CM_VER="$(ollama --version 2>/dev/null | head -n1)"
+          mkdir -p engine/eval/runs
+          python3 - <<'PY'
+          import datetime, json, os, pathlib
+          ctx = os.environ.get("OLLAMA_CONTEXT_LENGTH")
+          doc = {
+              "utc": datetime.datetime.now(datetime.UTC).isoformat(),
+              "ollama_version": os.environ["CM_VER"],
+              "install_pin": os.environ["CM_PIN"],
+              "model": os.environ["CM_MODEL"],
+              "config_digest": os.environ["CM_DIGEST"],
+              "context": {
+                  "OLLAMA_CONTEXT_LENGTH_env": int(ctx) if ctx else None,
+                  "note": "v2.0.2 engine does not expose num_ctx; the server-side default governs truncation (OLLAMA_CONTEXT_LENGTH here, else the Ollama build default)",
+              },
+          }
+          p = pathlib.Path("engine/eval/runs/ollama_env.json")
+          p.write_text(json.dumps(doc, indent=2) + "\n")
+          print(p.read_text())
+          PY
 
       - name: Set up Python 3.12
         if: steps.guard.outputs.available == 'true'
