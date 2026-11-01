@@ -179,6 +179,25 @@ strict = true
 warn_return_any = true
 warn_unused_configs = true
 
+# Optional stats/NLP deps used by eval/ (nltk, pysbd, scipy, statsmodels,
+# lexicalrichness) are not installed in every environment — e.g. the CI mypy
+# job installs only [dev], so nltk/statsmodels/lexicalrichness are absent.
+# Inline `# type: ignore[import-untyped]` comments flip to import-not-found +
+# unused-ignore there, which regressed eval 0 -> 6 (2026-11-01). Suppress at
+# config level instead: ignore_missing_imports covers BOTH states (module
+# missing, or installed-but-untyped) and can never become an unused-ignore.
+[[tool.mypy.overrides]]
+module = [
+  "nltk.*",
+  "pysbd",
+  "pysbd.*",
+  "scipy.*",
+  "statsmodels.*",
+  "lexicalrichness",
+  "lexicalrichness.*",
+]
+ignore_missing_imports = true
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
