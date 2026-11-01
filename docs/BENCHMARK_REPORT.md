@@ -102,6 +102,11 @@ Each config: full 80-question bank, 3 independent runs on
 | qwen2.5:3b | 0.075 / 0.075 / 0.0625 | **0.0708** | 0.3625 / 0.3875 / 0.425 | **0.3917** | 24/80 (30%) |
 | qwen2.5:7b | probe only (5 q) | — | — | — | — |
 
+7b probe scored (2026-11-01, offline against the frozen gold —
+`benchmarks/results/run-41206910830/grounding-probe/paper_report_7b_probe.json`
+on the data branch): G-001..G-005 → PASS 0, MISSING_NUMBER 2,
+HALLUCINATED 2, TRAP_FAILURE 1 (0/5 passable; diagnostic only, not a row).
+
 Verdict distributions (across runs): 1.5b PASS 12–13, MISSING_NUMBER 11–14,
 HALLUCINATED 39–44, TRAP_FAILURE 13–14; 3b PASS 5–6, MISSING_NUMBER 31–37,
 HALLUCINATED 23–30, TRAP_FAILURE 14.
@@ -137,9 +142,42 @@ grounding scores for small local models carry a ±2.5–5 pp noise band.
 7b: timing probe (run 41206910830, 5 questions) measured mean 271.5 s/q →
 full-80 projection 362 min > the 330-min CI runner cap → **does not fit**;
 per the pre-registered rule the 7b row is **pending user-run** with a
-one-command runbook in `engine/eval/README.md` (bench/extra-1). Probe
-verdicts (diagnostic only): MISSING_NUMBER×2, HALLUCINATED×2,
-TRAP_FAILURE×1.
+runbook in `engine/eval/README.md` §4 (bench/extra-1). Probe verdicts
+(diagnostic only): MISSING_NUMBER×2, HALLUCINATED×2, TRAP_FAILURE×1
+(0/5 passable, scored 2026-11-01).
+
+### F7 — Ollama context truncation confound (measured 2026-11-01)
+
+The grounding harness POSTs to `/api/v1/ai/chat`; the engine's assistant
+builds the provider prompt as: SYSTEM_PROMPT (~1,029 Qwen2.5 tokens) +
+corpus hint + UI context block (~61) + tool schemas rendered into the prompt
+by Ollama (**4,095** tokens, the dominant component) + the question (≤36).
+**Turn 1 measures ~5,221 tokens**; pass 2 with three 20-row summarized tool
+results measures ~7,576. Ollama's default context is **4k tokens for <24 GiB
+VRAM** (docs.ollama.com/context-length, updated 2026-10-27) — the CI runner
+is CPU-only (`No NVIDIA/AMD GPU detected` in the run logs; client version
+0.40.13, installed via unpinned `install.sh`), so the 4k default applied to
+**every local grounding run**: turn 1 was head-truncated by ~1,100 tokens
+and pass 2 by ~3,500. The probe's G-001 answer ("Let's try calling the
+`get_corpus_overview` tool again…") is consistent with the model not seeing
+its tool schemas.
+
+Consequence: the 1.5b/3b rows above (and the 7b probe) were **measured under
+context truncation** — the reported pass/hallucination rates are a confound
+of model capability AND truncated tool visibility; they must not be cited as
+pure capability numbers. The truncation is deterministic (same prompt, same
+default) so the A3 triple statistics (flips, CI bands) remain internally
+valid. Re-running under a raised context (OLLAMA_CONTEXT_LENGTH=8192, or the
+engine fix below) is a maintainer decision and would supersede these rows.
+The truncation check was offline and read-only: frozen-code prompt
+reconstruction + the real Qwen2.5 tokenizer; the exact per-run truncation
+boundaries (which Ollama drops first) are UNVERIFIED — the CI `/tmp/ollama.log`
+server logs were not archived.
+
+Post-freeze fix proposed (joins the approval list in §7 finding 4):
+`OllamaProvider` should set `options.num_ctx` (env-driven, e.g.
+`CORPUSMIND_OLLAMA_NUM_CTX`, unset = Ollama default) so the grounding rows
+do not depend on the server's VRAM-bucketed default.
 
 Superseded rows: the afce8fe 1.5b row (run 41028985957, pass 0.1375 /
 halluc 0.65) predates the #43/#44 re-freeze; its delta vs the current row
@@ -332,9 +370,23 @@ Findings:
      deterministic depth-1000 ceiling of finding 2/3. Pure query-batching
      change, no result semantics change; gold unaffected; still a
      post-freeze engine edit (new freeze ref required).
+   - Ollama `num_ctx` (F7, added 2026-11-01): `OllamaProvider`'s chat
+     options set temperature/num_predict/keep_alive but not `num_ctx`, so
+     grounding prompts ride the server's VRAM-bucketed default (4k on the
+     CPU-only CI runner) and the ~5.2k-token turn-1 prompt is
+     head-truncated (§4 F7). Fix: env-driven `options.num_ctx`
+     (e.g. `CORPUSMIND_OLLAMA_NUM_CTX`); no result-semantics change, but
+     the local rows measured before it carry the truncation confound and
+     would need a re-run to supersede.
 
 ## 8. Provenance, anomalies, and disclosures
 
+- F7 (2026-11-01, release-eve check): Ollama default-context truncation of
+  the local grounding rows — measurement, runner evidence (0.40.13,
+  CPU-only) and the third post-freeze fix proposal are in §4. The scored
+  7b probe report was committed to the data branch
+  (`benchmarks/results/run-41206910830/grounding-probe/
+  paper_report_7b_probe.json`).
 - Freeze/gold: gold-diff gate GREEN at ee42bfa (runs 41163039515 and
   41173011756, clean=true, diffs=[]). Snapshot branches pushed for every
   completed run; the workflow's automatic snapshot-PR step silently failed
