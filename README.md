@@ -444,6 +444,7 @@ stable across releases and always resolves to the latest version deposited on
 Zenodo. It is a concept record, not itself a version record: the family's
 first deposit is v1.2.11-rc1 (2026-10-07; Zenodo API, conceptrecid
 23216073). Version DOIs pin a single deposit:
+v2.0.2 → [10.5281/zenodo.23852351](https://doi.org/10.5281/zenodo.23852351);
 v2.0.1 → [10.5281/zenodo.23785435](https://doi.org/10.5281/zenodo.23785435);
 v2.0.0 → [10.5281/zenodo.23763019](https://doi.org/10.5281/zenodo.23763019);
 v1.2.10 → [10.5281/zenodo.23052753](https://doi.org/10.5281/zenodo.23052753);
