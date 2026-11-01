@@ -171,6 +171,16 @@ key and no `GH_TOKEN` are needed: the harness reads its settings from the
 
 ```bash
 cd engine
+# F7 (2026-11-01): Ollama's default context is 4k tokens for <24 GiB VRAM
+# (docs.ollama.com/context-length) — the CI runner is CPU-only, so 4k
+# applied there too. The grounding turn-1 prompt measures ~5.2k tokens
+# (system prompt ~1.0k + tool schemas ~4.1k + question), so the DEFAULT
+# context head-truncates the tools out of the prompt — a known confound of
+# the CI local rows (BENCHMARK_REPORT.md §4). Raise the server context
+# BEFORE serving, or the engine fix (num_ctx in options) must land first:
+export OLLAMA_CONTEXT_LENGTH=8192
+ollama serve   # (or restart the service with the env set)
+
 # Per-question chat deadline. The probe answers took 200-332 s, so the
 # 300 s default (CORPUSMIND_CHAT_TIMEOUT_S, what CI maps its
 # grounding_chat_deadline_s input to) would abort the slowest answers.
