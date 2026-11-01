@@ -621,3 +621,20 @@ except where a row names a bench-branch
 commit (`76454a0`, `9125bbb`, `b592cdc`, `62af13c`) — those are
 `engine/eval`/`scripts` additions that do not alter engine semantics, and
 each keeps the freeze gate empty.
+
+**User-run Tier B probe (preliminary, 2026-11-01).** A 5-question smoke
+(G-001..G-005) ahead of the user-run arms — `qwen2.5:7b` @16384, Windows 11
++ WSL2 Ubuntu 24.04 (16 GB cap), Ollama 0.40.13, engine at tag `5a5e43f`
+(user-reported), chat deadline 900 s, `--pause 0`, no `--rate-retries` — is
+committed at `benchmarks/results/user-wsl2-7b-16384/` (probe16k.json
+byte-identical to the harness output; sha256 in its MANIFEST.json). G-001
+failed: HTTP 502 `[ollama] tool-call request failed` after 181.3 s —
+cold-start, code-verified: local tool rounds carry a hardcoded 60 s
+per-attempt timeout (`engine/ai/assistant.py` `_tool_round_timeout()`) × 3
+resilience attempts (`engine/ai/resilience.py` `_ATTEMPTS = 3`) while the 7b
+model was still loading. G-002..G-005 answered; repo-scorer verdicts on this
+slice: 0 PASS / 3 HALLUCINATED / 1 TRAP_FAILURE (CI 3b @16384 on the same
+five ids: 2 PASS — G-001, G-002; G-004 is a no-tool trap that every arm
+fails). The full user-run repetitions (`--rate-retries 4`, per-repetition
+warm-up, gold hash `480f5230` re-verified) are pending; probe rates are not
+bank-comparable (n=5).

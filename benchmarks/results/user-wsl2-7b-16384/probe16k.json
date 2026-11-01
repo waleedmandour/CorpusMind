@@ -1,0 +1,119 @@
+{
+ "meta": {
+  "created_utc": "2026-11-01T21:00:52+00:00",
+  "provider": "ollama",
+  "model": "qwen2.5:7b",
+  "question_count": 5,
+  "pause_s": 0.0,
+  "rate_retries": 0,
+  "cloud_reasoning_effort": "",
+  "cloud_chat_timeout_s": 240.0,
+  "chat_deadline_s": 900.0,
+  "harness_timeout_s": 900.0
+ },
+ "results": [
+  {
+   "id": "G-001",
+   "answer": "",
+   "http_status": 502,
+   "error": "{\"detail\":\"Model call failed: [ollama] tool-call request failed: \"}",
+   "wall_ms": 181275
+  },
+  {
+   "id": "G-002",
+   "answer": "في هذا المحتوى، يوجد:\n\n- عدد المستندات: 4 مستندات\n- عدد الكلمات: 233 كلمة\n- عدد أنواع الكلمات (أنواع): 20 نوعًا\n- عدد الجمل: 18 جملة\n\nهذه المعلومات مستندة على البيانات الحالية لل_corpus_id=61ec76e7887e4a1c.",
+   "grounded": true,
+   "tool_calls": [
+    {
+     "name": "get_frequency",
+     "args": {
+      "corpus_id": "61ec76e7887e4a1c",
+      "unit": "word"
+     },
+     "ok": true
+    }
+   ],
+   "evidence": [
+    {
+     "kind": "tool_result",
+     "ref": "tool:get_frequency:1",
+     "snippet": "{\"unit\": \"word\", \"total_tokens\": 233, \"total_types\": 20, \"sttr\": 0.7768, \"top_items\": [{\"item\": \"\\u0641\\u064a\", \"freq\": 11, \"per_million\": 47210.3, \"percent\": 4.721, \"range\": 4, \"range_percent\": 100.0}, {\"item\": \"\\u0639\\u0644\\u0649\", \"freq\": 5, \"per_million\": 21459.23, \"percent\": 2.1459, \"range\": 3, \"range_percent\": 75.0}, {\"item\": \"\\u0645\\u0646\", \"freq\": 5, \"per_million\": 21459.23, \"percent\": 2.1459, \"range\": 4, \"range_percent\": 100.0}, {\"item\": \"\\u0639\\u0646\", \"freq\": 4, \"per_million\": 17167.3"
+    }
+   ],
+   "elapsed_ms": 238318,
+   "wall_ms": 238380
+  },
+  {
+   "id": "G-003",
+   "answer": "The total number of tokens in the corpus is 331, and the total number of types (unique words) is 20.\n\nThe most frequent word is \"the\", which occurs 15 times. This word has a normalized frequency of 45317.22 per million tokens, which is the highest among all words in the corpus.",
+   "grounded": true,
+   "tool_calls": [
+    {
+     "name": "get_frequency",
+     "args": {
+      "corpus_id": "d98eeb8126414d10",
+      "unit": "word"
+     },
+     "ok": true
+    }
+   ],
+   "evidence": [
+    {
+     "kind": "tool_result",
+     "ref": "tool:get_frequency:1",
+     "snippet": "{\"unit\": \"word\", \"total_tokens\": 331, \"total_types\": 20, \"sttr\": 0.6042, \"top_items\": [{\"item\": \"the\", \"freq\": 15, \"per_million\": 45317.22, \"percent\": 4.5317, \"range\": 3, \"range_percent\": 100.0}, {\"item\": \"in\", \"freq\": 9, \"per_million\": 27190.33, \"percent\": 2.719, \"range\": 3, \"range_percent\": 100.0}, {\"item\": \"is\", \"freq\": 9, \"per_million\": 27190.33, \"percent\": 2.719, \"range\": 3, \"range_percent\": 100.0}, {\"item\": \"to\", \"freq\": 9, \"per_million\": 27190.33, \"percent\": 2.719, \"range\": 3, \"range_perc"
+    }
+   ],
+   "elapsed_ms": 88591,
+   "wall_ms": 88619
+  },
+  {
+   "id": "G-004",
+   "answer": "The type-token ratio (TTR) of this corpus is approximately 0.6042. This means that about 6.042% of the tokens in the corpus are unique types. The top frequent words in the corpus include \"the\", \"in\", \"is\", and \"to\", each appearing multiple times, while the overall vocabulary is relatively small with only 20 unique types out of 331 tokens.",
+   "grounded": true,
+   "tool_calls": [
+    {
+     "name": "get_frequency",
+     "args": {
+      "corpus_id": "d98eeb8126414d10",
+      "unit": "word"
+     },
+     "ok": true
+    }
+   ],
+   "evidence": [
+    {
+     "kind": "tool_result",
+     "ref": "tool:get_frequency:1",
+     "snippet": "{\"unit\": \"word\", \"total_tokens\": 331, \"total_types\": 20, \"sttr\": 0.6042, \"top_items\": [{\"item\": \"the\", \"freq\": 15, \"per_million\": 45317.22, \"percent\": 4.5317, \"range\": 3, \"range_percent\": 100.0}, {\"item\": \"in\", \"freq\": 9, \"per_million\": 27190.33, \"percent\": 2.719, \"range\": 3, \"range_percent\": 100.0}, {\"item\": \"is\", \"freq\": 9, \"per_million\": 27190.33, \"percent\": 2.719, \"range\": 3, \"range_percent\": 100.0}, {\"item\": \"to\", \"freq\": 9, \"per_million\": 27190.33, \"percent\": 2.719, \"range\": 3, \"range_perc"
+    }
+   ],
+   "elapsed_ms": 217215,
+   "wall_ms": 217244
+  },
+  {
+   "id": "G-005",
+   "answer": "في هذا المحتوى، يوجد 233 كلمة و 20 نوعًا مختلفًا.\n\nإليك بعض المعلومات الإضافية عن أكثر الكلمات تكرارًا:\n\n1. \"في\" هو الأكثر تكرارًا مع عدد 11 مرة، مما يعادل 4.72% من الكلمات الكلية.\n2. \"على\" في المرتبة الثانية مع عدد 5 مرات، مما يعادل 2.15% من الكلمات.\n3. \"من\" في المرتبة الثالثة أيضًا مع عدد 5 مرات، مما يعادل 2.15% من الكلمات.\n\nهذه الكلمات تشكل نسبة كبيرة من المحتوى، مما يشير إلى أهميتها في النص.",
+   "grounded": true,
+   "tool_calls": [
+    {
+     "name": "get_frequency",
+     "args": {
+      "corpus_id": "61ec76e7887e4a1c",
+      "unit": "word"
+     },
+     "ok": true
+    }
+   ],
+   "evidence": [
+    {
+     "kind": "tool_result",
+     "ref": "tool:get_frequency:1",
+     "snippet": "{\"unit\": \"word\", \"total_tokens\": 233, \"total_types\": 20, \"sttr\": 0.7768, \"top_items\": [{\"item\": \"\\u0641\\u064a\", \"freq\": 11, \"per_million\": 47210.3, \"percent\": 4.721, \"range\": 4, \"range_percent\": 100.0}, {\"item\": \"\\u0639\\u0644\\u0649\", \"freq\": 5, \"per_million\": 21459.23, \"percent\": 2.1459, \"range\": 3, \"range_percent\": 75.0}, {\"item\": \"\\u0645\\u0646\", \"freq\": 5, \"per_million\": 21459.23, \"percent\": 2.1459, \"range\": 4, \"range_percent\": 100.0}, {\"item\": \"\\u0639\\u0646\", \"freq\": 4, \"per_million\": 17167.3"
+    }
+   ],
+   "elapsed_ms": 99660,
+   "wall_ms": 99695
+  }
+ ]
+}

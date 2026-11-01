@@ -1,0 +1,77 @@
+# User-run Tier B — qwen2.5:7b @16384, Windows 11 + WSL2 (Ubuntu 24.04)
+
+Preliminary 5-question probe (G-001..G-005) of the upcoming user-run
+grounding arms. **This is not a bank run — n=5, rates are not
+bank-comparable.** Nothing here is edited from what the harness wrote:
+`probe16k.json` is byte-identical to the user's upload (sha256 in
+`MANIFEST.json`).
+
+## Hardware and settings (user-reported; to be confirmed by the provenance files with the full run)
+
+- Windows 11 host, WSL2 Ubuntu 24.04, 16 GB RAM cap
+- Ollama **0.40.13** (the pinned release; `install.sh OLLAMA_VERSION=0.40.13`)
+- Engine: v2.0.2 at tag `5a5e43f` (user-reported)
+- Server context: `OLLAMA_CONTEXT_LENGTH=16384`
+- Harness: `--provider ollama --model qwen2.5:7b --pause 0`, **no
+  `--rate-retries`** (probe only; the full-run protocol restores
+  `--rate-retries 4` to match CI), per-question deadline 900 s
+  (`CORPUSMIND_CHAT_TIMEOUT_S=900`), 2026-11-01T21:00:52Z
+
+## Probe outcome
+
+| id | result | wall |
+|---|---|---|
+| G-001 | **failed** — HTTP 502, empty answer, `[ollama] tool-call request failed:` | 181.3 s |
+| G-002 | answered (Arabic) | 238.4 s |
+| G-003 | answered | 88.6 s |
+| G-004 | answered (no-tool trap — see below) | 217.2 s |
+| G-005 | answered (Arabic) | 99.7 s |
+
+**G-001 cause (code-verified, not conjecture).** It was the first request
+after engine start: the 7b model was still loading from disk. Local-provider
+tool rounds have a **hardcoded 60 s per-attempt timeout**
+(`engine/ai/assistant.py` `_tool_round_timeout()`), and every POST is retried
+on transport errors up to **3 attempts** (`engine/ai/resilience.py`
+`_ATTEMPTS = 3`, v2.0.1). 3 × 60 s read-timeout + ~1.3 s of jitter/backoff =
+the observed 181.3 s. G-002 onward ran against a warm model. The full-run
+protocol warms the model before each repetition; note the Ollama default
+keep-alive (5 min) unloads the model between reps, so each repetition needs
+its own warm-up.
+
+**Hardcoded 60 s cap — known risk for 7b on CPU.** A single tool-round LLM
+call that needs more than 60 s of compute fails all 3 attempts
+deterministically (~181 s), and each harness re-send (with
+`--rate-retries 4`, up to 4 re-POSTs) costs another full question run. The
+engine is frozen (v2.0.2) and will NOT be patched for this; such failures
+are counted and disclosed (NO_ANSWER / 5xx counts per repetition).
+
+## Preliminary scoring (repo scorer, `probe16k.repo_scored.json`)
+
+Scored with the repo scorer (`python -m eval.score`) against the frozen gold
+(sha256 `480f5230…`): G-001 `NO_ANSWER`; G-002/G-003/G-005 `HALLUCINATED`;
+G-004 `TRAP_FAILURE`. Two reading notes:
+
+- The scorer's "allowed" numbers are the **frozen gold tool outputs**
+  (`eval/score.py`), not the live evidence. G-003/G-005 answered with the
+  `total_types` of an unlimited `get_frequency` call (20 = items listed by
+  the default limit), while the frozen spec captured limit-5/limit-1 calls
+  (5 / 1) — the same scorer logic applied to the CI arms, so comparability
+  holds; the verdicts are harsher than "numbers match the live output"
+  suggests.
+- G-004 is a **no-tool trap** (gold `traps.no_tool: true`, frozen
+  `tools: []`): the honest answer is to state unavailability. Quoting
+  numbers (0.6042, 6.042%, …) is a trap failure — the CI arms fail it too
+  (trap slice 1/8 at best).
+
+Paired vs the committed CI 3b @16384 arm on the same 5 ids: CI passed
+G-001 + G-002; the probe passed none (`scripts/validate_user_run.py
+--data-dir benchmarks/results/user-wsl2-7b-16384 --engine-dir engine
+--probe-ids G-001..G-005` reproduces everything above).
+
+## Pending with the full run
+
+`ollama_env.json` for 7b (digest), `env_*.json`, logs
+(`ollama_server.log`, harness logs for re-send counts), `gold_diff.json`,
+`pip_freeze.txt`, hardware/commands files, the G-001 retest
+(`g001_retest.json`), and the repetition shards
+(`rep*_shard*.json`, disjoint, union G-001..G-080 each).
