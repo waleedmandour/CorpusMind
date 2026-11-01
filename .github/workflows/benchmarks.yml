@@ -418,11 +418,30 @@ jobs:
         # grounding-report artifact upload and the results snapshot).
         run: |
           MODEL="${{ inputs.grounding_model || 'qwen2.5:1.5b' }}"
-          if [[ "$MODEL" == */* ]]; then REPO_PATH="$MODEL"; else REPO_PATH="library/$MODEL"; fi
-          DIGEST=$(curl -sf "http://127.0.0.1:11434/api/manifests/$REPO_PATH" \
-            | python3 -c "import json,sys; print(json.load(sys.stdin)['config']['digest'])")
-          [ -n "$DIGEST" ] || { echo "manifest API returned no config digest"; exit 1; }
-          export CM_MODEL="$MODEL" CM_DIGEST="$DIGEST"
+          case "$MODEL" in
+            *:*) TAG="${MODEL##*:}"; BASE="${MODEL%:*}" ;;
+            *)   TAG="latest";      BASE="$MODEL" ;;
+          esac
+          if [[ "$BASE" != */* ]]; then BASE="library/$BASE"; fi
+          # The local server exposes manifests under the OCI distribution path
+          # /v2/<ns>/<repo>/manifests/<tag>; there is no /api/manifests route
+          # (first arm dispatch 2026-11-01 died on exactly that 404).
+          MANIFEST=$(curl -sf \
+            -H "Accept: application/vnd.oci.image.manifest.v1+json,application/vnd.docker.distribution.manifest.v2+json" \
+            "http://127.0.0.1:11434/v2/$BASE/manifests/$TAG" || true)
+          DIGEST=$(printf '%s' "$MANIFEST" | python3 -c 'import json,sys
+          try:
+              print(json.load(sys.stdin)["config"]["digest"])
+          except Exception:
+              print("")' 2>/dev/null || true)
+          if [ -n "$DIGEST" ]; then
+            SRC="registry manifest (v2 API)"
+          else
+            SRC="ollama ls (short id)"
+            DIGEST=$(ollama ls | awk -v m="$MODEL" '$1==m {print $2}')
+          fi
+          [ -n "$DIGEST" ] || { echo "could not resolve model digest for $MODEL"; exit 1; }
+          export CM_MODEL="$MODEL" CM_DIGEST="$DIGEST" CM_DIGEST_SRC="$SRC"
           export CM_PIN="${{ inputs.ollama_version || '0.40.13' }}"
           export CM_VER="$(ollama --version 2>/dev/null | head -n1)"
           mkdir -p engine/eval/runs
@@ -435,6 +454,7 @@ jobs:
               "install_pin": os.environ["CM_PIN"],
               "model": os.environ["CM_MODEL"],
               "config_digest": os.environ["CM_DIGEST"],
+              "config_digest_source": os.environ["CM_DIGEST_SRC"],
               "context": {
                   "OLLAMA_CONTEXT_LENGTH_env": int(ctx) if ctx else None,
                   "note": "v2.0.2 engine does not expose num_ctx; the server-side default governs truncation (OLLAMA_CONTEXT_LENGTH here, else the Ollama build default)",
