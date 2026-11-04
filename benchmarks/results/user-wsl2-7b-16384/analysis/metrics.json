@@ -1,0 +1,761 @@
+{
+ "pass_asrun": {
+  "r1": {
+   "k": 21,
+   "n": 80,
+   "rate": 0.2625,
+   "ci95": [
+    0.1786,
+    0.3682
+   ]
+  },
+  "r2": {
+   "k": 21,
+   "n": 80,
+   "rate": 0.2625,
+   "ci95": [
+    0.1786,
+    0.3682
+   ]
+  },
+  "r3": {
+   "k": 23,
+   "n": 80,
+   "rate": 0.2875,
+   "ci95": [
+    0.1999,
+    0.3946
+   ]
+  },
+  "pooled": {
+   "k": 65,
+   "n": 240,
+   "rate": 0.2708,
+   "ci95": [
+    0.2185,
+    0.3303
+   ]
+  }
+ },
+ "pass_rescapplied": {
+  "r1": {
+   "k": 21,
+   "n": 80,
+   "rate": 0.2625,
+   "ci95": [
+    0.1786,
+    0.3682
+   ]
+  },
+  "r2": {
+   "k": 21,
+   "n": 80,
+   "rate": 0.2625,
+   "ci95": [
+    0.1786,
+    0.3682
+   ]
+  },
+  "r3": {
+   "k": 23,
+   "n": 80,
+   "rate": 0.2875,
+   "ci95": [
+    0.1999,
+    0.3946
+   ]
+  },
+  "pooled": {
+   "k": 65,
+   "n": 240,
+   "rate": 0.2708,
+   "ci95": [
+    0.2185,
+    0.3303
+   ]
+  }
+ },
+ "hallucinated": {
+  "r1": {
+   "k": 34,
+   "n": 80,
+   "rate": 0.425,
+   "ci95": [
+    0.3226,
+    0.5343
+   ]
+  },
+  "r2": {
+   "k": 35,
+   "n": 80,
+   "rate": 0.4375,
+   "ci95": [
+    0.3341,
+    0.5466
+   ]
+  },
+  "r3": {
+   "k": 31,
+   "n": 80,
+   "rate": 0.3875,
+   "ci95": [
+    0.2882,
+    0.4971
+   ]
+  },
+  "pooled": {
+   "k": 100,
+   "n": 240,
+   "rate": 0.4167,
+   "ci95": [
+    0.3561,
+    0.4799
+   ]
+  }
+ },
+ "trap_failure": {
+  "r1": {
+   "k": 10,
+   "n": 80,
+   "rate": 0.125,
+   "ci95": [
+    0.0693,
+    0.215
+   ]
+  },
+  "r2": {
+   "k": 10,
+   "n": 80,
+   "rate": 0.125,
+   "ci95": [
+    0.0693,
+    0.215
+   ]
+  },
+  "r3": {
+   "k": 11,
+   "n": 80,
+   "rate": 0.1375,
+   "ci95": [
+    0.0785,
+    0.2297
+   ]
+  },
+  "pooled": {
+   "k": 31,
+   "n": 240,
+   "rate": 0.1292,
+   "ci95": [
+    0.0925,
+    0.1775
+   ]
+  }
+ },
+ "missing_number": {
+  "r1": {
+   "k": 13,
+   "n": 80,
+   "rate": 0.1625,
+   "ci95": [
+    0.0975,
+    0.2584
+   ]
+  },
+  "r2": {
+   "k": 11,
+   "n": 80,
+   "rate": 0.1375,
+   "ci95": [
+    0.0785,
+    0.2297
+   ]
+  },
+  "r3": {
+   "k": 11,
+   "n": 80,
+   "rate": 0.1375,
+   "ci95": [
+    0.0785,
+    0.2297
+   ]
+  },
+  "pooled": {
+   "k": 35,
+   "n": 240,
+   "rate": 0.1458,
+   "ci95": [
+    0.1068,
+    0.1961
+   ]
+  }
+ },
+ "no_answer": {
+  "r1": {
+   "k": 2,
+   "n": 80,
+   "rate": 0.025,
+   "ci95": [
+    0.0069,
+    0.0866
+   ]
+  },
+  "r2": {
+   "k": 3,
+   "n": 80,
+   "rate": 0.0375,
+   "ci95": [
+    0.0128,
+    0.1045
+   ]
+  },
+  "r3": {
+   "k": 4,
+   "n": 80,
+   "rate": 0.05,
+   "ci95": [
+    0.0196,
+    0.1216
+   ]
+  },
+  "pooled": {
+   "k": 9,
+   "n": 240,
+   "rate": 0.0375,
+   "ci95": [
+    0.0199,
+    0.0697
+   ]
+  }
+ },
+ "grounded_flag": {
+  "r1": {
+   "k": 77,
+   "n": 80,
+   "rate": 0.9625,
+   "ci95": [
+    0.8955,
+    0.9872
+   ]
+  },
+  "r2": {
+   "k": 76,
+   "n": 80,
+   "rate": 0.95,
+   "ci95": [
+    0.8784,
+    0.9804
+   ]
+  },
+  "r3": {
+   "k": 75,
+   "n": 80,
+   "rate": 0.9375,
+   "ci95": [
+    0.8619,
+    0.973
+   ]
+  }
+ },
+ "verdict_counts_asrun": {
+  "r1": {
+   "PASS": 21,
+   "MISSING_NUMBER": 13,
+   "HALLUCINATED": 34,
+   "TRAP_FAILURE": 10,
+   "NO_ANSWER": 2
+  },
+  "r2": {
+   "PASS": 21,
+   "MISSING_NUMBER": 11,
+   "HALLUCINATED": 35,
+   "TRAP_FAILURE": 10,
+   "NO_ANSWER": 3
+  },
+  "r3": {
+   "PASS": 23,
+   "MISSING_NUMBER": 11,
+   "HALLUCINATED": 31,
+   "TRAP_FAILURE": 11,
+   "NO_ANSWER": 4
+  }
+ },
+ "verdict_counts_rescapplied": {
+  "r1": {
+   "PASS": 21,
+   "MISSING_NUMBER": 13,
+   "HALLUCINATED": 34,
+   "TRAP_FAILURE": 10,
+   "NO_ANSWER": 2
+  },
+  "r2": {
+   "PASS": 21,
+   "MISSING_NUMBER": 11,
+   "HALLUCINATED": 36,
+   "TRAP_FAILURE": 10,
+   "NO_ANSWER": 2
+  },
+  "r3": {
+   "PASS": 23,
+   "MISSING_NUMBER": 11,
+   "HALLUCINATED": 31,
+   "TRAP_FAILURE": 11,
+   "NO_ANSWER": 4
+  }
+ },
+ "per_category_pass_asrun": {
+  "r1": {
+   "arabic_tools": {
+    "n": 4,
+    "pass_rate": 0.25
+   },
+   "collocation": {
+    "n": 6,
+    "pass_rate": 0.16666666666666666
+   },
+   "corpus_stats": {
+    "n": 5,
+    "pass_rate": 0.2
+   },
+   "cql": {
+    "n": 6,
+    "pass_rate": 0.0
+   },
+   "discourse": {
+    "n": 3,
+    "pass_rate": 0.0
+   },
+   "dispersion": {
+    "n": 7,
+    "pass_rate": 0.5714285714285714
+   },
+   "diversity": {
+    "n": 7,
+    "pass_rate": 0.0
+   },
+   "keyness": {
+    "n": 10,
+    "pass_rate": 0.2
+   },
+   "kwic": {
+    "n": 7,
+    "pass_rate": 0.42857142857142855
+   },
+   "ngrams": {
+    "n": 4,
+    "pass_rate": 0.25
+   },
+   "pos_grammar": {
+    "n": 3,
+    "pass_rate": 0.6666666666666666
+   },
+   "register": {
+    "n": 5,
+    "pass_rate": 0.0
+   },
+   "sentiment": {
+    "n": 5,
+    "pass_rate": 0.8
+   },
+   "trap": {
+    "n": 8,
+    "pass_rate": 0.25
+   }
+  },
+  "r2": {
+   "arabic_tools": {
+    "n": 4,
+    "pass_rate": 0.0
+   },
+   "collocation": {
+    "n": 6,
+    "pass_rate": 0.3333333333333333
+   },
+   "corpus_stats": {
+    "n": 5,
+    "pass_rate": 0.2
+   },
+   "cql": {
+    "n": 6,
+    "pass_rate": 0.0
+   },
+   "discourse": {
+    "n": 3,
+    "pass_rate": 0.0
+   },
+   "dispersion": {
+    "n": 7,
+    "pass_rate": 0.5714285714285714
+   },
+   "diversity": {
+    "n": 7,
+    "pass_rate": 0.0
+   },
+   "keyness": {
+    "n": 10,
+    "pass_rate": 0.1
+   },
+   "kwic": {
+    "n": 7,
+    "pass_rate": 0.42857142857142855
+   },
+   "ngrams": {
+    "n": 4,
+    "pass_rate": 0.25
+   },
+   "pos_grammar": {
+    "n": 3,
+    "pass_rate": 0.6666666666666666
+   },
+   "register": {
+    "n": 5,
+    "pass_rate": 0.2
+   },
+   "sentiment": {
+    "n": 5,
+    "pass_rate": 0.8
+   },
+   "trap": {
+    "n": 8,
+    "pass_rate": 0.25
+   }
+  },
+  "r3": {
+   "arabic_tools": {
+    "n": 4,
+    "pass_rate": 0.0
+   },
+   "collocation": {
+    "n": 6,
+    "pass_rate": 0.16666666666666666
+   },
+   "corpus_stats": {
+    "n": 5,
+    "pass_rate": 0.2
+   },
+   "cql": {
+    "n": 6,
+    "pass_rate": 0.0
+   },
+   "discourse": {
+    "n": 3,
+    "pass_rate": 0.0
+   },
+   "dispersion": {
+    "n": 7,
+    "pass_rate": 0.5714285714285714
+   },
+   "diversity": {
+    "n": 7,
+    "pass_rate": 0.0
+   },
+   "keyness": {
+    "n": 10,
+    "pass_rate": 0.2
+   },
+   "kwic": {
+    "n": 7,
+    "pass_rate": 0.7142857142857143
+   },
+   "ngrams": {
+    "n": 4,
+    "pass_rate": 0.25
+   },
+   "pos_grammar": {
+    "n": 3,
+    "pass_rate": 0.6666666666666666
+   },
+   "register": {
+    "n": 5,
+    "pass_rate": 0.2
+   },
+   "sentiment": {
+    "n": 5,
+    "pass_rate": 0.8
+   },
+   "trap": {
+    "n": 8,
+    "pass_rate": 0.25
+   }
+  }
+ },
+ "latency_s": {
+  "r1": {
+   "n": 78,
+   "mean": 175.6,
+   "median": 174.8,
+   "p95": 305.0,
+   "min": 24.6,
+   "max": 335.1,
+   "mean_answered": 175.6,
+   "fail_walls": [
+    1432.0,
+    1888.1
+   ]
+  },
+  "r2": {
+   "n": 77,
+   "mean": 176.7,
+   "median": 171.8,
+   "p95": 261.8,
+   "min": 29.0,
+   "max": 320.2,
+   "mean_answered": 176.7,
+   "fail_walls": [
+    1430.5,
+    1853.5,
+    1908.4
+   ]
+  },
+  "r3": {
+   "n": 76,
+   "mean": 169.8,
+   "median": 172.1,
+   "p95": 283.3,
+   "min": 31.8,
+   "max": 332.2,
+   "mean_answered": 169.8,
+   "fail_walls": [
+    1377.9,
+    1584.9,
+    1963.7,
+    1964.8
+   ]
+  }
+ },
+ "tool_calls": {
+  "r1": {
+   "mean_calls": 1.08,
+   "median_calls": 1.0,
+   "max_calls": 2,
+   "zero_call_qs": 1,
+   "failed_tool_rounds": 5
+  },
+  "r2": {
+   "mean_calls": 1.05,
+   "median_calls": 1,
+   "max_calls": 2,
+   "zero_call_qs": 1,
+   "failed_tool_rounds": 7
+  },
+  "r3": {
+   "mean_calls": 1.07,
+   "median_calls": 1.0,
+   "max_calls": 2,
+   "zero_call_qs": 1,
+   "failed_tool_rounds": 6
+  }
+ },
+ "stability": {
+  "identical_verdict_all3": 58,
+  "identical_verdict_ids": [
+   "G-001",
+   "G-002",
+   "G-003",
+   "G-004",
+   "G-005",
+   "G-006",
+   "G-009",
+   "G-010",
+   "G-011",
+   "G-012",
+   "G-013",
+   "G-015",
+   "G-017",
+   "G-019",
+   "G-020",
+   "G-021",
+   "G-024",
+   "G-025",
+   "G-026",
+   "G-027",
+   "G-028",
+   "G-029",
+   "G-030",
+   "G-031",
+   "G-032",
+   "G-034",
+   "G-036",
+   "G-037",
+   "G-038",
+   "G-039",
+   "G-040",
+   "G-042",
+   "G-045",
+   "G-046",
+   "G-047",
+   "G-049",
+   "G-051",
+   "G-052",
+   "G-053",
+   "G-054",
+   "G-055",
+   "G-056",
+   "G-057",
+   "G-059",
+   "G-062",
+   "G-064",
+   "G-065",
+   "G-067",
+   "G-068",
+   "G-069",
+   "G-070",
+   "G-071",
+   "G-072",
+   "G-073",
+   "G-074",
+   "G-076",
+   "G-077",
+   "G-079"
+  ],
+  "pass_all3": 16,
+  "pass_all3_ids": [
+   "G-001",
+   "G-017",
+   "G-020",
+   "G-021",
+   "G-034",
+   "G-039",
+   "G-040",
+   "G-042",
+   "G-045",
+   "G-053",
+   "G-054",
+   "G-055",
+   "G-057",
+   "G-070",
+   "G-071",
+   "G-076"
+  ],
+  "pass_any3": 29,
+  "pass_any3_ids": [
+   "G-001",
+   "G-007",
+   "G-014",
+   "G-016",
+   "G-017",
+   "G-020",
+   "G-021",
+   "G-022",
+   "G-023",
+   "G-033",
+   "G-034",
+   "G-039",
+   "G-040",
+   "G-042",
+   "G-043",
+   "G-044",
+   "G-045",
+   "G-053",
+   "G-054",
+   "G-055",
+   "G-057",
+   "G-058",
+   "G-060",
+   "G-066",
+   "G-070",
+   "G-071",
+   "G-075",
+   "G-076",
+   "G-078"
+  ],
+  "pass_majority": 20,
+  "exact_verdict_agreement_pairs": {
+   "r1-r2": 0.825,
+   "r1-r3": 0.8125,
+   "r2-r3": 0.7625
+  },
+  "pass_agreement_pairs": {
+   "r1-r2": 0.925,
+   "r1-r3": 0.9,
+   "r2-r3": 0.85
+  },
+  "cohens_kappa_pass": {
+   "r1-r2": 0.8063,
+   "r1-r3": 0.7494,
+   "r2-r3": 0.6241
+  }
+ },
+ "no_answer_records": {
+  "r1": [
+   {
+    "id": "G-032",
+    "wall_s": 1888.1,
+    "error": "{\"detail\":\"Model call failed: [ollama] chat request failed: ReadTimeou"
+   },
+   {
+    "id": "G-077",
+    "wall_s": 1432.0,
+    "error": "{\"detail\":\"Model call failed: [ollama] chat request failed: ReadTimeou"
+   }
+  ],
+  "r2": [
+   {
+    "id": "G-032",
+    "wall_s": 1853.5,
+    "error": "{\"detail\":\"Model call failed: [ollama] chat request failed: ReadTimeou"
+   },
+   {
+    "id": "G-035",
+    "wall_s": 1908.4,
+    "error": "{\"detail\":\"Model call failed: [ollama] chat request failed: ReadTimeou"
+   },
+   {
+    "id": "G-077",
+    "wall_s": 1430.5,
+    "error": "{\"detail\":\"Model call failed: [ollama] chat request failed: ReadTimeou"
+   }
+  ],
+  "r3": [
+   {
+    "id": "G-008",
+    "wall_s": 1377.9,
+    "error": "{\"detail\":\"Model call failed: [ollama] chat request failed: ReadTimeou"
+   },
+   {
+    "id": "G-018",
+    "wall_s": 1963.7,
+    "error": "{\"detail\":\"Model call failed: [ollama] chat request failed: ReadTimeou"
+   },
+   {
+    "id": "G-032",
+    "wall_s": 1964.8,
+    "error": "{\"detail\":\"Model call failed: [ollama] chat request failed: ReadTimeou"
+   },
+   {
+    "id": "G-077",
+    "wall_s": 1584.9,
+    "error": "{\"detail\":\"Model call failed: [ollama] chat request failed: ReadTimeou"
+   }
+  ]
+ },
+ "rescue_G035": {
+  "id": "G-035",
+  "rep": "r2",
+  "elapsed_s": 333.7,
+  "verdict_resc": "HALLUCINATED",
+  "verdict_asrun": "NO_ANSWER",
+  "n_tool_calls": 2
+ },
+ "g001_retest": {
+  "verdict": "PASS",
+  "wall_s": 173.0,
+  "verdict_in_r1": "PASS",
+  "verdict_in_r2": "PASS",
+  "verdict_in_r3": "PASS"
+ },
+ "probe_crosscheck": {
+  "self_vs_repo_identical": true,
+  "n_verdicts_compared": 80
+ },
+ "rescore_diff_counts": {
+  "r1": 15,
+  "r2": 12,
+  "r3": 18
+ },
+ "latency_pearson_answered_common": {
+  "n": 75,
+  "r1_r2": 0.74,
+  "r1_r3": 0.657,
+  "r2_r3": 0.614
+ }
+}

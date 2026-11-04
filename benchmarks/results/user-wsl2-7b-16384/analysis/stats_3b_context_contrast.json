@@ -1,0 +1,157 @@
+{
+  "test": "exact McNemar, two-sided, on paired per-question binary verdicts (PASS vs not-PASS)",
+  "pre_registration": "CorpusMind Benchmark Re-run Plan v3, section 7 (unit = question; n=1 collapse = single verdict; Holm family)",
+  "arms": {
+    "control_4k": {
+      "run": "run-41306198564",
+      "model": "qwen2.5:3b",
+      "context": "Ollama build default (4k) - OLLAMA_CONTEXT_LENGTH_env null",
+      "ollama": "ollama version is 0.40.13",
+      "config_digest": "357c53fb659c",
+      "manifest_commit": "110e6c4cc0ae0006c74e6422cc2f590ef3369234",
+      "pass": 4,
+      "n": 80,
+      "rate": 0.05,
+      "ci95_wilson": [
+        0.0196,
+        0.1216
+      ],
+      "verdict_counts": {
+        "HALLUCINATED": 29,
+        "MISSING_NUMBER": 33,
+        "PASS": 4,
+        "TRAP_FAILURE": 14
+      }
+    },
+    "arm_16384": {
+      "run": "run-41306203484",
+      "model": "qwen2.5:3b",
+      "context": 16384,
+      "ollama": "ollama version is 0.40.13",
+      "config_digest": "357c53fb659c",
+      "manifest_commit": "ef983d695fbf3359882131bbb977488531b8eb08",
+      "pass": 18,
+      "n": 80,
+      "rate": 0.225,
+      "ci95_wilson": [
+        0.1473,
+        0.3279
+      ],
+      "verdict_counts": {
+        "HALLUCINATED": 31,
+        "MISSING_NUMBER": 18,
+        "PASS": 18,
+        "TRAP_FAILURE": 13
+      }
+    }
+  },
+  "paired_counts": {
+    "both_PASS": 1,
+    "PASS_4k_only_b": 3,
+    "PASS_16k_only_c": 17,
+    "neither_PASS": 59
+  },
+  "discordant_questions": {
+    "b_4k_only": [
+      "G-013",
+      "G-016",
+      "G-075"
+    ],
+    "c_16k_only": [
+      "G-001",
+      "G-002",
+      "G-007",
+      "G-011",
+      "G-014",
+      "G-021",
+      "G-033",
+      "G-037",
+      "G-043",
+      "G-051",
+      "G-053",
+      "G-054",
+      "G-055",
+      "G-069",
+      "G-070",
+      "G-071",
+      "G-076"
+    ],
+    "b_cell_verdicts_16k": {
+      "G-013": "HALLUCINATED",
+      "G-016": "HALLUCINATED",
+      "G-075": "TRAP_FAILURE"
+    },
+    "c_cell_verdicts_4k": {
+      "G-001": "MISSING_NUMBER",
+      "G-002": "MISSING_NUMBER",
+      "G-007": "MISSING_NUMBER",
+      "G-011": "MISSING_NUMBER",
+      "G-014": "HALLUCINATED",
+      "G-021": "HALLUCINATED",
+      "G-033": "MISSING_NUMBER",
+      "G-037": "MISSING_NUMBER",
+      "G-043": "HALLUCINATED",
+      "G-051": "TRAP_FAILURE",
+      "G-053": "HALLUCINATED",
+      "G-054": "MISSING_NUMBER",
+      "G-055": "HALLUCINATED",
+      "G-069": "MISSING_NUMBER",
+      "G-070": "HALLUCINATED",
+      "G-071": "MISSING_NUMBER",
+      "G-076": "TRAP_FAILURE"
+    }
+  },
+  "exact_mcnemar": {
+    "b": 3,
+    "c": 17,
+    "n_discordant": 20,
+    "p_two_sided_raw": 0.0025768280029296875,
+    "holm_family_declared": [
+      "ctx_1.5b",
+      "ctx_3b",
+      "size_CI",
+      "size_TierB"
+    ],
+    "holm_executed_tests": [
+      "ctx_3b"
+    ],
+    "p_two_sided_holm_adjusted": 0.0025768280029296875,
+    "note": "single executed test in the pre-registered family; Holm adjustment is the identity. ctx_1.5b not executed (only a freeze-version 4k triple exists - Ollama-version confound, AREA_AUDIT.md); size contrasts not executed (no Tier B bridging runs - descoped 2026-11-05)."
+  },
+  "agreement_descriptive": {
+    "five_class_identical": 40,
+    "five_class_rate": 0.5,
+    "binary_identical": 60,
+    "binary_rate": 0.75,
+    "joint_verdict_pairs": {
+      "MISSING_NUMBER|PASS": 9,
+      "MISSING_NUMBER|HALLUCINATED": 12,
+      "TRAP_FAILURE|TRAP_FAILURE": 11,
+      "HALLUCINATED|HALLUCINATED": 17,
+      "PASS|HALLUCINATED": 2,
+      "HALLUCINATED|PASS": 6,
+      "MISSING_NUMBER|MISSING_NUMBER": 11,
+      "HALLUCINATED|MISSING_NUMBER": 6,
+      "PASS|PASS": 1,
+      "TRAP_FAILURE|PASS": 2,
+      "TRAP_FAILURE|MISSING_NUMBER": 1,
+      "PASS|TRAP_FAILURE": 1,
+      "MISSING_NUMBER|TRAP_FAILURE": 1
+    }
+  },
+  "gold_integrity": {
+    "keys": [
+      "arabic_pack",
+      "corpus_layout",
+      "created_utc",
+      "description",
+      "engine_version",
+      "git_commit",
+      "question_count",
+      "snapshot",
+      "spacy_model"
+    ],
+    "control": {},
+    "identical_across_arms": true
+  }
+}
