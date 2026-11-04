@@ -1,0 +1,14 @@
+CorpusMind Tier B (local) run journal - qwen2.5:7b @ 16384 ctx
+All times UTC. Reconstructed journal; the *.log files are the authoritative record.
+Host: Waleed-Desktop, Windows 11 + WSL2 Ubuntu 24.04, CPU-only
+Ollama 0.40.13; OLLAMA_CONTEXT_LENGTH=16384; OLLAMA_NUM_PARALLEL=1; keep_alive 30 m
+Engine: v2.0.2, commit 5a5e43fa0c9e6a903dc06f79579b732a9f666bca (frozen, unchanged across reps)
+Gold: engine/eval/data/gold/grounding_gold.json (G-001..G-080), sha256 starts 480f5230
+Shard command: python -m eval.run_grounding --provider ollama --model qwen2.5:7b --pause 0 --rate-retries 4 --timeout 900 --only <20 disjoint ids> --out eval/runs/<TAG>_shardN.json
+2026-11-01  probe16k.json: 5-question probe G-001..G-005. G-001 HTTP 502 = cold start (model loading; hardcoded 60 s tool-round timeout x 3 attempts). Warm-up adopted; g001_retest.json confirms recovery.
+2026-11-02  rep b7_16k_r1: 4 shards x 20, first shard created 18:11Z. Deadline misses: G-032, G-077 (900 s cap). Retry counts in b7_16k_r1.log.
+2026-11-02  rep b7_16k_r2 started 20:32Z, ran into Nov 3. Same two deadline misses: G-032, G-077.
+2026-11-03  rescues: G-035 (r2) succeeded; G-032 and G-077 failed again in r1 and r2 (4 attempts, 497 B stubs). Rescue stopped per pre-registration; misses disclosed.
+2026-11-04  rep b7_16k_r3: 4 shards x 20, engine_stopped 12:35:12Z. No rescues attempted.
+Post-run  truncation gate: grep -c 'truncated = 1' across all three ollama_server.log segments = 0.
+Disclosure: two placeholder-aborted invocations wrote junk files; deleted before production data. No shard affected.
