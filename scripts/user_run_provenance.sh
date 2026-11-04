@@ -114,7 +114,10 @@ python3 benchmarks/scripts/make_manifest.py "$DATA" \
   --run-url "local://Waleed-Desktop/WSL2-Ubuntu24.04-tierB-user-run" \
   --commit "$ENGINE_COMMIT"
 if [ -f "$DATA/MANIFEST.json" ]; then
-  git rm -q "$DATA/MANIFEST.json"     # partial probe-only manifest, superseded
+  # -f is required: the Stage 5 validator rewrites MANIFEST.json on every pass,
+  # so git always sees it as locally modified here. It is superseded by the
+  # full-folder manifest.json generated above.
+  git rm -qf "$DATA/MANIFEST.json"
 fi
 ls -la "$DATA/manifest.json"
 
