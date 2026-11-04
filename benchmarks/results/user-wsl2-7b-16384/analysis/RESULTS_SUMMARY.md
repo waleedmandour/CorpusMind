@@ -163,13 +163,16 @@ mass shifts decisively to hallucinated numbers rather than missing ones.
   MISSING_NUMBER-vs-HALLUCINATED semantics; per protocol these are reported, not
   fatal, and the **repo scorer remains the citable verdict source** (identical
   logic applied to every CI arm, so comparability holds).
-- **Environment files not yet in the repo**: `env_qwen2.5-7b.json`,
-  `host_snapshot.txt`, the three `ollama_server` log segments, and
-  `pip_freeze.txt` (created 2026-11-04). Upload when convenient; the analysis
-  above does not depend on them.
-- The run-folder `MANIFEST.json` currently hashes only the three probe-stage
-  files; it should be regenerated over the full folder once the remaining
-  evidence files land.
+- **Environment files committed (2026-11-05)**: `env_qwen2.5-7b.json`,
+  `ollama_env.json`, `host_snapshot.txt`, `pip_freeze.txt`, and the three
+  `ollama_server` log segments now live under `evidence/` (recorded
+  2026-11-04T17:30Z on the run machine, same pinned install). Truncation gate
+  re-checked on the committed bytes: 0 matches for `truncated = 1`; the env
+  file confirms Ollama 0.40.13 with OLLAMA_CONTEXT_LENGTH=16384. The verdicts
+  above do not depend on these files; they complete the provenance chain.
+- The run-folder manifest was regenerated over the full folder (lowercase
+  `manifest.json`, commit-under-test 5a5e43fa...); the earlier partial
+  probe-stage `MANIFEST.json` is removed as superseded.
 - Two placeholder-aborted invocations wrote junk files before production data;
   deleted before production data was collected. No shard was affected
   (per `evidence/notes.txt`, the reconstructed journal; the `*.log` files are
