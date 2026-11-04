@@ -1,0 +1,23 @@
+{
+ "meta": {
+  "created_utc": "2026-11-03T21:04:14+00:00",
+  "provider": "ollama",
+  "model": "qwen2.5:7b",
+  "question_count": 1,
+  "pause_s": 0.0,
+  "rate_retries": 4,
+  "cloud_reasoning_effort": "",
+  "cloud_chat_timeout_s": 240.0,
+  "chat_deadline_s": 900.0,
+  "harness_timeout_s": 900.0
+ },
+ "results": [
+  {
+   "id": "G-032",
+   "answer": "",
+   "http_status": 502,
+   "error": "{\"detail\":\"Model call failed: [ollama] chat request failed: ReadTimeout: \"}",
+   "wall_ms": 1604179
+  }
+ ]
+}

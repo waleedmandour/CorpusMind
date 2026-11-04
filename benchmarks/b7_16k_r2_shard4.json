@@ -1,0 +1,475 @@
+{
+ "meta": {
+  "created_utc": "2026-11-03T01:25:22+00:00",
+  "provider": "ollama",
+  "model": "qwen2.5:7b",
+  "question_count": 20,
+  "pause_s": 0.0,
+  "rate_retries": 4,
+  "cloud_reasoning_effort": "",
+  "cloud_chat_timeout_s": 240.0,
+  "chat_deadline_s": 900.0,
+  "harness_timeout_s": 900.0
+ },
+ "results": [
+  {
+   "id": "G-061",
+   "answer": "Based on the provided tool response, the distribution of parts of speech (POS) in the text \"ذهب الطلاب إلى المكتبة في الصباح الباكر قرأوا القصة ثم كتبوا ملخصاً قصيراً عنها\" is as follows:\n\n1. **NOUN**: 90 tokens (38.63%)\n2. **VERB**: 51 tokens (21.89%)\n3. **X**: 27 tokens (11.59%)\n4. **ADJ**: 23 tokens (9.87%)\n5. **ADP**: 14 tokens (6.01%)\n6. **SCONJ**: 9 tokens (3.86%)\n7. **PROPN**: 8 tokens (3.43%)\n8. **PRON**: 6 tokens (2.58%)\n9. **ADV**: 2 tokens (0.86%)\n10. **CCONJ**: 2 tokens (0.86%)\n\nThe most frequent POS is **NOUN** with 90 tokens, followed by **VERB** with 51 tokens. The less frequent POS include **ADP** (14 tokens), **SCONJ** (9 tokens), and **CCONJ** (2 tokens).\n\nThis distribution indicates that the text is primarily composed of nouns and verbs, which is typical of a narrative or descriptive text. The presence of adjectives, adpositions, and conjunctions is also noted, which further enriches the sentence structure.",
+   "grounded": true,
+   "tool_calls": [
+    {
+     "name": "get_pos_analysis",
+     "args": {
+      "corpus_id": "1d6ff8a0e4a84c37",
+      "n": 1
+     },
+     "ok": true
+    }
+   ],
+   "evidence": [
+    {
+     "kind": "tool_result",
+     "ref": "tool:get_pos_analysis:1",
+     "snippet": "{\"total_tokens\": 233, \"distribution_top\": [{\"pos\": \"NOUN\", \"freq\": 90, \"percent\": 38.627}, {\"pos\": \"VERB\", \"freq\": 51, \"percent\": 21.888}, {\"pos\": \"X\", \"freq\": 27, \"percent\": 11.588}, {\"pos\": \"ADJ\", \"freq\": 23, \"percent\": 9.871}, {\"pos\": \"ADP\", \"freq\": 14, \"percent\": 6.009}, {\"pos\": \"SCONJ\", \"freq\": 9, \"percent\": 3.863}, {\"pos\": \"PROPN\", \"freq\": 8, \"percent\": 3.433}, {\"pos\": \"PRON\", \"freq\": 6, \"percent\": 2.575}, {\"pos\": \"ADV\", \"freq\": 2, \"percent\": 0.858}, {\"pos\": \"CCONJ\", \"freq\": 2, \"percent\": "
+    }
+   ],
+   "elapsed_ms": 310373,
+   "wall_ms": 663935
+  },
+  {
+   "id": "G-062",
+   "answer": "التصنيف السائد لنص «سافر التاجر العجوز إلى الساحل كل ربيع.» هو اللغة المعاصرة المعاصرة (Modern Standard Arabic, MSA). النص يحتوي على نسبة 100% من الكلمات من اللغة المعاصرة، مما يشير إلى أنه مكتوب باللغة العربية المعاصرة المعيارية.",
+   "grounded": true,
+   "tool_calls": [
+    {
+     "name": "arabic_register",
+     "args": {
+      "text": "سافر التاجر العجوز إلى الساحل كل ربيع."
+     },
+     "ok": true
+    }
+   ],
+   "evidence": [
+    {
+     "kind": "tool_result",
+     "ref": "tool:arabic_register:1",
+     "snippet": "{\"register_distribution\": {\"classical\": 0.0, \"msa\": 1.0, \"dialectal\": 0.0}}"
+    }
+   ],
+   "elapsed_ms": 155875,
+   "wall_ms": 155903
+  },
+  {
+   "id": "G-063",
+   "answer": "النص المعطى يحتوي على نسبة متساوية بين اللهجات الثلاث، حيث يبلغ تصنيف اللهجة المعاصرة (المساهمة) 33.3%，古典阿拉伯语方言的贡献也是33.3%，而古典阿拉伯语的贡献也是33.3%。这表明该文本在不同阿拉伯方言和形式之间的使用是均衡的。",
+   "grounded": true,
+   "tool_calls": [
+    {
+     "name": "arabic_register",
+     "args": {
+      "text": "ليش ما رح تيجي معنا على البحرية؟ الشو كان حلو كتير مبارح، وهويك الجو منعش."
+     },
+     "ok": true
+    }
+   ],
+   "evidence": [
+    {
+     "kind": "tool_result",
+     "ref": "tool:arabic_register:1",
+     "snippet": "{\"register_distribution\": {\"classical\": 0.333, \"msa\": 0.333, \"dialectal\": 0.333}}"
+    }
+   ],
+   "elapsed_ms": 160483,
+   "wall_ms": 160520
+  },
+  {
+   "id": "G-064",
+   "answer": "النص «أعلنت الوزارة عن مشروع جديد لتطوير التعليم الرقمي في المدارس الحكومية.» مصنف كله في اللهجة المعاصرة المعاصرة (Modern Standard Arabic, MSA). لا يوجد أي كلمات في النص تنتمي إلى اللهجة الكلاسيكية أو اللهجة الدialektala.",
+   "grounded": true,
+   "tool_calls": [
+    {
+     "name": "arabic_register",
+     "args": {
+      "text": "أعلنت الوزارة عن مشروع جديد لتطوير التعليم الرقمي في المدارس الحكومية."
+     },
+     "ok": true
+    }
+   ],
+   "evidence": [
+    {
+     "kind": "tool_result",
+     "ref": "tool:arabic_register:1",
+     "snippet": "{\"register_distribution\": {\"classical\": 0.0, \"msa\": 1.0, \"dialectal\": 0.0}}"
+    }
+   ],
+   "elapsed_ms": 152741,
+   "wall_ms": 152769
+  },
+  {
+   "id": "G-065",
+   "answer": "في العبارة «الطلاب يقرأون القصة»، استخرج المحرك الكلامي الجذور التالية:\n\n1. **الطلاب**: الجذر هو \"ط.ل.ب\" وصيغته في النص هي \"طالِب\" وتصنيفها الصوتي هو \"ال1ُ2ّا3\".\n2. **يقرأون**: الجذر هو \"ق.ر.#\" وصيغته في النص هي \"قَرَأ\" وتصنيفها الصوتي هو \"يَ1ْ2َأُونَ\".\n3. **القصة**: الجذر هو \"ق.ص.ص\" وصيغته في النص هي \"قَصَّة\" وتصنيفها الصوتي هو \"ال1َ2َّة\".\n\nهناك ثلاثة جذور مختلفة في هذه العبارة.",
+   "grounded": true,
+   "tool_calls": [
+    {
+     "name": "arabic_roots",
+     "args": {
+      "text": "الطلاب يقرأون القصة"
+     },
+     "ok": true
+    }
+   ],
+   "evidence": [
+    {
+     "kind": "tool_result",
+     "ref": "tool:arabic_roots:1",
+     "snippet": "{\"roots\": [{\"token\": \"\\u0627\\u0644\\u0637\\u0644\\u0627\\u0628\", \"root\": \"\\u0637.\\u0644.\\u0628\", \"pattern\": \"\\u0627\\u06441\\u064f2\\u0651\\u06273\", \"lemma\": \"\\u0637\\u0627\\u0644\\u0650\\u0628\", \"pos\": \"noun\", \"buckwalter\": \"AlTlAb\"}, {\"token\": \"\\u064a\\u0642\\u0631\\u0623\\u0648\\u0646\", \"root\": \"\\u0642.\\u0631.#\", \"pattern\": \"\\u064a\\u064e1\\u06522\\u064e\\u0623\\u064f\\u0648\\u0646\\u064e\", \"lemma\": \"\\u0642\\u064e\\u0631\\u064e\\u0623\", \"pos\": \"verb\", \"buckwalter\": \"yqr>wn\"}, {\"token\": \"\\u0627\\u0644\\u0642\\u0635\\u0629\", \""
+    }
+   ],
+   "elapsed_ms": 177992,
+   "wall_ms": 178013
+  },
+  {
+   "id": "G-066",
+   "answer": "محرك التشكيل للنص «قال الوزير إن المشروع سيبدأ» يحلل النص إلى 5 رموز (tokens). الجذر الأول المُعاد هو \"ق.#.ل\" للكلمة \"قال\".\n\nالكلمات والجذور المحددة هي:\n\n1. قال (ق.#.ل): الجذر المُعاد هو \"ق.#.ل\".\n2. الوزير (#.ز.ر): الجذر هو \"ز.ر\".\n3. إن (#.ن): الجذر هو \"ن\".\n4. المشروع (ش.ر.ع): الجذر هو \"ش.ر.ع\".\n5. سيبدأ (ب.د.د): الجذر هو \"ب.د.د\".\n\nلذا، الجذر الأول المُعاد في هذه الجملة هو \"ق.#.ل\" للكلمة \"قال\".",
+   "grounded": true,
+   "tool_calls": [
+    {
+     "name": "arabic_morphology",
+     "args": {
+      "text": "قال الوزير إن المشروع سيبدأ"
+     },
+     "ok": true
+    }
+   ],
+   "evidence": [
+    {
+     "kind": "tool_result",
+     "ref": "tool:arabic_morphology:1",
+     "snippet": "{\"backend\": \"camel\", \"detected_dialect\": \"msa\", \"token_count\": 5, \"top_tokens\": [{\"text\": \"\\u0642\\u0627\\u0644\", \"root\": \"\\u0642.#.\\u0644\", \"pattern\": \"1\\u06273\\u064e\", \"lemma\": \"\\u0642\\u0627\\u0644\", \"pos\": \"verb\", \"buckwalter\": \"qAl\"}, {\"text\": \"\\u0627\\u0644\\u0648\\u0632\\u064a\\u0631\", \"root\": \"#.\\u0632.\\u0631\", \"pattern\": \"\\u0627\\u0644\\u0648\\u064e2\\u0650\\u064a3\", \"lemma\": \"\\u0648\\u064e\\u0632\\u0650\\u064a\\u0631\", \"pos\": \"noun\", \"buckwalter\": \"Alwzyr\"}, {\"text\": \"\\u0625\\u0646\", \"root\": \"#.\\u0646\", \""
+    }
+   ],
+   "elapsed_ms": 224656,
+   "wall_ms": 224677
+  },
+  {
+   "id": "G-067",
+   "answer": "The corpus \"EN-all\" has a total of 331 tokens. According to the Hyland (2005) metadiscourse analysis, the most frequent metadiscourse category is \"interactional.self_mentions\" with a frequency of 9 tokens, which translates to a normalized frequency of 27,190.33 per million tokens. Here are some examples of self-mentions in the corpus:\n\n- \"my teacher said me that practice is important, and I am agree with him.\"\n- \"my goal in university is to study computer science.\"\n- \"my teacher said me that practice is important, and I am agree with him.\"\n- \"in conclusion, my goal is clear: I want to be a good engineer.\"\n\nThese examples show that the author frequently refers to themselves, indicating a high presence of self-referential metadiscourse in the corpus.",
+   "grounded": true,
+   "tool_calls": [
+    {
+     "name": "discourse_analysis",
+     "args": {
+      "corpus_id": "d55aded5c5da42b4"
+     },
+     "ok": true
+    }
+   ],
+   "evidence": [
+    {
+     "kind": "tool_result",
+     "ref": "tool:discourse_analysis:1",
+     "snippet": "{\"taxonomy\": \"Hyland 2005\", \"total_tokens\": 331, \"categories\": {\"interactional.self_mentions\": {\"freq\": 9, \"per_million\": 27190.33, \"examples\": [{\"cue\": \"me\", \"evidence_id\": \"14c60e84469c45d0:2:3\", \"sentence_preview\": \"my teacher said me that practice is important , and i am agree with him .\"}, {\"cue\": \"my\", \"evidence_id\": \"14c60e84469c45d0:0:0\", \"sentence_preview\": \"my goal in university my goal in university is to study computer science .\"}, {\"cue\": \"my\", \"evidence_id\": \"14c60e84469c45d0:0:5\","
+    }
+   ],
+   "elapsed_ms": 243749,
+   "wall_ms": 243773
+  },
+  {
+   "id": "G-068",
+   "answer": "In the Hyland (2005) analysis of the corpus with ID `d55aded5c5da42b4`, the hedges category has a raw frequency of 7 tokens. Its per-million rate is approximately 21,148.04.",
+   "grounded": true,
+   "tool_calls": [
+    {
+     "name": "discourse_analysis",
+     "args": {
+      "corpus_id": "d55aded5c5da42b4"
+     },
+     "ok": true
+    }
+   ],
+   "evidence": [
+    {
+     "kind": "tool_result",
+     "ref": "tool:discourse_analysis:1",
+     "snippet": "{\"taxonomy\": \"Hyland 2005\", \"total_tokens\": 331, \"categories\": {\"interactional.self_mentions\": {\"freq\": 9, \"per_million\": 27190.33, \"examples\": [{\"cue\": \"me\", \"evidence_id\": \"14c60e84469c45d0:2:3\", \"sentence_preview\": \"my teacher said me that practice is important , and i am agree with him .\"}, {\"cue\": \"my\", \"evidence_id\": \"14c60e84469c45d0:0:0\", \"sentence_preview\": \"my goal in university my goal in university is to study computer science .\"}, {\"cue\": \"my\", \"evidence_id\": \"14c60e84469c45d0:0:5\","
+    }
+   ],
+   "elapsed_ms": 85099,
+   "wall_ms": 85120
+  },
+  {
+   "id": "G-069",
+   "answer": "The raw frequency of the boosters category in the Hyland (2005) analysis is 2 tokens. This can be seen in the tool response where the `freq` field under the \"interactional.boosters\" category is listed as 2.",
+   "grounded": true,
+   "tool_calls": [
+    {
+     "name": "discourse_analysis",
+     "args": {
+      "corpus_id": "d55aded5c5da42b4"
+     },
+     "ok": true
+    }
+   ],
+   "evidence": [
+    {
+     "kind": "tool_result",
+     "ref": "tool:discourse_analysis:1",
+     "snippet": "{\"taxonomy\": \"Hyland 2005\", \"total_tokens\": 331, \"categories\": {\"interactional.self_mentions\": {\"freq\": 9, \"per_million\": 27190.33, \"examples\": [{\"cue\": \"me\", \"evidence_id\": \"14c60e84469c45d0:2:3\", \"sentence_preview\": \"my teacher said me that practice is important , and i am agree with him .\"}, {\"cue\": \"my\", \"evidence_id\": \"14c60e84469c45d0:0:0\", \"sentence_preview\": \"my goal in university my goal in university is to study computer science .\"}, {\"cue\": \"my\", \"evidence_id\": \"14c60e84469c45d0:0:5\","
+    }
+   ],
+   "elapsed_ms": 212992,
+   "wall_ms": 213015
+  },
+  {
+   "id": "G-070",
+   "answer": "The total token count for the POS analysis is 331. The most frequent POS tag is NOUN, with a frequency of 81 tokens, which represents approximately 24.47% of all tokens.",
+   "grounded": true,
+   "tool_calls": [
+    {
+     "name": "get_pos_analysis",
+     "args": {
+      "corpus_id": "d55aded5c5da42b4",
+      "n": 1
+     },
+     "ok": true
+    }
+   ],
+   "evidence": [
+    {
+     "kind": "tool_result",
+     "ref": "tool:get_pos_analysis:1",
+     "snippet": "{\"total_tokens\": 331, \"distribution_top\": [{\"pos\": \"NOUN\", \"freq\": 81, \"percent\": 24.471}, {\"pos\": \"VERB\", \"freq\": 44, \"percent\": 13.293}, {\"pos\": \"DET\", \"freq\": 34, \"percent\": 10.272}, {\"pos\": \"ADJ\", \"freq\": 27, \"percent\": 8.157}, {\"pos\": \"AUX\", \"freq\": 26, \"percent\": 7.855}, {\"pos\": \"ADP\", \"freq\": 25, \"percent\": 7.553}, {\"pos\": \"PRON\", \"freq\": 21, \"percent\": 6.344}, {\"pos\": \"PROPN\", \"freq\": 21, \"percent\": 6.344}, {\"pos\": \"ADV\", \"freq\": 15, \"percent\": 4.532}, {\"pos\": \"NUM\", \"freq\": 12, \"percent"
+    }
+   ],
+   "elapsed_ms": 163556,
+   "wall_ms": 163582
+  },
+  {
+   "id": "G-071",
+   "answer": "The POS analysis reports 81 NOUN tokens, which make up approximately 24.47% of the total tokens in the corpus.",
+   "grounded": true,
+   "tool_calls": [
+    {
+     "name": "get_pos_analysis",
+     "args": {
+      "corpus_id": "d55aded5c5da42b4",
+      "n": 1
+     },
+     "ok": true
+    }
+   ],
+   "evidence": [
+    {
+     "kind": "tool_result",
+     "ref": "tool:get_pos_analysis:1",
+     "snippet": "{\"total_tokens\": 331, \"distribution_top\": [{\"pos\": \"NOUN\", \"freq\": 81, \"percent\": 24.471}, {\"pos\": \"VERB\", \"freq\": 44, \"percent\": 13.293}, {\"pos\": \"DET\", \"freq\": 34, \"percent\": 10.272}, {\"pos\": \"ADJ\", \"freq\": 27, \"percent\": 8.157}, {\"pos\": \"AUX\", \"freq\": 26, \"percent\": 7.855}, {\"pos\": \"ADP\", \"freq\": 25, \"percent\": 7.553}, {\"pos\": \"PRON\", \"freq\": 21, \"percent\": 6.344}, {\"pos\": \"PROPN\", \"freq\": 21, \"percent\": 6.344}, {\"pos\": \"ADV\", \"freq\": 15, \"percent\": 4.532}, {\"pos\": \"NUM\", \"freq\": 12, \"percent"
+    }
+   ],
+   "elapsed_ms": 159412,
+   "wall_ms": 159442
+  },
+  {
+   "id": "G-072",
+   "answer": "According to the grammar audit, there are 6 passive-voice constructions in the corpus. Here are some examples:\n\n1. \"was tagged\" from document `963fcc4c4f9546f0` at sentence 2.\n2. \"is expected\" from document `0e6c23c66ba34dc9` at sentence 2.\n3. \"am agreed\" from document `14c60e84469c45d0` at sentence 2.\n4. \"was gone\" from document `14c60e84e84469c45d0` at sentence 3.\n5. \"is needed\" from document `963fcc4c4f9546f0` at sentence 9.\n6. \"be drawn\" from document `963fcc4c4f9546f0` at sentence 9.",
+   "grounded": true,
+   "tool_calls": [
+    {
+     "name": "grammar_query",
+     "args": {
+      "corpus_id": "d55aded5c5da42b4",
+      "patterns": [
+       "passive_voice"
+      ]
+     },
+     "ok": true
+    }
+   ],
+   "evidence": [
+    {
+     "kind": "tool_result",
+     "ref": "tool:grammar_query:1",
+     "snippet": "{\"counts\": {\"passive_voice\": 6}, \"examples\": {\"passive_voice\": [{\"pattern\": \"passive_voice\", \"doc\": \"963fcc4c4f9546f0\", \"sent\": 2, \"verb\": \"tagged\", \"verb_lemma\": \"tag\", \"aux\": \"was\", \"evidence_id\": \"963fcc4c4f9546f0:2:2\"}, {\"pattern\": \"passive_voice\", \"doc\": \"0e6c23c66ba34dc9\", \"sent\": 2, \"verb\": \"expected\", \"verb_lemma\": \"expect\", \"aux\": \"is\", \"evidence_id\": \"0e6c23c66ba34dc9:2:8\"}, {\"pattern\": \"passive_voice\", \"doc\": \"14c60e84469c45d0\", \"sent\": 2, \"verb\": \"agree\", \"verb_lemma\": \"agree\", \"aux\""
+    }
+   ],
+   "elapsed_ms": 194173,
+   "wall_ms": 194191
+  },
+  {
+   "id": "G-073",
+   "answer": "The word 'zebra' does not appear in this corpus. The tool searched for exact matches of 'zebra' without considering case sensitivity or using a regex pattern, and found no occurrences within a window of 10 tokens on either side of the target word.",
+   "grounded": true,
+   "tool_calls": [
+    {
+     "name": "search_concordance",
+     "args": {
+      "corpus_id": "d55aded5c5da42b4",
+      "query": "zebra",
+      "window": 10
+     },
+     "ok": true
+    }
+   ],
+   "evidence": [],
+   "elapsed_ms": 150059,
+   "wall_ms": 150084
+  },
+  {
+   "id": "G-074",
+   "answer": "لم يتم العثور على كلمة \"زرافة\" في هذا المحتوى. عدد المطابقات هو صفر.",
+   "grounded": true,
+   "tool_calls": [
+    {
+     "name": "search_concordance",
+     "args": {
+      "query": "زرافة",
+      "window": 10,
+      "corpus_id": "1d6ff8a0e4a84c37"
+     },
+     "ok": true
+    }
+   ],
+   "evidence": [],
+   "elapsed_ms": 162157,
+   "wall_ms": 162179
+  },
+  {
+   "id": "G-075",
+   "answer": "The log ratio of the word 'zebra' in the keyness table vs the press corpus is not directly provided in the keyness results for the \"EN-learner\" corpus. The keyness results show the log ratios for other terms such as \"i\", \"goal\", \"is\", \"my\", and \"to\". \n\nTo find the log ratio for 'zebra', we would need to run the keyness analysis tool again specifically comparing 'zebra' in the \"EN-learner\" corpus to the \"EN-press\" corpus. \n\nWould you like to proceed with this analysis? If so, I can run the tool for you.",
+   "grounded": true,
+   "tool_calls": [
+    {
+     "name": "compute_keyness",
+     "args": {
+      "target_corpus_id": "7ade9b3fd6ed416e",
+      "reference_corpus_id": "246788a4dea04f3f",
+      "limit": 100
+     },
+     "ok": true
+    }
+   ],
+   "evidence": [
+    {
+     "kind": "tool_result",
+     "ref": "tool:compute_keyness:1",
+     "snippet": "{\"target_corpus_id\": \"7ade9b3fd6ed416e\", \"reference_corpus_id\": \"246788a4dea04f3f\", \"N1\": 35, \"N2\": 32, \"positive_keywords\": [{\"term\": \"i\", \"f1\": 8, \"f2\": 0, \"log_likelihood\": 11.380219077489372, \"chi_square\": 8.306053268765135, \"log_ratio\": 3.8707169830550336, \"pct_diff\": 1362.857142857143, \"simple_maths\": 228572.42857142855, \"odds_ratio\": 20.09090909090909, \"p_ll\": 0.000742, \"q_bh\": 0.006681}, {\"term\": \"goal\", \"f1\": 6, \"f2\": 0, \"log_likelihood\": 8.330993404202019, \"chi_square\": 6.0252927400468"
+    }
+   ],
+   "elapsed_ms": 252487,
+   "wall_ms": 252507
+  },
+  {
+   "id": "G-076",
+   "answer": "The query `[[[not-a-query` is invalid and caused an error due to the unexpected character `-`. To get accurate results, please provide a valid CQL (Corpus Query Language) query. If you intended to run a different query, could you please specify it correctly? For example, a valid query might look like `[[word=\"hello\"]`.",
+   "grounded": true,
+   "tool_calls": [
+    {
+     "name": "search_cql",
+     "args": {
+      "corpus_id": "d55aded5c5da42b4",
+      "query": "[[[not-a-query",
+      "window": 50
+     },
+     "ok": false,
+     "error": "position 6: unexpected character '-'"
+    }
+   ],
+   "evidence": [],
+   "elapsed_ms": 29009,
+   "wall_ms": 29032
+  },
+  {
+   "id": "G-077",
+   "answer": "",
+   "http_status": 502,
+   "error": "{\"detail\":\"Model call failed: [ollama] chat request failed: ReadTimeout: \"}",
+   "wall_ms": 1430529
+  },
+  {
+   "id": "G-078",
+   "answer": "The tool response provided does not contain information about the number of unique trilateral roots according to the Arabic morphology engine. The response instead provides frequency results for the English corpus \"EN-all\". To get the number of unique trilateral roots, we would need to use a tool specifically designed for Arabic morphology analysis, such as the `get_arabic_trilateral_roots` tool. \n\nSince this information is not available in the current corpus snapshot, we cannot provide the requested number of unique trilateral roots. To obtain this information, you would need to run the appropriate tool on the Arabic part of a bilingual or parallel corpus, if available.",
+   "grounded": true,
+   "tool_calls": [
+    {
+     "name": "get_corpus_overview",
+     "args": {
+      "corpus_id": "d55aded5c5da42b4"
+     },
+     "ok": true,
+     "auto": true
+    },
+    {
+     "name": "get_frequency",
+     "args": {
+      "corpus_id": "d55aded5c5da42b4"
+     },
+     "ok": true,
+     "auto": true
+    }
+   ],
+   "evidence": [
+    {
+     "kind": "tool_result",
+     "ref": "auto:get_corpus_overview:1",
+     "snippet": "{\"corpus_id\": \"d55aded5c5da42b4\", \"name\": \"EN-all\", \"language\": \"en\", \"genre\": \"mixed\", \"text_side\": {\"document_count\": 3, \"token_count\": 384, \"type_count\": 257, \"sentence_count\": 27}, \"vision_side\": {\"image_set_count\": 0, \"image_count\": 0, \"image_sets\": []}, \"note\": \"\"}"
+    },
+    {
+     "kind": "tool_result",
+     "ref": "auto:get_frequency:2",
+     "snippet": "{\"unit\": \"word\", \"total_tokens\": 331, \"total_types\": 20, \"sttr\": 0.6042, \"top_items\": [{\"item\": \"the\", \"freq\": 15, \"per_million\": 45317.22, \"percent\": 4.5317, \"range\": 3, \"range_percent\": 100.0}, {\"item\": \"in\", \"freq\": 9, \"per_million\": 27190.33, \"percent\": 2.719, \"range\": 3, \"range_percent\": 100.0}, {\"item\": \"is\", \"freq\": 9, \"per_million\": 27190.33, \"percent\": 2.719, \"range\": 3, \"range_percent\": 100.0}, {\"item\": \"to\", \"freq\": 9, \"per_million\": 27190.33, \"percent\": 2.719, \"range\": 3, \"range_perc"
+    }
+   ],
+   "elapsed_ms": 231187,
+   "wall_ms": 231211
+  },
+  {
+   "id": "G-079",
+   "answer": "Based on the tool results, there are no 8-grams that occur at least twice in the corpus with the ID `d55aded5c5da42b4`. The `min_freq` field indicates the minimum frequency required to count a 8-gram, and since the value is set to 2, we can conclude that no 8-grams meet this criterion in this corpus.",
+   "grounded": true,
+   "tool_calls": [
+    {
+     "name": "get_ngrams",
+     "args": {
+      "corpus_id": "d55aded5c5da42b4",
+      "n": 8,
+      "min_freq": 2
+     },
+     "ok": true
+    }
+   ],
+   "evidence": [
+    {
+     "kind": "tool_result",
+     "ref": "tool:get_ngrams:1",
+     "snippet": "{\"n\": 8, \"total_tokens\": 331, \"top_ngrams\": [], \"min_freq\": 2, \"min_range\": 1}"
+    }
+   ],
+   "elapsed_ms": 29741,
+   "wall_ms": 29771
+  },
+  {
+   "id": "G-080",
+   "answer": "The collocation analysis for the word \"zebra\" within a window of 5 tokens did not return any top collocates. This could be due to the word \"zebra\" not co-occurring frequently enough within the specified window size in the corpus. \n\nTo provide more detailed information, let's look at the measures:\n\n- **MI (Mutual Information):** >3 indicates a strong association.\n- **t_score:** >2 indicates a significant co-occurrence.\n- **log_likelihood:** Higher values indicate more significant co-occurrences.\n- **Dice:** A value between 0 and 1, with higher values indicating a stronger association.\n- **log_dice:** 14 + log2(Dice), with a maximum of 14 when Dice = 1, indicating a stronger association.\n- **chi_square:** Higher values indicate more significant co-occurrences.\n- **Delta P:** A value between -1 and 1, with positive values indicating that the collocate depends on the node.\n\nSince no top collocates were found, it suggests that \"zebra\" does not frequently co-occur with other words within a 5-token window in the corpus. If you need more detailed information, you can adjust the window size or check the frequency of \"zebra\" in the corpus.",
+   "grounded": true,
+   "tool_calls": [
+    {
+     "name": "compute_collocations",
+     "args": {
+      "corpus_id": "d55aded5c5da42b4",
+      "node": "zebra",
+      "window": 5
+     },
+     "ok": true
+    }
+   ],
+   "evidence": [
+    {
+     "kind": "tool_result",
+     "ref": "tool:compute_collocations:1",
+     "snippet": "{\"node\": \"zebra\", \"window\": 5, \"measures\": [\"mi\", \"t_score\", \"log_likelihood\", \"dice\", \"log_dice\", \"chi_square\", \"delta_p\", \"fisher\"], \"top_collocates\": []}"
+    }
+   ],
+   "elapsed_ms": 185430,
+   "wall_ms": 185452
+  }
+ ]
+}

@@ -1,0 +1,55 @@
+{
+ "meta": {
+  "created_utc": "2026-11-03T20:17:38+00:00",
+  "provider": "ollama",
+  "model": "qwen2.5:7b",
+  "question_count": 1,
+  "pause_s": 0.0,
+  "rate_retries": 4,
+  "cloud_reasoning_effort": "",
+  "cloud_chat_timeout_s": 240.0,
+  "chat_deadline_s": 900.0,
+  "harness_timeout_s": 900.0
+ },
+ "results": [
+  {
+   "id": "G-035",
+   "answer": "Based on the tool results, the word 'park' has no collocates reported with a window size of 2. However, with a window size of 5, the top collocate is 'the', which has a mutual information (MI) score of 3.9113, a t-score of 1.8671, a log-likelihood of 22.4159, a Dice coefficient of 0.3077, and a log Dice score of 12.2996. The chi-square test indicates a significant co-occurrence with a chi-square value of 56.8691, and the Fisher's exact test gives a p-value of 1.5e-05. The collocate 'the' appears 4 times in the context of 'park' within a window of 5 tokens, while 'the' occurs 22 times in the corpus overall.\n\nTo summarize:\n- With a window size of 2, 'park' has no reported collocates.\n- With a window size of 5, 'park' has one collocate, 'the', which is strongly associated with 'park'.",
+   "grounded": true,
+   "tool_calls": [
+    {
+     "name": "compute_collocations",
+     "args": {
+      "corpus_id": "1b1d02175bd043b6",
+      "node": "park",
+      "window": 2
+     },
+     "ok": true
+    },
+    {
+     "name": "compute_collocations",
+     "args": {
+      "node": "park",
+      "window": 5,
+      "corpus_id": "1b1d02175bd043b6"
+     },
+     "ok": true
+    }
+   ],
+   "evidence": [
+    {
+     "kind": "tool_result",
+     "ref": "tool:compute_collocations:1",
+     "snippet": "{\"node\": \"park\", \"window\": 2, \"measures\": [\"mi\", \"t_score\", \"log_likelihood\", \"dice\", \"log_dice\", \"chi_square\", \"delta_p\", \"fisher\"], \"top_collocates\": []}"
+    },
+    {
+     "kind": "tool_result",
+     "ref": "tool:compute_collocations:2",
+     "snippet": "{\"node\": \"park\", \"window\": 5, \"measures\": [\"mi\", \"t_score\", \"log_likelihood\", \"dice\", \"log_dice\", \"chi_square\", \"delta_p\", \"fisher\"], \"top_collocates\": [{\"collocate\": \"the\", \"O\": 4, \"fx\": 4, \"fy\": 22, \"N\": 331, \"mi\": 3.9113, \"t_score\": 1.8671, \"log_likelihood\": 22.4159, \"dice\": 0.3077, \"log_dice\": 12.2996, \"chi_square\": 56.8691, \"chi2_min_expected\": 0.2659, \"fisher\": 1.5e-05, \"delta_p_y_given_x\": 0.945, \"delta_p_x_given_y\": 0.1818}]}"
+    }
+   ],
+   "elapsed_ms": 333655,
+   "wall_ms": 779578
+  }
+ ]
+}

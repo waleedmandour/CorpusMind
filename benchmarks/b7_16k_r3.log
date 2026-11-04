@@ -1,0 +1,1599 @@
+{"host": "127.0.0.1", "port": 8765, "data_dir": "/tmp/cm-eval-data", "event": "engine_starting", "level": "info", "timestamp": "2026-11-04T05:43:47.498956Z"}
+{"url": "sqlite+aiosqlite:///:memory:", "event": "db_ready", "level": "info", "timestamp": "2026-11-04T05:43:47.570977Z"}
+{"event": "arabic_warmup_disabled", "level": "info", "timestamp": "2026-11-04T05:43:47.571235Z"}
+HTTP Request: POST http://test/api/v1/projects "HTTP/1.1 200 OK"
+HTTP Request: POST http://test/api/v1/projects/d4fdba3feb1a4eb4/corpora "HTTP/1.1 200 OK"
+{"filename": "en_news.txt", "format": "txt", "encoding": "ascii", "chars": 578, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-04T05:43:47.656526Z"}
+{"model": "en_core_web_sm", "event": "spacy_loading", "level": "info", "timestamp": "2026-11-04T05:43:50.104629Z"}
+{"model": "en_core_web_sm", "version": "3.8.0", "spacy": "3.8.18", "event": "spacy_loaded", "level": "info", "timestamp": "2026-11-04T05:43:50.476670Z"}
+{"corpus_id": "14752768fdba4fc0", "document_id": "d657d22c4cfb4338", "version_id": "5011f7ae3dad40ea", "tokens": 111, "sentences": 9, "elapsed_ms": 42, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-04T05:43:50.543364Z"}
+HTTP Request: POST http://test/api/v1/corpora/14752768fdba4fc0/documents "HTTP/1.1 200 OK"
+{"filename": "en_academic.txt", "format": "txt", "encoding": "ascii", "chars": 877, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-04T05:43:50.551075Z"}
+{"corpus_id": "14752768fdba4fc0", "document_id": "3448f32eef504316", "version_id": "5011f7ae3dad40ea", "tokens": 146, "sentences": 10, "elapsed_ms": 53, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-04T05:43:50.633956Z"}
+HTTP Request: POST http://test/api/v1/corpora/14752768fdba4fc0/documents "HTTP/1.1 200 OK"
+{"filename": "en_learner.txt", "format": "txt", "encoding": "ascii", "chars": 524, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-04T05:43:50.640255Z"}
+{"corpus_id": "14752768fdba4fc0", "document_id": "6e3d81b154214bef", "version_id": "5011f7ae3dad40ea", "tokens": 118, "sentences": 8, "elapsed_ms": 42, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-04T05:43:50.700773Z"}
+HTTP Request: POST http://test/api/v1/corpora/14752768fdba4fc0/documents "HTTP/1.1 200 OK"
+HTTP Request: POST http://test/api/v1/projects/d4fdba3feb1a4eb4/corpora "HTTP/1.1 200 OK"
+{"filename": "en_learner.txt", "format": "txt", "encoding": "ascii", "chars": 524, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-04T05:43:50.713741Z"}
+{"corpus_id": "165297d0ad5547b8", "document_id": "860a4c079a9a4d83", "version_id": "64db4c6e35e04959", "tokens": 118, "sentences": 8, "elapsed_ms": 42, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-04T05:43:50.773080Z"}
+HTTP Request: POST http://test/api/v1/corpora/165297d0ad5547b8/documents "HTTP/1.1 200 OK"
+HTTP Request: POST http://test/api/v1/projects/d4fdba3feb1a4eb4/corpora "HTTP/1.1 200 OK"
+{"filename": "en_news.txt", "format": "txt", "encoding": "ascii", "chars": 578, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-04T05:43:50.784022Z"}
+{"corpus_id": "02f70201b71540d6", "document_id": "0d419526577940cc", "version_id": "d1d3af1697a7449a", "tokens": 111, "sentences": 9, "elapsed_ms": 37, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-04T05:43:50.838007Z"}
+HTTP Request: POST http://test/api/v1/corpora/02f70201b71540d6/documents "HTTP/1.1 200 OK"
+{"filename": "en_academic.txt", "format": "txt", "encoding": "ascii", "chars": 877, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-04T05:43:50.844002Z"}
+{"corpus_id": "02f70201b71540d6", "document_id": "4d1a53d7a3154b53", "version_id": "d1d3af1697a7449a", "tokens": 146, "sentences": 10, "elapsed_ms": 51, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-04T05:43:50.915016Z"}
+HTTP Request: POST http://test/api/v1/corpora/02f70201b71540d6/documents "HTTP/1.1 200 OK"
+HTTP Request: POST http://test/api/v1/projects/d4fdba3feb1a4eb4/corpora "HTTP/1.1 200 OK"
+{"filename": "ar_msa.txt", "format": "txt", "encoding": "utf_8", "chars": 469, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-04T05:43:50.926862Z"}
+{"dialect": "msa", "event": "camel_loading", "level": "info", "timestamp": "2026-11-04T05:43:51.452614Z"}
+{"model": "calima-msa-r13", "event": "camel_loaded", "level": "info", "timestamp": "2026-11-04T05:43:53.219747Z"}
+{"corpus_id": "0749607fa0a64d55", "document_id": "90b6ea7bd23b456a", "version_id": "073bbc4ea3ca4ed6", "tokens": 78, "sentences": 7, "elapsed_ms": 27, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-04T05:43:53.287275Z"}
+HTTP Request: POST http://test/api/v1/corpora/0749607fa0a64d55/documents "HTTP/1.1 200 OK"
+{"filename": "ar_classical.txt", "format": "txt", "encoding": "utf_8", "chars": 312, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-04T05:43:53.293557Z"}
+{"corpus_id": "0749607fa0a64d55", "document_id": "4610957f10704fb0", "version_id": "073bbc4ea3ca4ed6", "tokens": 60, "sentences": 5, "elapsed_ms": 23, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-04T05:43:53.345023Z"}
+HTTP Request: POST http://test/api/v1/corpora/0749607fa0a64d55/documents "HTTP/1.1 200 OK"
+{"filename": "ar_dialect.txt", "format": "txt", "encoding": "utf_8", "chars": 261, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-04T05:43:53.351049Z"}
+{"corpus_id": "0749607fa0a64d55", "document_id": "77e77905349040df", "version_id": "073bbc4ea3ca4ed6", "tokens": 52, "sentences": 5, "elapsed_ms": 21, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-04T05:43:53.392383Z"}
+HTTP Request: POST http://test/api/v1/corpora/0749607fa0a64d55/documents "HTTP/1.1 200 OK"
+{"filename": "ar_nopunct.txt", "format": "txt", "encoding": "utf_8", "chars": 234, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-04T05:43:53.398198Z"}
+{"corpus_id": "0749607fa0a64d55", "document_id": "248fd5526428488e", "version_id": "073bbc4ea3ca4ed6", "tokens": 43, "sentences": 1, "elapsed_ms": 17, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-04T05:43:53.433484Z"}
+HTTP Request: POST http://test/api/v1/corpora/0749607fa0a64d55/documents "HTTP/1.1 200 OK"
+HTTP Request: POST http://test/api/v1/projects/d4fdba3feb1a4eb4/corpora "HTTP/1.1 200 OK"
+{"filename": "ar_parallel.txt", "format": "txt", "encoding": "utf_8", "chars": 166, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-04T05:43:53.444561Z"}
+{"corpus_id": "24c78220d0b54234", "document_id": "2d8137d1c49f4ff8", "version_id": "e9c5cc7285014754", "tokens": 29, "sentences": 4, "elapsed_ms": 13, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-04T05:43:53.473917Z"}
+HTTP Request: POST http://test/api/v1/corpora/24c78220d0b54234/documents "HTTP/1.1 200 OK"
+HTTP Request: POST http://test/api/v1/projects/d4fdba3feb1a4eb4/corpora "HTTP/1.1 200 OK"
+{"filename": "en_parallel.txt", "format": "txt", "encoding": "ascii", "chars": 199, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-04T05:43:53.484667Z"}
+{"corpus_id": "14e327e83c164d5a", "document_id": "d17122766de24c12", "version_id": "6ff0e5cdc72d4fe2", "tokens": 43, "sentences": 4, "elapsed_ms": 16, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-04T05:43:53.515697Z"}
+HTTP Request: POST http://test/api/v1/corpora/14e327e83c164d5a/documents "HTTP/1.1 200 OK"
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T05:43:53.564105Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T05:43:53.588455Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.09, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T05:44:56.526869Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.21, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T05:45:58.156923Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T05:46:48.677954Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 159, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T05:47:05.795014Z"}
+{"conversation": "55dce741fd0146de", "grounded": true, "tools": ["get_corpus_overview"], "ms": 185253, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T05:47:05.801836Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[1/20] G-001 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T05:47:05.813166Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T05:47:05.833728Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.29, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T05:48:08.640169Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.72, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T05:49:11.743897Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T05:50:08.808312Z"}
+{"label": "ollama:chat", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.19, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T05:51:11.622010Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 201, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T05:51:29.055856Z"}
+{"conversation": "01293a2fdb0d4abf", "grounded": true, "tools": ["get_frequency"], "ms": 252233, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T05:51:29.061810Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[2/20] G-002 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T05:51:29.070890Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T05:51:29.098115Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T05:51:45.477886Z"}
+{"label": "ollama:chat", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.42, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T05:52:48.387953Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 273, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T05:53:08.298687Z"}
+{"conversation": "282ef966ac4b4428", "grounded": true, "tools": ["get_frequency"], "ms": 94984, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T05:53:08.303594Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[3/20] G-003 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T05:53:08.321402Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T05:53:08.334611Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.11, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T05:54:11.175101Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.35, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T05:55:14.148504Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T05:56:03.954916Z"}
+{"label": "ollama:chat", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.11, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T05:57:06.803553Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 267, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T05:57:33.336367Z"}
+{"conversation": "df20e68a5c764d0f", "grounded": true, "tools": ["get_frequency"], "ms": 253866, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T05:57:33.352116Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[4/20] G-004 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T05:57:33.367244Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T05:57:33.389374Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T05:57:54.225950Z"}
+{"label": "ollama:chat", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.05, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T05:58:57.101516Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 291, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T05:59:39.641353Z"}
+{"conversation": "94894c5d463a4fc9", "grounded": true, "tools": ["get_frequency"], "ms": 120634, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T05:59:39.649812Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[5/20] G-005 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T05:59:39.663811Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T05:59:39.698031Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.13, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T06:00:42.640332Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.81, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T06:01:45.641976Z"}
+{"error": "[ollama] tool-call request failed: ", "event": "chat_failed", "level": "error", "timestamp": "2026-11-04T06:02:47.931260Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 502 Bad Gateway"
+[6/20] G-006 -> HTTP 502; rate-retry 1/4 in 20s
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T06:03:09.306383Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T06:03:09.337434Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T06:03:31.339677Z"}
+{"label": "ollama:chat", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.03, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T06:04:34.408428Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 65, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T06:04:44.696301Z"}
+{"conversation": "fae24955de6b47e6", "grounded": true, "tools": ["get_frequency"], "ms": 90928, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T06:04:44.704762Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[6/20] G-006 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T06:04:44.714057Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T06:04:44.734434Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.44, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T06:05:47.706643Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.13, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T06:06:49.791398Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T06:07:45.948960Z"}
+{"label": "ollama:chat", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.24, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T06:08:49.030285Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 700, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T06:09:40.056574Z"}
+{"conversation": "c63e169fad5e44f2", "grounded": true, "tools": ["compute_keyness"], "ms": 283300, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T06:09:40.062252Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[7/20] G-007 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T06:09:40.078626Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T06:09:40.096533Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.46, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T06:10:43.087900Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.24, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T06:11:46.630884Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T06:12:39.547851Z"}
+{"label": "ollama:chat", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.28, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T06:13:41.107918Z"}
+{"label": "ollama:chat", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.07, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T06:14:44.480252Z"}
+{"error": "[ollama] chat request failed: ReadTimeout: ", "event": "chat_failed", "level": "error", "timestamp": "2026-11-04T06:15:47.519696Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 502 Bad Gateway"
+[8/20] G-008 -> HTTP 502; rate-retry 1/4 in 20s
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T06:16:09.098887Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T06:16:09.118087Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T06:16:28.122767Z"}
+{"label": "ollama:chat", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.26, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T06:17:31.167252Z"}
+{"label": "ollama:chat", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.85, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T06:18:34.308711Z"}
+{"error": "[ollama] chat request failed: ReadTimeout: ", "event": "chat_failed", "level": "error", "timestamp": "2026-11-04T06:19:38.097253Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 502 Bad Gateway"
+[8/20] G-008 -> HTTP 502; rate-retry 2/4 in 40s
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T06:20:19.582852Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T06:20:19.596272Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T06:20:39.111662Z"}
+{"label": "ollama:chat", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.2, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T06:21:42.025818Z"}
+{"label": "ollama:chat", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.33, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T06:22:45.162598Z"}
+{"error": "[ollama] chat request failed: ReadTimeout: ", "event": "chat_failed", "level": "error", "timestamp": "2026-11-04T06:23:46.991353Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 502 Bad Gateway"
+[8/20] G-008 -> HTTP 502; rate-retry 3/4 in 80s
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T06:25:11.424780Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T06:25:11.445348Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T06:25:28.940193Z"}
+{"label": "ollama:chat", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.43, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T06:26:31.971064Z"}
+{"label": "ollama:chat", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.54, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T06:27:35.472538Z"}
+{"error": "[ollama] chat request failed: ReadTimeout: ", "event": "chat_failed", "level": "error", "timestamp": "2026-11-04T06:28:39.053949Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 502 Bad Gateway"
+[8/20] G-008 -> HTTP 502; rate-retry 4/4 in 90s
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T06:30:13.679994Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T06:30:13.692240Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T06:30:31.782501Z"}
+{"label": "ollama:chat", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.35, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T06:31:35.030426Z"}
+{"label": "ollama:chat", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.05, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T06:32:38.629482Z"}
+{"error": "[ollama] chat request failed: ReadTimeout: ", "event": "chat_failed", "level": "error", "timestamp": "2026-11-04T06:33:41.952695Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 502 Bad Gateway"
+[8/20] G-008 -> {"detail":"Model call failed: [ollama] chat request failed: ReadTimeout: "}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T06:33:41.963044Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T06:33:41.993234Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T06:34:08.087859Z"}
+{"label": "ollama:chat", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.3, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T06:35:11.447491Z"}
+{"label": "ollama:chat", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.81, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T06:36:13.521756Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 477, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T06:36:59.586392Z"}
+{"conversation": "4a44912fbe934392", "grounded": true, "tools": ["compute_keyness"], "ms": 187789, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T06:36:59.592728Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[9/20] G-009 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T06:36:59.602968Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T06:36:59.613475Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T06:37:49.988458Z"}
+{"label": "ollama:chat", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.22, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T06:38:53.217899Z"}
+{"label": "ollama:chat", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.97, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T06:39:56.618167Z"}
+{"error": "[ollama] chat request failed: ReadTimeout: ", "event": "chat_failed", "level": "error", "timestamp": "2026-11-04T06:41:00.907752Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 502 Bad Gateway"
+[10/20] G-010 -> HTTP 502; rate-retry 1/4 in 20s
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T06:41:22.474295Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T06:41:22.494184Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.17, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T06:42:24.095257Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.38, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T06:43:27.420761Z"}
+{"error": "[ollama] tool-call request failed: ", "event": "chat_failed", "level": "error", "timestamp": "2026-11-04T06:44:30.960564Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 502 Bad Gateway"
+[10/20] G-010 -> HTTP 502; rate-retry 2/4 in 40s
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T06:45:12.546554Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T06:45:12.557652Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T06:45:56.930524Z"}
+{"label": "ollama:chat", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.42, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T06:47:00.077249Z"}
+{"label": "ollama:chat", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.44, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T06:48:02.327308Z"}
+{"error": "[ollama] chat request failed: ReadTimeout: ", "event": "chat_failed", "level": "error", "timestamp": "2026-11-04T06:49:05.799346Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 502 Bad Gateway"
+[10/20] G-010 -> HTTP 502; rate-retry 3/4 in 80s
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T06:50:30.648011Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T06:50:30.666427Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.04, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T06:51:33.920844Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.04, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T06:52:35.656068Z"}
+{"error": "[ollama] tool-call request failed: ", "event": "chat_failed", "level": "error", "timestamp": "2026-11-04T06:53:38.944770Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 502 Bad Gateway"
+[10/20] G-010 -> HTTP 502; rate-retry 4/4 in 90s
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T06:55:13.996930Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T06:55:14.009449Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T06:55:58.440559Z"}
+{"label": "ollama:chat", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.06, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T06:57:01.886616Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 580, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T06:57:36.466713Z"}
+{"conversation": "9bf7e732cff3473c", "grounded": true, "tools": ["compute_keyness"], "ms": 135682, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T06:57:36.472941Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[10/20] G-010 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T06:57:36.485056Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T06:57:36.505630Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.49, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T06:58:40.063449Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.24, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T06:59:44.294336Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T07:00:40.842834Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 365, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T07:01:28.416088Z"}
+{"conversation": "8acfbd476fd24e4d", "grounded": true, "tools": ["compute_keyness"], "ms": 219426, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T07:01:28.421689Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[11/20] G-011 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T07:01:28.438134Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T07:01:28.459696Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.29, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T07:02:31.970476Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.04, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T07:03:35.662543Z"}
+{"error": "[ollama] tool-call request failed: ", "event": "chat_failed", "level": "error", "timestamp": "2026-11-04T07:04:37.214575Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 502 Bad Gateway"
+[12/20] G-012 -> HTTP 502; rate-retry 1/4 in 20s
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T07:04:58.365845Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T07:04:58.379719Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T07:05:18.703260Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 430, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T07:06:11.440254Z"}
+{"conversation": "b4167ceb674545ba", "grounded": true, "tools": ["compute_keyness"], "ms": 71179, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T07:06:11.445829Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[12/20] G-012 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T07:06:11.454109Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T07:06:11.471447Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.27, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T07:07:13.700927Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.91, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T07:08:16.275911Z"}
+{"error": "[ollama] tool-call request failed: ", "event": "chat_failed", "level": "error", "timestamp": "2026-11-04T07:09:19.601591Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 502 Bad Gateway"
+[13/20] G-013 -> HTTP 502; rate-retry 1/4 in 20s
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T07:09:39.631912Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T07:09:39.645048Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T07:09:54.341605Z"}
+{"label": "ollama:chat", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.02, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T07:10:56.673513Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 431, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T07:11:19.065790Z"}
+{"conversation": "b350a16b74b845ee", "grounded": true, "tools": ["compute_keyness"], "ms": 95864, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T07:11:19.072143Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[13/20] G-013 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T07:11:19.080461Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T07:11:19.098541Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.11, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T07:12:21.502835Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.04, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T07:13:24.026525Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T07:14:21.489930Z"}
+{"label": "ollama:chat", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.26, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T07:15:24.138248Z"}
+{"label": "ollama:chat", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.78, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T07:16:27.147278Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 496, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T07:17:04.988918Z"}
+{"conversation": "95770f91ee21493a", "grounded": true, "tools": ["compute_keyness"], "ms": 332214, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T07:17:04.993788Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[14/20] G-014 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T07:17:05.002413Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T07:17:05.017592Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T07:17:47.601228Z"}
+{"label": "ollama:chat", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.11, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T07:18:50.556338Z"}
+{"label": "ollama:chat", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.68, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T07:19:54.181161Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 609, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T07:20:53.846038Z"}
+{"conversation": "eaa40de55f5b4407", "grounded": true, "tools": ["get_frequency"], "ms": 219405, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T07:20:53.853546Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[15/20] G-015 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T07:20:53.862020Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T07:20:53.874930Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T07:21:17.608629Z"}
+{"label": "ollama:chat", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.4, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T07:22:21.033144Z"}
+{"label": "ollama:chat", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.34, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T07:23:24.902852Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 499, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T07:24:05.067960Z"}
+{"conversation": "aa2f348917634450", "grounded": true, "tools": ["compute_keyness"], "ms": 180948, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T07:24:05.077177Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[16/20] G-016 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T07:24:05.085156Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T07:24:05.107752Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T07:24:25.721599Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 444, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T07:25:00.903336Z"}
+{"conversation": "e7455c4f790f424d", "grounded": true, "tools": ["get_dispersion"], "ms": 52456, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T07:25:00.910937Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[17/20] G-017 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T07:25:00.919843Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T07:25:00.933872Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.32, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T07:26:04.283418Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.3, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T07:27:06.305156Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T07:28:01.759116Z"}
+{"label": "ollama:chat", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.22, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T07:29:05.092528Z"}
+{"label": "ollama:chat", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.51, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T07:30:08.637378Z"}
+{"error": "[ollama] chat request failed: ReadTimeout: ", "event": "chat_failed", "level": "error", "timestamp": "2026-11-04T07:31:12.458483Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 502 Bad Gateway"
+[18/20] G-018 -> HTTP 502; rate-retry 1/4 in 20s
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T07:31:32.485110Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T07:31:32.503371Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.06, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T07:32:35.726005Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.72, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T07:33:39.080360Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T07:34:28.533294Z"}
+{"label": "ollama:chat", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.34, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T07:35:31.713773Z"}
+{"label": "ollama:chat", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.32, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T07:36:35.085710Z"}
+{"error": "[ollama] chat request failed: ReadTimeout: ", "event": "chat_failed", "level": "error", "timestamp": "2026-11-04T07:37:39.055819Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 502 Bad Gateway"
+[18/20] G-018 -> HTTP 502; rate-retry 2/4 in 40s
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T07:38:20.680417Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T07:38:20.699481Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.1, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T07:39:24.078171Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.84, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T07:40:27.563975Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T07:41:13.411598Z"}
+{"label": "ollama:chat", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.44, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T07:42:16.722485Z"}
+{"label": "ollama:chat", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.32, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T07:43:20.827594Z"}
+{"error": "[ollama] chat request failed: ReadTimeout: ", "event": "chat_failed", "level": "error", "timestamp": "2026-11-04T07:44:25.129624Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 502 Bad Gateway"
+[18/20] G-018 -> HTTP 502; rate-retry 3/4 in 80s
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T07:45:48.976124Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T07:45:48.992637Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.31, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T07:46:52.900165Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 1.0, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T07:47:57.007124Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T07:48:42.389133Z"}
+{"label": "ollama:chat", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.18, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T07:49:44.233816Z"}
+{"label": "ollama:chat", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.61, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T07:50:48.275686Z"}
+{"error": "[ollama] chat request failed: ReadTimeout: ", "event": "chat_failed", "level": "error", "timestamp": "2026-11-04T07:51:52.634852Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 502 Bad Gateway"
+[18/20] G-018 -> HTTP 502; rate-retry 4/4 in 90s
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T07:53:28.192756Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T07:53:28.208088Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.45, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T07:54:31.954519Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.93, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T07:55:36.168804Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T07:56:19.505824Z"}
+{"label": "ollama:chat", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.23, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T07:57:23.541474Z"}
+{"label": "ollama:chat", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.23, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T07:58:27.224362Z"}
+{"error": "[ollama] chat request failed: ReadTimeout: ", "event": "chat_failed", "level": "error", "timestamp": "2026-11-04T07:59:31.217719Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 502 Bad Gateway"
+[18/20] G-018 -> {"detail":"Model call failed: [ollama] chat request failed: ReadTimeout: "}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T07:59:31.228443Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T07:59:31.253655Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.2, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T08:00:33.164967Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.19, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T08:01:36.011605Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T08:02:30.444727Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 689, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T08:03:19.217948Z"}
+{"conversation": "bc30ce457aeb4e2d", "grounded": true, "tools": ["get_dispersion"], "ms": 217513, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T08:03:19.221950Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[19/20] G-019 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T08:03:19.229780Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T08:03:19.242848Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.07, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T08:04:22.716017Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.99, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T08:05:26.451044Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T08:06:18.970504Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 354, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T08:06:47.634806Z"}
+{"conversation": "05d8df4be1724612", "grounded": true, "tools": ["get_dispersion"], "ms": 197804, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T08:06:47.639514Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[20/20] G-020 -> ok
+{"event": "engine_stopped", "level": "info", "timestamp": "2026-11-04T08:06:47.644458Z"}
+run written: eval/runs/b7_16k_r3_shard1.json
+{"host": "127.0.0.1", "port": 8765, "data_dir": "/tmp/cm-eval-data", "event": "engine_starting", "level": "info", "timestamp": "2026-11-04T08:06:52.476525Z"}
+{"url": "sqlite+aiosqlite:///:memory:", "event": "db_ready", "level": "info", "timestamp": "2026-11-04T08:06:52.554120Z"}
+{"event": "arabic_warmup_disabled", "level": "info", "timestamp": "2026-11-04T08:06:52.554404Z"}
+HTTP Request: POST http://test/api/v1/projects "HTTP/1.1 200 OK"
+HTTP Request: POST http://test/api/v1/projects/b7d5a716b0684bc4/corpora "HTTP/1.1 200 OK"
+{"filename": "en_news.txt", "format": "txt", "encoding": "ascii", "chars": 578, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-04T08:06:52.642047Z"}
+{"model": "en_core_web_sm", "event": "spacy_loading", "level": "info", "timestamp": "2026-11-04T08:06:55.327534Z"}
+{"model": "en_core_web_sm", "version": "3.8.0", "spacy": "3.8.18", "event": "spacy_loaded", "level": "info", "timestamp": "2026-11-04T08:06:55.719413Z"}
+{"corpus_id": "85c1e916ebf448d4", "document_id": "856c774c215c440a", "version_id": "576186de9b1e49bf", "tokens": 111, "sentences": 9, "elapsed_ms": 43, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-04T08:06:55.789992Z"}
+HTTP Request: POST http://test/api/v1/corpora/85c1e916ebf448d4/documents "HTTP/1.1 200 OK"
+{"filename": "en_academic.txt", "format": "txt", "encoding": "ascii", "chars": 877, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-04T08:06:55.796811Z"}
+{"corpus_id": "85c1e916ebf448d4", "document_id": "52e2b21e2a144a89", "version_id": "576186de9b1e49bf", "tokens": 146, "sentences": 10, "elapsed_ms": 53, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-04T08:06:55.881964Z"}
+HTTP Request: POST http://test/api/v1/corpora/85c1e916ebf448d4/documents "HTTP/1.1 200 OK"
+{"filename": "en_learner.txt", "format": "txt", "encoding": "ascii", "chars": 524, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-04T08:06:55.888672Z"}
+{"corpus_id": "85c1e916ebf448d4", "document_id": "26dcaadf19b04b7c", "version_id": "576186de9b1e49bf", "tokens": 118, "sentences": 8, "elapsed_ms": 44, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-04T08:06:55.953705Z"}
+HTTP Request: POST http://test/api/v1/corpora/85c1e916ebf448d4/documents "HTTP/1.1 200 OK"
+HTTP Request: POST http://test/api/v1/projects/b7d5a716b0684bc4/corpora "HTTP/1.1 200 OK"
+{"filename": "en_learner.txt", "format": "txt", "encoding": "ascii", "chars": 524, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-04T08:06:55.965707Z"}
+{"corpus_id": "9cc373de1a5e4858", "document_id": "b03bbeef56ca4858", "version_id": "ac66cba1b9e94a92", "tokens": 118, "sentences": 8, "elapsed_ms": 41, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-04T08:06:56.024072Z"}
+HTTP Request: POST http://test/api/v1/corpora/9cc373de1a5e4858/documents "HTTP/1.1 200 OK"
+HTTP Request: POST http://test/api/v1/projects/b7d5a716b0684bc4/corpora "HTTP/1.1 200 OK"
+{"filename": "en_news.txt", "format": "txt", "encoding": "ascii", "chars": 578, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-04T08:06:56.036603Z"}
+{"corpus_id": "ed39b24e280740c7", "document_id": "89496409a2724158", "version_id": "65f5984c0c2d4239", "tokens": 111, "sentences": 9, "elapsed_ms": 40, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-04T08:06:56.094028Z"}
+HTTP Request: POST http://test/api/v1/corpora/ed39b24e280740c7/documents "HTTP/1.1 200 OK"
+{"filename": "en_academic.txt", "format": "txt", "encoding": "ascii", "chars": 877, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-04T08:06:56.100364Z"}
+{"corpus_id": "ed39b24e280740c7", "document_id": "95751da8f68d4ee4", "version_id": "65f5984c0c2d4239", "tokens": 146, "sentences": 10, "elapsed_ms": 51, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-04T08:06:56.169786Z"}
+HTTP Request: POST http://test/api/v1/corpora/ed39b24e280740c7/documents "HTTP/1.1 200 OK"
+HTTP Request: POST http://test/api/v1/projects/b7d5a716b0684bc4/corpora "HTTP/1.1 200 OK"
+{"filename": "ar_msa.txt", "format": "txt", "encoding": "utf_8", "chars": 469, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-04T08:06:56.182797Z"}
+{"dialect": "msa", "event": "camel_loading", "level": "info", "timestamp": "2026-11-04T08:06:56.695978Z"}
+{"model": "calima-msa-r13", "event": "camel_loaded", "level": "info", "timestamp": "2026-11-04T08:06:59.380116Z"}
+{"corpus_id": "7a55b45195d54311", "document_id": "85a010f494ad44e9", "version_id": "b14c407d7f0d405b", "tokens": 78, "sentences": 7, "elapsed_ms": 32, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-04T08:06:59.458606Z"}
+HTTP Request: POST http://test/api/v1/corpora/7a55b45195d54311/documents "HTTP/1.1 200 OK"
+{"filename": "ar_classical.txt", "format": "txt", "encoding": "utf_8", "chars": 312, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-04T08:06:59.465533Z"}
+{"corpus_id": "7a55b45195d54311", "document_id": "ce6f8988486b41f8", "version_id": "b14c407d7f0d405b", "tokens": 60, "sentences": 5, "elapsed_ms": 24, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-04T08:06:59.521306Z"}
+HTTP Request: POST http://test/api/v1/corpora/7a55b45195d54311/documents "HTTP/1.1 200 OK"
+{"filename": "ar_dialect.txt", "format": "txt", "encoding": "utf_8", "chars": 261, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-04T08:06:59.528315Z"}
+{"corpus_id": "7a55b45195d54311", "document_id": "de2725da2bf8428c", "version_id": "b14c407d7f0d405b", "tokens": 52, "sentences": 5, "elapsed_ms": 23, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-04T08:06:59.573966Z"}
+HTTP Request: POST http://test/api/v1/corpora/7a55b45195d54311/documents "HTTP/1.1 200 OK"
+{"filename": "ar_nopunct.txt", "format": "txt", "encoding": "utf_8", "chars": 234, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-04T08:06:59.582120Z"}
+{"corpus_id": "7a55b45195d54311", "document_id": "05b8107f225c4217", "version_id": "b14c407d7f0d405b", "tokens": 43, "sentences": 1, "elapsed_ms": 19, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-04T08:06:59.621566Z"}
+HTTP Request: POST http://test/api/v1/corpora/7a55b45195d54311/documents "HTTP/1.1 200 OK"
+HTTP Request: POST http://test/api/v1/projects/b7d5a716b0684bc4/corpora "HTTP/1.1 200 OK"
+{"filename": "ar_parallel.txt", "format": "txt", "encoding": "utf_8", "chars": 166, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-04T08:06:59.634555Z"}
+{"corpus_id": "15e1e46cd7a94f45", "document_id": "83ba71e32bb44e06", "version_id": "e37da58e8c8642ee", "tokens": 29, "sentences": 4, "elapsed_ms": 15, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-04T08:06:59.666277Z"}
+HTTP Request: POST http://test/api/v1/corpora/15e1e46cd7a94f45/documents "HTTP/1.1 200 OK"
+HTTP Request: POST http://test/api/v1/projects/b7d5a716b0684bc4/corpora "HTTP/1.1 200 OK"
+{"filename": "en_parallel.txt", "format": "txt", "encoding": "ascii", "chars": 199, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-04T08:06:59.677965Z"}
+{"corpus_id": "8fb732f4fd604d80", "document_id": "f89556f6672c4d14", "version_id": "93ed345866724f44", "tokens": 43, "sentences": 4, "elapsed_ms": 18, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-04T08:06:59.710929Z"}
+HTTP Request: POST http://test/api/v1/corpora/8fb732f4fd604d80/documents "HTTP/1.1 200 OK"
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T08:06:59.766855Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T08:06:59.798363Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.32, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T08:08:01.652066Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.54, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T08:09:04.997136Z"}
+{"error": "[ollama] tool-call request failed: ", "event": "chat_failed", "level": "error", "timestamp": "2026-11-04T08:10:08.926535Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 502 Bad Gateway"
+[1/20] G-021 -> HTTP 502; rate-retry 1/4 in 20s
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T08:10:30.983893Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T08:10:30.996099Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T08:10:45.947706Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 312, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T08:11:10.153671Z"}
+{"conversation": "6728eb977b4b4b3e", "grounded": true, "tools": ["get_dispersion"], "ms": 37536, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T08:11:10.161558Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[1/20] G-021 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T08:11:10.169848Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T08:11:10.181235Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.12, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T08:12:13.855321Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.34, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T08:13:16.009781Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 5, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T08:14:20.307906Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 566, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T08:15:07.873666Z"}
+{"conversation": "3ed247f30ea149e9", "grounded": true, "tools": ["get_dispersion", "get_dispersion"], "ms": 223848, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T08:15:07.880136Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[2/20] G-022 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T08:15:07.889056Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T08:15:07.914427Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.01, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T08:16:11.992068Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.65, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T08:17:13.946216Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T08:18:05.147504Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 379, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T08:18:34.998496Z"}
+{"conversation": "4c5c6f2d5bc34b30", "grounded": true, "tools": ["get_dispersion"], "ms": 197422, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T08:18:35.004009Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[3/20] G-023 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T08:18:35.016521Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T08:18:35.035723Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.38, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T08:19:37.967843Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.47, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T08:20:40.954690Z"}
+{"error": "[ollama] tool-call request failed: ", "event": "chat_failed", "level": "error", "timestamp": "2026-11-04T08:21:41.996677Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 502 Bad Gateway"
+[4/20] G-024 -> HTTP 502; rate-retry 1/4 in 20s
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T08:22:01.593099Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T08:22:01.613052Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T08:22:50.804313Z"}
+{"label": "ollama:chat", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.01, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T08:23:50.866764Z"}
+{"label": "ollama:chat", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.17, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T08:24:50.941532Z"}
+{"error": "[ollama] chat request failed: ReadTimeout: ", "event": "chat_failed", "level": "error", "timestamp": "2026-11-04T08:25:51.177609Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 502 Bad Gateway"
+[4/20] G-024 -> HTTP 502; rate-retry 2/4 in 40s
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T08:26:31.226634Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T08:26:31.242319Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.16, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T08:27:31.301809Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.38, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T08:28:31.529717Z"}
+{"error": "[ollama] tool-call request failed: ", "event": "chat_failed", "level": "error", "timestamp": "2026-11-04T08:29:31.969775Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 502 Bad Gateway"
+[4/20] G-024 -> HTTP 502; rate-retry 3/4 in 80s
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T08:30:52.059827Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T08:30:52.078432Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T08:31:26.138799Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 374, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T08:32:01.274745Z"}
+{"conversation": "6d0bc2a3fec743a6", "grounded": true, "tools": ["get_corpus_overview"], "ms": 69200, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T08:32:01.280355Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[4/20] G-024 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T08:32:01.290196Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T08:32:01.304743Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.1, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T08:33:01.365473Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.01, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T08:34:01.530770Z"}
+{"error": "[ollama] tool-call request failed: ", "event": "chat_failed", "level": "error", "timestamp": "2026-11-04T08:35:01.602317Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 502 Bad Gateway"
+[5/20] G-025 -> HTTP 502; rate-retry 1/4 in 20s
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T08:35:21.621512Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T08:35:21.633550Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T08:36:05.010018Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 830, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T08:37:00.869117Z"}
+{"conversation": "9da2027777a24ad2", "grounded": true, "tools": ["get_dispersion"], "ms": 99240, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T08:37:00.877937Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[5/20] G-025 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T08:37:00.887504Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T08:37:00.912143Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.48, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T08:38:00.973771Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.23, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T08:39:01.521468Z"}
+{"error": "[ollama] tool-call request failed: ", "event": "chat_failed", "level": "error", "timestamp": "2026-11-04T08:40:01.809511Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 502 Bad Gateway"
+[6/20] G-026 -> HTTP 502; rate-retry 1/4 in 20s
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T08:40:21.840742Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T08:40:21.853829Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T08:40:35.751403Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 486, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T08:41:08.202071Z"}
+{"conversation": "b94927ccbbbe4e53", "grounded": true, "tools": ["get_dispersion"], "ms": 46353, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T08:41:08.209289Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[6/20] G-026 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T08:41:08.223200Z"}
+{"model": "qwen2.5:7b", "messages": 2, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T08:41:08.235324Z"}
+{"label": "ollama:chat", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.25, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T08:42:08.297536Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 570, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T08:43:04.245117Z"}
+{"conversation": "c4b26bed76414afe", "grounded": false, "tools": [], "ms": 116010, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T08:43:04.250382Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[7/20] G-027 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T08:43:04.262455Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T08:43:04.280254Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.02, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T08:44:04.342007Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.69, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T08:45:04.425419Z"}
+{"error": "[ollama] tool-call request failed: ", "event": "chat_failed", "level": "error", "timestamp": "2026-11-04T08:46:05.181410Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 502 Bad Gateway"
+[8/20] G-028 -> HTTP 502; rate-retry 1/4 in 20s
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T08:46:25.214131Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T08:46:25.228575Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T08:46:39.125092Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 317, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T08:47:02.079442Z"}
+{"conversation": "dbf4e19aac1a45d8", "grounded": true, "tools": ["get_dispersion"], "ms": 36856, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T08:47:02.087700Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[8/20] G-028 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T08:47:02.106100Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T08:47:02.117258Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.31, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T08:48:02.180905Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.35, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T08:49:02.557468Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T08:50:01.124071Z"}
+{"label": "ollama:chat", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.07, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T08:51:01.185454Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 672, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T08:51:56.829683Z"}
+{"conversation": "d84f5cc572fb4191", "grounded": true, "tools": ["get_frequency"], "ms": 294717, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T08:51:56.836011Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[9/20] G-029 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T08:51:56.846317Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T08:51:56.864891Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T08:52:21.802017Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 485, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T08:53:00.559930Z"}
+{"conversation": "e9920cde5f0f4226", "grounded": true, "tools": ["compute_collocations"], "ms": 63702, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T08:53:00.565758Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[10/20] G-030 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T08:53:00.582388Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T08:53:00.599156Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.28, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T08:54:00.657665Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.48, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T08:55:01.005993Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T08:55:51.574815Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 890, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T08:56:51.326859Z"}
+{"conversation": "d5aaedfe77f14114", "grounded": true, "tools": ["compute_collocations"], "ms": 230733, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T08:56:51.335583Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[11/20] G-031 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T08:56:51.343643Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T08:56:51.359469Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.01, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T08:57:51.421673Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.51, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T08:58:51.489473Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T08:59:41.823166Z"}
+{"label": "ollama:chat", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.38, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T09:00:41.890227Z"}
+{"label": "ollama:chat", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.84, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T09:01:42.329562Z"}
+{"error": "[ollama] chat request failed: ReadTimeout: ", "event": "chat_failed", "level": "error", "timestamp": "2026-11-04T09:02:43.233448Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 502 Bad Gateway"
+[12/20] G-032 -> HTTP 502; rate-retry 1/4 in 20s
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T09:03:03.265891Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T09:03:03.285508Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.43, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T09:04:03.345489Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.36, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T09:05:03.841405Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T09:05:50.591663Z"}
+{"label": "ollama:chat", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.16, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T09:06:50.653441Z"}
+{"label": "ollama:chat", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.33, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T09:07:50.873402Z"}
+{"error": "[ollama] chat request failed: ReadTimeout: ", "event": "chat_failed", "level": "error", "timestamp": "2026-11-04T09:08:51.261443Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 502 Bad Gateway"
+[12/20] G-032 -> HTTP 502; rate-retry 2/4 in 40s
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T09:09:31.341089Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T09:09:31.358048Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.13, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T09:10:31.421043Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.06, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T09:11:31.617632Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T09:12:15.829879Z"}
+{"label": "ollama:chat", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.12, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T09:13:15.890811Z"}
+{"label": "ollama:chat", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.65, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T09:14:16.078076Z"}
+{"error": "[ollama] chat request failed: ReadTimeout: ", "event": "chat_failed", "level": "error", "timestamp": "2026-11-04T09:15:16.789780Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 502 Bad Gateway"
+[12/20] G-032 -> HTTP 502; rate-retry 3/4 in 80s
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T09:16:36.882475Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T09:16:36.903032Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.43, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T09:17:36.961692Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.78, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T09:18:37.459369Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T09:19:20.840828Z"}
+{"label": "ollama:chat", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.09, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T09:20:20.901927Z"}
+{"label": "ollama:chat", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.45, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T09:21:21.053450Z"}
+{"error": "[ollama] chat request failed: ReadTimeout: ", "event": "chat_failed", "level": "error", "timestamp": "2026-11-04T09:22:21.565428Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 502 Bad Gateway"
+[12/20] G-032 -> HTTP 502; rate-retry 4/4 in 90s
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T09:23:51.620274Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T09:23:51.638173Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.39, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T09:24:51.697582Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.71, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T09:25:52.153768Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T09:26:35.633693Z"}
+{"label": "ollama:chat", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.03, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T09:27:35.693741Z"}
+{"label": "ollama:chat", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.25, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T09:28:35.785718Z"}
+{"error": "[ollama] chat request failed: ReadTimeout: ", "event": "chat_failed", "level": "error", "timestamp": "2026-11-04T09:29:36.097508Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 502 Bad Gateway"
+[12/20] G-032 -> {"detail":"Model call failed: [ollama] chat request failed: ReadTimeout: "}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T09:29:36.111900Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T09:29:36.134390Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.48, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T09:30:36.194005Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.54, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T09:31:36.741436Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T09:32:29.497910Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 154, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T09:33:03.863405Z"}
+{"conversation": "29acf1425fdd4b34", "grounded": true, "tools": ["compute_collocations"], "ms": 207737, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T09:33:03.868833Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[13/20] G-033 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T09:33:03.877478Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T09:33:03.891082Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.45, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T09:34:03.953912Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.19, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T09:35:04.469621Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T09:35:55.744047Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 401, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T09:36:40.898681Z"}
+{"conversation": "e9a9172e203c40a0", "grounded": true, "tools": ["compute_collocations"], "ms": 217012, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T09:36:40.903650Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[14/20] G-034 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T09:36:40.914474Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T09:36:40.934764Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.06, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T09:37:40.993589Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.6, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T09:38:41.121568Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 5, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T09:39:13.343333Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 927, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T09:40:12.973762Z"}
+{"conversation": "36d4309591f04dd5", "grounded": true, "tools": ["compute_collocations", "compute_collocations"], "ms": 212048, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T09:40:12.978614Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[15/20] G-035 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T09:40:12.988680Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T09:40:12.999901Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.43, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T09:41:13.061441Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.84, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T09:42:13.553483Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T09:42:34.395185Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 377, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T09:42:52.626183Z"}
+{"conversation": "52fb3295afe74307", "grounded": true, "tools": ["get_ngrams"], "ms": 159631, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T09:42:52.632090Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[16/20] G-036 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T09:42:52.640132Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T09:42:52.658030Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.01, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T09:43:52.717429Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.42, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T09:44:52.793444Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T09:45:14.572454Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 366, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T09:45:33.581394Z"}
+{"conversation": "84fb06f20cde4c99", "grounded": true, "tools": ["get_ngrams"], "ms": 160929, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T09:45:33.586690Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[17/20] G-037 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T09:45:33.595625Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T09:45:33.608545Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.05, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T09:46:33.670258Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.51, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T09:47:33.781411Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T09:47:57.784288Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 365, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T09:48:30.399464Z"}
+{"conversation": "fd938bf488404024", "grounded": true, "tools": ["get_ngrams"], "ms": 176796, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T09:48:30.406707Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[18/20] G-038 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T09:48:30.416783Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T09:48:30.433227Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.4, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T09:49:30.493736Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.2, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T09:50:30.961580Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T09:51:01.803582Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 205, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T09:51:28.362945Z"}
+{"conversation": "da64fcbb5a054f73", "grounded": true, "tools": ["get_ngrams"], "ms": 177934, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T09:51:28.367816Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[19/20] G-039 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T09:51:28.379265Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T09:51:28.391526Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.29, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T09:52:28.453460Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.26, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T09:53:28.809501Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T09:53:49.548312Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 229, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T09:54:09.445965Z"}
+{"conversation": "23e1c570ec544a38", "grounded": true, "tools": ["search_concordance"], "ms": 161059, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T09:54:09.450393Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[20/20] G-040 -> ok
+{"event": "engine_stopped", "level": "info", "timestamp": "2026-11-04T09:54:09.453745Z"}
+run written: eval/runs/b7_16k_r3_shard2.json
+{"host": "127.0.0.1", "port": 8765, "data_dir": "/tmp/cm-eval-data", "event": "engine_starting", "level": "info", "timestamp": "2026-11-04T09:54:13.321504Z"}
+{"url": "sqlite+aiosqlite:///:memory:", "event": "db_ready", "level": "info", "timestamp": "2026-11-04T09:54:13.403580Z"}
+{"event": "arabic_warmup_disabled", "level": "info", "timestamp": "2026-11-04T09:54:13.403843Z"}
+HTTP Request: POST http://test/api/v1/projects "HTTP/1.1 200 OK"
+HTTP Request: POST http://test/api/v1/projects/13dbab2978cf4b21/corpora "HTTP/1.1 200 OK"
+{"filename": "en_news.txt", "format": "txt", "encoding": "ascii", "chars": 578, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-04T09:54:13.500020Z"}
+{"model": "en_core_web_sm", "event": "spacy_loading", "level": "info", "timestamp": "2026-11-04T09:54:17.141185Z"}
+{"model": "en_core_web_sm", "version": "3.8.0", "spacy": "3.8.18", "event": "spacy_loaded", "level": "info", "timestamp": "2026-11-04T09:54:17.625787Z"}
+{"corpus_id": "54cbbd26cf324a09", "document_id": "a0d24050fbb14e0b", "version_id": "175df4b15db14ce2", "tokens": 111, "sentences": 9, "elapsed_ms": 40, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-04T09:54:17.713048Z"}
+HTTP Request: POST http://test/api/v1/corpora/54cbbd26cf324a09/documents "HTTP/1.1 200 OK"
+{"filename": "en_academic.txt", "format": "txt", "encoding": "ascii", "chars": 877, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-04T09:54:17.721835Z"}
+{"corpus_id": "54cbbd26cf324a09", "document_id": "34561e58838d44c9", "version_id": "175df4b15db14ce2", "tokens": 146, "sentences": 10, "elapsed_ms": 49, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-04T09:54:17.803049Z"}
+HTTP Request: POST http://test/api/v1/corpora/54cbbd26cf324a09/documents "HTTP/1.1 200 OK"
+{"filename": "en_learner.txt", "format": "txt", "encoding": "ascii", "chars": 524, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-04T09:54:17.808898Z"}
+{"corpus_id": "54cbbd26cf324a09", "document_id": "6bdaf35423a24ba6", "version_id": "175df4b15db14ce2", "tokens": 118, "sentences": 8, "elapsed_ms": 41, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-04T09:54:17.869158Z"}
+HTTP Request: POST http://test/api/v1/corpora/54cbbd26cf324a09/documents "HTTP/1.1 200 OK"
+HTTP Request: POST http://test/api/v1/projects/13dbab2978cf4b21/corpora "HTTP/1.1 200 OK"
+{"filename": "en_learner.txt", "format": "txt", "encoding": "ascii", "chars": 524, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-04T09:54:17.880189Z"}
+{"corpus_id": "773a71daa0c44a17", "document_id": "d1e41f8d5ff54c3e", "version_id": "a000749285c24d1a", "tokens": 118, "sentences": 8, "elapsed_ms": 41, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-04T09:54:17.939140Z"}
+HTTP Request: POST http://test/api/v1/corpora/773a71daa0c44a17/documents "HTTP/1.1 200 OK"
+HTTP Request: POST http://test/api/v1/projects/13dbab2978cf4b21/corpora "HTTP/1.1 200 OK"
+{"filename": "en_news.txt", "format": "txt", "encoding": "ascii", "chars": 578, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-04T09:54:17.950863Z"}
+{"corpus_id": "d8491f067e8141da", "document_id": "c945fecc55204438", "version_id": "f577db34af884e8c", "tokens": 111, "sentences": 9, "elapsed_ms": 37, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-04T09:54:18.006159Z"}
+HTTP Request: POST http://test/api/v1/corpora/d8491f067e8141da/documents "HTTP/1.1 200 OK"
+{"filename": "en_academic.txt", "format": "txt", "encoding": "ascii", "chars": 877, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-04T09:54:18.012046Z"}
+{"corpus_id": "d8491f067e8141da", "document_id": "5cb27380db464a02", "version_id": "f577db34af884e8c", "tokens": 146, "sentences": 10, "elapsed_ms": 48, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-04T09:54:18.079889Z"}
+HTTP Request: POST http://test/api/v1/corpora/d8491f067e8141da/documents "HTTP/1.1 200 OK"
+HTTP Request: POST http://test/api/v1/projects/13dbab2978cf4b21/corpora "HTTP/1.1 200 OK"
+{"filename": "ar_msa.txt", "format": "txt", "encoding": "utf_8", "chars": 469, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-04T09:54:18.091406Z"}
+{"dialect": "msa", "event": "camel_loading", "level": "info", "timestamp": "2026-11-04T09:54:18.640287Z"}
+{"model": "calima-msa-r13", "event": "camel_loaded", "level": "info", "timestamp": "2026-11-04T09:54:20.255794Z"}
+{"corpus_id": "22a176af4f3d42b8", "document_id": "0a627978dbe442c1", "version_id": "5da3bb15272b4ce3", "tokens": 78, "sentences": 7, "elapsed_ms": 29, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-04T09:54:20.339913Z"}
+HTTP Request: POST http://test/api/v1/corpora/22a176af4f3d42b8/documents "HTTP/1.1 200 OK"
+{"filename": "ar_classical.txt", "format": "txt", "encoding": "utf_8", "chars": 312, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-04T09:54:20.346623Z"}
+{"corpus_id": "22a176af4f3d42b8", "document_id": "7c9aea34216c4c1c", "version_id": "5da3bb15272b4ce3", "tokens": 60, "sentences": 5, "elapsed_ms": 22, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-04T09:54:20.398580Z"}
+HTTP Request: POST http://test/api/v1/corpora/22a176af4f3d42b8/documents "HTTP/1.1 200 OK"
+{"filename": "ar_dialect.txt", "format": "txt", "encoding": "utf_8", "chars": 261, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-04T09:54:20.404183Z"}
+{"corpus_id": "22a176af4f3d42b8", "document_id": "50e18afb0a9544cf", "version_id": "5da3bb15272b4ce3", "tokens": 52, "sentences": 5, "elapsed_ms": 21, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-04T09:54:20.447338Z"}
+HTTP Request: POST http://test/api/v1/corpora/22a176af4f3d42b8/documents "HTTP/1.1 200 OK"
+{"filename": "ar_nopunct.txt", "format": "txt", "encoding": "utf_8", "chars": 234, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-04T09:54:20.453374Z"}
+{"corpus_id": "22a176af4f3d42b8", "document_id": "c4a676ff87ca459f", "version_id": "5da3bb15272b4ce3", "tokens": 43, "sentences": 1, "elapsed_ms": 17, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-04T09:54:20.490470Z"}
+HTTP Request: POST http://test/api/v1/corpora/22a176af4f3d42b8/documents "HTTP/1.1 200 OK"
+HTTP Request: POST http://test/api/v1/projects/13dbab2978cf4b21/corpora "HTTP/1.1 200 OK"
+{"filename": "ar_parallel.txt", "format": "txt", "encoding": "utf_8", "chars": 166, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-04T09:54:20.501173Z"}
+{"corpus_id": "e975ce167bf843f9", "document_id": "f827ad77a3b4454c", "version_id": "4db8e9f78cf643ce", "tokens": 29, "sentences": 4, "elapsed_ms": 13, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-04T09:54:20.532442Z"}
+HTTP Request: POST http://test/api/v1/corpora/e975ce167bf843f9/documents "HTTP/1.1 200 OK"
+HTTP Request: POST http://test/api/v1/projects/13dbab2978cf4b21/corpora "HTTP/1.1 200 OK"
+{"filename": "en_parallel.txt", "format": "txt", "encoding": "ascii", "chars": 199, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-04T09:54:20.542921Z"}
+{"corpus_id": "e5a2b0be4f6f40c2", "document_id": "57cea8fac8054974", "version_id": "3492fe8747044927", "tokens": 43, "sentences": 4, "elapsed_ms": 17, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-04T09:54:20.575887Z"}
+HTTP Request: POST http://test/api/v1/corpora/e5a2b0be4f6f40c2/documents "HTTP/1.1 200 OK"
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T09:54:20.649954Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T09:54:20.674877Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.06, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T09:55:20.737494Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.63, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T09:56:20.857499Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T09:56:56.342817Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 318, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T09:57:15.305828Z"}
+{"conversation": "79805993428840b2", "grounded": true, "tools": ["get_frequency"], "ms": 174636, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T09:57:15.311768Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[1/20] G-041 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T09:57:15.333767Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T09:57:15.349870Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.46, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T09:58:15.409498Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.44, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T09:59:15.933416Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 5, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T10:00:05.209952Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 365, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T10:00:34.858283Z"}
+{"conversation": "1a832685a013411a", "grounded": true, "tools": ["search_concordance", "search_concordance"], "ms": 199513, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T10:00:34.862819Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[2/20] G-042 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T10:00:34.878554Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T10:00:34.902061Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.29, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T10:01:34.961459Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.82, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T10:02:35.309461Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 5, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T10:03:23.255592Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 225, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T10:04:08.201351Z"}
+{"conversation": "4c1618e439a2439f", "grounded": true, "tools": ["search_concordance", "search_concordance"], "ms": 213309, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T10:04:08.205784Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[3/20] G-043 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T10:04:08.215108Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T10:04:08.233838Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.25, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T10:05:08.293512Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.21, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T10:06:08.605489Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T10:06:47.741143Z"}
+{"label": "ollama:chat", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.44, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T10:07:47.801486Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 367, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T10:08:17.713215Z"}
+{"conversation": "8d1c07f34cfe4353", "grounded": true, "tools": ["search_concordance"], "ms": 249080, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T10:08:17.717881Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[4/20] G-044 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T10:08:17.728064Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T10:08:17.748851Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T10:08:32.457635Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 157, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T10:08:51.865895Z"}
+{"conversation": "cb8d2b32a9494bfa", "grounded": true, "tools": ["search_concordance"], "ms": 34122, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T10:08:51.870969Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[5/20] G-045 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T10:08:51.881856Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T10:08:51.908502Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.2, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T10:09:51.968577Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.59, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T10:10:52.232472Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 5, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T10:11:39.231338Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 450, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T10:12:15.571006Z"}
+{"conversation": "64211e26ab554265", "grounded": true, "tools": ["search_concordance", "search_concordance"], "ms": 203668, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T10:12:15.576318Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[6/20] G-046 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T10:12:15.589633Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T10:12:15.601177Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.04, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T10:13:15.660468Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.89, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T10:14:16.610558Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T10:14:38.366521Z"}
+{"label": "ollama:chat", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.19, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T10:15:38.426074Z"}
+{"label": "ollama:chat", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.02, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T10:16:38.674367Z"}
+{"error": "[ollama] chat request failed: ReadTimeout: ", "event": "chat_failed", "level": "error", "timestamp": "2026-11-04T10:17:38.754124Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 502 Bad Gateway"
+[7/20] G-047 -> HTTP 502; rate-retry 1/4 in 20s
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T10:17:58.784326Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T10:17:58.800130Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.05, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T10:18:58.866058Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.13, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T10:19:58.982198Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T10:20:17.004603Z"}
+{"label": "ollama:chat", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.41, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T10:21:17.066503Z"}
+{"label": "ollama:chat", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.95, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T10:22:17.542102Z"}
+{"error": "[ollama] chat request failed: ReadTimeout: ", "event": "chat_failed", "level": "error", "timestamp": "2026-11-04T10:23:18.558301Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 502 Bad Gateway"
+[7/20] G-047 -> HTTP 502; rate-retry 2/4 in 40s
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T10:23:58.615784Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T10:23:58.632880Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.28, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T10:24:58.698056Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.3, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T10:25:59.038314Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T10:26:15.716724Z"}
+{"label": "ollama:chat", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.46, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T10:27:15.782513Z"}
+{"label": "ollama:chat", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.06, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T10:28:16.310057Z"}
+{"error": "[ollama] chat request failed: ReadTimeout: ", "event": "chat_failed", "level": "error", "timestamp": "2026-11-04T10:29:16.438083Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 502 Bad Gateway"
+[7/20] G-047 -> HTTP 502; rate-retry 3/4 in 80s
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T10:30:36.540278Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T10:30:36.556658Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.23, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T10:31:36.619972Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.61, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T10:32:36.906095Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T10:32:53.901854Z"}
+{"label": "ollama:chat", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.29, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T10:33:53.962597Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 950, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T10:34:46.435092Z"}
+{"conversation": "00758ba54968412e", "grounded": true, "tools": ["search_cql"], "ms": 249882, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T10:34:46.440342Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[7/20] G-047 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T10:34:46.448404Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T10:34:46.459175Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.1, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T10:35:46.518136Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.31, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T10:36:46.678167Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T10:37:08.350572Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 285, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T10:37:26.658579Z"}
+{"conversation": "ef8d1ce9cd1246b7", "grounded": true, "tools": ["search_cql"], "ms": 160204, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T10:37:26.665689Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[8/20] G-048 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T10:37:26.674310Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T10:37:26.697110Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.43, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T10:38:26.758453Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.95, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T10:39:27.659844Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T10:39:51.134252Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 347, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T10:40:14.981730Z"}
+{"conversation": "af289d2d7f674bbd", "grounded": true, "tools": ["search_cql"], "ms": 167467, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T10:40:14.988833Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[9/20] G-049 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T10:40:14.997056Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T10:40:15.011626Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.01, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T10:41:15.072091Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.25, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T10:42:15.554073Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T10:42:42.324618Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 965, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T10:43:32.819682Z"}
+{"conversation": "c90f0bb332834324", "grounded": true, "tools": ["search_cql"], "ms": 196568, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T10:43:32.824954Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[10/20] G-050 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T10:43:32.832959Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T10:43:32.850866Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.37, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T10:44:33.879107Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.87, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T10:45:34.761648Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T10:46:07.017830Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 408, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T10:46:34.256822Z"}
+{"conversation": "b909b13ead794fb3", "grounded": true, "tools": ["search_cql"], "ms": 178972, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T10:46:34.260756Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[11/20] G-051 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T10:46:34.269130Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T10:46:34.280976Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.18, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T10:47:35.405681Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.15, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T10:48:36.731439Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T10:49:01.027449Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 286, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T10:49:21.427014Z"}
+{"conversation": "a78987b983df44c7", "grounded": true, "tools": ["search_cql"], "ms": 164469, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T10:49:21.434580Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[12/20] G-052 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T10:49:21.442745Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T10:49:21.462876Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.17, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T10:50:22.610169Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.23, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T10:51:23.944570Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T10:51:42.534976Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 202, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T10:51:55.044683Z"}
+{"conversation": "0d08efda57a44c6e", "grounded": true, "tools": ["sentiment"], "ms": 150851, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T10:51:55.051125Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[13/20] G-053 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T10:51:55.059647Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T10:51:55.082935Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.02, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T10:52:56.244782Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.64, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T10:53:56.807712Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T10:54:15.212894Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 112, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T10:54:24.604188Z"}
+{"conversation": "7163e28287e94219", "grounded": true, "tools": ["sentiment"], "ms": 147482, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T10:54:24.615229Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[14/20] G-054 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T10:54:24.623082Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T10:54:24.640986Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.15, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T10:55:25.184747Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.56, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T10:56:26.376080Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T10:57:02.238833Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 285, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T10:57:16.685226Z"}
+{"conversation": "e929c42bc6154edc", "grounded": true, "tools": ["sentiment"], "ms": 169606, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T10:57:16.690434Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[15/20] G-055 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T10:57:16.698448Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T10:57:16.723535Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.34, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T10:58:17.777765Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.06, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T10:59:19.173123Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T10:59:52.505140Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 117, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T11:00:06.882907Z"}
+{"conversation": "e33ec7120cfd4174", "grounded": true, "tools": ["sentiment"], "ms": 167691, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T11:00:06.887482Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[16/20] G-056 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T11:00:06.898726Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T11:00:06.914872Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.35, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T11:01:07.998673Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.2, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T11:02:09.463108Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T11:02:43.510368Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 250, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T11:02:57.842358Z"}
+{"conversation": "f9a1b8cf455841f8", "grounded": true, "tools": ["sentiment"], "ms": 168343, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T11:02:57.846308Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[17/20] G-057 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T11:02:57.854753Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T11:02:57.871218Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.04, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T11:03:58.964207Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.63, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T11:05:00.154462Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T11:05:38.972602Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 275, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T11:06:02.454966Z"}
+{"conversation": "7104b9ee122f433a", "grounded": true, "tools": ["arabic_register"], "ms": 181331, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T11:06:02.461920Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[18/20] G-058 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T11:06:02.472802Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T11:06:02.483961Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.39, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T11:07:03.729930Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.32, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T11:08:05.377077Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T11:08:30.047455Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 249, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T11:08:51.123332Z"}
+{"conversation": "2e2c0aacc3e64b29", "grounded": true, "tools": ["arabic_register"], "ms": 165691, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T11:08:51.127805Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[19/20] G-059 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T11:08:51.136422Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T11:08:51.154740Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.27, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T11:09:51.966398Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.77, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T11:10:52.762206Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T11:11:14.587700Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 245, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T11:11:30.322492Z"}
+{"conversation": "afa9fe05aae947ef", "grounded": true, "tools": ["arabic_register"], "ms": 157960, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T11:11:30.327602Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[20/20] G-060 -> ok
+{"event": "engine_stopped", "level": "info", "timestamp": "2026-11-04T11:11:30.335667Z"}
+run written: eval/runs/b7_16k_r3_shard3.json
+{"host": "127.0.0.1", "port": 8765, "data_dir": "/tmp/cm-eval-data", "event": "engine_starting", "level": "info", "timestamp": "2026-11-04T11:11:34.295463Z"}
+{"url": "sqlite+aiosqlite:///:memory:", "event": "db_ready", "level": "info", "timestamp": "2026-11-04T11:11:34.381018Z"}
+{"event": "arabic_warmup_disabled", "level": "info", "timestamp": "2026-11-04T11:11:34.381278Z"}
+HTTP Request: POST http://test/api/v1/projects "HTTP/1.1 200 OK"
+HTTP Request: POST http://test/api/v1/projects/efc7855a31084081/corpora "HTTP/1.1 200 OK"
+{"filename": "en_news.txt", "format": "txt", "encoding": "ascii", "chars": 578, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-04T11:11:34.482364Z"}
+{"model": "en_core_web_sm", "event": "spacy_loading", "level": "info", "timestamp": "2026-11-04T11:11:38.865874Z"}
+{"model": "en_core_web_sm", "version": "3.8.0", "spacy": "3.8.18", "event": "spacy_loaded", "level": "info", "timestamp": "2026-11-04T11:11:39.327250Z"}
+{"corpus_id": "7947734760ec4402", "document_id": "5b41eecb03464e08", "version_id": "eca529b70abf475b", "tokens": 111, "sentences": 9, "elapsed_ms": 45, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-04T11:11:39.410644Z"}
+HTTP Request: POST http://test/api/v1/corpora/7947734760ec4402/documents "HTTP/1.1 200 OK"
+{"filename": "en_academic.txt", "format": "txt", "encoding": "ascii", "chars": 877, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-04T11:11:39.420490Z"}
+{"corpus_id": "7947734760ec4402", "document_id": "8cbc35223a7144c2", "version_id": "eca529b70abf475b", "tokens": 146, "sentences": 10, "elapsed_ms": 66, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-04T11:11:39.525828Z"}
+HTTP Request: POST http://test/api/v1/corpora/7947734760ec4402/documents "HTTP/1.1 200 OK"
+{"filename": "en_learner.txt", "format": "txt", "encoding": "ascii", "chars": 524, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-04T11:11:39.533546Z"}
+{"corpus_id": "7947734760ec4402", "document_id": "ffab5140bf4544ad", "version_id": "eca529b70abf475b", "tokens": 118, "sentences": 8, "elapsed_ms": 41, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-04T11:11:39.594777Z"}
+HTTP Request: POST http://test/api/v1/corpora/7947734760ec4402/documents "HTTP/1.1 200 OK"
+HTTP Request: POST http://test/api/v1/projects/efc7855a31084081/corpora "HTTP/1.1 200 OK"
+{"filename": "en_learner.txt", "format": "txt", "encoding": "ascii", "chars": 524, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-04T11:11:39.606572Z"}
+{"corpus_id": "2cd14a6c6124422c", "document_id": "0b4838a3166141ef", "version_id": "28f6b8c288fb40a6", "tokens": 118, "sentences": 8, "elapsed_ms": 42, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-04T11:11:39.666228Z"}
+HTTP Request: POST http://test/api/v1/corpora/2cd14a6c6124422c/documents "HTTP/1.1 200 OK"
+HTTP Request: POST http://test/api/v1/projects/efc7855a31084081/corpora "HTTP/1.1 200 OK"
+{"filename": "en_news.txt", "format": "txt", "encoding": "ascii", "chars": 578, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-04T11:11:39.678327Z"}
+{"corpus_id": "23261c4342c64397", "document_id": "c410ce6fe01a46d8", "version_id": "67aae72ae64d46dd", "tokens": 111, "sentences": 9, "elapsed_ms": 43, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-04T11:11:39.738626Z"}
+HTTP Request: POST http://test/api/v1/corpora/23261c4342c64397/documents "HTTP/1.1 200 OK"
+{"filename": "en_academic.txt", "format": "txt", "encoding": "ascii", "chars": 877, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-04T11:11:39.744942Z"}
+{"corpus_id": "23261c4342c64397", "document_id": "ceef0066daf74a41", "version_id": "67aae72ae64d46dd", "tokens": 146, "sentences": 10, "elapsed_ms": 51, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-04T11:11:39.815705Z"}
+HTTP Request: POST http://test/api/v1/corpora/23261c4342c64397/documents "HTTP/1.1 200 OK"
+HTTP Request: POST http://test/api/v1/projects/efc7855a31084081/corpora "HTTP/1.1 200 OK"
+{"filename": "ar_msa.txt", "format": "txt", "encoding": "utf_8", "chars": 469, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-04T11:11:39.828553Z"}
+{"dialect": "msa", "event": "camel_loading", "level": "info", "timestamp": "2026-11-04T11:11:40.456379Z"}
+{"model": "calima-msa-r13", "event": "camel_loaded", "level": "info", "timestamp": "2026-11-04T11:11:42.186584Z"}
+{"corpus_id": "0691363c5c8f4be2", "document_id": "c045d3d738364dd4", "version_id": "51f8415534ce40be", "tokens": 78, "sentences": 7, "elapsed_ms": 28, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-04T11:11:42.272155Z"}
+HTTP Request: POST http://test/api/v1/corpora/0691363c5c8f4be2/documents "HTTP/1.1 200 OK"
+{"filename": "ar_classical.txt", "format": "txt", "encoding": "utf_8", "chars": 312, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-04T11:11:42.279029Z"}
+{"corpus_id": "0691363c5c8f4be2", "document_id": "8347dea5c69547cd", "version_id": "51f8415534ce40be", "tokens": 60, "sentences": 5, "elapsed_ms": 21, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-04T11:11:42.330677Z"}
+HTTP Request: POST http://test/api/v1/corpora/0691363c5c8f4be2/documents "HTTP/1.1 200 OK"
+{"filename": "ar_dialect.txt", "format": "txt", "encoding": "utf_8", "chars": 261, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-04T11:11:42.336793Z"}
+{"corpus_id": "0691363c5c8f4be2", "document_id": "340794b9f7e24f6a", "version_id": "51f8415534ce40be", "tokens": 52, "sentences": 5, "elapsed_ms": 21, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-04T11:11:42.380506Z"}
+HTTP Request: POST http://test/api/v1/corpora/0691363c5c8f4be2/documents "HTTP/1.1 200 OK"
+{"filename": "ar_nopunct.txt", "format": "txt", "encoding": "utf_8", "chars": 234, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-04T11:11:42.386852Z"}
+{"corpus_id": "0691363c5c8f4be2", "document_id": "82a752f622ac4136", "version_id": "51f8415534ce40be", "tokens": 43, "sentences": 1, "elapsed_ms": 16, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-04T11:11:42.422815Z"}
+HTTP Request: POST http://test/api/v1/corpora/0691363c5c8f4be2/documents "HTTP/1.1 200 OK"
+HTTP Request: POST http://test/api/v1/projects/efc7855a31084081/corpora "HTTP/1.1 200 OK"
+{"filename": "ar_parallel.txt", "format": "txt", "encoding": "utf_8", "chars": 166, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-04T11:11:42.435504Z"}
+{"corpus_id": "426ce0e3e6d34bd9", "document_id": "b686c0e01da34e04", "version_id": "3097136e54f74f62", "tokens": 29, "sentences": 4, "elapsed_ms": 12, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-04T11:11:42.464899Z"}
+HTTP Request: POST http://test/api/v1/corpora/426ce0e3e6d34bd9/documents "HTTP/1.1 200 OK"
+HTTP Request: POST http://test/api/v1/projects/efc7855a31084081/corpora "HTTP/1.1 200 OK"
+{"filename": "en_parallel.txt", "format": "txt", "encoding": "ascii", "chars": 199, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-04T11:11:42.475891Z"}
+{"corpus_id": "e074eb46bb6a4d02", "document_id": "f1a1258c26e74914", "version_id": "1c4aa272da7940a4", "tokens": 43, "sentences": 4, "elapsed_ms": 18, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-04T11:11:42.510259Z"}
+HTTP Request: POST http://test/api/v1/corpora/e074eb46bb6a4d02/documents "HTTP/1.1 200 OK"
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T11:11:42.589364Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T11:11:42.616730Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.23, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T11:12:42.678462Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.66, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T11:13:42.970413Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T11:14:21.151344Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 235, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T11:14:40.392320Z"}
+{"conversation": "8c2fd701b78c441a", "grounded": true, "tools": ["arabic_register"], "ms": 177380, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T11:14:40.397069Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[1/20] G-061 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T11:14:40.413418Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T11:14:40.424322Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.28, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T11:15:41.475340Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.22, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T11:16:42.791643Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T11:17:03.133575Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 223, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T11:17:21.794416Z"}
+{"conversation": "6a7b585824554022", "grounded": true, "tools": ["arabic_register"], "ms": 158903, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T11:17:21.798705Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[2/20] G-062 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T11:17:21.809440Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T11:17:21.826114Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.2, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T11:18:22.390992Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.22, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T11:19:23.526856Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T11:19:47.205483Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 341, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T11:20:11.739504Z"}
+{"conversation": "ad73cb99ead74a70", "grounded": true, "tools": ["arabic_register"], "ms": 168098, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T11:20:11.743936Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[3/20] G-063 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T11:20:11.751703Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T11:20:11.766669Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.3, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T11:21:12.719272Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.64, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T11:22:13.982341Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T11:22:34.734573Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 205, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T11:22:49.378260Z"}
+{"conversation": "cbdc52d642c944a9", "grounded": true, "tools": ["arabic_register"], "ms": 155375, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T11:22:49.382700Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[4/20] G-064 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T11:22:49.391451Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T11:22:49.407615Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.13, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T11:23:50.384285Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.48, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T11:24:51.571098Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"dialect": "msa", "event": "camel_loading", "level": "info", "timestamp": "2026-11-04T11:25:09.775148Z"}
+{"model": "calima-msa-r13", "event": "camel_loaded", "level": "info", "timestamp": "2026-11-04T11:25:11.745472Z"}
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T11:25:11.747317Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 364, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T11:25:52.411263Z"}
+{"conversation": "035d83822bf04c96", "grounded": true, "tools": ["arabic_roots"], "ms": 180089, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T11:25:52.419379Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[5/20] G-065 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T11:25:52.435328Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T11:25:52.449528Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.36, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T11:26:53.521762Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.29, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T11:27:55.101669Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T11:28:17.897868Z"}
+{"label": "ollama:chat", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.44, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T11:29:19.119776Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 211, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T11:29:35.187437Z"}
+{"conversation": "221ee446765f44b8", "grounded": true, "tools": ["arabic_morphology"], "ms": 218804, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T11:29:35.192258Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[6/20] G-066 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T11:29:35.201446Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T11:29:35.219513Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.33, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T11:30:35.882058Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.87, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T11:31:37.514130Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T11:32:12.546288Z"}
+{"label": "ollama:chat", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.47, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T11:33:13.924926Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 363, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T11:33:30.491700Z"}
+{"conversation": "57ced81a58474345", "grounded": true, "tools": ["discourse_analysis"], "ms": 230845, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T11:33:30.495288Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[7/20] G-067 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T11:33:30.503756Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T11:33:30.516862Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.06, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T11:34:31.918971Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.51, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T11:35:33.378333Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T11:35:52.739374Z"}
+{"label": "ollama:chat", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.41, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T11:36:54.150955Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 159, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T11:37:05.671162Z"}
+{"conversation": "a3516d1538424da7", "grounded": true, "tools": ["discourse_analysis"], "ms": 211121, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T11:37:05.683099Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[8/20] G-068 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T11:37:05.694154Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T11:37:05.712311Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.08, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T11:38:07.140290Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.76, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T11:39:08.649799Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T11:39:36.754984Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 128, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T11:40:37.304856Z"}
+{"conversation": "f3d4953c6d334482", "grounded": true, "tools": ["discourse_analysis"], "ms": 207246, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T11:40:37.313430Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[9/20] G-069 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T11:40:37.322787Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T11:40:37.334141Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.3, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T11:41:38.587176Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.31, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T11:42:39.547117Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T11:42:59.645944Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 175, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T11:43:28.263890Z"}
+{"conversation": "e9dfac75a6ca4ced", "grounded": true, "tools": ["get_pos_analysis"], "ms": 167925, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T11:43:28.269448Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[10/20] G-070 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T11:43:28.281995Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T11:43:28.300424Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.17, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T11:44:29.585987Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.72, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T11:45:31.066415Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T11:45:50.152455Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 110, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T11:46:15.266596Z"}
+{"conversation": "01a3cf3c3a63428b", "grounded": true, "tools": ["get_pos_analysis"], "ms": 163882, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T11:46:15.271552Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[11/20] G-071 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T11:46:15.280134Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T11:46:15.293519Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.47, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T11:47:16.660720Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.82, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T11:48:18.448229Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T11:48:38.456792Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 581, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T11:49:36.351074Z"}
+{"conversation": "6dbc859d14aa4818", "grounded": true, "tools": ["grammar_query"], "ms": 197133, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T11:49:36.356226Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[12/20] G-072 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T11:49:36.367552Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T11:49:36.384800Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.19, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T11:50:37.765077Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.3, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T11:51:39.455370Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T11:52:01.520989Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 161, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T11:52:12.675818Z"}
+{"conversation": "9cdceb06bb79407b", "grounded": true, "tools": ["search_concordance"], "ms": 152818, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T11:52:12.681106Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[13/20] G-073 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T11:52:12.695310Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T11:52:12.710456Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.04, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T11:53:14.329897Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.66, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T11:54:16.018116Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T11:54:53.315278Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 68, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T11:55:02.351418Z"}
+{"conversation": "9b8241b93634435a", "grounded": true, "tools": ["search_concordance"], "ms": 165701, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T11:55:02.355691Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[14/20] G-074 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T11:55:02.366417Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T11:55:02.382881Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.45, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T11:56:04.059079Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.28, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T11:57:06.037601Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T11:57:46.612183Z"}
+{"label": "ollama:chat", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.17, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T11:58:48.250575Z"}
+{"label": "ollama:chat", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 1.0, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T11:59:49.937224Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 607, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T12:00:18.155407Z"}
+{"conversation": "76ed00098c1b4e1e", "grounded": true, "tools": ["compute_keyness"], "ms": 308286, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T12:00:18.160230Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[15/20] G-075 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T12:00:18.172953Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T12:00:18.194570Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T12:00:33.132659Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 452, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T12:00:54.749943Z"}
+{"conversation": "81df99315321453b", "grounded": true, "tools": ["search_cql"], "ms": 35842, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T12:00:54.755180Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[16/20] G-076 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T12:00:54.766012Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T12:00:54.790534Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.05, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T12:01:56.318717Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.76, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T12:02:57.165367Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T12:03:32.683204Z"}
+{"label": "ollama:chat", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.46, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T12:04:33.813226Z"}
+{"label": "ollama:chat", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.42, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T12:05:35.739555Z"}
+{"error": "[ollama] chat request failed: ReadTimeout: ", "event": "chat_failed", "level": "error", "timestamp": "2026-11-04T12:06:37.559870Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 502 Bad Gateway"
+[17/20] G-077 -> HTTP 502; rate-retry 1/4 in 20s
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T12:06:57.576567Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T12:06:57.593731Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T12:07:28.101486Z"}
+{"label": "ollama:chat", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.4, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T12:08:29.700841Z"}
+{"label": "ollama:chat", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.34, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T12:09:31.625127Z"}
+{"error": "[ollama] chat request failed: ReadTimeout: ", "event": "chat_failed", "level": "error", "timestamp": "2026-11-04T12:10:33.515640Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 502 Bad Gateway"
+[17/20] G-077 -> HTTP 502; rate-retry 2/4 in 40s
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T12:11:14.289515Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T12:11:14.300606Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.06, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T12:12:15.871715Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T12:12:45.389678Z"}
+{"label": "ollama:chat", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.18, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T12:13:46.993263Z"}
+{"label": "ollama:chat", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.68, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T12:14:48.813937Z"}
+{"error": "[ollama] chat request failed: ReadTimeout: ", "event": "chat_failed", "level": "error", "timestamp": "2026-11-04T12:15:50.424688Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 502 Bad Gateway"
+[17/20] G-077 -> HTTP 502; rate-retry 3/4 in 80s
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T12:17:12.948517Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T12:17:12.963679Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.44, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T12:18:14.753274Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.44, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T12:19:17.029691Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T12:19:45.157353Z"}
+{"label": "ollama:chat", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.11, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T12:20:46.957223Z"}
+{"label": "ollama:chat", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.4, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T12:21:48.874926Z"}
+{"error": "[ollama] chat request failed: ReadTimeout: ", "event": "chat_failed", "level": "error", "timestamp": "2026-11-04T12:22:51.045400Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 502 Bad Gateway"
+[17/20] G-077 -> HTTP 502; rate-retry 4/4 in 90s
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T12:24:23.768077Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T12:24:23.786692Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T12:24:53.229965Z"}
+{"label": "ollama:chat", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.37, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T12:25:54.997839Z"}
+{"label": "ollama:chat", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.3, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T12:26:57.129374Z"}
+{"error": "[ollama] chat request failed: ReadTimeout: ", "event": "chat_failed", "level": "error", "timestamp": "2026-11-04T12:27:58.290550Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 502 Bad Gateway"
+[17/20] G-077 -> {"detail":"Model call failed: [ollama] chat request failed: ReadTimeout: "}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T12:27:58.298773Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T12:27:58.307777Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.1, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T12:28:59.843708Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 1.0, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T12:30:01.389652Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 5, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T12:30:28.003947Z"}
+{"label": "ollama:chat", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.09, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T12:31:29.322424Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 638, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T12:31:50.635889Z"}
+{"conversation": "f9981df623e94032", "grounded": true, "tools": ["get_corpus_overview", "get_frequency"], "ms": 227581, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T12:31:50.641935Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[18/20] G-078 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T12:31:50.652155Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T12:31:50.672758Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T12:32:07.994066Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 258, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T12:32:23.296791Z"}
+{"conversation": "8f41756422904f35", "grounded": true, "tools": ["get_ngrams"], "ms": 31837, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T12:32:23.302597Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[19/20] G-079 -> ok
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-04T12:32:23.311458Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-04T12:32:23.329710Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.06, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T12:33:25.145542Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.86, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-04T12:34:27.136419Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-04T12:34:49.638793Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "qwen2.5:7b", "content_len": 461, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-04T12:35:12.198613Z"}
+{"conversation": "b541b75c073144f9", "grounded": true, "tools": ["compute_collocations"], "ms": 163623, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-04T12:35:12.205439Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[20/20] G-080 -> ok
+{"event": "engine_stopped", "level": "info", "timestamp": "2026-11-04T12:35:12.210209Z"}
+run written: eval/runs/b7_16k_r3_shard4.json
