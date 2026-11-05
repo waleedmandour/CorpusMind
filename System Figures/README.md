@@ -42,6 +42,35 @@ renderer and re-run the two-step generation. The renderer warns on any
 wrapped-text/hyphen anomaly that would desynchronize the SVG export from
 the browser rendering.
 
+## Corrections (2026-11-05) — fig0, reviewed against the engine code
+
+`fig0_design_principles.drawio` (new) is the editable draw.io source of fig0
+with two faithful corrections applied; open it in diagrams.net or the VS Code
+draw.io plugin to review and adjust manually, then re-export PNG/PDF/SVG
+(the current raster/vector exports still show the pre-correction text):
+
+1. **P3 — six → eight association tests.** The engine's default collocation
+   measure set (`engine/stats/service.py`) is MI, T-score, log-likelihood,
+   Dice, **log-Dice**, chi-square, delta-P, **Fisher** — eight tests — beside
+   the four effect sizes Log Ratio, %DIFF, Simple Maths, Odds Ratio (exact).
+2. **P7 — honest scale wording.** "Designed for hundreds of millions of
+   tokens" was not supported by any committed artifact. The card now mirrors
+   README principle 7 and the committed scale runs (`bench-state/artifacts/
+   a7-scale/1m|10m`): interactive analysis is measured on ~100K-token corpora
+   on consumer hardware; synthetic stress runs reach 10M tokens; production
+   scale (millions of tokens) is a stated roadmap item.
+
+### Pending fixes (flagged in the 2026-11-05 review, not yet applied)
+
+- **fig1**: the RTL card says "Cairo/Segoe fonts" — the web UI ships
+  Inter/Segoe UI + Noto Sans Arabic + Noto Nastaliq Urdu (no Cairo).
+- **fig2**: item 8 "15 frameworks (7 textual, 8 visual)" has no source — the
+  catalogue is 12 YAML lenses + 8 vision-LM discourse framework routes;
+  item 11 lists Word/LaTeX table exports that do not exist (actual: xlsx/csv/
+  tsv/txt/json + network SVG/PNG + Methods PDF).
+- **fig3**: drop the internal "(r4)" reference; the dialect list may add
+  Classical (pipeline supports MSA, Egyptian, Gulf, Levantine, Classical).
+
 ## Design tokens
 
 Okabe-Ito: blue `#0072B2`, teal `#009E73`, orange `#E69F00`, vermillion
