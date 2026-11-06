@@ -23,7 +23,7 @@ overhaul is needed.
 
 The executed contrast (3b: pinned 4k control `run-41306198564` vs 16384
 `run-41306203484`) is the paper's only causal result: exact McNemar
-p = 0.00258 (Holm-adjusted; single executed test in the declared family),
+p = 0.00258 raw, Holm-adjusted over the declared four-test family = 0.0103,
 22.5% vs 5.0% PASS. Give it a dedicated results subsection with a methods
 paragraph (exact McNemar, declared Holm family, unexecuted contrasts
 disclosed), the paired 2x2 and joint-verdict tables from

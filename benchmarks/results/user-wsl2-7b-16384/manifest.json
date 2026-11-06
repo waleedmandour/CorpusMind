@@ -1,7 +1,7 @@
 {
  "run_url": "local://Waleed-Desktop/WSL2-Ubuntu24.04-tierB-user-run",
  "commit": "5a5e43fa0c9e6a903dc06f79579b732a9f666bca",
- "utc": "2026-11-04T18:38:54+00:00",
+ "utc": "2026-11-06T11:44:15+00:00",
  "runner": {
   "platform": null,
   "cpu_count": null,
@@ -10,14 +10,9 @@
  },
  "files": [
   {
-   "path": "MANIFEST.json",
-   "sha256": "914f992cb1fb532e43d6be5642364d45ad2a4828f520ac39476e7b560f3d0f83",
-   "bytes": 320
-  },
-  {
    "path": "README.md",
-   "sha256": "9274dac053fc83155b855dcef64780d392cd940416cd4577fabe1ed021dad100",
-   "bytes": 4415
+   "sha256": "b42b9018373099bb20469dcc008ed1a32243b04c80a2b135c77469bb1f93fbc1",
+   "bytes": 5457
   },
   {
    "path": "analysis/AREA_AUDIT.md",
@@ -31,18 +26,18 @@
   },
   {
    "path": "analysis/MANUSCRIPT_PLAN_IMPLICATIONS.md",
-   "sha256": "31d3f3f0ad621a649a2eb27126b02ceaef4311deae2481f1702df5b257611074",
-   "bytes": 3595
+   "sha256": "b26ce21387d68502ba5f86592d4e7b022f72fd3ae63ee4ecaac4cb6e9bd2a979",
+   "bytes": 3597
   },
   {
    "path": "analysis/MCNEMAR_3b_CONTEXT_CONTRAST.md",
-   "sha256": "cd9a3d3d75ac29b305540c0d3869260198dd1a70eb86a4cde08a2b46ef6c1817",
-   "bytes": 3516
+   "sha256": "6a6ebb4aa618b994f8964f0cfd2163bdf6e414fe6f3a4c45d6f66f9669c33230",
+   "bytes": 3882
   },
   {
    "path": "analysis/RESULTS_SUMMARY.md",
-   "sha256": "f147326ea1312fa949e1c74e63d8b1ef686fc493124aec4cc71fbb6888c970c9",
-   "bytes": 10843
+   "sha256": "61fcc8c5d1e4215044ba744e2f63b79a2088950bd5baed91dc78c071d2c7fcd3",
+   "bytes": 10916
   },
   {
    "path": "analysis/figures/fig1_verdict_composition.pdf",
@@ -125,9 +120,14 @@
    "bytes": 14631
   },
   {
+   "path": "analysis/qwen7b_majority_vector.json",
+   "sha256": "f36a02ec559e582738420a0e9b90001f83a23d52b54332c09c2769d52d1bb532",
+   "bytes": 10383
+  },
+  {
    "path": "analysis/stats_3b_context_contrast.json",
-   "sha256": "9ed05730c3e33fe3365a21064433cdbdd8a4a3d5bddc96b13d64841471040f10",
-   "bytes": 4099
+   "sha256": "da765eed92f2d00ae1b4438fea70ae4278f301c00b11f2d48db9a29bba52b1d2",
+   "bytes": 4604
   },
   {
    "path": "b7_16k_r1_shard1.json",

@@ -116,6 +116,8 @@
       "ctx_3b"
     ],
     "p_two_sided_holm_adjusted": 0.0025768280029296875,
+  "p_two_sided_holm_adjusted_declared_family_4": 0.01030731201171875,
+  "holm_convention_note": "p_two_sided_holm_adjusted retains its original executed-tests-only reading (one executed test, identity adjustment). The citable convention, matching the manuscript and MCNEMAR_3b_CONTEXT_CONTRAST.md, adjusts over the declared four-test family (raw x 4) and is stored in p_two_sided_holm_adjusted_declared_family_4. Additive correction of 2026-11-06; raw p, paired counts and verdict tables are unchanged.",
     "note": "single executed test in the pre-registered family; Holm adjustment is the identity. ctx_1.5b not executed (only a freeze-version 4k triple exists - Ollama-version confound, AREA_AUDIT.md); size contrasts not executed (no Tier B bridging runs - descoped 2026-11-05)."
   },
   "agreement_descriptive": {
