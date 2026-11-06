@@ -30,9 +30,13 @@ measurement code is the frozen v2.0.2 grounding stack, and each run ships its ow
 
 ## Exact McNemar (two-sided)
 
-p = 2 · P(X ≤ 3), X ~ Binomial(20, 0.5) = **0.00258**
-Holm-adjusted p = **0.00258** (identity: this is the only executed test in the
-pre-registered family {ctx×1.5b, ctx×3b, size×CI, size×TierB}).
+p = 2 · P(X ≤ 3), X ~ Binomial(20, 0.5) = **0.00258** (raw)
+Holm-adjusted over the **declared four-test family** {ctx×1.5b, ctx×3b, size×CI,
+size×TierB} = **0.0103** (convention: the raw p is multiplied by the declared family
+size, 4 — the same convention as the manuscript, which reports 0.010). The companion
+`stats_3b_context_contrast.json` records both values as of 2026-11-06; its original
+`p_two_sided_holm_adjusted` = 0.00258 reflected the executed-tests-only reading (one
+executed test, identity adjustment), which is *not* the citable convention here.
 
 **Family disclosure (not imputed, simply not run):** ctx×1.5b has no clean comparator
 (only the freeze-version 4k triple exists — Ollama-version confound; see AREA_AUDIT.md);

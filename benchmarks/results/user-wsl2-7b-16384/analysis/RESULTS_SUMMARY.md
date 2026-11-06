@@ -196,8 +196,9 @@ summary; figures carry manuscript-ready captions in `FIGURE_CAPTIONS.md`.
 Computed per Plan v3 §7 from the two committed CI arms (`run-41306198564` control,
 `run-41306203484` arm; both pinned Ollama 0.40.13, same frozen gold, repo scorer):
 exact McNemar on the 80 paired per-question binary verdicts. Discordant pairs
-b = 3 (PASS at 4k only), c = 17 (PASS at 16384 only) → **p = 0.00258, Holm-adjusted
-p = 0.00258** (single executed test in the declared family) — the 16384 arm improves
+b = 3 (PASS at 4k only), c = 17 (PASS at 16384 only) → **p = 0.00258 raw;
+Holm-adjusted over the declared four-test family = 0.0103** (manuscript convention:
+raw × declared family size; the manuscript reports 0.010) — the 16384 arm improves
 3b grounding: 22.5% vs 5.0% PASS. Verdict-level: 9 questions move
 MISSING_NUMBER → PASS, 12 move MISSING_NUMBER → HALLUCINATED (failure mass shifts
 from missing to hallucinated, matching the 7b signature); traps are context-stable.
