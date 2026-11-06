@@ -8,7 +8,13 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # cancel-in-progress disabled (was: true) on 2026-11-07. On a single-author
+  # repo, back-to-back pushes to main are common (e.g. the Nov 4 push series),
+  # and cancel-in-progress killed in-flight runs as "cancelled" — CI #455,
+  # #468, #469 — destroying the CI signal for those commits, which matters in
+  # a repo where commit timestamps are pre-registration evidence. Let runs
+  # queue instead; each pushed commit keeps a complete, inspectable run.
+  cancel-in-progress: false
 
 jobs:
   # -----------------------------------------------------------------------
