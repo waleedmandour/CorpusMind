@@ -1,0 +1,2 @@
+fcb383f986766603df10ff60c93f714bbdc601bbb76bc82ef68eba532af7dcc9  benchmarks/plans/2026-11-06_gemma4-e4b-arm-plan-v1.md
+2fee1e36c36ee592c6f28d6a6eca7c667cf29d047b37361e01de62aa3d429899  benchmarks/plans/2026-11-06_gemma4-e4b-arm-plan-v1-addendum-1.md

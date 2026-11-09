@@ -1,0 +1,28 @@
+2026-11-08T16:01:25Z  prep done, fails=0
+2026-11-08T16:04:26Z  GATE 1 PASS model=llama3.1:8b; tools capability present; digest/quantisation/context/template recorded
+2026-11-08T16:04:26Z  pulled llama3.1:8b
+2026-11-08T16:05:18Z  GATE 2 PASS model=llama3.1:8b; probe0
+2026-11-08T16:06:12Z  GATE 4 PASS model=llama3.1:8b; truncated=1 lines: 0; truncating-input-prompt lines: 1 (addendum-2 A3)
+2026-11-08T16:11:15Z  GATE 3 PASS model=llama3.1:8b; probe-g076
+2026-11-08T16:27:51Z  GATE 5 PASS model=llama3.1:8b; probe5
+OBSERVATION probe5 G-004 trap: llama3.1:8b returned a tool call (<TOOL>) instead of an explicit unavailability statement; not gated (same behaviour class observed on the gemma4:e4b arm).
+OBSERVATION serving mode: llama3.1:8b runs 100% CPU (Ryzen 5 4500U, 6 threads) — identical compute mode to the committed qwen2.5:7b comparator (its evidence/notes.txt records "CPU-only"); cross-arm latency comparisons are same-mode.
+ARM-CHOICE: fallback arm llama3.1:8b activated per plan-v1 addendum-2 §A4 (primary gemma4:e4b gated out at gate 2 — reasoning text on the /v1/chat/completions tool-round path; unfixable in frozen checkout 5a5e43fa). Gates 1-5 all PASS 2026-11-08. Full run may start.
+2026-11-08T17:24:56Z  ARM CHOICE: llama3.1:8b (FALLBACK arm per plan v1 section 2 / addendum A2; primary-arm gate evidence committed) - written before the first full repetition
+2026-11-08T17:24:56Z  rep 1 start (l8_16k_r1)
+2026-11-08T22:56:14Z  rep 1 done, truncation_lines=0
+2026-11-08T22:56:15Z  rep 2 start (l8_16k_r2)
+2026-11-09T03:58:39Z  rep 2 done, truncation_lines=0
+2026-11-09T03:58:40Z  rep 3 start (l8_16k_r3)
+2026-11-09T08:50:16Z  rescue G-059 rep 1 start
+2026-11-09T09:13:48Z  rep 3 done, truncation_lines=0
+2026-11-09T09:25:04Z  rescue G-059 rep 1 start
+2026-11-09T09:49:12Z  rescue G-059 rep 1 done rc=0 (applied to the merge only if the original was errored AND this re-run is clean; both attempts kept)
+2026-11-09T09:49:14Z  rescue G-059 rep 3 start
+2026-11-09T10:10:21Z  rescue G-059 rep 3 done rc=0 (applied to the merge only if the original was errored AND this re-run is clean; both attempts kept)
+
+## 2026-11-09 - G-059 transport disclosure (post-run rescues)
+- G-059 (slowest item; CPU-only inference) errored 502 ReadTimeout in r1 and r3 originals (walls 1274 s / 1312 s). One rescue per rep, per plan.
+- r1 rescue (09:25-09:49 UTC): FAILED - all 4 rate-retries exhausted on ReadTimeout; rescues/l8_16k_r1_rescue_G-059.json (n=1, no_answer=1, wall 1385 s). Not retried further.
+- r3 rescue (09:49-10:10 UTC): SUCCEEDED on the 4th rate-retry - answered with tools [get_corpus_overview, get_frequency], final turn 79.8 s; rescues/l8_16k_r3_rescue_G-059.json (n=1, answered=1, wall 1211 s).
+- Originals + rescues + full logs all in the bundle. No timeouts changed, no attempt files deleted.

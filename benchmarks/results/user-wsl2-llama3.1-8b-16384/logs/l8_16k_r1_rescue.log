@@ -1,0 +1,174 @@
+{"host": "127.0.0.1", "port": 8765, "data_dir": "/tmp/cm-eval-data", "event": "engine_starting", "level": "info", "timestamp": "2026-11-09T08:50:18.645315Z"}
+{"url": "sqlite+aiosqlite:///:memory:", "event": "db_ready", "level": "info", "timestamp": "2026-11-09T08:50:18.757689Z"}
+{"event": "arabic_warmup_disabled", "level": "info", "timestamp": "2026-11-09T08:50:18.757953Z"}
+HTTP Request: POST http://test/api/v1/projects "HTTP/1.1 200 OK"
+HTTP Request: POST http://test/api/v1/projects/dfc588af62f64b53/corpora "HTTP/1.1 200 OK"
+{"filename": "en_news.txt", "format": "txt", "encoding": "ascii", "chars": 578, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-09T08:50:18.888022Z"}
+{"model": "en_core_web_sm", "event": "spacy_loading", "level": "info", "timestamp": "2026-11-09T08:50:31.752422Z"}
+{"model": "en_core_web_sm", "version": "3.8.0", "spacy": "3.8.18", "event": "spacy_loaded", "level": "info", "timestamp": "2026-11-09T08:50:32.484108Z"}
+{"corpus_id": "99df9abfc8854c9b", "document_id": "d0594eeb27d243e1", "version_id": "84352927cbf245c4", "tokens": 111, "sentences": 9, "elapsed_ms": 80, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-09T08:50:32.661627Z"}
+HTTP Request: POST http://test/api/v1/corpora/99df9abfc8854c9b/documents "HTTP/1.1 200 OK"
+{"filename": "en_academic.txt", "format": "txt", "encoding": "ascii", "chars": 877, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-09T08:50:32.684079Z"}
+{"corpus_id": "99df9abfc8854c9b", "document_id": "3346c3ab5e50419f", "version_id": "84352927cbf245c4", "tokens": 146, "sentences": 10, "elapsed_ms": 98, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-09T08:50:32.866101Z"}
+HTTP Request: POST http://test/api/v1/corpora/99df9abfc8854c9b/documents "HTTP/1.1 200 OK"
+{"filename": "en_learner.txt", "format": "txt", "encoding": "ascii", "chars": 524, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-09T08:50:32.880683Z"}
+{"corpus_id": "99df9abfc8854c9b", "document_id": "0fa28b73bcfc42e2", "version_id": "84352927cbf245c4", "tokens": 118, "sentences": 8, "elapsed_ms": 70, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-09T08:50:32.992403Z"}
+HTTP Request: POST http://test/api/v1/corpora/99df9abfc8854c9b/documents "HTTP/1.1 200 OK"
+HTTP Request: POST http://test/api/v1/projects/dfc588af62f64b53/corpora "HTTP/1.1 200 OK"
+{"filename": "en_learner.txt", "format": "txt", "encoding": "ascii", "chars": 524, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-09T08:50:33.020139Z"}
+{"corpus_id": "ac12f60b9c104357", "document_id": "d36bf34f7a504322", "version_id": "a9b6264a60734bf5", "tokens": 118, "sentences": 8, "elapsed_ms": 79, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-09T08:50:33.146937Z"}
+HTTP Request: POST http://test/api/v1/corpora/ac12f60b9c104357/documents "HTTP/1.1 200 OK"
+HTTP Request: POST http://test/api/v1/projects/dfc588af62f64b53/corpora "HTTP/1.1 200 OK"
+{"filename": "en_news.txt", "format": "txt", "encoding": "ascii", "chars": 578, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-09T08:50:33.175904Z"}
+{"corpus_id": "ac008c3898124214", "document_id": "d792ba7c7faa41ba", "version_id": "4e93f31d656c490f", "tokens": 111, "sentences": 9, "elapsed_ms": 65, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-09T08:50:33.281833Z"}
+HTTP Request: POST http://test/api/v1/corpora/ac008c3898124214/documents "HTTP/1.1 200 OK"
+{"filename": "en_academic.txt", "format": "txt", "encoding": "ascii", "chars": 877, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-09T08:50:33.307565Z"}
+{"corpus_id": "ac008c3898124214", "document_id": "e950bf7242434570", "version_id": "4e93f31d656c490f", "tokens": 146, "sentences": 10, "elapsed_ms": 89, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-09T08:50:33.444597Z"}
+HTTP Request: POST http://test/api/v1/corpora/ac008c3898124214/documents "HTTP/1.1 200 OK"
+HTTP Request: POST http://test/api/v1/projects/dfc588af62f64b53/corpora "HTTP/1.1 200 OK"
+{"filename": "ar_msa.txt", "format": "txt", "encoding": "utf_8", "chars": 469, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-09T08:50:33.483152Z"}
+{"dialect": "msa", "event": "camel_loading", "level": "info", "timestamp": "2026-11-09T08:50:34.443262Z"}
+{"model": "calima-msa-r13", "event": "camel_loaded", "level": "info", "timestamp": "2026-11-09T08:50:38.473360Z"}
+{"corpus_id": "e6fb9582f7e641e2", "document_id": "c48462da0f444ba2", "version_id": "c1fac7edb927400a", "tokens": 78, "sentences": 7, "elapsed_ms": 35, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-09T08:50:38.769022Z"}
+HTTP Request: POST http://test/api/v1/corpora/e6fb9582f7e641e2/documents "HTTP/1.1 200 OK"
+{"filename": "ar_classical.txt", "format": "txt", "encoding": "utf_8", "chars": 312, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-09T08:50:38.790297Z"}
+{"corpus_id": "e6fb9582f7e641e2", "document_id": "a14e0bcad0d74a4c", "version_id": "c1fac7edb927400a", "tokens": 60, "sentences": 5, "elapsed_ms": 34, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-09T08:50:38.907850Z"}
+HTTP Request: POST http://test/api/v1/corpora/e6fb9582f7e641e2/documents "HTTP/1.1 200 OK"
+{"filename": "ar_dialect.txt", "format": "txt", "encoding": "utf_8", "chars": 261, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-09T08:50:38.926128Z"}
+{"corpus_id": "e6fb9582f7e641e2", "document_id": "6baa64ee17554c35", "version_id": "c1fac7edb927400a", "tokens": 52, "sentences": 5, "elapsed_ms": 44, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-09T08:50:39.030761Z"}
+HTTP Request: POST http://test/api/v1/corpora/e6fb9582f7e641e2/documents "HTTP/1.1 200 OK"
+{"filename": "ar_nopunct.txt", "format": "txt", "encoding": "utf_8", "chars": 234, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-09T08:50:39.050012Z"}
+{"corpus_id": "e6fb9582f7e641e2", "document_id": "18c5c8f2e6e444fc", "version_id": "c1fac7edb927400a", "tokens": 43, "sentences": 1, "elapsed_ms": 35, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-09T08:50:39.136498Z"}
+HTTP Request: POST http://test/api/v1/corpora/e6fb9582f7e641e2/documents "HTTP/1.1 200 OK"
+HTTP Request: POST http://test/api/v1/projects/dfc588af62f64b53/corpora "HTTP/1.1 200 OK"
+{"filename": "ar_parallel.txt", "format": "txt", "encoding": "utf_8", "chars": 166, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-09T08:50:39.170211Z"}
+{"corpus_id": "96a7cacc7b8d4cdb", "document_id": "cab8e050504d4cfa", "version_id": "91b955a170484371", "tokens": 29, "sentences": 4, "elapsed_ms": 20, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-09T08:50:39.252197Z"}
+HTTP Request: POST http://test/api/v1/corpora/96a7cacc7b8d4cdb/documents "HTTP/1.1 200 OK"
+HTTP Request: POST http://test/api/v1/projects/dfc588af62f64b53/corpora "HTTP/1.1 200 OK"
+{"filename": "en_parallel.txt", "format": "txt", "encoding": "ascii", "chars": 199, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-09T08:50:39.273620Z"}
+{"corpus_id": "cc03b3d488034c74", "document_id": "9645bc2b0b594c76", "version_id": "d7faec875b51418e", "tokens": 43, "sentences": 4, "elapsed_ms": 30, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-09T08:50:39.369842Z"}
+HTTP Request: POST http://test/api/v1/corpora/cc03b3d488034c74/documents "HTTP/1.1 200 OK"
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-09T08:50:39.838482Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "llama3.1:8b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-09T08:50:39.897755Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.44, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-09T08:51:41.055774Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.57, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-09T08:52:43.608805Z"}
+{"error": "[ollama] tool-call request failed: ", "event": "chat_failed", "level": "error", "timestamp": "2026-11-09T08:53:46.245014Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 502 Bad Gateway"
+[1/1] G-059 -> HTTP 502; rate-retry 1/4 in 20s
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-09T08:54:07.307651Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "llama3.1:8b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-09T08:54:07.323559Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "llama3.1:8b", "messages": 5, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-09T08:54:34.480628Z"}
+{"label": "ollama:chat", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.05, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-09T08:55:35.636231Z"}
+{"label": "ollama:chat", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.24, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-09T08:56:37.879412Z"}
+{"host": "127.0.0.1", "port": 8765, "data_dir": "/tmp/cm-eval-data", "event": "engine_starting", "level": "info", "timestamp": "2026-11-09T09:25:06.607970Z"}
+{"url": "sqlite+aiosqlite:///:memory:", "event": "db_ready", "level": "info", "timestamp": "2026-11-09T09:25:06.688369Z"}
+{"event": "arabic_warmup_disabled", "level": "info", "timestamp": "2026-11-09T09:25:06.688606Z"}
+HTTP Request: POST http://test/api/v1/projects "HTTP/1.1 200 OK"
+HTTP Request: POST http://test/api/v1/projects/6b724b1166f44416/corpora "HTTP/1.1 200 OK"
+{"filename": "en_news.txt", "format": "txt", "encoding": "ascii", "chars": 578, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-09T09:25:06.789545Z"}
+{"model": "en_core_web_sm", "event": "spacy_loading", "level": "info", "timestamp": "2026-11-09T09:25:11.393393Z"}
+{"model": "en_core_web_sm", "version": "3.8.0", "spacy": "3.8.18", "event": "spacy_loaded", "level": "info", "timestamp": "2026-11-09T09:25:11.812935Z"}
+{"corpus_id": "8e91f7e7177d4f64", "document_id": "be31403459c44dce", "version_id": "fc0e0a4a05194474", "tokens": 111, "sentences": 9, "elapsed_ms": 40, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-09T09:25:11.877531Z"}
+HTTP Request: POST http://test/api/v1/corpora/8e91f7e7177d4f64/documents "HTTP/1.1 200 OK"
+{"filename": "en_academic.txt", "format": "txt", "encoding": "ascii", "chars": 877, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-09T09:25:11.884200Z"}
+{"corpus_id": "8e91f7e7177d4f64", "document_id": "43bf521c7bca47b1", "version_id": "fc0e0a4a05194474", "tokens": 146, "sentences": 10, "elapsed_ms": 48, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-09T09:25:11.962306Z"}
+HTTP Request: POST http://test/api/v1/corpora/8e91f7e7177d4f64/documents "HTTP/1.1 200 OK"
+{"filename": "en_learner.txt", "format": "txt", "encoding": "ascii", "chars": 524, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-09T09:25:11.967762Z"}
+{"corpus_id": "8e91f7e7177d4f64", "document_id": "5bee1cfafb244971", "version_id": "fc0e0a4a05194474", "tokens": 118, "sentences": 8, "elapsed_ms": 38, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-09T09:25:12.024403Z"}
+HTTP Request: POST http://test/api/v1/corpora/8e91f7e7177d4f64/documents "HTTP/1.1 200 OK"
+HTTP Request: POST http://test/api/v1/projects/6b724b1166f44416/corpora "HTTP/1.1 200 OK"
+{"filename": "en_learner.txt", "format": "txt", "encoding": "ascii", "chars": 524, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-09T09:25:12.034903Z"}
+{"corpus_id": "b2b3860f549c4c13", "document_id": "c1ef27c44e7d4203", "version_id": "9e61957a84af4768", "tokens": 118, "sentences": 8, "elapsed_ms": 38, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-09T09:25:12.090576Z"}
+HTTP Request: POST http://test/api/v1/corpora/b2b3860f549c4c13/documents "HTTP/1.1 200 OK"
+HTTP Request: POST http://test/api/v1/projects/6b724b1166f44416/corpora "HTTP/1.1 200 OK"
+{"filename": "en_news.txt", "format": "txt", "encoding": "ascii", "chars": 578, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-09T09:25:12.101198Z"}
+{"corpus_id": "8972de2732864fc4", "document_id": "1f513963f9e54e4d", "version_id": "90308461d82b4ae1", "tokens": 111, "sentences": 9, "elapsed_ms": 37, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-09T09:25:12.155305Z"}
+HTTP Request: POST http://test/api/v1/corpora/8972de2732864fc4/documents "HTTP/1.1 200 OK"
+{"filename": "en_academic.txt", "format": "txt", "encoding": "ascii", "chars": 877, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-09T09:25:12.160946Z"}
+{"corpus_id": "8972de2732864fc4", "document_id": "40b20aab2f2c4660", "version_id": "90308461d82b4ae1", "tokens": 146, "sentences": 10, "elapsed_ms": 46, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-09T09:25:12.225414Z"}
+HTTP Request: POST http://test/api/v1/corpora/8972de2732864fc4/documents "HTTP/1.1 200 OK"
+HTTP Request: POST http://test/api/v1/projects/6b724b1166f44416/corpora "HTTP/1.1 200 OK"
+{"filename": "ar_msa.txt", "format": "txt", "encoding": "utf_8", "chars": 469, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-09T09:25:12.237185Z"}
+{"dialect": "msa", "event": "camel_loading", "level": "info", "timestamp": "2026-11-09T09:25:12.765999Z"}
+{"model": "calima-msa-r13", "event": "camel_loaded", "level": "info", "timestamp": "2026-11-09T09:25:15.496018Z"}
+{"corpus_id": "c1d11a8141354b48", "document_id": "79d1aa22f81d4b17", "version_id": "9da418f041de4d98", "tokens": 78, "sentences": 7, "elapsed_ms": 29, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-09T09:25:15.573989Z"}
+HTTP Request: POST http://test/api/v1/corpora/c1d11a8141354b48/documents "HTTP/1.1 200 OK"
+{"filename": "ar_classical.txt", "format": "txt", "encoding": "utf_8", "chars": 312, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-09T09:25:15.580622Z"}
+{"corpus_id": "c1d11a8141354b48", "document_id": "710d7c1197c647aa", "version_id": "9da418f041de4d98", "tokens": 60, "sentences": 5, "elapsed_ms": 24, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-09T09:25:15.633309Z"}
+HTTP Request: POST http://test/api/v1/corpora/c1d11a8141354b48/documents "HTTP/1.1 200 OK"
+{"filename": "ar_dialect.txt", "format": "txt", "encoding": "utf_8", "chars": 261, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-09T09:25:15.638756Z"}
+{"corpus_id": "c1d11a8141354b48", "document_id": "04d7db6ce57b4997", "version_id": "9da418f041de4d98", "tokens": 52, "sentences": 5, "elapsed_ms": 19, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-09T09:25:15.678982Z"}
+HTTP Request: POST http://test/api/v1/corpora/c1d11a8141354b48/documents "HTTP/1.1 200 OK"
+{"filename": "ar_nopunct.txt", "format": "txt", "encoding": "utf_8", "chars": 234, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-09T09:25:15.684734Z"}
+{"corpus_id": "c1d11a8141354b48", "document_id": "1ec8b3e61b6b4c0c", "version_id": "9da418f041de4d98", "tokens": 43, "sentences": 1, "elapsed_ms": 18, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-09T09:25:15.723252Z"}
+HTTP Request: POST http://test/api/v1/corpora/c1d11a8141354b48/documents "HTTP/1.1 200 OK"
+HTTP Request: POST http://test/api/v1/projects/6b724b1166f44416/corpora "HTTP/1.1 200 OK"
+{"filename": "ar_parallel.txt", "format": "txt", "encoding": "utf_8", "chars": 166, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-09T09:25:15.734220Z"}
+{"corpus_id": "de923ab690494ea0", "document_id": "6dea629e80b04cd4", "version_id": "0c281268d87a49b8", "tokens": 29, "sentences": 4, "elapsed_ms": 11, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-09T09:25:15.761883Z"}
+HTTP Request: POST http://test/api/v1/corpora/de923ab690494ea0/documents "HTTP/1.1 200 OK"
+HTTP Request: POST http://test/api/v1/projects/6b724b1166f44416/corpora "HTTP/1.1 200 OK"
+{"filename": "en_parallel.txt", "format": "txt", "encoding": "ascii", "chars": 199, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-09T09:25:15.773011Z"}
+{"corpus_id": "23a89e4b6f234f4e", "document_id": "26d30ffe69594f6d", "version_id": "6c4412882ce14f82", "tokens": 43, "sentences": 4, "elapsed_ms": 15, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-09T09:25:15.804027Z"}
+HTTP Request: POST http://test/api/v1/corpora/23a89e4b6f234f4e/documents "HTTP/1.1 200 OK"
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-09T09:25:15.887894Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "llama3.1:8b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-09T09:25:15.912675Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.27, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-09T09:26:17.152359Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.21, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-09T09:27:19.612256Z"}
+{"error": "[ollama] tool-call request failed: ", "event": "chat_failed", "level": "error", "timestamp": "2026-11-09T09:28:22.096721Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 502 Bad Gateway"
+[1/1] G-059 -> HTTP 502; rate-retry 1/4 in 20s
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-09T09:28:43.235669Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "llama3.1:8b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-09T09:28:43.251315Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.26, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-09T09:29:45.539568Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "llama3.1:8b", "messages": 5, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-09T09:30:09.442564Z"}
+{"label": "ollama:chat", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.34, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-09T09:31:11.738446Z"}
+{"label": "ollama:chat", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.91, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-09T09:32:14.515821Z"}
+{"error": "[ollama] chat request failed: ReadTimeout: ", "event": "chat_failed", "level": "error", "timestamp": "2026-11-09T09:33:17.758066Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 502 Bad Gateway"
+[1/1] G-059 -> HTTP 502; rate-retry 2/4 in 40s
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-09T09:33:58.970891Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "llama3.1:8b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-09T09:33:58.988797Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "llama3.1:8b", "messages": 5, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-09T09:34:41.722305Z"}
+{"label": "ollama:chat", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.29, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-09T09:35:44.410302Z"}
+{"label": "ollama:chat", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.43, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-09T09:36:46.837369Z"}
+{"error": "[ollama] chat request failed: ReadTimeout: ", "event": "chat_failed", "level": "error", "timestamp": "2026-11-09T09:37:49.623354Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 502 Bad Gateway"
+[1/1] G-059 -> HTTP 502; rate-retry 3/4 in 80s
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-09T09:39:11.929503Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "llama3.1:8b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-09T09:39:11.947800Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.17, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-09T09:40:14.310616Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "llama3.1:8b", "messages": 5, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-09T09:40:40.470566Z"}
+{"label": "ollama:chat", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.39, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-09T09:41:42.758706Z"}
+{"label": "ollama:chat", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.51, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-09T09:42:45.479588Z"}
+{"error": "[ollama] chat request failed: ReadTimeout: ", "event": "chat_failed", "level": "error", "timestamp": "2026-11-09T09:43:48.513362Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 502 Bad Gateway"
+[1/1] G-059 -> HTTP 502; rate-retry 4/4 in 90s
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-09T09:45:21.251417Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "llama3.1:8b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-09T09:45:21.268883Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "llama3.1:8b", "messages": 5, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-09T09:46:02.724758Z"}
+{"label": "ollama:chat", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.39, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-09T09:47:05.364814Z"}
+{"label": "ollama:chat", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.85, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-09T09:48:07.035945Z"}
+{"error": "[ollama] chat request failed: ReadTimeout: ", "event": "chat_failed", "level": "error", "timestamp": "2026-11-09T09:49:10.421347Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 502 Bad Gateway"
+[1/1] G-059 -> {"detail":"Model call failed: [ollama] chat request failed: ReadTimeout: "}
+{"event": "engine_stopped", "level": "info", "timestamp": "2026-11-09T09:49:10.427985Z"}
+run written: eval/runs/l8_16k_r1_rescue_G-059.json

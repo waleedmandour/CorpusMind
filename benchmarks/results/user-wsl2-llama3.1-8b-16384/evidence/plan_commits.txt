@@ -1,0 +1,2 @@
+90ef19e2849ab0337d08721bdb7a2796a4b2d27f 2026-11-06T16:38:41+00:00 bench(plans): addendum 1 to the gemma4 E4B arm plan - correct tag to gemma4:e4b, pre-specify the availability rule (fallback llama3.1:8b, no Ollama upgrade)
+c95c53a59abc564018b8a66b70e52fc2a4b54070 2026-11-06T11:45:03+00:00 bench(plans): pre-specify the gemma4 E4B Tier-B arm (plan v1)

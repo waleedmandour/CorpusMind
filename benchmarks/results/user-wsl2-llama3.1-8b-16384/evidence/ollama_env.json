@@ -1,0 +1,22 @@
+{
+ "utc": "2026-11-09T11:34:14.100085+00:00",
+ "ollama_version": "ollama version is 0.40.13",
+ "install_pin": "0.40.13",
+ "model": "llama3.1:8b",
+ "config_digest": "46e0c10c039e",
+ "config_digest_source": "ollama ls (short id)",
+ "full_digest": "46e0c10c039e019119339687c3c1757cc81b9da49709a3b3924863ba87ca666e",
+ "full_digest_source": "/api/tags",
+ "family": "llama",
+ "parameter_size": "8.0B",
+ "quantization_level": "Q4_K_M",
+ "capabilities": [
+  "completion",
+  "tools"
+ ],
+ "model_context_length": 131072,
+ "context": {
+  "OLLAMA_CONTEXT_LENGTH_env": 16384,
+  "note": "v2.0.2 engine does not expose num_ctx; the server-side default governs truncation"
+ }
+}

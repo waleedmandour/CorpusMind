@@ -1,0 +1,24 @@
+# 2026-11-08T16:06:25Z
+NAME           ID              SIZE      PROCESSOR    CONTEXT    RUNNER      UNTIL               
+llama3.1:8b    46e0c10c039e    7.4 GB    100% CPU     16384      llamacpp    29 minutes from now    
+# 2026-11-08T16:11:16Z
+NAME           ID              SIZE      PROCESSOR    CONTEXT    RUNNER      UNTIL               
+llama3.1:8b    46e0c10c039e    7.4 GB    100% CPU     16384      llamacpp    29 minutes from now    
+# 2026-11-08T17:25:13Z
+NAME           ID              SIZE      PROCESSOR    CONTEXT    RUNNER      UNTIL               
+llama3.1:8b    46e0c10c039e    7.4 GB    100% CPU     16384      llamacpp    29 minutes from now    
+# 2026-11-08T22:56:16Z
+NAME           ID              SIZE      PROCESSOR    CONTEXT    RUNNER      UNTIL               
+llama3.1:8b    46e0c10c039e    7.4 GB    100% CPU     16384      llamacpp    29 minutes from now    
+# 2026-11-09T03:58:41Z
+NAME           ID              SIZE      PROCESSOR    CONTEXT    RUNNER      UNTIL               
+llama3.1:8b    46e0c10c039e    7.4 GB    100% CPU     16384      llamacpp    29 minutes from now    
+# 2026-11-09T08:50:16Z
+NAME           ID              SIZE      PROCESSOR    CONTEXT    RUNNER      UNTIL               
+llama3.1:8b    46e0c10c039e    7.4 GB    100% CPU     16384      llamacpp    28 minutes from now    
+# 2026-11-09T09:25:04Z
+NAME           ID              SIZE      PROCESSOR    CONTEXT    RUNNER      UNTIL               
+llama3.1:8b    46e0c10c039e    7.4 GB    100% CPU     16384      llamacpp    29 minutes from now    
+# 2026-11-09T09:49:14Z
+NAME           ID              SIZE      PROCESSOR    CONTEXT    RUNNER      UNTIL               
+llama3.1:8b    46e0c10c039e    7.4 GB    100% CPU     16384      llamacpp    29 minutes from now    

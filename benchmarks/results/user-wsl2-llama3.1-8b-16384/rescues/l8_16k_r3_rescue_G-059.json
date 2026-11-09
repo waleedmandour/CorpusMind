@@ -1,0 +1,53 @@
+{
+ "meta": {
+  "created_utc": "2026-11-09T10:10:19+00:00",
+  "provider": "ollama",
+  "model": "llama3.1:8b",
+  "question_count": 1,
+  "pause_s": 0.0,
+  "rate_retries": 4,
+  "cloud_reasoning_effort": "",
+  "cloud_chat_timeout_s": 240.0,
+  "chat_deadline_s": 900.0,
+  "harness_timeout_s": 900.0
+ },
+ "results": [
+  {
+   "id": "G-059",
+   "answer": "assistant\n\nBased on the tool results, the most frequent word in the corpus is \"في\" (in) with a frequency of 11, which is 4.721% of the total tokens. The top 10 most frequent words are:\n\n1. في (in) - 11 times\n2. على (on) - 5 times\n3. من (from) - 5 times\n4. عن (about) - 4 times\n5. أن (that) - 3 times\n6. أنا (I) - 3 times\n7. إلى (to) - 3 times\n8. إن (that) - 3 times\n9. رح (to) - 3 times\n10. ما (what) - 3 times\n\nThe tool used is `get_frequency` with corpus ID `18c82a2710fb4293`.",
+   "grounded": true,
+   "tool_calls": [
+    {
+     "name": "get_corpus_overview",
+     "args": {
+      "corpus_id": "18c82a2710fb4293"
+     },
+     "ok": true,
+     "auto": true
+    },
+    {
+     "name": "get_frequency",
+     "args": {
+      "corpus_id": "18c82a2710fb4293"
+     },
+     "ok": true,
+     "auto": true
+    }
+   ],
+   "evidence": [
+    {
+     "kind": "tool_result",
+     "ref": "auto:get_corpus_overview:1",
+     "snippet": "{\"corpus_id\": \"18c82a2710fb4293\", \"name\": \"AR-all\", \"language\": \"ar\", \"genre\": \"mixed\", \"text_side\": {\"document_count\": 4, \"token_count\": 233, \"type_count\": 199, \"sentence_count\": 18}, \"vision_side\": {\"image_set_count\": 0, \"image_count\": 0, \"image_sets\": []}, \"note\": \"\"}"
+    },
+    {
+     "kind": "tool_result",
+     "ref": "auto:get_frequency:2",
+     "snippet": "{\"unit\": \"word\", \"total_tokens\": 233, \"total_types\": 20, \"sttr\": 0.7768, \"top_items\": [{\"item\": \"في\", \"freq\": 11, \"per_million\": 47210.3, \"percent\": 4.721, \"range\": 4, \"range_percent\": 100.0}, {\"item\": \"على\", \"freq\": 5, \"per_million\": 21459.23, \"percent\": 2.1459, \"range\": 3, \"range_percent\": 75.0}, {\"item\": \"من\", \"freq\": 5, \"per_million\": 21459.23, \"percent\": 2.1459, \"range\": 4, \"range_percent\": 100.0}, {\"item\": \"عن\", \"freq\": 4, \"per_million\": 17167.38, \"percent\": 1.7167, \"range\": 2, \"range_perc"
+    }
+   ],
+   "elapsed_ms": 79847,
+   "wall_ms": 1210846
+  }
+ ]
+}

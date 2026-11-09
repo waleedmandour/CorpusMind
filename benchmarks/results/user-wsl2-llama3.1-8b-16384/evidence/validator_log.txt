@@ -1,0 +1,166 @@
+[gold] grounding_gold.json sha256=480f5230955ae32e... -> OK
+[l8_16k_r1] shards=4 questions=80 unique=80 disjoint=yes missing=none extra=none -> OK
+[l8_16k_r1] NO_ANSWER=1 ['G-059'] | 5xx=1 ['G-059'] | max_wall=1273.7s at/above 180s: [('G-001', 222.8), ('G-002', 239.1), ('G-004', 215.2), ('G-006', 249.4), ('G-007', 183.5), ('G-008', 187.0)]
+[score] -m eval.score -> rc=0
+[rescore-diff] G-007: repo=MISSING_NUMBER independent=HALLUCINATED {'hallucinated': [98.0, 529354.0], 'missing': [32.0, 35.0]}
+[rescore-diff] G-008: repo=MISSING_NUMBER independent=HALLUCINATED {'hallucinated': [98.0, 529354.0], 'missing': [4.0, 5.0]}
+[rescore-diff] G-009: repo=MISSING_NUMBER independent=HALLUCINATED {'hallucinated': [98.0], 'missing': [3.4556794837761897, 997.1428571428571]}
+[rescore-diff] G-010: repo=MISSING_NUMBER independent=HALLUCINATED {'hallucinated': [98.0], 'missing': [0.003897, 0.007698]}
+[rescore-diff] G-013: repo=TRAP_FAILURE independent=HALLUCINATED {'hallucinated': [98.0], 'missing': []}
+[rescore-diff] G-016: repo=PASS independent=HALLUCINATED {'hallucinated': [98.0], 'missing': []}
+[rescore-diff] G-024: repo=TRAP_FAILURE independent=PASS {}
+[rescore-diff] G-037: repo=MISSING_NUMBER independent=PASS {}
+[rescore-diff] G-043: repo=MISSING_NUMBER independent=HALLUCINATED {'hallucinated': [15.0], 'missing': [4.0]}
+[rescore-diff] G-046: repo=MISSING_NUMBER independent=HALLUCINATED {'hallucinated': [4062.0], 'missing': [1.0, 2.0]}
+[rescore-diff] G-048: repo=MISSING_NUMBER independent=HALLUCINATED {'hallucinated': [4062.0], 'missing': [4.0]}
+[rescore-diff] G-049: repo=HALLUCINATED independent=PASS {}
+[rescore-diff] G-050: repo=MISSING_NUMBER independent=HALLUCINATED {'hallucinated': [4062.0], 'missing': [2.0]}
+[rescore-diff] G-052: repo=HALLUCINATED independent=PASS {}
+[rescore-diff] G-058: repo=MISSING_NUMBER independent=HALLUCINATED {'hallucinated': [100.0], 'missing': [0.0, 1.0]}
+[rescore-diff] G-067: repo=MISSING_NUMBER independent=PASS {}
+[rescore-diff] G-071: repo=MISSING_NUMBER independent=HALLUCINATED {'hallucinated': [57.0], 'missing': [81.0]}
+[rescore-diff] G-073: repo=TRAP_FAILURE independent=HALLUCINATED {'hallucinated': [57.0], 'missing': [0.0]}
+[rescore-diff] G-076: repo=PASS independent=HALLUCINATED {'hallucinated': [57.0], 'missing': []}
+[rescore-diff] G-078: repo=TRAP_FAILURE independent=PASS {}
+[rescore-diff] G-079: repo=TRAP_FAILURE independent=HALLUCINATED {'hallucinated': [57.0], 'missing': [0.0]}
+[rescore-diff] G-080: repo=TRAP_FAILURE independent=HALLUCINATED {'hallucinated': [57.0], 'missing': [0.0]}
+[l8_16k_r2] shards=4 questions=80 unique=80 disjoint=yes missing=none extra=none -> OK
+[l8_16k_r2] NO_ANSWER=0 [] | 5xx=0 [] | max_wall=593.3s at/above 180s: [('G-001', 184.2), ('G-002', 261.5), ('G-004', 220.8), ('G-006', 184.0), ('G-007', 267.1), ('G-008', 180.6)]
+[score] -m eval.score -> rc=0
+[rescore-diff] G-032: repo=MISSING_NUMBER independent=HALLUCINATED {'hallucinated': [8255.0], 'missing': [20.0]}
+[rescore-diff] G-034: repo=MISSING_NUMBER independent=HALLUCINATED {'hallucinated': [0.0, 8255.0], 'missing': [4.0, 22.0, 331.0]}
+[rescore-diff] G-035: repo=MISSING_NUMBER independent=HALLUCINATED {'hallucinated': [8255.0], 'missing': [11.0, 20.0]}
+[rescore-diff] G-036: repo=MISSING_NUMBER independent=HALLUCINATED {'hallucinated': [8255.0], 'missing': [2.0]}
+[rescore-diff] G-038: repo=MISSING_NUMBER independent=HALLUCINATED {'hallucinated': [8255.0], 'missing': [1.0]}
+[rescore-diff] G-039: repo=PASS independent=HALLUCINATED {'hallucinated': [8255.0], 'missing': []}
+[rescore-diff] G-040: repo=MISSING_NUMBER independent=HALLUCINATED {'hallucinated': [8255.0], 'missing': [4.0]}
+[rescore-diff] G-044: repo=MISSING_NUMBER independent=HALLUCINATED {'hallucinated': [6041.0], 'missing': [2.0]}
+[rescore-diff] G-047: repo=MISSING_NUMBER independent=HALLUCINATED {'hallucinated': [3.0], 'missing': [4.0]}
+[rescore-diff] G-048: repo=MISSING_NUMBER independent=HALLUCINATED {'hallucinated': [3.0], 'missing': [4.0]}
+[rescore-diff] G-050: repo=MISSING_NUMBER independent=HALLUCINATED {'hallucinated': [3.0], 'missing': [2.0]}
+[rescore-diff] G-058: repo=MISSING_NUMBER independent=HALLUCINATED {'hallucinated': [100.0], 'missing': [0.0, 1.0]}
+[rescore-diff] G-065: repo=HALLUCINATED independent=MISSING_NUMBER {'missing': [3.0]}
+[rescore-diff] G-066: repo=MISSING_NUMBER independent=PASS {}
+[rescore-diff] G-067: repo=MISSING_NUMBER independent=PASS {}
+[rescore-diff] G-078: repo=TRAP_FAILURE independent=PASS {}
+[rescore-diff] G-079: repo=TRAP_FAILURE independent=MISSING_NUMBER {'missing': [0.0]}
+[rescore-diff] G-080: repo=TRAP_FAILURE independent=HALLUCINATED {'hallucinated': [1.0], 'missing': [0.0]}
+[l8_16k_r3] shards=4 questions=80 unique=80 disjoint=yes missing=none extra=none -> OK
+[l8_16k_r3] NO_ANSWER=1 ['G-059'] | 5xx=1 ['G-059'] | max_wall=1312.5s at/above 180s: [('G-001', 184.5), ('G-002', 263.2), ('G-004', 220.5), ('G-006', 206.9), ('G-007', 201.8), ('G-008', 182.4)]
+[score] -m eval.score -> rc=0
+[rescore-diff] G-012: repo=TRAP_FAILURE independent=PASS {}
+[rescore-diff] G-013: repo=TRAP_FAILURE independent=PASS {}
+[rescore-diff] G-014: repo=MISSING_NUMBER independent=PASS {}
+[rescore-diff] G-029: repo=MISSING_NUMBER independent=HALLUCINATED {'hallucinated': [63503.0], 'missing': [0.5905]}
+[rescore-diff] G-034: repo=MISSING_NUMBER independent=HALLUCINATED {'hallucinated': [0.0, 6.0], 'missing': [4.0, 22.0, 331.0]}
+[rescore-diff] G-035: repo=MISSING_NUMBER independent=HALLUCINATED {'hallucinated': [6.0], 'missing': [11.0, 20.0]}
+[rescore-diff] G-038: repo=MISSING_NUMBER independent=HALLUCINATED {'hallucinated': [6.0], 'missing': [1.0]}
+[rescore-diff] G-039: repo=PASS independent=HALLUCINATED {'hallucinated': [6.0], 'missing': []}
+[rescore-diff] G-040: repo=MISSING_NUMBER independent=HALLUCINATED {'hallucinated': [6.0], 'missing': [4.0]}
+[rescore-diff] G-042: repo=MISSING_NUMBER independent=HALLUCINATED {'hallucinated': [52.0], 'missing': [1.0]}
+[rescore-diff] G-044: repo=MISSING_NUMBER independent=HALLUCINATED {'hallucinated': [3.0], 'missing': [2.0]}
+[rescore-diff] G-049: repo=HALLUCINATED independent=MISSING_NUMBER {'missing': [1.0]}
+[rescore-diff] G-052: repo=HALLUCINATED independent=PASS {}
+[rescore-diff] G-058: repo=MISSING_NUMBER independent=HALLUCINATED {'hallucinated': [100.0], 'missing': [0.0, 1.0]}
+[rescore-diff] G-065: repo=HALLUCINATED independent=MISSING_NUMBER {'missing': [3.0]}
+[rescore-diff] G-066: repo=MISSING_NUMBER independent=PASS {}
+[rescore-diff] G-067: repo=MISSING_NUMBER independent=PASS {}
+[rescore-diff] G-070: repo=MISSING_NUMBER independent=HALLUCINATED {'hallucinated': [4.0], 'missing': [331.0]}
+[rescore-diff] G-075: repo=TRAP_FAILURE independent=PASS {}
+[rescore-diff] G-076: repo=TRAP_FAILURE independent=HALLUCINATED {'hallucinated': [4.0], 'missing': []}
+[rescore-diff] G-078: repo=TRAP_FAILURE independent=PASS {}
+[rescore-diff] G-079: repo=TRAP_FAILURE independent=HALLUCINATED {'hallucinated': [4.0], 'missing': [0.0]}
+[rescore-diff] G-080: repo=TRAP_FAILURE independent=HALLUCINATED {'hallucinated': [4.0], 'missing': [0.0]}
+[probe] shards=1 questions=5 unique=5 disjoint=yes missing=none extra=none -> OK
+[probe] NO_ANSWER=0 [] | 5xx=0 [] | max_wall=309.0s at/above 180s: [('G-001', 183.1), ('G-002', 185.8), ('G-003', 309.0), ('G-004', 223.9)]
+[score] -m eval.score -> rc=0
+{
+ "run-41306198564": {
+  "common": 80,
+  "user_pass": 18,
+  "ci_pass": 4,
+  "pass_gains": [
+   "G-001",
+   "G-002",
+   "G-017",
+   "G-018",
+   "G-020",
+   "G-022",
+   "G-023",
+   "G-053",
+   "G-054",
+   "G-055",
+   "G-056",
+   "G-057",
+   "G-068",
+   "G-069",
+   "G-074",
+   "G-076"
+  ],
+  "pass_losses": [
+   "G-013",
+   "G-075"
+  ]
+ },
+ "run-41306203484": {
+  "common": 80,
+  "user_pass": 18,
+  "ci_pass": 18,
+  "pass_gains": [
+   "G-016",
+   "G-017",
+   "G-018",
+   "G-020",
+   "G-022",
+   "G-023",
+   "G-056",
+   "G-057",
+   "G-068",
+   "G-074"
+  ],
+  "pass_losses": [
+   "G-007",
+   "G-011",
+   "G-014",
+   "G-021",
+   "G-033",
+   "G-037",
+   "G-043",
+   "G-051",
+   "G-070",
+   "G-071"
+  ]
+ },
+ "run-41306208341": {
+  "common": 80,
+  "user_pass": 18,
+  "ci_pass": 15,
+  "pass_gains": [
+   "G-002",
+   "G-016",
+   "G-018",
+   "G-020",
+   "G-022",
+   "G-023",
+   "G-039",
+   "G-056",
+   "G-068",
+   "G-069",
+   "G-074",
+   "G-076"
+  ],
+  "pass_losses": [
+   "G-012",
+   "G-014",
+   "G-029",
+   "G-030",
+   "G-034",
+   "G-040",
+   "G-051",
+   "G-070",
+   "G-072"
+  ]
+ }
+}
+[manifest] 51 files hashed -> /home/waleed_mandour/cm_main/benchmarks/results/user-wsl2-llama3.1-8b-16384/MANIFEST.json
+STRUCTURAL: PASS

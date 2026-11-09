@@ -1,0 +1,19 @@
+diff --git a/scripts/validate_user_run.py b/scripts/validate_user_run.py
+index 2b5c82c..296166f 100644
+--- a/scripts/validate_user_run.py
++++ b/scripts/validate_user_run.py
+@@ -140,7 +140,13 @@ def independent_rescore(run: dict, gold: dict) -> list[dict]:
+         allowed: set[float] = set()
+         for t in q.get("tools", []):
+             allowed |= {round(v, 9) for v in _numbers_in(t.get("result"))}
+-        required = [g["value"] for g in q.get("gold", {}).get("numbers", [])]
++        required: list[float] = []
++        for g in q.get("gold", {}).get("numbers", []):
++            val = g["value"]
++            if isinstance(val, list):  # e.g. G-018/G-023 per-part frequencies
++                required.extend(float(t) for t in val)
++            else:
++                required.append(float(val))
+         hall = sorted(n for n in quoted
+                       if not any(_match(n, a) for a in allowed))
+         # required gold numbers not matched by any quoted number
