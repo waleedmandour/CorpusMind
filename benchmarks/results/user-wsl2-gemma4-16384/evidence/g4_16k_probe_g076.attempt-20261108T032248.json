@@ -1,0 +1,41 @@
+{
+ "meta": {
+  "created_utc": "2026-11-07T18:47:57+00:00",
+  "provider": "ollama",
+  "model": "gemma4:e4b",
+  "question_count": 1,
+  "pause_s": 0.0,
+  "rate_retries": 4,
+  "cloud_reasoning_effort": "",
+  "cloud_chat_timeout_s": 240.0,
+  "chat_deadline_s": 900.0,
+  "harness_timeout_s": 900.0
+ },
+ "results": [
+  {
+   "id": "G-076",
+   "answer": "I do not have a tool available that can execute a CQL query like `[[[not-a-query]]`. Therefore, I cannot report the number of hits for that query.",
+   "grounded": true,
+   "tool_calls": [
+    {
+     "name": "search_concordance",
+     "args": {
+      "corpus_id": "6616a6c88f734adb",
+      "query": "[[[not-a-query"
+     },
+     "ok": true,
+     "auto": true
+    }
+   ],
+   "evidence": [
+    {
+     "kind": "tool_result",
+     "ref": "auto:search_concordance:1",
+     "snippet": "{\"total_matches\": 0, \"query\": {\"q\": \"[[[not-a-query\", \"level\": \"word\", \"window\": 5, \"case_sensitive\": false, \"regex\": false}, \"lines\": []}"
+    }
+   ],
+   "elapsed_ms": 98613,
+   "wall_ms": 299104
+  }
+ ]
+}

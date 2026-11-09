@@ -1,0 +1,4 @@
+truncation gate over RUN server segments only (ollama_server_seg*.log; the self-test log is excluded):
+  'truncated = 1'            : 0   (plan / qwen-precedent pattern; must be 0)
+  'truncating input prompt'  : 0   (additional, stricter pattern; must be 0)
+  total                      : 0

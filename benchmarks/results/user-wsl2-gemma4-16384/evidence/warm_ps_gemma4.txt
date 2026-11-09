@@ -1,0 +1,30 @@
+# 2026-11-07T17:39:27Z
+NAME          ID              SIZE      PROCESSOR    CONTEXT    RUNNER      UNTIL               
+gemma4:e4b    dc35e8d9c606    2.1 GB    100% CPU     16384      llamacpp    29 minutes from now    
+# 2026-11-07T17:39:28Z
+NAME          ID              SIZE      PROCESSOR    CONTEXT    RUNNER      UNTIL               
+gemma4:e4b    dc35e8d9c606    2.1 GB    100% CPU     16384      llamacpp    29 minutes from now    
+# 2026-11-07T18:21:27Z
+NAME          ID              SIZE      PROCESSOR    CONTEXT    RUNNER      UNTIL               
+gemma4:e4b    dc35e8d9c606    2.1 GB    100% CPU     16384      llamacpp    29 minutes from now    
+# 2026-11-07T18:21:42Z
+NAME          ID              SIZE      PROCESSOR    CONTEXT    RUNNER      UNTIL               
+gemma4:e4b    dc35e8d9c606    2.1 GB    100% CPU     16384      llamacpp    29 minutes from now    
+# 2026-11-07T18:31:48Z
+NAME          ID              SIZE      PROCESSOR    CONTEXT    RUNNER      UNTIL               
+gemma4:e4b    dc35e8d9c606    2.1 GB    100% CPU     16384      llamacpp    29 minutes from now    
+# 2026-11-07T18:31:55Z
+NAME          ID              SIZE      PROCESSOR    CONTEXT    RUNNER      UNTIL               
+gemma4:e4b    dc35e8d9c606    2.1 GB    100% CPU     16384      llamacpp    29 minutes from now    
+# 2026-11-07T18:42:44Z
+NAME          ID              SIZE      PROCESSOR    CONTEXT    RUNNER      UNTIL               
+gemma4:e4b    dc35e8d9c606    2.1 GB    100% CPU     16384      llamacpp    29 minutes from now    
+# 2026-11-07T18:48:00Z
+NAME          ID              SIZE      PROCESSOR    CONTEXT    RUNNER      UNTIL               
+gemma4:e4b    dc35e8d9c606    2.1 GB    100% CPU     16384      llamacpp    29 minutes from now    
+# 2026-11-08T03:22:48Z
+NAME          ID              SIZE      PROCESSOR    CONTEXT    RUNNER      UNTIL               
+gemma4:e4b    dc35e8d9c606    2.1 GB    100% CPU     16384      llamacpp    29 minutes from now    
+# 2026-11-08T03:28:27Z
+NAME          ID              SIZE      PROCESSOR    CONTEXT    RUNNER      UNTIL               
+gemma4:e4b    dc35e8d9c606    2.1 GB    100% CPU     16384      llamacpp    29 minutes from now    

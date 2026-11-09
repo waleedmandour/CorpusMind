@@ -1,0 +1,56 @@
+{
+ "model": "gemma4:e4b",
+ "load_s": 1.1,
+ "engine": [
+  {
+   "wall_s": 27.4,
+   "tool_calls": 1,
+   "completion_tokens": 171,
+   "reasoning_chars": 578,
+   "finish": "tool_calls"
+  },
+  {
+   "wall_s": 23.8,
+   "tool_calls": 1,
+   "completion_tokens": 138,
+   "reasoning_chars": 402,
+   "finish": "tool_calls"
+  },
+  {
+   "wall_s": 25.2,
+   "tool_calls": 1,
+   "completion_tokens": 147,
+   "reasoning_chars": 452,
+   "finish": "tool_calls"
+  }
+ ],
+ "diag_reasoning_effort_none": [
+  {
+   "wall_s": 5.6,
+   "tool_calls": 1,
+   "completion_tokens": 20,
+   "reasoning_chars": 0,
+   "finish": "tool_calls"
+  },
+  {
+   "wall_s": 6.0,
+   "tool_calls": 1,
+   "completion_tokens": 30,
+   "reasoning_chars": 0,
+   "finish": "tool_calls"
+  },
+  {
+   "wall_s": 4.2,
+   "tool_calls": 1,
+   "completion_tokens": 20,
+   "reasoning_chars": 0,
+   "finish": "tool_calls"
+  }
+ ],
+ "gate": {
+  "tool_call_in_>=2_of_3": true,
+  "median_wall_<=45s": true,
+  "median_completion_tokens_<=300": true,
+  "no_reasoning_text": false
+ }
+}

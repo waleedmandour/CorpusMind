@@ -1,0 +1,30 @@
+2026-11-07T16:50:58Z  prep done, fails=2
+2026-11-07T16:51:21Z  server started seg1 ctx=16384 parallel=1 max_loaded=1 keep_alive=30m
+2026-11-07T16:55:56Z  GATE 1 PASS model=gemma4:e4b; tools capability present; digest/quantisation/context/template recorded
+2026-11-07T16:55:56Z  pulled gemma4:e4b
+2026-11-07T16:57:44Z  GATE 2 FAIL model=gemma4:e4b; probe0 rc=4
+2026-11-07T16:58:25Z  GATE 4 FAIL model=gemma4:e4b; truncated=1 lines: 0; truncating-input-prompt lines: 1; request rc=0
+2026-11-07T17:39:27Z  GATE 3 FAIL model=gemma4:e4b; probe-g076 rc=1
+2026-11-07T17:39:28Z  GATE 5 FAIL model=gemma4:e4b; probe5 rc=1
+2026-11-07T18:06:27Z  prep done, fails=2
+2026-11-07T18:18:54Z  prep done, fails=0
+2026-11-07T18:21:33Z  GATE 3 FAIL model=gemma4:e4b; probe-g076 rc=1
+2026-11-07T18:21:47Z  GATE 5 FAIL model=gemma4:e4b; probe5 rc=1
+2026-11-07T18:30:43Z  GATE 2 FAIL model=gemma4:e4b; probe0 rc=4
+2026-11-07T18:31:33Z  GATE 4 FAIL model=gemma4:e4b; truncated=1 lines: 0; truncating-input-prompt lines: 1; request rc=0
+2026-11-07T18:31:53Z  GATE 3 FAIL model=gemma4:e4b; probe-g076 rc=1
+2026-11-07T18:31:59Z  GATE 5 FAIL model=gemma4:e4b; probe5 rc=1
+2026-11-07T18:41:39Z  GATE 2 FAIL model=gemma4:e4b; probe0 rc=4
+2026-11-07T18:42:29Z  GATE 4 FAIL model=gemma4:e4b; truncated=1 lines: 0; truncating-input-prompt lines: 1; request rc=0
+2026-11-07T18:47:59Z  GATE 3 FAIL model=gemma4:e4b; probe-g076 rc=6
+2026-11-07T19:08:15Z  GATE 5 PASS model=gemma4:e4b; probe5
+2026-11-08T03:21:50Z  GATE 2 FAIL model=gemma4:e4b; probe0 rc=4
+2026-11-08T03:22:34Z  GATE 4 FAIL model=gemma4:e4b; truncated=1 lines: 0; truncating-input-prompt lines: 1; request rc=0
+2026-11-08T03:28:25Z  GATE 3 FAIL model=gemma4:e4b; probe-g076 rc=6
+2026-11-08T03:44:03Z  GATE 5 PASS model=gemma4:e4b; probe5
+2026-11-08T10:52:16Z OBSERVATION probe5 G-004 (TTR trap): model called get_frequency, answered grounded; not gated per plan v1 §5.5
+2026-11-08T11:06:44Z  GATE 2 FAIL model=gemma4:e4b; probe0 rc=4
+2026-11-08T11:10:18Z  GATE 4 FAIL model=gemma4:e4b; truncated=1 lines: 0; truncating-input-prompt lines: 1; request rc=0
+2026-11-08T11:21:42Z OBSERVATION gate2 FAIL: gemma4:e4b defaults to thinking on engine tool-call path (/v1 compat payload has no think control; CORPUSMIND_CLOUD_REASONING_EFFORT is cloud-only). diag rows: reasoning_effort=none -> 0 reasoning chars, tool calls 3/3.
+2026-11-08T11:21:42Z OBSERVATION gate4: plan marker 'truncated = 1' absent on ollama 0.40.13; detection proven via 'truncating input prompt' (x1, prompt_eval_count=1027). Amendment required.
+2026-11-08T16:00:52Z DECLARATION per plan v1 sec.5 + addendum-2 A4: primary arm gemma4:e4b terminated at gate stage (gate 2 FAIL - reasoning text 3/3 on the pinned no-thinking tool-round path; frozen engine sends no thinking control on /v1 compat). Zero measurement data (0/12 shards). Fallback arm llama3.1:8b activated; gate repeated in full. Artifacts retained in place.

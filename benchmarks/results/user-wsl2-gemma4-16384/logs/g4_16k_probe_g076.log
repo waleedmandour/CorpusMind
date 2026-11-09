@@ -1,0 +1,282 @@
+/home/waleed_mandour/cm_arm.sh: line 494: /home/waleed_mandour/CorpusMind/.venv/bin/activate: No such file or directory
+{"host": "127.0.0.1", "port": 8765, "data_dir": "/tmp/cm-eval-data", "event": "engine_starting", "level": "info", "timestamp": "2026-11-07T18:21:29.738879Z"}
+{"url": "sqlite+aiosqlite:///:memory:", "event": "db_ready", "level": "info", "timestamp": "2026-11-07T18:21:29.834195Z"}
+{"event": "arabic_warmup_disabled", "level": "info", "timestamp": "2026-11-07T18:21:29.834434Z"}
+HTTP Request: POST http://test/api/v1/projects "HTTP/1.1 200 OK"
+HTTP Request: POST http://test/api/v1/projects/659fc2fe7ba048a6/corpora "HTTP/1.1 200 OK"
+{"filename": "en_news.txt", "format": "txt", "encoding": "ascii", "chars": 578, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-07T18:21:29.945397Z"}
+{"model": "en_core_web_sm", "event": "spacy_loading", "level": "info", "timestamp": "2026-11-07T18:21:31.678219Z"}
+{"model": "en_core_web_sm", "event": "spacy_strategy1_failed", "level": "info", "timestamp": "2026-11-07T18:21:31.678594Z"}
+{"error": "No module named 'en_core_web_sm'", "event": "spacy_strategy2_failed", "level": "info", "timestamp": "2026-11-07T18:21:31.679628Z"}
+{"model": "en_core_web_sm", "hint": "Using spacy.blank() - tokenization only, no POS/lemma/parse. The full model was not bundled correctly in PyInstaller.", "event": "spacy_model_not_found_fallback_blank", "level": "warning", "timestamp": "2026-11-07T18:21:31.679829Z"}
+{"model": "en_core_web_sm", "version": "0.0.0", "spacy": "3.8.18", "event": "spacy_loaded", "level": "info", "timestamp": "2026-11-07T18:21:31.879385Z"}
+{"language": "en", "model": "en_core_web_sm", "hint": "Tokens will be stored with pos='X' and surface-form lemmas. POS/lemma analyses will be empty until the model is available and the corpus is recompiled.", "event": "ingest_degraded_pipeline", "level": "warning", "timestamp": "2026-11-07T18:21:31.879601Z"}
+{"corpus_id": "b197eff236c146d6", "document_id": "4c931412261f4b05", "version_id": "8dc86b86d5994ae0", "tokens": 111, "sentences": 8, "elapsed_ms": 61, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-07T18:21:31.952304Z"}
+HTTP Request: POST http://test/api/v1/corpora/b197eff236c146d6/documents "HTTP/1.1 200 OK"
+{"filename": "en_academic.txt", "format": "txt", "encoding": "ascii", "chars": 877, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-07T18:21:31.960036Z"}
+{"language": "en", "model": "en_core_web_sm", "hint": "Tokens will be stored with pos='X' and surface-form lemmas. POS/lemma analyses will be empty until the model is available and the corpus is recompiled.", "event": "ingest_degraded_pipeline", "level": "warning", "timestamp": "2026-11-07T18:21:31.965511Z"}
+{"corpus_id": "b197eff236c146d6", "document_id": "a9caab0b0df140bd", "version_id": "8dc86b86d5994ae0", "tokens": 146, "sentences": 10, "elapsed_ms": 79, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-07T18:21:32.050440Z"}
+HTTP Request: POST http://test/api/v1/corpora/b197eff236c146d6/documents "HTTP/1.1 200 OK"
+{"filename": "en_learner.txt", "format": "txt", "encoding": "ascii", "chars": 524, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-07T18:21:32.058327Z"}
+{"language": "en", "model": "en_core_web_sm", "hint": "Tokens will be stored with pos='X' and surface-form lemmas. POS/lemma analyses will be empty until the model is available and the corpus is recompiled.", "event": "ingest_degraded_pipeline", "level": "warning", "timestamp": "2026-11-07T18:21:32.064200Z"}
+{"corpus_id": "b197eff236c146d6", "document_id": "0d7a37047f8546bf", "version_id": "8dc86b86d5994ae0", "tokens": 118, "sentences": 8, "elapsed_ms": 64, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-07T18:21:32.134013Z"}
+HTTP Request: POST http://test/api/v1/corpora/b197eff236c146d6/documents "HTTP/1.1 200 OK"
+HTTP Request: POST http://test/api/v1/projects/659fc2fe7ba048a6/corpora "HTTP/1.1 200 OK"
+{"filename": "en_learner.txt", "format": "txt", "encoding": "ascii", "chars": 524, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-07T18:21:32.150187Z"}
+{"language": "en", "model": "en_core_web_sm", "hint": "Tokens will be stored with pos='X' and surface-form lemmas. POS/lemma analyses will be empty until the model is available and the corpus is recompiled.", "event": "ingest_degraded_pipeline", "level": "warning", "timestamp": "2026-11-07T18:21:32.155028Z"}
+{"corpus_id": "849ef9a64d6e4a74", "document_id": "2e97a56b7e8941b0", "version_id": "3a6a293c5883463d", "tokens": 118, "sentences": 8, "elapsed_ms": 70, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-07T18:21:32.230820Z"}
+HTTP Request: POST http://test/api/v1/corpora/849ef9a64d6e4a74/documents "HTTP/1.1 200 OK"
+HTTP Request: POST http://test/api/v1/projects/659fc2fe7ba048a6/corpora "HTTP/1.1 200 OK"
+{"filename": "en_news.txt", "format": "txt", "encoding": "ascii", "chars": 578, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-07T18:21:32.247532Z"}
+{"language": "en", "model": "en_core_web_sm", "hint": "Tokens will be stored with pos='X' and surface-form lemmas. POS/lemma analyses will be empty until the model is available and the corpus is recompiled.", "event": "ingest_degraded_pipeline", "level": "warning", "timestamp": "2026-11-07T18:21:32.252799Z"}
+{"corpus_id": "f26b55a518954f5c", "document_id": "0682f2e6a88f43ac", "version_id": "5c663a8b3eb742d1", "tokens": 111, "sentences": 8, "elapsed_ms": 67, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-07T18:21:32.326585Z"}
+HTTP Request: POST http://test/api/v1/corpora/f26b55a518954f5c/documents "HTTP/1.1 200 OK"
+{"filename": "en_academic.txt", "format": "txt", "encoding": "ascii", "chars": 877, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-07T18:21:32.336267Z"}
+{"language": "en", "model": "en_core_web_sm", "hint": "Tokens will be stored with pos='X' and surface-form lemmas. POS/lemma analyses will be empty until the model is available and the corpus is recompiled.", "event": "ingest_degraded_pipeline", "level": "warning", "timestamp": "2026-11-07T18:21:32.343150Z"}
+{"corpus_id": "f26b55a518954f5c", "document_id": "1e813e0774394f74", "version_id": "5c663a8b3eb742d1", "tokens": 146, "sentences": 10, "elapsed_ms": 88, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-07T18:21:32.435120Z"}
+HTTP Request: POST http://test/api/v1/corpora/f26b55a518954f5c/documents "HTTP/1.1 200 OK"
+HTTP Request: POST http://test/api/v1/projects/659fc2fe7ba048a6/corpora "HTTP/1.1 200 OK"
+{"filename": "ar_msa.txt", "format": "txt", "encoding": "utf_8", "chars": 469, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-07T18:21:32.452647Z"}
+{"filename": "ar_msa.txt", "error": "No module named 'camel_tools'", "event": "ingest_failed", "level": "error", "timestamp": "2026-11-07T18:21:32.459824Z"}
+HTTP Request: POST http://test/api/v1/corpora/b86d6635dfec4259/documents "HTTP/1.1 400 Bad Request"
+{"event": "engine_stopped", "level": "info", "timestamp": "2026-11-07T18:21:32.463745Z"}
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/home/waleed_mandour/CorpusMind/engine/eval/run_grounding.py", line 181, in <module>
+    main()
+  File "/home/waleed_mandour/CorpusMind/engine/eval/run_grounding.py", line 175, in main
+    asyncio.run(run(args.provider, args.model, args.only, out,
+  File "/usr/lib/python3.12/asyncio/runners.py", line 194, in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/asyncio/base_events.py", line 687, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/home/waleed_mandour/CorpusMind/engine/eval/run_grounding.py", line 64, in run
+    corpus_map = await prepare_corpora(client)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/waleed_mandour/CorpusMind/engine/eval/corpus_snapshot.py", line 116, in prepare_corpora
+    raise RuntimeError(
+RuntimeError: upload failed for ar_msa.txt -> C4: HTTP 400: {"detail":"Failed to ingest 'ar_msa.txt': No module named 'camel_tools'"}
+{"host": "127.0.0.1", "port": 8765, "data_dir": "/tmp/cm-eval-data", "event": "engine_starting", "level": "info", "timestamp": "2026-11-07T18:31:50.300875Z"}
+{"url": "sqlite+aiosqlite:///:memory:", "event": "db_ready", "level": "info", "timestamp": "2026-11-07T18:31:50.418276Z"}
+{"event": "arabic_warmup_disabled", "level": "info", "timestamp": "2026-11-07T18:31:50.418571Z"}
+HTTP Request: POST http://test/api/v1/projects "HTTP/1.1 200 OK"
+HTTP Request: POST http://test/api/v1/projects/e7eea80493944a5e/corpora "HTTP/1.1 200 OK"
+{"filename": "en_news.txt", "format": "txt", "encoding": "ascii", "chars": 578, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-07T18:31:50.530887Z"}
+{"model": "en_core_web_sm", "event": "spacy_loading", "level": "info", "timestamp": "2026-11-07T18:31:52.259771Z"}
+{"model": "en_core_web_sm", "event": "spacy_strategy1_failed", "level": "info", "timestamp": "2026-11-07T18:31:52.260258Z"}
+{"error": "No module named 'en_core_web_sm'", "event": "spacy_strategy2_failed", "level": "info", "timestamp": "2026-11-07T18:31:52.260757Z"}
+{"model": "en_core_web_sm", "hint": "Using spacy.blank() - tokenization only, no POS/lemma/parse. The full model was not bundled correctly in PyInstaller.", "event": "spacy_model_not_found_fallback_blank", "level": "warning", "timestamp": "2026-11-07T18:31:52.261803Z"}
+{"model": "en_core_web_sm", "version": "0.0.0", "spacy": "3.8.18", "event": "spacy_loaded", "level": "info", "timestamp": "2026-11-07T18:31:52.498369Z"}
+{"language": "en", "model": "en_core_web_sm", "hint": "Tokens will be stored with pos='X' and surface-form lemmas. POS/lemma analyses will be empty until the model is available and the corpus is recompiled.", "event": "ingest_degraded_pipeline", "level": "warning", "timestamp": "2026-11-07T18:31:52.498624Z"}
+{"corpus_id": "28cc2675350c4e35", "document_id": "90e054c181314a2f", "version_id": "8f4ecb09b4844b8b", "tokens": 111, "sentences": 8, "elapsed_ms": 57, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-07T18:31:52.570772Z"}
+HTTP Request: POST http://test/api/v1/corpora/28cc2675350c4e35/documents "HTTP/1.1 200 OK"
+{"filename": "en_academic.txt", "format": "txt", "encoding": "ascii", "chars": 877, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-07T18:31:52.582162Z"}
+{"language": "en", "model": "en_core_web_sm", "hint": "Tokens will be stored with pos='X' and surface-form lemmas. POS/lemma analyses will be empty until the model is available and the corpus is recompiled.", "event": "ingest_degraded_pipeline", "level": "warning", "timestamp": "2026-11-07T18:31:52.588561Z"}
+{"corpus_id": "28cc2675350c4e35", "document_id": "4012521b1cdf4ceb", "version_id": "8f4ecb09b4844b8b", "tokens": 146, "sentences": 10, "elapsed_ms": 73, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-07T18:31:52.669835Z"}
+HTTP Request: POST http://test/api/v1/corpora/28cc2675350c4e35/documents "HTTP/1.1 200 OK"
+{"filename": "en_learner.txt", "format": "txt", "encoding": "ascii", "chars": 524, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-07T18:31:52.678879Z"}
+{"language": "en", "model": "en_core_web_sm", "hint": "Tokens will be stored with pos='X' and surface-form lemmas. POS/lemma analyses will be empty until the model is available and the corpus is recompiled.", "event": "ingest_degraded_pipeline", "level": "warning", "timestamp": "2026-11-07T18:31:52.684722Z"}
+{"corpus_id": "28cc2675350c4e35", "document_id": "f267eabffc794761", "version_id": "8f4ecb09b4844b8b", "tokens": 118, "sentences": 8, "elapsed_ms": 63, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-07T18:31:52.754353Z"}
+HTTP Request: POST http://test/api/v1/corpora/28cc2675350c4e35/documents "HTTP/1.1 200 OK"
+HTTP Request: POST http://test/api/v1/projects/e7eea80493944a5e/corpora "HTTP/1.1 200 OK"
+{"filename": "en_learner.txt", "format": "txt", "encoding": "ascii", "chars": 524, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-07T18:31:52.769680Z"}
+{"language": "en", "model": "en_core_web_sm", "hint": "Tokens will be stored with pos='X' and surface-form lemmas. POS/lemma analyses will be empty until the model is available and the corpus is recompiled.", "event": "ingest_degraded_pipeline", "level": "warning", "timestamp": "2026-11-07T18:31:52.775085Z"}
+{"corpus_id": "c64b182c816245ef", "document_id": "75a768d8333c4761", "version_id": "652bdc370a0241dd", "tokens": 118, "sentences": 8, "elapsed_ms": 60, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-07T18:31:52.839837Z"}
+HTTP Request: POST http://test/api/v1/corpora/c64b182c816245ef/documents "HTTP/1.1 200 OK"
+HTTP Request: POST http://test/api/v1/projects/e7eea80493944a5e/corpora "HTTP/1.1 200 OK"
+{"filename": "en_news.txt", "format": "txt", "encoding": "ascii", "chars": 578, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-07T18:31:52.855878Z"}
+{"language": "en", "model": "en_core_web_sm", "hint": "Tokens will be stored with pos='X' and surface-form lemmas. POS/lemma analyses will be empty until the model is available and the corpus is recompiled.", "event": "ingest_degraded_pipeline", "level": "warning", "timestamp": "2026-11-07T18:31:52.862058Z"}
+{"corpus_id": "6347f45759d24f49", "document_id": "4f327e6601914cd7", "version_id": "98980d4da61d4edf", "tokens": 111, "sentences": 8, "elapsed_ms": 53, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-07T18:31:52.919480Z"}
+HTTP Request: POST http://test/api/v1/corpora/6347f45759d24f49/documents "HTTP/1.1 200 OK"
+{"filename": "en_academic.txt", "format": "txt", "encoding": "ascii", "chars": 877, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-07T18:31:52.928856Z"}
+{"language": "en", "model": "en_core_web_sm", "hint": "Tokens will be stored with pos='X' and surface-form lemmas. POS/lemma analyses will be empty until the model is available and the corpus is recompiled.", "event": "ingest_degraded_pipeline", "level": "warning", "timestamp": "2026-11-07T18:31:52.934594Z"}
+{"corpus_id": "6347f45759d24f49", "document_id": "8c8910abe6eb438c", "version_id": "98980d4da61d4edf", "tokens": 146, "sentences": 10, "elapsed_ms": 65, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-07T18:31:53.004466Z"}
+HTTP Request: POST http://test/api/v1/corpora/6347f45759d24f49/documents "HTTP/1.1 200 OK"
+HTTP Request: POST http://test/api/v1/projects/e7eea80493944a5e/corpora "HTTP/1.1 200 OK"
+{"filename": "ar_msa.txt", "format": "txt", "encoding": "utf_8", "chars": 469, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-07T18:31:53.020113Z"}
+{"filename": "ar_msa.txt", "error": "No module named 'camel_tools'", "event": "ingest_failed", "level": "error", "timestamp": "2026-11-07T18:31:53.026352Z"}
+HTTP Request: POST http://test/api/v1/corpora/b8cff7583f224d3d/documents "HTTP/1.1 400 Bad Request"
+{"event": "engine_stopped", "level": "info", "timestamp": "2026-11-07T18:31:53.029670Z"}
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/home/waleed_mandour/CorpusMind/engine/eval/run_grounding.py", line 181, in <module>
+    main()
+  File "/home/waleed_mandour/CorpusMind/engine/eval/run_grounding.py", line 175, in main
+    asyncio.run(run(args.provider, args.model, args.only, out,
+  File "/usr/lib/python3.12/asyncio/runners.py", line 194, in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/asyncio/base_events.py", line 687, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/home/waleed_mandour/CorpusMind/engine/eval/run_grounding.py", line 64, in run
+    corpus_map = await prepare_corpora(client)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/waleed_mandour/CorpusMind/engine/eval/corpus_snapshot.py", line 116, in prepare_corpora
+    raise RuntimeError(
+RuntimeError: upload failed for ar_msa.txt -> C4: HTTP 400: {"detail":"Failed to ingest 'ar_msa.txt': No module named 'camel_tools'"}
+{"host": "127.0.0.1", "port": 8765, "data_dir": "/tmp/cm-eval-data", "event": "engine_starting", "level": "info", "timestamp": "2026-11-07T18:42:46.372762Z"}
+{"url": "sqlite+aiosqlite:///:memory:", "event": "db_ready", "level": "info", "timestamp": "2026-11-07T18:42:46.453232Z"}
+{"event": "arabic_warmup_disabled", "level": "info", "timestamp": "2026-11-07T18:42:46.453497Z"}
+HTTP Request: POST http://test/api/v1/projects "HTTP/1.1 200 OK"
+HTTP Request: POST http://test/api/v1/projects/0d7bed70eab14533/corpora "HTTP/1.1 200 OK"
+{"filename": "en_news.txt", "format": "txt", "encoding": "ascii", "chars": 578, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-07T18:42:46.566908Z"}
+{"model": "en_core_web_sm", "event": "spacy_loading", "level": "info", "timestamp": "2026-11-07T18:42:50.591314Z"}
+{"model": "en_core_web_sm", "event": "spacy_strategy1_failed", "level": "info", "timestamp": "2026-11-07T18:42:50.592322Z"}
+{"error": "No module named 'en_core_web_sm'", "event": "spacy_strategy2_failed", "level": "info", "timestamp": "2026-11-07T18:42:50.592526Z"}
+{"model": "en_core_web_sm", "hint": "Using spacy.blank() - tokenization only, no POS/lemma/parse. The full model was not bundled correctly in PyInstaller.", "event": "spacy_model_not_found_fallback_blank", "level": "warning", "timestamp": "2026-11-07T18:42:50.593106Z"}
+{"model": "en_core_web_sm", "version": "0.0.0", "spacy": "3.8.18", "event": "spacy_loaded", "level": "info", "timestamp": "2026-11-07T18:42:50.745790Z"}
+{"language": "en", "model": "en_core_web_sm", "hint": "Tokens will be stored with pos='X' and surface-form lemmas. POS/lemma analyses will be empty until the model is available and the corpus is recompiled.", "event": "ingest_degraded_pipeline", "level": "warning", "timestamp": "2026-11-07T18:42:50.745925Z"}
+{"corpus_id": "6616a6c88f734adb", "document_id": "21cba188336f4c54", "version_id": "f4e9b1bbfd914c4a", "tokens": 111, "sentences": 8, "elapsed_ms": 47, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-07T18:42:50.809807Z"}
+HTTP Request: POST http://test/api/v1/corpora/6616a6c88f734adb/documents "HTTP/1.1 200 OK"
+{"filename": "en_academic.txt", "format": "txt", "encoding": "ascii", "chars": 877, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-07T18:42:50.818757Z"}
+{"language": "en", "model": "en_core_web_sm", "hint": "Tokens will be stored with pos='X' and surface-form lemmas. POS/lemma analyses will be empty until the model is available and the corpus is recompiled.", "event": "ingest_degraded_pipeline", "level": "warning", "timestamp": "2026-11-07T18:42:50.823635Z"}
+{"corpus_id": "6616a6c88f734adb", "document_id": "56e831094cda49a3", "version_id": "f4e9b1bbfd914c4a", "tokens": 146, "sentences": 10, "elapsed_ms": 53, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-07T18:42:50.883428Z"}
+HTTP Request: POST http://test/api/v1/corpora/6616a6c88f734adb/documents "HTTP/1.1 200 OK"
+{"filename": "en_learner.txt", "format": "txt", "encoding": "ascii", "chars": 524, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-07T18:42:50.889944Z"}
+{"language": "en", "model": "en_core_web_sm", "hint": "Tokens will be stored with pos='X' and surface-form lemmas. POS/lemma analyses will be empty until the model is available and the corpus is recompiled.", "event": "ingest_degraded_pipeline", "level": "warning", "timestamp": "2026-11-07T18:42:50.893519Z"}
+{"corpus_id": "6616a6c88f734adb", "document_id": "4197cd46008a4151", "version_id": "f4e9b1bbfd914c4a", "tokens": 118, "sentences": 8, "elapsed_ms": 41, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-07T18:42:50.939784Z"}
+HTTP Request: POST http://test/api/v1/corpora/6616a6c88f734adb/documents "HTTP/1.1 200 OK"
+HTTP Request: POST http://test/api/v1/projects/0d7bed70eab14533/corpora "HTTP/1.1 200 OK"
+{"filename": "en_learner.txt", "format": "txt", "encoding": "ascii", "chars": 524, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-07T18:42:50.952545Z"}
+{"language": "en", "model": "en_core_web_sm", "hint": "Tokens will be stored with pos='X' and surface-form lemmas. POS/lemma analyses will be empty until the model is available and the corpus is recompiled.", "event": "ingest_degraded_pipeline", "level": "warning", "timestamp": "2026-11-07T18:42:50.957019Z"}
+{"corpus_id": "604340b6757443b7", "document_id": "f0fecfda5af946b4", "version_id": "a41247a549fc411e", "tokens": 118, "sentences": 8, "elapsed_ms": 42, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-07T18:42:51.003021Z"}
+HTTP Request: POST http://test/api/v1/corpora/604340b6757443b7/documents "HTTP/1.1 200 OK"
+HTTP Request: POST http://test/api/v1/projects/0d7bed70eab14533/corpora "HTTP/1.1 200 OK"
+{"filename": "en_news.txt", "format": "txt", "encoding": "ascii", "chars": 578, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-07T18:42:51.013608Z"}
+{"language": "en", "model": "en_core_web_sm", "hint": "Tokens will be stored with pos='X' and surface-form lemmas. POS/lemma analyses will be empty until the model is available and the corpus is recompiled.", "event": "ingest_degraded_pipeline", "level": "warning", "timestamp": "2026-11-07T18:42:51.017797Z"}
+{"corpus_id": "33289b467c584286", "document_id": "f62efc7e1ba24d1b", "version_id": "74cda0296d4d4474", "tokens": 111, "sentences": 8, "elapsed_ms": 40, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-07T18:42:51.062319Z"}
+HTTP Request: POST http://test/api/v1/corpora/33289b467c584286/documents "HTTP/1.1 200 OK"
+{"filename": "en_academic.txt", "format": "txt", "encoding": "ascii", "chars": 877, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-07T18:42:51.069278Z"}
+{"language": "en", "model": "en_core_web_sm", "hint": "Tokens will be stored with pos='X' and surface-form lemmas. POS/lemma analyses will be empty until the model is available and the corpus is recompiled.", "event": "ingest_degraded_pipeline", "level": "warning", "timestamp": "2026-11-07T18:42:51.073949Z"}
+{"corpus_id": "33289b467c584286", "document_id": "30fdc74bf38d498a", "version_id": "74cda0296d4d4474", "tokens": 146, "sentences": 10, "elapsed_ms": 50, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-07T18:42:51.127686Z"}
+HTTP Request: POST http://test/api/v1/corpora/33289b467c584286/documents "HTTP/1.1 200 OK"
+HTTP Request: POST http://test/api/v1/projects/0d7bed70eab14533/corpora "HTTP/1.1 200 OK"
+{"filename": "ar_msa.txt", "format": "txt", "encoding": "utf_8", "chars": 469, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-07T18:42:51.140431Z"}
+{"dialect": "msa", "event": "camel_loading", "level": "info", "timestamp": "2026-11-07T18:42:51.667876Z"}
+{"model": "calima-msa-r13", "event": "camel_loaded", "level": "info", "timestamp": "2026-11-07T18:42:53.766184Z"}
+{"corpus_id": "810fa771c0c4411d", "document_id": "b29429c35c504406", "version_id": "404bcbcbb2b24a1d", "tokens": 78, "sentences": 7, "elapsed_ms": 33, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-07T18:42:53.853125Z"}
+HTTP Request: POST http://test/api/v1/corpora/810fa771c0c4411d/documents "HTTP/1.1 200 OK"
+{"filename": "ar_classical.txt", "format": "txt", "encoding": "utf_8", "chars": 312, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-07T18:42:53.859745Z"}
+{"corpus_id": "810fa771c0c4411d", "document_id": "09ec5c07ed2947a7", "version_id": "404bcbcbb2b24a1d", "tokens": 60, "sentences": 5, "elapsed_ms": 25, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-07T18:42:53.914576Z"}
+HTTP Request: POST http://test/api/v1/corpora/810fa771c0c4411d/documents "HTTP/1.1 200 OK"
+{"filename": "ar_dialect.txt", "format": "txt", "encoding": "utf_8", "chars": 261, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-07T18:42:53.921722Z"}
+{"corpus_id": "810fa771c0c4411d", "document_id": "34dcd514b0fc47e3", "version_id": "404bcbcbb2b24a1d", "tokens": 52, "sentences": 5, "elapsed_ms": 21, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-07T18:42:53.964937Z"}
+HTTP Request: POST http://test/api/v1/corpora/810fa771c0c4411d/documents "HTTP/1.1 200 OK"
+{"filename": "ar_nopunct.txt", "format": "txt", "encoding": "utf_8", "chars": 234, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-07T18:42:53.970823Z"}
+{"corpus_id": "810fa771c0c4411d", "document_id": "e2842aa67cdf40d1", "version_id": "404bcbcbb2b24a1d", "tokens": 43, "sentences": 1, "elapsed_ms": 19, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-07T18:42:54.009730Z"}
+HTTP Request: POST http://test/api/v1/corpora/810fa771c0c4411d/documents "HTTP/1.1 200 OK"
+HTTP Request: POST http://test/api/v1/projects/0d7bed70eab14533/corpora "HTTP/1.1 200 OK"
+{"filename": "ar_parallel.txt", "format": "txt", "encoding": "utf_8", "chars": 166, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-07T18:42:54.020618Z"}
+{"corpus_id": "1eb6177fb7044fd0", "document_id": "b6e2ea005d444548", "version_id": "0abfe5169e744879", "tokens": 29, "sentences": 4, "elapsed_ms": 12, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-07T18:42:54.049747Z"}
+HTTP Request: POST http://test/api/v1/corpora/1eb6177fb7044fd0/documents "HTTP/1.1 200 OK"
+HTTP Request: POST http://test/api/v1/projects/0d7bed70eab14533/corpora "HTTP/1.1 200 OK"
+{"filename": "en_parallel.txt", "format": "txt", "encoding": "ascii", "chars": 199, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-07T18:42:54.062106Z"}
+{"language": "en", "model": "en_core_web_sm", "hint": "Tokens will be stored with pos='X' and surface-form lemmas. POS/lemma analyses will be empty until the model is available and the corpus is recompiled.", "event": "ingest_degraded_pipeline", "level": "warning", "timestamp": "2026-11-07T18:42:54.064841Z"}
+{"corpus_id": "f295b8d399bd4e87", "document_id": "31b73ae3ac4a4f1a", "version_id": "c9e951da4ad74ad4", "tokens": 43, "sentences": 4, "elapsed_ms": 16, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-07T18:42:54.085823Z"}
+HTTP Request: POST http://test/api/v1/corpora/f295b8d399bd4e87/documents "HTTP/1.1 200 OK"
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-07T18:42:54.168920Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "gemma4:e4b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-07T18:42:54.194868Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.02, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-07T18:43:54.831215Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.13, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-07T18:44:56.029334Z"}
+{"error": "[ollama] tool-call request failed: ", "event": "chat_failed", "level": "error", "timestamp": "2026-11-07T18:45:57.236783Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 502 Bad Gateway"
+[1/1] G-076 -> HTTP 502; rate-retry 1/4 in 20s
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-07T18:46:17.793478Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "gemma4:e4b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-07T18:46:17.805474Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "gemma4:e4b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-07T18:47:05.535437Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "gemma4:e4b", "content_len": 146, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-07T18:47:57.419685Z"}
+{"conversation": "74d5703a87c84cdb", "grounded": true, "tools": ["search_concordance"], "ms": 98613, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-07T18:47:57.423852Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[1/1] G-076 -> ok
+{"event": "engine_stopped", "level": "info", "timestamp": "2026-11-07T18:47:57.428461Z"}
+run written: eval/runs/g4_16k_probe_g076.json
+{"host": "127.0.0.1", "port": 8765, "data_dir": "/tmp/cm-eval-data", "event": "engine_starting", "level": "info", "timestamp": "2026-11-08T03:22:50.609282Z"}
+{"url": "sqlite+aiosqlite:///:memory:", "event": "db_ready", "level": "info", "timestamp": "2026-11-08T03:22:50.699386Z"}
+{"event": "arabic_warmup_disabled", "level": "info", "timestamp": "2026-11-08T03:22:50.699645Z"}
+HTTP Request: POST http://test/api/v1/projects "HTTP/1.1 200 OK"
+HTTP Request: POST http://test/api/v1/projects/1a92fe078da04396/corpora "HTTP/1.1 200 OK"
+{"filename": "en_news.txt", "format": "txt", "encoding": "ascii", "chars": 578, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-08T03:22:50.798991Z"}
+{"model": "en_core_web_sm", "event": "spacy_loading", "level": "info", "timestamp": "2026-11-08T03:22:56.220497Z"}
+{"model": "en_core_web_sm", "version": "3.8.0", "spacy": "3.8.18", "event": "spacy_loaded", "level": "info", "timestamp": "2026-11-08T03:22:56.614908Z"}
+{"corpus_id": "ec9d9f3457e24108", "document_id": "c99c99a3e0d147ca", "version_id": "4b60b867342346cc", "tokens": 111, "sentences": 9, "elapsed_ms": 39, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-08T03:22:56.677765Z"}
+HTTP Request: POST http://test/api/v1/corpora/ec9d9f3457e24108/documents "HTTP/1.1 200 OK"
+{"filename": "en_academic.txt", "format": "txt", "encoding": "ascii", "chars": 877, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-08T03:22:56.684493Z"}
+{"corpus_id": "ec9d9f3457e24108", "document_id": "43fb11d639a7430a", "version_id": "4b60b867342346cc", "tokens": 146, "sentences": 10, "elapsed_ms": 49, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-08T03:22:56.765199Z"}
+HTTP Request: POST http://test/api/v1/corpora/ec9d9f3457e24108/documents "HTTP/1.1 200 OK"
+{"filename": "en_learner.txt", "format": "txt", "encoding": "ascii", "chars": 524, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-08T03:22:56.771482Z"}
+{"corpus_id": "ec9d9f3457e24108", "document_id": "b280980c30fb4c8b", "version_id": "4b60b867342346cc", "tokens": 118, "sentences": 8, "elapsed_ms": 41, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-08T03:22:56.832782Z"}
+HTTP Request: POST http://test/api/v1/corpora/ec9d9f3457e24108/documents "HTTP/1.1 200 OK"
+HTTP Request: POST http://test/api/v1/projects/1a92fe078da04396/corpora "HTTP/1.1 200 OK"
+{"filename": "en_learner.txt", "format": "txt", "encoding": "ascii", "chars": 524, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-08T03:22:56.844006Z"}
+{"corpus_id": "85eb21bd52554c32", "document_id": "0fed3dffc85247b7", "version_id": "9b79cb3400e8471c", "tokens": 118, "sentences": 8, "elapsed_ms": 40, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-08T03:22:56.902658Z"}
+HTTP Request: POST http://test/api/v1/corpora/85eb21bd52554c32/documents "HTTP/1.1 200 OK"
+HTTP Request: POST http://test/api/v1/projects/1a92fe078da04396/corpora "HTTP/1.1 200 OK"
+{"filename": "en_news.txt", "format": "txt", "encoding": "ascii", "chars": 578, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-08T03:22:56.913329Z"}
+{"corpus_id": "878c10c7c7d6425f", "document_id": "dc52ceae75e34e0b", "version_id": "aec2e628145e4526", "tokens": 111, "sentences": 9, "elapsed_ms": 36, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-08T03:22:56.967671Z"}
+HTTP Request: POST http://test/api/v1/corpora/878c10c7c7d6425f/documents "HTTP/1.1 200 OK"
+{"filename": "en_academic.txt", "format": "txt", "encoding": "ascii", "chars": 877, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-08T03:22:56.973272Z"}
+{"corpus_id": "878c10c7c7d6425f", "document_id": "19fb7247d7d64dd1", "version_id": "aec2e628145e4526", "tokens": 146, "sentences": 10, "elapsed_ms": 47, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-08T03:22:57.039664Z"}
+HTTP Request: POST http://test/api/v1/corpora/878c10c7c7d6425f/documents "HTTP/1.1 200 OK"
+HTTP Request: POST http://test/api/v1/projects/1a92fe078da04396/corpora "HTTP/1.1 200 OK"
+{"filename": "ar_msa.txt", "format": "txt", "encoding": "utf_8", "chars": 469, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-08T03:22:57.050693Z"}
+{"dialect": "msa", "event": "camel_loading", "level": "info", "timestamp": "2026-11-08T03:22:57.587477Z"}
+{"model": "calima-msa-r13", "event": "camel_loaded", "level": "info", "timestamp": "2026-11-08T03:22:59.159560Z"}
+{"corpus_id": "75033831bf004b42", "document_id": "b1373d04b8844d64", "version_id": "f80ec8d4893a45fa", "tokens": 78, "sentences": 7, "elapsed_ms": 28, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-08T03:22:59.240581Z"}
+HTTP Request: POST http://test/api/v1/corpora/75033831bf004b42/documents "HTTP/1.1 200 OK"
+{"filename": "ar_classical.txt", "format": "txt", "encoding": "utf_8", "chars": 312, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-08T03:22:59.247133Z"}
+{"corpus_id": "75033831bf004b42", "document_id": "325c6b4601b340b0", "version_id": "f80ec8d4893a45fa", "tokens": 60, "sentences": 5, "elapsed_ms": 22, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-08T03:22:59.300487Z"}
+HTTP Request: POST http://test/api/v1/corpora/75033831bf004b42/documents "HTTP/1.1 200 OK"
+{"filename": "ar_dialect.txt", "format": "txt", "encoding": "utf_8", "chars": 261, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-08T03:22:59.306717Z"}
+{"corpus_id": "75033831bf004b42", "document_id": "6eed63705bca494c", "version_id": "f80ec8d4893a45fa", "tokens": 52, "sentences": 5, "elapsed_ms": 19, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-08T03:22:59.346929Z"}
+HTTP Request: POST http://test/api/v1/corpora/75033831bf004b42/documents "HTTP/1.1 200 OK"
+{"filename": "ar_nopunct.txt", "format": "txt", "encoding": "utf_8", "chars": 234, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-08T03:22:59.353611Z"}
+{"corpus_id": "75033831bf004b42", "document_id": "e267028dad9048d2", "version_id": "f80ec8d4893a45fa", "tokens": 43, "sentences": 1, "elapsed_ms": 17, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-08T03:22:59.391628Z"}
+HTTP Request: POST http://test/api/v1/corpora/75033831bf004b42/documents "HTTP/1.1 200 OK"
+HTTP Request: POST http://test/api/v1/projects/1a92fe078da04396/corpora "HTTP/1.1 200 OK"
+{"filename": "ar_parallel.txt", "format": "txt", "encoding": "utf_8", "chars": 166, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-08T03:22:59.402151Z"}
+{"corpus_id": "6b1fc3f99a174d3a", "document_id": "dcac2da992c545b1", "version_id": "8109297c297b4d2d", "tokens": 29, "sentences": 4, "elapsed_ms": 13, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-08T03:22:59.432217Z"}
+HTTP Request: POST http://test/api/v1/corpora/6b1fc3f99a174d3a/documents "HTTP/1.1 200 OK"
+HTTP Request: POST http://test/api/v1/projects/1a92fe078da04396/corpora "HTTP/1.1 200 OK"
+{"filename": "en_parallel.txt", "format": "txt", "encoding": "ascii", "chars": 199, "event": "ingest_parsed", "level": "info", "timestamp": "2026-11-08T03:22:59.442800Z"}
+{"corpus_id": "75c4e767c36c44ff", "document_id": "b90d41d8ed22446d", "version_id": "f14adef6dd304dbd", "tokens": 43, "sentences": 4, "elapsed_ms": 17, "event": "ingest_complete", "level": "info", "timestamp": "2026-11-08T03:22:59.474002Z"}
+HTTP Request: POST http://test/api/v1/corpora/75c4e767c36c44ff/documents "HTTP/1.1 200 OK"
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-08T03:22:59.564126Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "gemma4:e4b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-08T03:22:59.590878Z"}
+{"label": "ollama:chat_tools", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.05, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-08T03:23:59.649394Z"}
+{"label": "ollama:chat_tools", "attempt": 2, "error": "ReadTimeout: ", "next_wait_s": 0.15, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-08T03:24:59.765594Z"}
+{"error": "[ollama] tool-call request failed: ", "event": "chat_failed", "level": "error", "timestamp": "2026-11-08T03:25:59.981463Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 502 Bad Gateway"
+[1/1] G-076 -> HTTP 502; rate-retry 1/4 in 20s
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"url": "http://127.0.0.1:11434/api/tags", "event": "ollama_health_ok", "level": "info", "timestamp": "2026-11-08T03:26:20.016784Z"}
+HTTP Request: GET http://127.0.0.1:11434/api/tags "HTTP/1.1 200 OK"
+{"model": "gemma4:e4b", "messages": 2, "has_tools": true, "json_mode": false, "event": "ollama_openai_compat_request", "level": "info", "timestamp": "2026-11-08T03:26:20.030767Z"}
+HTTP Request: POST http://127.0.0.1:11434/v1/chat/completions "HTTP/1.1 200 OK"
+{"model": "gemma4:e4b", "messages": 4, "qwen3": false, "json_mode": false, "event": "ollama_chat_request", "level": "info", "timestamp": "2026-11-08T03:27:13.091244Z"}
+{"label": "ollama:chat", "attempt": 1, "error": "ReadTimeout: ", "next_wait_s": 0.07, "event": "provider_retry", "level": "warning", "timestamp": "2026-11-08T03:28:13.153686Z"}
+HTTP Request: POST http://127.0.0.1:11434/api/chat "HTTP/1.1 200 OK"
+{"model": "gemma4:e4b", "content_len": 106, "event": "ollama_chat_success", "level": "info", "timestamp": "2026-11-08T03:28:23.257985Z"}
+{"conversation": "1ad6d2f433fd45c0", "grounded": true, "tools": ["search_cql"], "ms": 123233, "persisted": true, "event": "assistant_turn", "level": "info", "timestamp": "2026-11-08T03:28:23.267295Z"}
+HTTP Request: POST http://test/api/v1/ai/chat "HTTP/1.1 200 OK"
+[1/1] G-076 -> ok
+{"event": "engine_stopped", "level": "info", "timestamp": "2026-11-08T03:28:23.274587Z"}
+run written: eval/runs/g4_16k_probe_g076.json

@@ -1,0 +1,38 @@
+[gold] grounding_gold.json sha256=480f5230955ae32e... -> OK
+[probe] shards=1 questions=5 unique=5 disjoint=yes missing=none extra=none -> OK
+[probe] NO_ANSWER=0 [] | 5xx=0 [] | max_wall=264.3s at/above 180s: [('G-001', 181.6), ('G-002', 264.3), ('G-004', 209.0)]
+[score] -m eval.score -> rc=0
+[rescore-diff] G-001: repo=MISSING_NUMBER independent=HALLUCINATED {'hallucinated': [1.0], 'missing': [3.0, 27.0, 257.0, 384.0]}
+{
+ "run-41306198564": {
+  "common": 5,
+  "user_pass": 1,
+  "ci_pass": 0,
+  "pass_gains": [
+   "G-002"
+  ],
+  "pass_losses": []
+ },
+ "run-41306203484": {
+  "common": 5,
+  "user_pass": 1,
+  "ci_pass": 2,
+  "pass_gains": [],
+  "pass_losses": [
+   "G-001"
+  ]
+ },
+ "run-41306208341": {
+  "common": 5,
+  "user_pass": 1,
+  "ci_pass": 1,
+  "pass_gains": [
+   "G-002"
+  ],
+  "pass_losses": [
+   "G-001"
+  ]
+ }
+}
+[manifest] 38 files hashed -> /home/waleed_mandour/cm_main/benchmarks/results/user-wsl2-gemma4-16384/MANIFEST.json
+STRUCTURAL: PASS
