@@ -1,0 +1,111 @@
+{
+  "_meta": {
+    "pattern": "the model asserts one fixed pair of wrong corpus totals per repetition; the same wrong values recur across many questions (independent-scorer hallucinated payloads in validator_log.txt)",
+    "gold_reference": "frozen tool outputs in engine/eval/data/gold/grounding_gold.json (get_corpus_overview)"
+  },
+  "recurring_hallucinated_values": {
+    "l8_16k_r1": {
+      "98.0": {
+        "questions": [
+          "G-007",
+          "G-008",
+          "G-009",
+          "G-010",
+          "G-013",
+          "G-016"
+        ],
+        "n": 6
+      },
+      "57.0": {
+        "questions": [
+          "G-071",
+          "G-073",
+          "G-076",
+          "G-079",
+          "G-080"
+        ],
+        "n": 5
+      },
+      "4062.0": {
+        "questions": [
+          "G-046",
+          "G-048",
+          "G-050"
+        ],
+        "n": 3
+      },
+      "529354.0": {
+        "questions": [
+          "G-007",
+          "G-008"
+        ],
+        "n": 2
+      }
+    },
+    "l8_16k_r2": {
+      "8255.0": {
+        "questions": [
+          "G-032",
+          "G-034",
+          "G-035",
+          "G-036",
+          "G-038",
+          "G-039",
+          "G-040"
+        ],
+        "n": 7
+      },
+      "3.0": {
+        "questions": [
+          "G-047",
+          "G-048",
+          "G-050"
+        ],
+        "n": 3
+      }
+    },
+    "l8_16k_r3": {
+      "6.0": {
+        "questions": [
+          "G-034",
+          "G-035",
+          "G-038",
+          "G-039",
+          "G-040"
+        ],
+        "n": 5
+      },
+      "4.0": {
+        "questions": [
+          "G-070",
+          "G-076",
+          "G-079",
+          "G-080"
+        ],
+        "n": 4
+      }
+    }
+  },
+  "gold_corpus_totals_examples": {
+    "C1": {
+      "question_example": "G-001",
+      "tool": "get_corpus_overview",
+      "text_side": {
+        "document_count": 3,
+        "token_count": 384,
+        "type_count": 257,
+        "sentence_count": 27
+      }
+    },
+    "C4": {
+      "question_example": "G-002",
+      "tool": "get_corpus_overview",
+      "text_side": {
+        "document_count": 4,
+        "token_count": 233,
+        "type_count": 199,
+        "sentence_count": 18
+      }
+    }
+  }
+}

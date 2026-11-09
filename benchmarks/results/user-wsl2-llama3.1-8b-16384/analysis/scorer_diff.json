@@ -1,0 +1,745 @@
+{
+  "_meta": {
+    "source": "evidence/validator_log.txt [rescore-diff] lines (validator's deliberately simpler second scorer; no trap/no-tool/absence logic)",
+    "policy": "7b-arm precedent: disagreements are reported, not fatal; the repo scorer remains the citable verdict source (identical logic applied to every arm)"
+  },
+  "disagreements": {
+    "l8_16k_r1": {
+      "n": 22,
+      "rows": [
+        {
+          "id": "G-007",
+          "repo": "MISSING_NUMBER",
+          "independent": "HALLUCINATED",
+          "payload": {
+            "hallucinated": [
+              98.0,
+              529354.0
+            ],
+            "missing": [
+              32.0,
+              35.0
+            ]
+          }
+        },
+        {
+          "id": "G-008",
+          "repo": "MISSING_NUMBER",
+          "independent": "HALLUCINATED",
+          "payload": {
+            "hallucinated": [
+              98.0,
+              529354.0
+            ],
+            "missing": [
+              4.0,
+              5.0
+            ]
+          }
+        },
+        {
+          "id": "G-009",
+          "repo": "MISSING_NUMBER",
+          "independent": "HALLUCINATED",
+          "payload": {
+            "hallucinated": [
+              98.0
+            ],
+            "missing": [
+              3.4556794837761897,
+              997.1428571428571
+            ]
+          }
+        },
+        {
+          "id": "G-010",
+          "repo": "MISSING_NUMBER",
+          "independent": "HALLUCINATED",
+          "payload": {
+            "hallucinated": [
+              98.0
+            ],
+            "missing": [
+              0.003897,
+              0.007698
+            ]
+          }
+        },
+        {
+          "id": "G-013",
+          "repo": "TRAP_FAILURE",
+          "independent": "HALLUCINATED",
+          "payload": {
+            "hallucinated": [
+              98.0
+            ],
+            "missing": []
+          }
+        },
+        {
+          "id": "G-016",
+          "repo": "PASS",
+          "independent": "HALLUCINATED",
+          "payload": {
+            "hallucinated": [
+              98.0
+            ],
+            "missing": []
+          }
+        },
+        {
+          "id": "G-024",
+          "repo": "TRAP_FAILURE",
+          "independent": "PASS",
+          "payload": {}
+        },
+        {
+          "id": "G-037",
+          "repo": "MISSING_NUMBER",
+          "independent": "PASS",
+          "payload": {}
+        },
+        {
+          "id": "G-043",
+          "repo": "MISSING_NUMBER",
+          "independent": "HALLUCINATED",
+          "payload": {
+            "hallucinated": [
+              15.0
+            ],
+            "missing": [
+              4.0
+            ]
+          }
+        },
+        {
+          "id": "G-046",
+          "repo": "MISSING_NUMBER",
+          "independent": "HALLUCINATED",
+          "payload": {
+            "hallucinated": [
+              4062.0
+            ],
+            "missing": [
+              1.0,
+              2.0
+            ]
+          }
+        },
+        {
+          "id": "G-048",
+          "repo": "MISSING_NUMBER",
+          "independent": "HALLUCINATED",
+          "payload": {
+            "hallucinated": [
+              4062.0
+            ],
+            "missing": [
+              4.0
+            ]
+          }
+        },
+        {
+          "id": "G-049",
+          "repo": "HALLUCINATED",
+          "independent": "PASS",
+          "payload": {}
+        },
+        {
+          "id": "G-050",
+          "repo": "MISSING_NUMBER",
+          "independent": "HALLUCINATED",
+          "payload": {
+            "hallucinated": [
+              4062.0
+            ],
+            "missing": [
+              2.0
+            ]
+          }
+        },
+        {
+          "id": "G-052",
+          "repo": "HALLUCINATED",
+          "independent": "PASS",
+          "payload": {}
+        },
+        {
+          "id": "G-058",
+          "repo": "MISSING_NUMBER",
+          "independent": "HALLUCINATED",
+          "payload": {
+            "hallucinated": [
+              100.0
+            ],
+            "missing": [
+              0.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "id": "G-067",
+          "repo": "MISSING_NUMBER",
+          "independent": "PASS",
+          "payload": {}
+        },
+        {
+          "id": "G-071",
+          "repo": "MISSING_NUMBER",
+          "independent": "HALLUCINATED",
+          "payload": {
+            "hallucinated": [
+              57.0
+            ],
+            "missing": [
+              81.0
+            ]
+          }
+        },
+        {
+          "id": "G-073",
+          "repo": "TRAP_FAILURE",
+          "independent": "HALLUCINATED",
+          "payload": {
+            "hallucinated": [
+              57.0
+            ],
+            "missing": [
+              0.0
+            ]
+          }
+        },
+        {
+          "id": "G-076",
+          "repo": "PASS",
+          "independent": "HALLUCINATED",
+          "payload": {
+            "hallucinated": [
+              57.0
+            ],
+            "missing": []
+          }
+        },
+        {
+          "id": "G-078",
+          "repo": "TRAP_FAILURE",
+          "independent": "PASS",
+          "payload": {}
+        },
+        {
+          "id": "G-079",
+          "repo": "TRAP_FAILURE",
+          "independent": "HALLUCINATED",
+          "payload": {
+            "hallucinated": [
+              57.0
+            ],
+            "missing": [
+              0.0
+            ]
+          }
+        },
+        {
+          "id": "G-080",
+          "repo": "TRAP_FAILURE",
+          "independent": "HALLUCINATED",
+          "payload": {
+            "hallucinated": [
+              57.0
+            ],
+            "missing": [
+              0.0
+            ]
+          }
+        }
+      ]
+    },
+    "l8_16k_r2": {
+      "n": 18,
+      "rows": [
+        {
+          "id": "G-032",
+          "repo": "MISSING_NUMBER",
+          "independent": "HALLUCINATED",
+          "payload": {
+            "hallucinated": [
+              8255.0
+            ],
+            "missing": [
+              20.0
+            ]
+          }
+        },
+        {
+          "id": "G-034",
+          "repo": "MISSING_NUMBER",
+          "independent": "HALLUCINATED",
+          "payload": {
+            "hallucinated": [
+              0.0,
+              8255.0
+            ],
+            "missing": [
+              4.0,
+              22.0,
+              331.0
+            ]
+          }
+        },
+        {
+          "id": "G-035",
+          "repo": "MISSING_NUMBER",
+          "independent": "HALLUCINATED",
+          "payload": {
+            "hallucinated": [
+              8255.0
+            ],
+            "missing": [
+              11.0,
+              20.0
+            ]
+          }
+        },
+        {
+          "id": "G-036",
+          "repo": "MISSING_NUMBER",
+          "independent": "HALLUCINATED",
+          "payload": {
+            "hallucinated": [
+              8255.0
+            ],
+            "missing": [
+              2.0
+            ]
+          }
+        },
+        {
+          "id": "G-038",
+          "repo": "MISSING_NUMBER",
+          "independent": "HALLUCINATED",
+          "payload": {
+            "hallucinated": [
+              8255.0
+            ],
+            "missing": [
+              1.0
+            ]
+          }
+        },
+        {
+          "id": "G-039",
+          "repo": "PASS",
+          "independent": "HALLUCINATED",
+          "payload": {
+            "hallucinated": [
+              8255.0
+            ],
+            "missing": []
+          }
+        },
+        {
+          "id": "G-040",
+          "repo": "MISSING_NUMBER",
+          "independent": "HALLUCINATED",
+          "payload": {
+            "hallucinated": [
+              8255.0
+            ],
+            "missing": [
+              4.0
+            ]
+          }
+        },
+        {
+          "id": "G-044",
+          "repo": "MISSING_NUMBER",
+          "independent": "HALLUCINATED",
+          "payload": {
+            "hallucinated": [
+              6041.0
+            ],
+            "missing": [
+              2.0
+            ]
+          }
+        },
+        {
+          "id": "G-047",
+          "repo": "MISSING_NUMBER",
+          "independent": "HALLUCINATED",
+          "payload": {
+            "hallucinated": [
+              3.0
+            ],
+            "missing": [
+              4.0
+            ]
+          }
+        },
+        {
+          "id": "G-048",
+          "repo": "MISSING_NUMBER",
+          "independent": "HALLUCINATED",
+          "payload": {
+            "hallucinated": [
+              3.0
+            ],
+            "missing": [
+              4.0
+            ]
+          }
+        },
+        {
+          "id": "G-050",
+          "repo": "MISSING_NUMBER",
+          "independent": "HALLUCINATED",
+          "payload": {
+            "hallucinated": [
+              3.0
+            ],
+            "missing": [
+              2.0
+            ]
+          }
+        },
+        {
+          "id": "G-058",
+          "repo": "MISSING_NUMBER",
+          "independent": "HALLUCINATED",
+          "payload": {
+            "hallucinated": [
+              100.0
+            ],
+            "missing": [
+              0.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "id": "G-065",
+          "repo": "HALLUCINATED",
+          "independent": "MISSING_NUMBER",
+          "payload": {
+            "missing": [
+              3.0
+            ]
+          }
+        },
+        {
+          "id": "G-066",
+          "repo": "MISSING_NUMBER",
+          "independent": "PASS",
+          "payload": {}
+        },
+        {
+          "id": "G-067",
+          "repo": "MISSING_NUMBER",
+          "independent": "PASS",
+          "payload": {}
+        },
+        {
+          "id": "G-078",
+          "repo": "TRAP_FAILURE",
+          "independent": "PASS",
+          "payload": {}
+        },
+        {
+          "id": "G-079",
+          "repo": "TRAP_FAILURE",
+          "independent": "MISSING_NUMBER",
+          "payload": {
+            "missing": [
+              0.0
+            ]
+          }
+        },
+        {
+          "id": "G-080",
+          "repo": "TRAP_FAILURE",
+          "independent": "HALLUCINATED",
+          "payload": {
+            "hallucinated": [
+              1.0
+            ],
+            "missing": [
+              0.0
+            ]
+          }
+        }
+      ]
+    },
+    "l8_16k_r3": {
+      "n": 23,
+      "rows": [
+        {
+          "id": "G-012",
+          "repo": "TRAP_FAILURE",
+          "independent": "PASS",
+          "payload": {}
+        },
+        {
+          "id": "G-013",
+          "repo": "TRAP_FAILURE",
+          "independent": "PASS",
+          "payload": {}
+        },
+        {
+          "id": "G-014",
+          "repo": "MISSING_NUMBER",
+          "independent": "PASS",
+          "payload": {}
+        },
+        {
+          "id": "G-029",
+          "repo": "MISSING_NUMBER",
+          "independent": "HALLUCINATED",
+          "payload": {
+            "hallucinated": [
+              63503.0
+            ],
+            "missing": [
+              0.5905
+            ]
+          }
+        },
+        {
+          "id": "G-034",
+          "repo": "MISSING_NUMBER",
+          "independent": "HALLUCINATED",
+          "payload": {
+            "hallucinated": [
+              0.0,
+              6.0
+            ],
+            "missing": [
+              4.0,
+              22.0,
+              331.0
+            ]
+          }
+        },
+        {
+          "id": "G-035",
+          "repo": "MISSING_NUMBER",
+          "independent": "HALLUCINATED",
+          "payload": {
+            "hallucinated": [
+              6.0
+            ],
+            "missing": [
+              11.0,
+              20.0
+            ]
+          }
+        },
+        {
+          "id": "G-038",
+          "repo": "MISSING_NUMBER",
+          "independent": "HALLUCINATED",
+          "payload": {
+            "hallucinated": [
+              6.0
+            ],
+            "missing": [
+              1.0
+            ]
+          }
+        },
+        {
+          "id": "G-039",
+          "repo": "PASS",
+          "independent": "HALLUCINATED",
+          "payload": {
+            "hallucinated": [
+              6.0
+            ],
+            "missing": []
+          }
+        },
+        {
+          "id": "G-040",
+          "repo": "MISSING_NUMBER",
+          "independent": "HALLUCINATED",
+          "payload": {
+            "hallucinated": [
+              6.0
+            ],
+            "missing": [
+              4.0
+            ]
+          }
+        },
+        {
+          "id": "G-042",
+          "repo": "MISSING_NUMBER",
+          "independent": "HALLUCINATED",
+          "payload": {
+            "hallucinated": [
+              52.0
+            ],
+            "missing": [
+              1.0
+            ]
+          }
+        },
+        {
+          "id": "G-044",
+          "repo": "MISSING_NUMBER",
+          "independent": "HALLUCINATED",
+          "payload": {
+            "hallucinated": [
+              3.0
+            ],
+            "missing": [
+              2.0
+            ]
+          }
+        },
+        {
+          "id": "G-049",
+          "repo": "HALLUCINATED",
+          "independent": "MISSING_NUMBER",
+          "payload": {
+            "missing": [
+              1.0
+            ]
+          }
+        },
+        {
+          "id": "G-052",
+          "repo": "HALLUCINATED",
+          "independent": "PASS",
+          "payload": {}
+        },
+        {
+          "id": "G-058",
+          "repo": "MISSING_NUMBER",
+          "independent": "HALLUCINATED",
+          "payload": {
+            "hallucinated": [
+              100.0
+            ],
+            "missing": [
+              0.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "id": "G-065",
+          "repo": "HALLUCINATED",
+          "independent": "MISSING_NUMBER",
+          "payload": {
+            "missing": [
+              3.0
+            ]
+          }
+        },
+        {
+          "id": "G-066",
+          "repo": "MISSING_NUMBER",
+          "independent": "PASS",
+          "payload": {}
+        },
+        {
+          "id": "G-067",
+          "repo": "MISSING_NUMBER",
+          "independent": "PASS",
+          "payload": {}
+        },
+        {
+          "id": "G-070",
+          "repo": "MISSING_NUMBER",
+          "independent": "HALLUCINATED",
+          "payload": {
+            "hallucinated": [
+              4.0
+            ],
+            "missing": [
+              331.0
+            ]
+          }
+        },
+        {
+          "id": "G-075",
+          "repo": "TRAP_FAILURE",
+          "independent": "PASS",
+          "payload": {}
+        },
+        {
+          "id": "G-076",
+          "repo": "TRAP_FAILURE",
+          "independent": "HALLUCINATED",
+          "payload": {
+            "hallucinated": [
+              4.0
+            ],
+            "missing": []
+          }
+        },
+        {
+          "id": "G-078",
+          "repo": "TRAP_FAILURE",
+          "independent": "PASS",
+          "payload": {}
+        },
+        {
+          "id": "G-079",
+          "repo": "TRAP_FAILURE",
+          "independent": "HALLUCINATED",
+          "payload": {
+            "hallucinated": [
+              4.0
+            ],
+            "missing": [
+              0.0
+            ]
+          }
+        },
+        {
+          "id": "G-080",
+          "repo": "TRAP_FAILURE",
+          "independent": "HALLUCINATED",
+          "payload": {
+            "hallucinated": [
+              4.0
+            ],
+            "missing": [
+              0.0
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "flip_types": {
+    "l8_16k_r1": {
+      "MISSING_NUMBER->HALLUCINATED": 10,
+      "TRAP_FAILURE->HALLUCINATED": 4,
+      "PASS->HALLUCINATED": 2,
+      "TRAP_FAILURE->PASS": 2,
+      "MISSING_NUMBER->PASS": 2,
+      "HALLUCINATED->PASS": 2
+    },
+    "l8_16k_r2": {
+      "MISSING_NUMBER->HALLUCINATED": 11,
+      "PASS->HALLUCINATED": 1,
+      "HALLUCINATED->MISSING_NUMBER": 1,
+      "MISSING_NUMBER->PASS": 2,
+      "TRAP_FAILURE->PASS": 1,
+      "TRAP_FAILURE->MISSING_NUMBER": 1,
+      "TRAP_FAILURE->HALLUCINATED": 1
+    },
+    "l8_16k_r3": {
+      "TRAP_FAILURE->PASS": 4,
+      "MISSING_NUMBER->PASS": 3,
+      "MISSING_NUMBER->HALLUCINATED": 9,
+      "PASS->HALLUCINATED": 1,
+      "HALLUCINATED->MISSING_NUMBER": 2,
+      "HALLUCINATED->PASS": 1,
+      "TRAP_FAILURE->HALLUCINATED": 3
+    }
+  }
+}

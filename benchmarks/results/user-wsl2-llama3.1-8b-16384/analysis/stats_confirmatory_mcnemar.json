@@ -1,0 +1,89 @@
+{
+  "test": "exact McNemar, two-sided, on paired per-question binary verdicts (PASS vs not-PASS)",
+  "pre_registration": "plan v1 (2026-11-06_gemma4-e4b-arm-plan-v1.md) section 4; comparator vector pinned at sha256 f36a02ec559e5827 (verified against the committed file before computation); multiplicity: declared family extended from four to five tests",
+  "arms": {
+    "llama31_8b_16384": {
+      "run": "user-wsl2-llama3.1-8b-16384 (Tier B, n=3 reps)",
+      "model": "llama3.1:8b",
+      "evidence": "evidence/env_llama3.1-8b.json, evidence/api_show_llama3.1-8b.json",
+      "majority_pass": 19,
+      "per_repetition_pass": {
+        "r1": 18,
+        "r2": 21,
+        "r3": 19
+      },
+      "n": 80,
+      "rate": 0.2375,
+      "ci95_wilson": [
+        0.1576,
+        0.3414
+      ]
+    },
+    "qwen25_7b_16384": {
+      "run": "user-wsl2-7b-16384 (Tier B, n=3 reps, pinned vector)",
+      "model": "qwen2.5:7b",
+      "vector": "user-wsl2-7b-16384/analysis/qwen7b_majority_vector.json",
+      "vector_sha256": "f36a02ec559e582738420a0e9b90001f83a23d52b54332c09c2769d52d1bb532",
+      "majority_pass": 20,
+      "per_repetition_pass": {
+        "r1": 21,
+        "r2": 21,
+        "r3": 23
+      },
+      "n": 80,
+      "rate": 0.25
+    }
+  },
+  "paired_counts": {
+    "both_PASS": 12,
+    "PASS_llama_only_b": 7,
+    "PASS_qwen_only_c": 8,
+    "neither_PASS": 53
+  },
+  "discordant_questions": {
+    "b_llama_only": [
+      "G-018",
+      "G-023",
+      "G-051",
+      "G-056",
+      "G-068",
+      "G-069",
+      "G-074"
+    ],
+    "c_qwen_only": [
+      "G-014",
+      "G-034",
+      "G-040",
+      "G-042",
+      "G-045",
+      "G-070",
+      "G-071",
+      "G-078"
+    ]
+  },
+  "exact_mcnemar": {
+    "b": 7,
+    "c": 8,
+    "n_discordant": 15,
+    "p_two_sided_raw": 1.0,
+    "holm_executed_tests_m5": [
+      {
+        "test": "ctx_3b",
+        "raw_p": 0.0025768280029296875,
+        "holm_adjusted_m5": 0.012884140014648438
+      },
+      {
+        "test": "family_TierB_llama_vs_qwen7b",
+        "raw_p": 1.0,
+        "holm_adjusted_m5": 1.0
+      }
+    ],
+    "disclosure_3b_rereported_at_m5": 0.0129,
+    "note": "The 3b context contrast was published at m=4 (raw 0.00258 -> 0.0103, manuscript v3/v4). Re-reported jointly over the declared five-test family it is 0.0129; the conclusion (significant at alpha=0.05) is unchanged."
+  },
+  "power_note": "plan v1 section 4: with 80 paired questions an exact McNemar only reaches p<0.05 for a landslide among discordant pairs; a non-significant result is 'no detectable difference at n=80' and never evidence of equivalence.",
+  "agreement_descriptive": {
+    "binary_identical": 65,
+    "binary_rate": 0.8125
+  }
+}

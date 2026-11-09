@@ -1,0 +1,759 @@
+{
+  "scope": "user-run Tier B fallback arm llama3.1:8b @16384 (plan v1 section 2/3), as-run repo-scorer verdicts of record",
+  "reproduce_rescore": {
+    "r1": {
+      "rerun_rc": 0,
+      "identical_verdicts": 80,
+      "n": 80
+    },
+    "r2": {
+      "rerun_rc": 0,
+      "identical_verdicts": 80,
+      "n": 80
+    },
+    "r3": {
+      "rerun_rc": 0,
+      "identical_verdicts": 80,
+      "n": 80
+    },
+    "probe": {
+      "identical_verdicts": 80,
+      "n": 80
+    }
+  },
+  "headline": {
+    "r1": {
+      "pass": 18,
+      "n": 80,
+      "rate": 0.225,
+      "wilson95": [
+        0.1473,
+        0.3279
+      ],
+      "hallucinated_share_attempts": 0.2875,
+      "no_answer": 1,
+      "http_5xx": 1
+    },
+    "r2": {
+      "pass": 21,
+      "n": 80,
+      "rate": 0.2625,
+      "wilson95": [
+        0.1786,
+        0.3682
+      ],
+      "hallucinated_share_attempts": 0.325,
+      "no_answer": 0,
+      "http_5xx": 0
+    },
+    "r3": {
+      "pass": 19,
+      "n": 80,
+      "rate": 0.2375,
+      "wilson95": [
+        0.1576,
+        0.3414
+      ],
+      "hallucinated_share_attempts": 0.3,
+      "no_answer": 1,
+      "http_5xx": 1
+    }
+  },
+  "verdict_composition": {
+    "r1": {
+      "PASS": 18,
+      "MISSING_NUMBER": 25,
+      "HALLUCINATED": 23,
+      "TRAP_FAILURE": 13,
+      "NO_ANSWER": 1
+    },
+    "r2": {
+      "PASS": 21,
+      "MISSING_NUMBER": 22,
+      "HALLUCINATED": 26,
+      "TRAP_FAILURE": 11,
+      "NO_ANSWER": 0
+    },
+    "r3": {
+      "PASS": 19,
+      "MISSING_NUMBER": 22,
+      "HALLUCINATED": 24,
+      "TRAP_FAILURE": 14,
+      "NO_ANSWER": 1
+    }
+  },
+  "majority": {
+    "rule": "PASS iff verdict == PASS in at least 2 of 3 repetitions",
+    "majority_pass": 19,
+    "n": 80,
+    "rate": 0.2375,
+    "wilson95": [
+      0.1576,
+      0.3414
+    ],
+    "pass_in_all_3": 15,
+    "pass_in_all_3_ids": [
+      "G-001",
+      "G-016",
+      "G-017",
+      "G-018",
+      "G-020",
+      "G-022",
+      "G-039",
+      "G-053",
+      "G-054",
+      "G-055",
+      "G-056",
+      "G-057",
+      "G-068",
+      "G-069",
+      "G-074"
+    ],
+    "pass_in_at_least_1": 24,
+    "never_pass": 56
+  },
+  "repetition_stability": {
+    "r1-r2": {
+      "five_class_identical": 59,
+      "five_class_rate": 0.7375,
+      "binary_identical": 75,
+      "binary_rate": 0.9375,
+      "kappa_binary": 0.8308
+    },
+    "r1-r3": {
+      "five_class_identical": 55,
+      "five_class_rate": 0.6875,
+      "binary_identical": 73,
+      "binary_rate": 0.9125,
+      "kappa_binary": 0.754
+    },
+    "r2-r3": {
+      "five_class_identical": 62,
+      "five_class_rate": 0.775,
+      "binary_identical": 74,
+      "binary_rate": 0.925,
+      "kappa_binary": 0.8002
+    }
+  },
+  "tool_behaviour": {
+    "r1": {
+      "grounded_flags": 78,
+      "grounded_share": 0.975,
+      "with_tool_call": 78,
+      "with_tool_call_share": 0.975,
+      "zero_tool_questions": [
+        "G-027",
+        "G-059"
+      ],
+      "zero_tool_trap_ids": [],
+      "zero_tool_nontrap_ids": [
+        "G-027",
+        "G-059"
+      ],
+      "mean_tool_calls_answered": 1.025,
+      "failed_tool_rounds": 39
+    },
+    "r2": {
+      "grounded_flags": 79,
+      "grounded_share": 0.9875,
+      "with_tool_call": 79,
+      "with_tool_call_share": 0.9875,
+      "zero_tool_questions": [
+        "G-027"
+      ],
+      "zero_tool_trap_ids": [],
+      "zero_tool_nontrap_ids": [
+        "G-027"
+      ],
+      "mean_tool_calls_answered": 1.038,
+      "failed_tool_rounds": 44
+    },
+    "r3": {
+      "grounded_flags": 78,
+      "grounded_share": 0.975,
+      "with_tool_call": 78,
+      "with_tool_call_share": 0.975,
+      "zero_tool_questions": [
+        "G-027",
+        "G-059"
+      ],
+      "zero_tool_trap_ids": [],
+      "zero_tool_nontrap_ids": [
+        "G-027",
+        "G-059"
+      ],
+      "mean_tool_calls_answered": 1.025,
+      "failed_tool_rounds": 43
+    }
+  },
+  "shard_tool_counts": {
+    "r1": {
+      "l8_16k_r1_shard1": {
+        "questions": 20,
+        "with_tool_call": 20
+      },
+      "l8_16k_r1_shard2": {
+        "questions": 20,
+        "with_tool_call": 19
+      },
+      "l8_16k_r1_shard3": {
+        "questions": 20,
+        "with_tool_call": 19
+      },
+      "l8_16k_r1_shard4": {
+        "questions": 20,
+        "with_tool_call": 20
+      }
+    },
+    "r2": {
+      "l8_16k_r2_shard1": {
+        "questions": 20,
+        "with_tool_call": 20
+      },
+      "l8_16k_r2_shard2": {
+        "questions": 20,
+        "with_tool_call": 19
+      },
+      "l8_16k_r2_shard3": {
+        "questions": 20,
+        "with_tool_call": 20
+      },
+      "l8_16k_r2_shard4": {
+        "questions": 20,
+        "with_tool_call": 20
+      }
+    },
+    "r3": {
+      "l8_16k_r3_shard1": {
+        "questions": 20,
+        "with_tool_call": 20
+      },
+      "l8_16k_r3_shard2": {
+        "questions": 20,
+        "with_tool_call": 19
+      },
+      "l8_16k_r3_shard3": {
+        "questions": 20,
+        "with_tool_call": 19
+      },
+      "l8_16k_r3_shard4": {
+        "questions": 20,
+        "with_tool_call": 20
+      }
+    }
+  },
+  "latency": {
+    "r1": {
+      "answered_n": 79,
+      "wall_median_s": 199.0,
+      "wall_mean_s": 230.7,
+      "wall_p95_s": 349.9,
+      "wall_max_s": 1036.7,
+      "elapsed_median_s": 184.6,
+      "elapsed_max_s": 260.8,
+      "questions_at_or_above_180s": 66
+    },
+    "r2": {
+      "answered_n": 80,
+      "wall_median_s": 191.3,
+      "wall_mean_s": 217.5,
+      "wall_p95_s": 310.5,
+      "wall_max_s": 593.3,
+      "elapsed_median_s": 184.0,
+      "elapsed_max_s": 307.2,
+      "questions_at_or_above_180s": 69
+    },
+    "r3": {
+      "answered_n": 79,
+      "wall_median_s": 201.8,
+      "wall_mean_s": 219.2,
+      "wall_p95_s": 337.7,
+      "wall_max_s": 684.3,
+      "elapsed_median_s": 181.9,
+      "elapsed_max_s": 337.6,
+      "questions_at_or_above_180s": 69
+    }
+  },
+  "g059_original_walls_s": {
+    "r1": 1273.7,
+    "r2": 593.3,
+    "r3": 1312.5
+  },
+  "per_category": {
+    "arabic_tools": {
+      "n": 4,
+      "r1": 0,
+      "r2": 0,
+      "r3": 0
+    },
+    "collocation": {
+      "n": 6,
+      "r1": 0,
+      "r2": 0,
+      "r3": 0
+    },
+    "corpus_stats": {
+      "n": 5,
+      "r1": 2,
+      "r2": 1,
+      "r3": 1
+    },
+    "cql": {
+      "n": 6,
+      "r1": 0,
+      "r2": 1,
+      "r3": 2
+    },
+    "discourse": {
+      "n": 3,
+      "r1": 2,
+      "r2": 2,
+      "r3": 2
+    },
+    "dispersion": {
+      "n": 7,
+      "r1": 5,
+      "r2": 6,
+      "r3": 5
+    },
+    "diversity": {
+      "n": 7,
+      "r1": 0,
+      "r2": 0,
+      "r3": 0
+    },
+    "keyness": {
+      "n": 10,
+      "r1": 1,
+      "r2": 2,
+      "r3": 1
+    },
+    "kwic": {
+      "n": 7,
+      "r1": 0,
+      "r2": 1,
+      "r3": 0
+    },
+    "ngrams": {
+      "n": 4,
+      "r1": 1,
+      "r2": 1,
+      "r3": 1
+    },
+    "pos_grammar": {
+      "n": 3,
+      "r1": 0,
+      "r2": 0,
+      "r3": 0
+    },
+    "register": {
+      "n": 5,
+      "r1": 0,
+      "r2": 0,
+      "r3": 0
+    },
+    "sentiment": {
+      "n": 5,
+      "r1": 5,
+      "r2": 5,
+      "r3": 5
+    },
+    "trap": {
+      "n": 8,
+      "r1": 2,
+      "r2": 2,
+      "r3": 2
+    }
+  },
+  "per_language": {
+    "ar": {
+      "n": 15,
+      "r1": 3,
+      "r2": 2,
+      "r3": 2
+    },
+    "en": {
+      "n": 65,
+      "r1": 15,
+      "r2": 19,
+      "r3": 17
+    }
+  },
+  "probe_gate5": {
+    "G-001": {
+      "verdict": "PASS",
+      "tool_calls": 1
+    },
+    "G-002": {
+      "verdict": "MISSING_NUMBER",
+      "tool_calls": 1
+    },
+    "G-003": {
+      "verdict": "HALLUCINATED",
+      "tool_calls": 1
+    },
+    "G-004": {
+      "verdict": "TRAP_FAILURE",
+      "tool_calls": 1
+    },
+    "G-005": {
+      "verdict": "HALLUCINATED",
+      "tool_calls": 1
+    },
+    "G-006": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-007": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-008": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-009": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-010": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-011": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-012": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-013": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-014": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-015": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-016": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-017": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-018": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-019": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-020": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-021": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-022": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-023": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-024": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-025": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-026": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-027": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-028": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-029": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-030": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-031": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-032": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-033": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-034": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-035": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-036": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-037": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-038": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-039": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-040": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-041": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-042": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-043": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-044": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-045": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-046": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-047": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-048": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-049": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-050": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-051": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-052": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-053": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-054": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-055": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-056": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-057": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-058": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-059": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-060": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-061": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-062": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-063": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-064": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-065": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-066": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-067": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-068": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-069": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-070": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-071": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-072": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-073": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-074": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-075": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-076": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-077": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-078": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-079": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    },
+    "G-080": {
+      "verdict": "NO_ANSWER",
+      "tool_calls": 0
+    }
+  },
+  "rescue_applied_r3": {
+    "file": "merged/l8_16k_r3_rescue_applied.scored.json",
+    "g059_verdict": "HALLUCINATED",
+    "g059_detail": {
+      "missing": [
+        {
+          "classical": 0.75
+        },
+        {
+          "msa": 0.25
+        },
+        {
+          "dialectal": 0.0
+        }
+      ],
+      "hallucinated": [
+        11.0,
+        4.721,
+        10.0,
+        1.0,
+        11.0,
+        2.0,
+        5.0,
+        3.0,
+        5.0,
+        4.0,
+        4.0,
+        5.0,
+        3.0,
+        6.0,
+        3.0,
+        7.0,
+        3.0,
+        8.0,
+        3.0,
+        9.0,
+        3.0,
+        10.0,
+        3.0
+      ],
+      "matched": [],
+      "notes": [
+        "numbers not in any tool output: [11.0, 4.721, 10.0, 1.0, 11.0, 2.0, 5.0, 3.0, 5.0, 4.0, 4.0, 5.0, 3.0, 6.0, 3.0, 7.0, 3.0, 8.0, 3.0, 9.0, 3.0, 10.0, 3.0]",
+        "gold numbers not quoted: [{'classical': 0.75}, {'msa': 0.25}, {'dialectal': 0.0}]"
+      ]
+    },
+    "verdict_counts": {
+      "PASS": 19,
+      "MISSING_NUMBER": 22,
+      "HALLUCINATED": 25,
+      "TRAP_FAILURE": 14,
+      "NO_ANSWER": 0
+    },
+    "pass_count_unchanged": true
+  }
+}

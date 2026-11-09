@@ -1,0 +1,504 @@
+{
+ "_meta": {
+  "purpose": "Per-question verdicts and majority-vote collapse of the committed llama3.1:8b @16384 Tier-B fallback run (plan v1 section 2 fallback / addendum-1 section A2.5). The exact McNemar of plan v1 section 4 pairs the pinned qwen2.5:7b majority vector against this vector.",
+  "generated_utc": "2026-11-09T16:56:54+00:00",
+  "rule": "majority = PASS iff verdict == PASS in at least 2 of 3 repetitions",
+  "per_repetition_pass": {
+   "r1": 18,
+   "r2": 21,
+   "r3": 19
+  },
+  "majority_pass": 19,
+  "sources": {
+   "per_question_csv_sha256": "99f897591b39db22a0f3ca2483e94eb2ca1bf2434e23513b382d9a704e3f0622",
+   "merged_scored_r1_sha256": "cf433fd425219a74513758db4851dd1c87e7ebda4cc4e0366d6f546035598b13",
+   "merged_scored_r2_sha256": "83f0d0abd3137cd61595619f9d0baa653c22949ceb1f3cd60029a2fa96729c30",
+   "merged_scored_r3_sha256": "85dd39476d10e457962f7f9b002b180ffeff267971450d14719ee295103a274b",
+   "gold_sha256": "480f5230955ae32e52d52bce51e82a0244ea44f9ae110c37dcf3afc16e6dac13"
+  },
+  "scorer": "engine/eval/score.py at commit 5a5e43fa0c9e6a903dc06f79579b732a9f666bca",
+  "note": "As-run verdicts of record (repo scorer). The r3 G-059 rescue is recorded in rescues/ and in merged/l8_16k_r3_rescue_applied.scored.json; the as-run NO_ANSWER is the verdict of record and the rescue does not change any PASS count (see addendum-2 A5)."
+ },
+ "per_question": {
+  "G-001": {
+   "r1": "PASS",
+   "r2": "PASS",
+   "r3": "PASS",
+   "majority": "PASS"
+  },
+  "G-002": {
+   "r1": "PASS",
+   "r2": "HALLUCINATED",
+   "r3": "HALLUCINATED",
+   "majority": "NOT_PASS"
+  },
+  "G-003": {
+   "r1": "HALLUCINATED",
+   "r2": "HALLUCINATED",
+   "r3": "HALLUCINATED",
+   "majority": "NOT_PASS"
+  },
+  "G-004": {
+   "r1": "TRAP_FAILURE",
+   "r2": "TRAP_FAILURE",
+   "r3": "TRAP_FAILURE",
+   "majority": "NOT_PASS"
+  },
+  "G-005": {
+   "r1": "HALLUCINATED",
+   "r2": "HALLUCINATED",
+   "r3": "HALLUCINATED",
+   "majority": "NOT_PASS"
+  },
+  "G-006": {
+   "r1": "HALLUCINATED",
+   "r2": "HALLUCINATED",
+   "r3": "HALLUCINATED",
+   "majority": "NOT_PASS"
+  },
+  "G-007": {
+   "r1": "MISSING_NUMBER",
+   "r2": "HALLUCINATED",
+   "r3": "HALLUCINATED",
+   "majority": "NOT_PASS"
+  },
+  "G-008": {
+   "r1": "MISSING_NUMBER",
+   "r2": "MISSING_NUMBER",
+   "r3": "MISSING_NUMBER",
+   "majority": "NOT_PASS"
+  },
+  "G-009": {
+   "r1": "MISSING_NUMBER",
+   "r2": "MISSING_NUMBER",
+   "r3": "HALLUCINATED",
+   "majority": "NOT_PASS"
+  },
+  "G-010": {
+   "r1": "MISSING_NUMBER",
+   "r2": "MISSING_NUMBER",
+   "r3": "MISSING_NUMBER",
+   "majority": "NOT_PASS"
+  },
+  "G-011": {
+   "r1": "HALLUCINATED",
+   "r2": "HALLUCINATED",
+   "r3": "MISSING_NUMBER",
+   "majority": "NOT_PASS"
+  },
+  "G-012": {
+   "r1": "TRAP_FAILURE",
+   "r2": "TRAP_FAILURE",
+   "r3": "TRAP_FAILURE",
+   "majority": "NOT_PASS"
+  },
+  "G-013": {
+   "r1": "TRAP_FAILURE",
+   "r2": "PASS",
+   "r3": "TRAP_FAILURE",
+   "majority": "NOT_PASS"
+  },
+  "G-014": {
+   "r1": "HALLUCINATED",
+   "r2": "HALLUCINATED",
+   "r3": "MISSING_NUMBER",
+   "majority": "NOT_PASS"
+  },
+  "G-015": {
+   "r1": "HALLUCINATED",
+   "r2": "HALLUCINATED",
+   "r3": "HALLUCINATED",
+   "majority": "NOT_PASS"
+  },
+  "G-016": {
+   "r1": "PASS",
+   "r2": "PASS",
+   "r3": "PASS",
+   "majority": "PASS"
+  },
+  "G-017": {
+   "r1": "PASS",
+   "r2": "PASS",
+   "r3": "PASS",
+   "majority": "PASS"
+  },
+  "G-018": {
+   "r1": "PASS",
+   "r2": "PASS",
+   "r3": "PASS",
+   "majority": "PASS"
+  },
+  "G-019": {
+   "r1": "TRAP_FAILURE",
+   "r2": "TRAP_FAILURE",
+   "r3": "TRAP_FAILURE",
+   "majority": "NOT_PASS"
+  },
+  "G-020": {
+   "r1": "PASS",
+   "r2": "PASS",
+   "r3": "PASS",
+   "majority": "PASS"
+  },
+  "G-021": {
+   "r1": "MISSING_NUMBER",
+   "r2": "PASS",
+   "r3": "PASS",
+   "majority": "PASS"
+  },
+  "G-022": {
+   "r1": "PASS",
+   "r2": "PASS",
+   "r3": "PASS",
+   "majority": "PASS"
+  },
+  "G-023": {
+   "r1": "PASS",
+   "r2": "PASS",
+   "r3": "HALLUCINATED",
+   "majority": "PASS"
+  },
+  "G-024": {
+   "r1": "TRAP_FAILURE",
+   "r2": "TRAP_FAILURE",
+   "r3": "TRAP_FAILURE",
+   "majority": "NOT_PASS"
+  },
+  "G-025": {
+   "r1": "TRAP_FAILURE",
+   "r2": "TRAP_FAILURE",
+   "r3": "TRAP_FAILURE",
+   "majority": "NOT_PASS"
+  },
+  "G-026": {
+   "r1": "TRAP_FAILURE",
+   "r2": "TRAP_FAILURE",
+   "r3": "TRAP_FAILURE",
+   "majority": "NOT_PASS"
+  },
+  "G-027": {
+   "r1": "HALLUCINATED",
+   "r2": "HALLUCINATED",
+   "r3": "HALLUCINATED",
+   "majority": "NOT_PASS"
+  },
+  "G-028": {
+   "r1": "TRAP_FAILURE",
+   "r2": "TRAP_FAILURE",
+   "r3": "TRAP_FAILURE",
+   "majority": "NOT_PASS"
+  },
+  "G-029": {
+   "r1": "HALLUCINATED",
+   "r2": "HALLUCINATED",
+   "r3": "MISSING_NUMBER",
+   "majority": "NOT_PASS"
+  },
+  "G-030": {
+   "r1": "MISSING_NUMBER",
+   "r2": "HALLUCINATED",
+   "r3": "HALLUCINATED",
+   "majority": "NOT_PASS"
+  },
+  "G-031": {
+   "r1": "HALLUCINATED",
+   "r2": "MISSING_NUMBER",
+   "r3": "HALLUCINATED",
+   "majority": "NOT_PASS"
+  },
+  "G-032": {
+   "r1": "MISSING_NUMBER",
+   "r2": "MISSING_NUMBER",
+   "r3": "MISSING_NUMBER",
+   "majority": "NOT_PASS"
+  },
+  "G-033": {
+   "r1": "HALLUCINATED",
+   "r2": "HALLUCINATED",
+   "r3": "HALLUCINATED",
+   "majority": "NOT_PASS"
+  },
+  "G-034": {
+   "r1": "HALLUCINATED",
+   "r2": "MISSING_NUMBER",
+   "r3": "MISSING_NUMBER",
+   "majority": "NOT_PASS"
+  },
+  "G-035": {
+   "r1": "MISSING_NUMBER",
+   "r2": "MISSING_NUMBER",
+   "r3": "MISSING_NUMBER",
+   "majority": "NOT_PASS"
+  },
+  "G-036": {
+   "r1": "MISSING_NUMBER",
+   "r2": "MISSING_NUMBER",
+   "r3": "HALLUCINATED",
+   "majority": "NOT_PASS"
+  },
+  "G-037": {
+   "r1": "MISSING_NUMBER",
+   "r2": "HALLUCINATED",
+   "r3": "HALLUCINATED",
+   "majority": "NOT_PASS"
+  },
+  "G-038": {
+   "r1": "MISSING_NUMBER",
+   "r2": "MISSING_NUMBER",
+   "r3": "MISSING_NUMBER",
+   "majority": "NOT_PASS"
+  },
+  "G-039": {
+   "r1": "PASS",
+   "r2": "PASS",
+   "r3": "PASS",
+   "majority": "PASS"
+  },
+  "G-040": {
+   "r1": "MISSING_NUMBER",
+   "r2": "MISSING_NUMBER",
+   "r3": "MISSING_NUMBER",
+   "majority": "NOT_PASS"
+  },
+  "G-041": {
+   "r1": "HALLUCINATED",
+   "r2": "MISSING_NUMBER",
+   "r3": "HALLUCINATED",
+   "majority": "NOT_PASS"
+  },
+  "G-042": {
+   "r1": "HALLUCINATED",
+   "r2": "PASS",
+   "r3": "MISSING_NUMBER",
+   "majority": "NOT_PASS"
+  },
+  "G-043": {
+   "r1": "MISSING_NUMBER",
+   "r2": "MISSING_NUMBER",
+   "r3": "HALLUCINATED",
+   "majority": "NOT_PASS"
+  },
+  "G-044": {
+   "r1": "MISSING_NUMBER",
+   "r2": "MISSING_NUMBER",
+   "r3": "MISSING_NUMBER",
+   "majority": "NOT_PASS"
+  },
+  "G-045": {
+   "r1": "HALLUCINATED",
+   "r2": "HALLUCINATED",
+   "r3": "HALLUCINATED",
+   "majority": "NOT_PASS"
+  },
+  "G-046": {
+   "r1": "MISSING_NUMBER",
+   "r2": "HALLUCINATED",
+   "r3": "MISSING_NUMBER",
+   "majority": "NOT_PASS"
+  },
+  "G-047": {
+   "r1": "HALLUCINATED",
+   "r2": "MISSING_NUMBER",
+   "r3": "MISSING_NUMBER",
+   "majority": "NOT_PASS"
+  },
+  "G-048": {
+   "r1": "MISSING_NUMBER",
+   "r2": "MISSING_NUMBER",
+   "r3": "PASS",
+   "majority": "NOT_PASS"
+  },
+  "G-049": {
+   "r1": "HALLUCINATED",
+   "r2": "HALLUCINATED",
+   "r3": "HALLUCINATED",
+   "majority": "NOT_PASS"
+  },
+  "G-050": {
+   "r1": "MISSING_NUMBER",
+   "r2": "MISSING_NUMBER",
+   "r3": "MISSING_NUMBER",
+   "majority": "NOT_PASS"
+  },
+  "G-051": {
+   "r1": "HALLUCINATED",
+   "r2": "PASS",
+   "r3": "PASS",
+   "majority": "PASS"
+  },
+  "G-052": {
+   "r1": "HALLUCINATED",
+   "r2": "HALLUCINATED",
+   "r3": "HALLUCINATED",
+   "majority": "NOT_PASS"
+  },
+  "G-053": {
+   "r1": "PASS",
+   "r2": "PASS",
+   "r3": "PASS",
+   "majority": "PASS"
+  },
+  "G-054": {
+   "r1": "PASS",
+   "r2": "PASS",
+   "r3": "PASS",
+   "majority": "PASS"
+  },
+  "G-055": {
+   "r1": "PASS",
+   "r2": "PASS",
+   "r3": "PASS",
+   "majority": "PASS"
+  },
+  "G-056": {
+   "r1": "PASS",
+   "r2": "PASS",
+   "r3": "PASS",
+   "majority": "PASS"
+  },
+  "G-057": {
+   "r1": "PASS",
+   "r2": "PASS",
+   "r3": "PASS",
+   "majority": "PASS"
+  },
+  "G-058": {
+   "r1": "MISSING_NUMBER",
+   "r2": "MISSING_NUMBER",
+   "r3": "MISSING_NUMBER",
+   "majority": "NOT_PASS"
+  },
+  "G-059": {
+   "r1": "NO_ANSWER",
+   "r2": "HALLUCINATED",
+   "r3": "NO_ANSWER",
+   "majority": "NOT_PASS"
+  },
+  "G-060": {
+   "r1": "HALLUCINATED",
+   "r2": "HALLUCINATED",
+   "r3": "HALLUCINATED",
+   "majority": "NOT_PASS"
+  },
+  "G-061": {
+   "r1": "MISSING_NUMBER",
+   "r2": "HALLUCINATED",
+   "r3": "HALLUCINATED",
+   "majority": "NOT_PASS"
+  },
+  "G-062": {
+   "r1": "MISSING_NUMBER",
+   "r2": "MISSING_NUMBER",
+   "r3": "MISSING_NUMBER",
+   "majority": "NOT_PASS"
+  },
+  "G-063": {
+   "r1": "MISSING_NUMBER",
+   "r2": "HALLUCINATED",
+   "r3": "MISSING_NUMBER",
+   "majority": "NOT_PASS"
+  },
+  "G-064": {
+   "r1": "MISSING_NUMBER",
+   "r2": "MISSING_NUMBER",
+   "r3": "MISSING_NUMBER",
+   "majority": "NOT_PASS"
+  },
+  "G-065": {
+   "r1": "MISSING_NUMBER",
+   "r2": "HALLUCINATED",
+   "r3": "HALLUCINATED",
+   "majority": "NOT_PASS"
+  },
+  "G-066": {
+   "r1": "HALLUCINATED",
+   "r2": "MISSING_NUMBER",
+   "r3": "MISSING_NUMBER",
+   "majority": "NOT_PASS"
+  },
+  "G-067": {
+   "r1": "MISSING_NUMBER",
+   "r2": "MISSING_NUMBER",
+   "r3": "MISSING_NUMBER",
+   "majority": "NOT_PASS"
+  },
+  "G-068": {
+   "r1": "PASS",
+   "r2": "PASS",
+   "r3": "PASS",
+   "majority": "PASS"
+  },
+  "G-069": {
+   "r1": "PASS",
+   "r2": "PASS",
+   "r3": "PASS",
+   "majority": "PASS"
+  },
+  "G-070": {
+   "r1": "HALLUCINATED",
+   "r2": "MISSING_NUMBER",
+   "r3": "MISSING_NUMBER",
+   "majority": "NOT_PASS"
+  },
+  "G-071": {
+   "r1": "MISSING_NUMBER",
+   "r2": "HALLUCINATED",
+   "r3": "HALLUCINATED",
+   "majority": "NOT_PASS"
+  },
+  "G-072": {
+   "r1": "HALLUCINATED",
+   "r2": "HALLUCINATED",
+   "r3": "HALLUCINATED",
+   "majority": "NOT_PASS"
+  },
+  "G-073": {
+   "r1": "TRAP_FAILURE",
+   "r2": "HALLUCINATED",
+   "r3": "PASS",
+   "majority": "NOT_PASS"
+  },
+  "G-074": {
+   "r1": "PASS",
+   "r2": "PASS",
+   "r3": "PASS",
+   "majority": "PASS"
+  },
+  "G-075": {
+   "r1": "HALLUCINATED",
+   "r2": "HALLUCINATED",
+   "r3": "TRAP_FAILURE",
+   "majority": "NOT_PASS"
+  },
+  "G-076": {
+   "r1": "PASS",
+   "r2": "PASS",
+   "r3": "TRAP_FAILURE",
+   "majority": "PASS"
+  },
+  "G-077": {
+   "r1": "TRAP_FAILURE",
+   "r2": "TRAP_FAILURE",
+   "r3": "TRAP_FAILURE",
+   "majority": "NOT_PASS"
+  },
+  "G-078": {
+   "r1": "TRAP_FAILURE",
+   "r2": "TRAP_FAILURE",
+   "r3": "TRAP_FAILURE",
+   "majority": "NOT_PASS"
+  },
+  "G-079": {
+   "r1": "TRAP_FAILURE",
+   "r2": "TRAP_FAILURE",
+   "r3": "TRAP_FAILURE",
+   "majority": "NOT_PASS"
+  },
+  "G-080": {
+   "r1": "TRAP_FAILURE",
+   "r2": "TRAP_FAILURE",
+   "r3": "TRAP_FAILURE",
+   "majority": "NOT_PASS"
+  }
+ }
+}

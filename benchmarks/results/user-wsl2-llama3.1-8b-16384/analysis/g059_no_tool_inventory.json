@@ -1,0 +1,135 @@
+{
+  "_meta": {
+    "policy": "plan v1 section 3 rescue policy (mirrored from the qwen arm): one single-question rescue per errored record; replaces the errored record in the merge only when the original was errored and the re-run is clean; both attempts kept; NO_ANSWER counts as not PASS",
+    "as_run_note": "the shard-merging validator never folds rescues into merged/; the rescue-applied variant is computed separately, mirroring the 7b arm's b7_16k_r2_rescue_applied convention (addendum-2 A5)"
+  },
+  "g059_originals": {
+    "r1": {
+      "wall_s": 1273.7,
+      "http_status": 502,
+      "verdict": "NO_ANSWER"
+    },
+    "r2": {
+      "wall_s": 593.3,
+      "http_status": null,
+      "verdict": "HALLUCINATED"
+    },
+    "r3": {
+      "wall_s": 1312.5,
+      "http_status": 502,
+      "verdict": "NO_ANSWER"
+    }
+  },
+  "g059_rescues": {
+    "r1": {
+      "created_utc": "2026-11-09T09:49:10+00:00",
+      "rate_retries": 4,
+      "http_status": 502,
+      "wall_ms": 1385404,
+      "answered": false,
+      "tool_calls": []
+    },
+    "r3": {
+      "created_utc": "2026-11-09T10:10:19+00:00",
+      "rate_retries": 4,
+      "http_status": null,
+      "wall_ms": 1210846,
+      "answered": true,
+      "tool_calls": [
+        "get_corpus_overview",
+        "get_frequency"
+      ]
+    }
+  },
+  "zero_tool_questions_per_rep": {
+    "r1": [
+      "G-027",
+      "G-059"
+    ],
+    "r2": [
+      "G-027"
+    ],
+    "r3": [
+      "G-027",
+      "G-059"
+    ]
+  },
+  "zero_tool_trap_correct_vs_gap": {
+    "r1": {
+      "trap_ids": [],
+      "nontrap_ids": [
+        "G-027",
+        "G-059"
+      ]
+    },
+    "r2": {
+      "trap_ids": [],
+      "nontrap_ids": [
+        "G-027"
+      ]
+    },
+    "r3": {
+      "trap_ids": [],
+      "nontrap_ids": [
+        "G-027",
+        "G-059"
+      ]
+    }
+  },
+  "shard_with_tool_counts": {
+    "r1": {
+      "l8_16k_r1_shard1": {
+        "questions": 20,
+        "with_tool_call": 20
+      },
+      "l8_16k_r1_shard2": {
+        "questions": 20,
+        "with_tool_call": 19
+      },
+      "l8_16k_r1_shard3": {
+        "questions": 20,
+        "with_tool_call": 19
+      },
+      "l8_16k_r1_shard4": {
+        "questions": 20,
+        "with_tool_call": 20
+      }
+    },
+    "r2": {
+      "l8_16k_r2_shard1": {
+        "questions": 20,
+        "with_tool_call": 20
+      },
+      "l8_16k_r2_shard2": {
+        "questions": 20,
+        "with_tool_call": 19
+      },
+      "l8_16k_r2_shard3": {
+        "questions": 20,
+        "with_tool_call": 20
+      },
+      "l8_16k_r2_shard4": {
+        "questions": 20,
+        "with_tool_call": 20
+      }
+    },
+    "r3": {
+      "l8_16k_r3_shard1": {
+        "questions": 20,
+        "with_tool_call": 20
+      },
+      "l8_16k_r3_shard2": {
+        "questions": 20,
+        "with_tool_call": 19
+      },
+      "l8_16k_r3_shard3": {
+        "questions": 20,
+        "with_tool_call": 19
+      },
+      "l8_16k_r3_shard4": {
+        "questions": 20,
+        "with_tool_call": 20
+      }
+    }
+  }
+}

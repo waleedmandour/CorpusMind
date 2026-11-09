@@ -1,0 +1,508 @@
+{
+  "_meta": {
+    "status": "DESCRIPTIVE ONLY - plan v1 section 4 fixes the secondary claim form; no significance language attaches to these comparisons; the only confirmatory test is in stats_confirmatory_mcnemar.json",
+    "ci_arm_identity": {
+      "run-41306198564": {
+        "model": "qwen2.5:3b",
+        "ctx": "default (4k), OLLAMA_CONTEXT_LENGTH_env null"
+      },
+      "run-41306203484": {
+        "model": "qwen2.5:3b",
+        "ctx": 16384
+      },
+      "run-41306208341": {
+        "model": "qwen2.5:1.5b",
+        "ctx": 16384
+      }
+    },
+    "ci_verdict_counts": {
+      "run-41306198564": {
+        "MISSING_NUMBER": 33,
+        "TRAP_FAILURE": 14,
+        "HALLUCINATED": 29,
+        "PASS": 4
+      },
+      "run-41306203484": {
+        "PASS": 18,
+        "HALLUCINATED": 31,
+        "TRAP_FAILURE": 13,
+        "MISSING_NUMBER": 18
+      },
+      "run-41306208341": {
+        "PASS": 15,
+        "MISSING_NUMBER": 21,
+        "HALLUCINATED": 30,
+        "TRAP_FAILURE": 14
+      }
+    },
+    "llama_reps": {
+      "r1": {
+        "PASS": 18,
+        "MISSING_NUMBER": 25,
+        "HALLUCINATED": 23,
+        "TRAP_FAILURE": 13,
+        "NO_ANSWER": 1
+      },
+      "r2": {
+        "PASS": 21,
+        "MISSING_NUMBER": 22,
+        "HALLUCINATED": 26,
+        "TRAP_FAILURE": 11,
+        "NO_ANSWER": 0
+      },
+      "r3": {
+        "PASS": 19,
+        "MISSING_NUMBER": 22,
+        "HALLUCINATED": 24,
+        "TRAP_FAILURE": 14,
+        "NO_ANSWER": 1
+      }
+    },
+    "llama_majority_pass": 19
+  },
+  "contrasts": [
+    {
+      "llama_series": "llama_r1",
+      "ci_run": "run-41306198564",
+      "model": "qwen2.5:3b",
+      "context": "default (4k), OLLAMA_CONTEXT_LENGTH_env null",
+      "llama_pass": 18,
+      "ci_pass": 4,
+      "common": 80,
+      "b": 16,
+      "c": 2,
+      "n_discordant": 18,
+      "p_two_sided_raw": 0.001312255859375,
+      "pass_gains": [
+        "G-001",
+        "G-002",
+        "G-017",
+        "G-018",
+        "G-020",
+        "G-022",
+        "G-023",
+        "G-053",
+        "G-054",
+        "G-055",
+        "G-056",
+        "G-057",
+        "G-068",
+        "G-069",
+        "G-074",
+        "G-076"
+      ],
+      "pass_losses": [
+        "G-013",
+        "G-075"
+      ]
+    },
+    {
+      "llama_series": "llama_r1",
+      "ci_run": "run-41306203484",
+      "model": "qwen2.5:3b",
+      "context": 16384,
+      "llama_pass": 18,
+      "ci_pass": 18,
+      "common": 80,
+      "b": 10,
+      "c": 10,
+      "n_discordant": 20,
+      "p_two_sided_raw": 1.0,
+      "pass_gains": [
+        "G-016",
+        "G-017",
+        "G-018",
+        "G-020",
+        "G-022",
+        "G-023",
+        "G-056",
+        "G-057",
+        "G-068",
+        "G-074"
+      ],
+      "pass_losses": [
+        "G-007",
+        "G-011",
+        "G-014",
+        "G-021",
+        "G-033",
+        "G-037",
+        "G-043",
+        "G-051",
+        "G-070",
+        "G-071"
+      ]
+    },
+    {
+      "llama_series": "llama_r1",
+      "ci_run": "run-41306208341",
+      "model": "qwen2.5:1.5b",
+      "context": 16384,
+      "llama_pass": 18,
+      "ci_pass": 15,
+      "common": 80,
+      "b": 12,
+      "c": 9,
+      "n_discordant": 21,
+      "p_two_sided_raw": 0.6636238098144531,
+      "pass_gains": [
+        "G-002",
+        "G-016",
+        "G-018",
+        "G-020",
+        "G-022",
+        "G-023",
+        "G-039",
+        "G-056",
+        "G-068",
+        "G-069",
+        "G-074",
+        "G-076"
+      ],
+      "pass_losses": [
+        "G-012",
+        "G-014",
+        "G-029",
+        "G-030",
+        "G-034",
+        "G-040",
+        "G-051",
+        "G-070",
+        "G-072"
+      ]
+    },
+    {
+      "llama_series": "llama_r2",
+      "ci_run": "run-41306198564",
+      "model": "qwen2.5:3b",
+      "context": "default (4k), OLLAMA_CONTEXT_LENGTH_env null",
+      "llama_pass": 21,
+      "ci_pass": 4,
+      "common": 80,
+      "b": 18,
+      "c": 1,
+      "n_discordant": 19,
+      "p_two_sided_raw": 7.62939453125e-05,
+      "pass_gains": [
+        "G-001",
+        "G-017",
+        "G-018",
+        "G-020",
+        "G-021",
+        "G-022",
+        "G-023",
+        "G-042",
+        "G-051",
+        "G-053",
+        "G-054",
+        "G-055",
+        "G-056",
+        "G-057",
+        "G-068",
+        "G-069",
+        "G-074",
+        "G-076"
+      ],
+      "pass_losses": [
+        "G-075"
+      ]
+    },
+    {
+      "llama_series": "llama_r2",
+      "ci_run": "run-41306203484",
+      "model": "qwen2.5:3b",
+      "context": 16384,
+      "llama_pass": 21,
+      "ci_pass": 18,
+      "common": 80,
+      "b": 12,
+      "c": 9,
+      "n_discordant": 21,
+      "p_two_sided_raw": 0.6636238098144531,
+      "pass_gains": [
+        "G-013",
+        "G-016",
+        "G-017",
+        "G-018",
+        "G-020",
+        "G-022",
+        "G-023",
+        "G-042",
+        "G-056",
+        "G-057",
+        "G-068",
+        "G-074"
+      ],
+      "pass_losses": [
+        "G-002",
+        "G-007",
+        "G-011",
+        "G-014",
+        "G-033",
+        "G-037",
+        "G-043",
+        "G-070",
+        "G-071"
+      ]
+    },
+    {
+      "llama_series": "llama_r2",
+      "ci_run": "run-41306208341",
+      "model": "qwen2.5:1.5b",
+      "context": 16384,
+      "llama_pass": 21,
+      "ci_pass": 15,
+      "common": 80,
+      "b": 14,
+      "c": 8,
+      "n_discordant": 22,
+      "p_two_sided_raw": 0.28627872467041016,
+      "pass_gains": [
+        "G-013",
+        "G-016",
+        "G-018",
+        "G-020",
+        "G-021",
+        "G-022",
+        "G-023",
+        "G-039",
+        "G-042",
+        "G-056",
+        "G-068",
+        "G-069",
+        "G-074",
+        "G-076"
+      ],
+      "pass_losses": [
+        "G-012",
+        "G-014",
+        "G-029",
+        "G-030",
+        "G-034",
+        "G-040",
+        "G-070",
+        "G-072"
+      ]
+    },
+    {
+      "llama_series": "llama_r3",
+      "ci_run": "run-41306198564",
+      "model": "qwen2.5:3b",
+      "context": "default (4k), OLLAMA_CONTEXT_LENGTH_env null",
+      "llama_pass": 19,
+      "ci_pass": 4,
+      "common": 80,
+      "b": 17,
+      "c": 2,
+      "n_discordant": 19,
+      "p_two_sided_raw": 0.000728607177734375,
+      "pass_gains": [
+        "G-001",
+        "G-017",
+        "G-018",
+        "G-020",
+        "G-021",
+        "G-022",
+        "G-048",
+        "G-051",
+        "G-053",
+        "G-054",
+        "G-055",
+        "G-056",
+        "G-057",
+        "G-068",
+        "G-069",
+        "G-073",
+        "G-074"
+      ],
+      "pass_losses": [
+        "G-013",
+        "G-075"
+      ]
+    },
+    {
+      "llama_series": "llama_r3",
+      "ci_run": "run-41306203484",
+      "model": "qwen2.5:3b",
+      "context": 16384,
+      "llama_pass": 19,
+      "ci_pass": 18,
+      "common": 80,
+      "b": 11,
+      "c": 10,
+      "n_discordant": 21,
+      "p_two_sided_raw": 1.0,
+      "pass_gains": [
+        "G-016",
+        "G-017",
+        "G-018",
+        "G-020",
+        "G-022",
+        "G-048",
+        "G-056",
+        "G-057",
+        "G-068",
+        "G-073",
+        "G-074"
+      ],
+      "pass_losses": [
+        "G-002",
+        "G-007",
+        "G-011",
+        "G-014",
+        "G-033",
+        "G-037",
+        "G-043",
+        "G-070",
+        "G-071",
+        "G-076"
+      ]
+    },
+    {
+      "llama_series": "llama_r3",
+      "ci_run": "run-41306208341",
+      "model": "qwen2.5:1.5b",
+      "context": 16384,
+      "llama_pass": 19,
+      "ci_pass": 15,
+      "common": 80,
+      "b": 12,
+      "c": 8,
+      "n_discordant": 20,
+      "p_two_sided_raw": 0.5034446716308594,
+      "pass_gains": [
+        "G-016",
+        "G-018",
+        "G-020",
+        "G-021",
+        "G-022",
+        "G-039",
+        "G-048",
+        "G-056",
+        "G-068",
+        "G-069",
+        "G-073",
+        "G-074"
+      ],
+      "pass_losses": [
+        "G-012",
+        "G-014",
+        "G-029",
+        "G-030",
+        "G-034",
+        "G-040",
+        "G-070",
+        "G-072"
+      ]
+    },
+    {
+      "llama_series": "llama_majority",
+      "ci_run": "run-41306198564",
+      "model": "qwen2.5:3b",
+      "context": "default (4k), OLLAMA_CONTEXT_LENGTH_env null",
+      "llama_pass": 19,
+      "ci_pass": 4,
+      "common": 80,
+      "b": 17,
+      "c": 2,
+      "n_discordant": 19,
+      "p_two_sided_raw": 0.000728607177734375,
+      "pass_gains": [
+        "G-001",
+        "G-017",
+        "G-018",
+        "G-020",
+        "G-021",
+        "G-022",
+        "G-023",
+        "G-051",
+        "G-053",
+        "G-054",
+        "G-055",
+        "G-056",
+        "G-057",
+        "G-068",
+        "G-069",
+        "G-074",
+        "G-076"
+      ],
+      "pass_losses": [
+        "G-013",
+        "G-075"
+      ]
+    },
+    {
+      "llama_series": "llama_majority",
+      "ci_run": "run-41306203484",
+      "model": "qwen2.5:3b",
+      "context": 16384,
+      "llama_pass": 19,
+      "ci_pass": 18,
+      "common": 80,
+      "b": 10,
+      "c": 9,
+      "n_discordant": 19,
+      "p_two_sided_raw": 1.0,
+      "pass_gains": [
+        "G-016",
+        "G-017",
+        "G-018",
+        "G-020",
+        "G-022",
+        "G-023",
+        "G-056",
+        "G-057",
+        "G-068",
+        "G-074"
+      ],
+      "pass_losses": [
+        "G-002",
+        "G-007",
+        "G-011",
+        "G-014",
+        "G-033",
+        "G-037",
+        "G-043",
+        "G-070",
+        "G-071"
+      ]
+    },
+    {
+      "llama_series": "llama_majority",
+      "ci_run": "run-41306208341",
+      "model": "qwen2.5:1.5b",
+      "context": 16384,
+      "llama_pass": 19,
+      "ci_pass": 15,
+      "common": 80,
+      "b": 12,
+      "c": 8,
+      "n_discordant": 20,
+      "p_two_sided_raw": 0.5034446716308594,
+      "pass_gains": [
+        "G-016",
+        "G-018",
+        "G-020",
+        "G-021",
+        "G-022",
+        "G-023",
+        "G-039",
+        "G-056",
+        "G-068",
+        "G-069",
+        "G-074",
+        "G-076"
+      ],
+      "pass_losses": [
+        "G-012",
+        "G-014",
+        "G-029",
+        "G-030",
+        "G-034",
+        "G-040",
+        "G-070",
+        "G-072"
+      ]
+    }
+  ]
+}
